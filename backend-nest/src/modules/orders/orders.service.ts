@@ -212,9 +212,9 @@ export class OrdersService {
           'Can only transition to ASSEMBLING from PENDING or NEW.',
         );
       }
-      if (paymentStatus !== 'APPROVED') {
+      if (paymentStatus !== 'APPROVED' && paymentStatus !== 'PAID') {
         throw new BadRequestException(
-          'Cannot assemble order until payment is APPROVED.',
+          'Cannot assemble order until payment is APPROVED or PAID.',
         );
       }
       return;

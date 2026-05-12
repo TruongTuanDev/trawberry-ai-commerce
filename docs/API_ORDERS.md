@@ -11,7 +11,6 @@ Current scope is limited to seller order management:
 
 This is not yet a full payments module and does not include:
 - payment provider integration
-- manual payment approval/rejection endpoints
 - shipment creation/tracking APIs in NestJS
 
 ## Auth and Access
@@ -91,8 +90,8 @@ Allowed values:
 - `CANCELLED`
 
 Current transition rules:
-- `PENDING -> ASSEMBLING` requires `paymentStatus=APPROVED`
-- `NEW -> ASSEMBLING` requires `paymentStatus=APPROVED`
+- `PENDING -> ASSEMBLING` requires `paymentStatus=APPROVED` or `PAID`
+- `NEW -> ASSEMBLING` requires `paymentStatus=APPROVED` or `PAID`
 - `ASSEMBLING -> SHIPPING`
 - `SHIPPING -> DELIVERED`
 - `CANCELLED` allowed only before `SHIPPING`
@@ -133,8 +132,7 @@ Current verification coverage:
 Still missing in the new NestJS stack:
 - customer order history API
 - payment confirmation upload/review workflow
-- seller payments list API
-- payment approve/reject API
+- payment provider integration
 - shipment lifecycle APIs
 
 Those flows still belong to the migration backlog and should not be treated as complete.

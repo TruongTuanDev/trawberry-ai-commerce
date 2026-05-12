@@ -94,6 +94,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         <Link href="/seller/orders" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white">
           Back to orders
         </Link>
+        <Link href={`/seller/payments/${orderId}`} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white">
+          Review payment
+        </Link>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">

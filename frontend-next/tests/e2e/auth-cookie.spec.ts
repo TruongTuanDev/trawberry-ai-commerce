@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://localhost:3001";
+const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
 test("cookie auth flow survives refresh and blocks protected routes after logout", async ({ page, request }) => {
   const email = `seller-cookie-${Date.now()}@example.com`;

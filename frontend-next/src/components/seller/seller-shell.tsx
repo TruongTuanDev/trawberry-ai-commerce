@@ -14,6 +14,7 @@ const navigation = [
   { href: "/seller/products", label: "Products" },
   { href: "/seller/ai-images", label: "AI Images" },
   { href: "/seller/orders", label: "Orders" },
+  { href: "/seller/payments", label: "Payments" },
   { href: "/seller/settings", label: "Settings" },
 ];
 

@@ -20,6 +20,7 @@ model User {
   aiGenerationTasks AiGenerationTask[]
   aiUsageLogs     AiUsageLog[]
   customerOrders  Order[]      @relation("CustomerOrders")
+  paymentReviewLogs PaymentReviewLog[] @relation("PaymentReviewerLogs")
 
   @@map("users")
 }
@@ -62,6 +63,7 @@ model Shop {
   aiCredits            SellerAiCredit?
   aiUsageLogs          AiUsageLog[]
   orders               Order[]
+  paymentReviewLogs    PaymentReviewLog[]
 
   @@map("shops")
 }
@@ -187,10 +189,30 @@ model Order {
   customer           User        @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
   shop               Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
   items              OrderItem[]
+  paymentReviewLogs  PaymentReviewLog[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
   @@map("orders")
+}
+
+model PaymentReviewLog {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId         String   @map("shop_id") @db.Uuid
+  orderId        String   @map("order_id") @db.Uuid
+  reviewerUserId String   @map("reviewer_user_id") @db.Uuid
+  action         String   @db.VarChar(50)
+  fromStatus     String?  @map("from_status") @db.VarChar(50)
+  toStatus       String?  @map("to_status") @db.VarChar(50)
+  note           String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reviewer       User     @relation("PaymentReviewerLogs", fields: [reviewerUserId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("payment_review_logs")
 }
 
 model OrderItem {

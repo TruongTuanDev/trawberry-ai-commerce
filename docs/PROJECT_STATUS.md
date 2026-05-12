@@ -27,8 +27,8 @@
 
 | Component | Tech stack | Status | Runtime verified? | Notes |
 |---|---|---|---|---|
-| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products` + `/checkout` MVP now exists; dashboard/settings/AI route still partly placeholder. |
-| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, public products, checkout, seller orders, images, AI tasks all present. |
+| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products` + `/checkout` MVP now exists; seller `/payments` MVP now exists; dashboard/settings/AI route still partly placeholder. |
+| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, public products, checkout, payments, seller orders, images, AI tasks all present. |
 | `ai-service` | FastAPI, Pydantic, OpenAI SDK, Pillow, boto3 | Partial | Yes | Mock provider verified; OpenAI provider implemented but real OpenAI runtime not fully confirmed in this audit. |
 | `postgres` | PostgreSQL 16 | Done | Yes | Running in Docker; host `5433`, network `5432`. |
 | `redis` | Redis 7 | Done | Yes | Running in Docker and used by BullMQ. |
@@ -121,19 +121,23 @@
   - Docker runtime verification passed with `smoke:checkout`, `smoke:orders`, backend/frontend health checks, and Playwright auth E2E
 
 ### Payments
-- Status: Not started / partial schema only
+- Status: MVP done for manual review
 - Evidence:
-  - no `payments` module exists in `backend-nest`
-  - no payment provider integration exists in `frontend-next`
-  - only `paymentStatus` field and shop `paymentInstructions` exist in current schema/API surface
+  - `backend-nest/src/modules/payments`
+  - `backend-nest/test/payments.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-payments.ps1`
+  - `frontend-next/src/app/seller/payments`
+  - `docs/API_PAYMENTS.md`
 - Main files/modules:
   - `backend-nest/prisma/schema.prisma`
-  - `backend-nest/src/modules/shops`
-  - `backend-nest/src/modules/orders`
+  - `backend-nest/src/modules/payments`
+  - `frontend-next/src/components/payments`
+  - `frontend-next/src/app/seller/payments`
 - Notes:
-  - seller orders display `paymentStatus`
-  - there are no NestJS payment approval, rejection, capture, refund, or provider webhook endpoints yet
-  - legacy Spring Boot still contains richer payment workflow references per `docs/API_MAP_OLD.md`
+  - manual seller review now supports list/detail/mark paid/reject/add note
+  - additive audit logging is stored in `payment_review_logs`
+  - there is still no payment provider integration, capture, refund, or webhook handling
+  - legacy Spring Boot still contains broader payment workflow references per `docs/API_MAP_OLD.md`
 
 ### AI Image Task Backend
 - Status: Done
@@ -295,9 +299,11 @@
 | `GET` | `/api/shops/:shopId/orders` | orders | Done | Yes | Yes |
 | `GET` | `/api/shops/:shopId/orders/:orderId` | orders | Done | Yes | Yes |
 | `PATCH` | `/api/shops/:shopId/orders/:orderId/status` | orders | Done | Yes | Yes |
-| `GET` | `/api/shops/:shopId/payments` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
-| `POST` | `/api/shops/:shopId/orders/:orderId/payment/approve` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
-| `POST` | `/api/shops/:shopId/orders/:orderId/payment/reject` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
+| `GET` | `/api/shops/:shopId/payments` | payments | MVP done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/payments/:orderId` | payments | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/payments/:orderId/mark-paid` | payments | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/payments/:orderId/reject` | payments | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/payments/:orderId/notes` | payments | MVP done | Yes | Yes |
 | `GET` | `/api/public/products` | public-products | Done | No | Covered by build/manual flow |
 | `GET` | `/api/public/products/:productId` | public-products | Done | No | Covered by build/manual flow |
 | `POST` | `/api/checkout/orders` | checkout | MVP done | Optional auth | Yes |
@@ -318,7 +324,8 @@
 | `/seller/ai-images` | Future AI center / try-on area | Partial | No | Placeholder route only. |
 | `/seller/orders` | Seller order list | Done | Yes | Connected to NestJS orders API. |
 | `/seller/orders/[id]` | Seller order detail | Done | Yes | Connected to NestJS orders API. |
-| `/seller/payments` | Seller payment review | Not started | No | No Next.js route exists yet. |
+| `/seller/payments` | Seller payment review list | MVP done | Yes | Pending queue, filters, and links into detail. |
+| `/seller/payments/[orderId]` | Seller payment review detail | MVP done | Yes | Mark paid, reject, add note, audit log view. |
 | `/seller/settings` | Seller settings area | Partial | No | Placeholder content only. |
 
 ## F. AI Pipeline Status
@@ -375,6 +382,7 @@ Current flow:
 | backend-nest | `npm run smoke:products` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:orders` | Pass | Re-run in this audit; seller orders runtime smoke covers list, detail, status update, and cross-shop `403`. |
 | backend-nest | `npm run smoke:checkout` | Pass | Re-run in this audit; anonymous checkout order is visible in seller list/detail. |
+| backend-nest | `npm run smoke:payments` | Pass | Manual payment review runtime smoke covers note/mark-paid/audit/cross-shop `403`. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -399,8 +407,8 @@ Current flow:
 - `ai-service` tree still contains `__pycache__` artifacts in the working tree; they are ignored/noise, not functional code.
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
-- Payments are not migrated in NestJS yet beyond `paymentStatus` fields and shop payment instructions.
-- Customer checkout is now in the new stack, but customer order history and payments are still incomplete.
+- Payments are now partially migrated for manual seller review, but provider-backed settlement is still missing.
+- Customer checkout is now in the new stack, but customer order history and customer-side payment proof flows are still incomplete.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
 ## J. Next Recommended Phases
@@ -408,7 +416,7 @@ Current flow:
 1. Final project status verification on a fresh machine using only documented steps.
 2. Add dev seed accounts and predictable seller/shop bootstrap to reduce smoke-script setup friction.
 3. Implement customer order history and post-checkout lifecycle in NestJS/Next.js.
-4. Implement seller payment review flow and payment module boundaries.
+4. Add customer payment proof upload and stronger payment state modeling.
 5. Expand the public marketplace beyond the single-product MVP checkout flow.
 6. Implement true try-on online flow end-to-end.
 7. Add admin moderation and operational tooling.
@@ -426,6 +434,7 @@ To demo the MVP cleanly, the following should be available:
 - seller login
 - public product browse
 - customer checkout create-order
+- seller manual payment review
 - create shop
 - create product
 - upload product image

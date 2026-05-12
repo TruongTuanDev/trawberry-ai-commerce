@@ -102,7 +102,7 @@ services:
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      S3_PUBLIC_BASE_URL: http://localhost:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
+      S3_PUBLIC_BASE_URL: http://127.0.0.1:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
       NEST_CALLBACK_AUTH_TOKEN: ""
     depends_on:
       minio:
@@ -137,17 +137,17 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: 0
       BULLMQ_DISABLED: "false"
-      CORS_ORIGIN: http://localhost:${FRONTEND_PORT:-3000}
+      CORS_ORIGIN: http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000}
       FILE_STORAGE_DRIVER: local
       UPLOAD_ROOT: uploads
-      FILES_PUBLIC_BASE_URL: http://localhost:${BACKEND_PORT:-3001}
+      FILES_PUBLIC_BASE_URL: http://127.0.0.1:${BACKEND_PORT:-3001}
       S3_BUCKET: ${MINIO_BUCKET:-strawberry-ai-assets}
       S3_REGION: us-east-1
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       STORAGE_DRIVER: local
-      S3_PUBLIC_BASE_URL: http://localhost:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
+      S3_PUBLIC_BASE_URL: http://127.0.0.1:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
       AI_SERVICE_BASE_URL: http://ai-service:8000
       AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-dev-internal-token}
       AI_SERVICE_TIMEOUT_MS: 45000
@@ -179,11 +179,11 @@ services:
       context: ../frontend-next
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-3001}
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:${BACKEND_PORT:-3001}
     container_name: strawberry-frontend-next
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-3001}
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:${BACKEND_PORT:-3001}
     depends_on:
       backend-nest:
         condition: service_healthy

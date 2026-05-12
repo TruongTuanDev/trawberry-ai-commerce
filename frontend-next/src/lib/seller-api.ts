@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api";
 
 export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
+export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE";
 
 export type ShopSummary = {
   id: string;
@@ -45,6 +46,57 @@ export type SellerOrderListItem = {
 
 export type SellerOrdersResponse = {
   items: SellerOrderListItem[];
+  meta: {
+    page: number;
+    size: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type PaymentReviewLog = {
+  id: string;
+  action: PaymentReviewAction;
+  fromStatus: string | null;
+  toStatus: string | null;
+  note: string | null;
+  reviewerUserId: string;
+  reviewerName: string | null;
+  createdAt: string;
+};
+
+export type SellerPaymentItem = {
+  id: string;
+  orderNumber: string;
+  shopId: string;
+  shopName: string;
+  status: SellerOrderStatus;
+  paymentStatus: string;
+  paymentMethod: string | null;
+  paymentInstructions: string | null;
+  totalAmount: string;
+  shippingAddress: string;
+  customer: {
+    name: string;
+    phone: string;
+    email: string | null;
+  };
+  customerNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    quantity: number;
+    priceAtPurchase: string;
+    productTitleSnapshot: string;
+    productSlugSnapshot: string;
+    productImageSnapshot: string | null;
+  }>;
+  reviewLogs: PaymentReviewLog[];
+};
+
+export type SellerPaymentsResponse = {
+  items: SellerPaymentItem[];
   meta: {
     page: number;
     size: number;
@@ -454,6 +506,79 @@ export async function getShopOrderById(shopId: string, orderId: string, token?: 
   return apiRequest<SellerOrderListItem>(`/api/shops/${shopId}/orders/${orderId}`, {
     method: "GET",
     token,
+  });
+}
+
+export async function listPayments(
+  shopId: string,
+  query: {
+    page: number;
+    size: number;
+    search?: string;
+    status?: string;
+  },
+  token?: string,
+) {
+  const params = new URLSearchParams({
+    page: String(query.page),
+    size: String(query.size),
+  });
+  if (query.search) {
+    params.set("search", query.search);
+  }
+  if (query.status) {
+    params.set("status", query.status);
+  }
+
+  return apiRequest<SellerPaymentsResponse>(`/api/shops/${shopId}/payments?${params.toString()}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getPaymentDetail(shopId: string, orderId: string, token?: string) {
+  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function markPaymentPaid(
+  shopId: string,
+  orderId: string,
+  payload?: { note?: string },
+  token?: string,
+) {
+  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}/mark-paid`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export async function rejectPayment(
+  shopId: string,
+  orderId: string,
+  payload?: { note?: string },
+  token?: string,
+) {
+  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}/reject`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export async function addPaymentNote(
+  shopId: string,
+  orderId: string,
+  payload: { note: string },
+  token?: string,
+) {
+  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}/notes`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
   });
 }
 

@@ -368,6 +368,58 @@ while allowing:
   - runtime endpoints were verified successfully with explicit `Invoke-WebRequest -UseBasicParsing`
   - no business-logic fix was required after Docker came up; runtime failures from the previous pass were environment-only
 
+## Manual Payment Review MVP
+
+- Scope:
+  - add seller-side manual payment review APIs in `backend-nest`
+  - add additive audit logging via `payment_review_logs`
+  - add seller payment review pages in `frontend-next`
+  - preserve checkout, orders, and auth flows
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/prisma/migrations/20260512_add_payment_review_logs/migration.sql`
+  - `backend-nest/src/modules/payments/*`
+  - `backend-nest/src/modules/orders/orders.service.ts`
+  - `backend-nest/test/payments.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-payments.ps1`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `frontend-next/src/components/payments/*`
+  - `frontend-next/src/app/seller/payments/*`
+  - `frontend-next/src/components/seller/seller-shell.tsx`
+  - `docs/API_PAYMENTS.md`
+  - `docs/API_ORDERS.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - seller can list pending/unpaid payment review items
+  - seller can open payment detail with customer snapshot, item snapshot, payment method, and payment instructions
+  - seller can add note, mark paid, and reject when the transition is valid
+  - every action creates an audit record in `payment_review_logs`
+  - seller order detail reflects the new `paymentStatus`
+  - seller fulfillment can continue after `paymentStatus=PAID`
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:orders`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/login`: pass
+  - `GET http://localhost:8000/health`: pass
+- Runtime notes:
+  - Playwright auth initially failed because the browser runtime hit `localhost:3001` while the host stack was reliably reachable at `127.0.0.1:3001`
+  - fixed by normalizing frontend and Playwright API defaults to `127.0.0.1`, and by allowing both `localhost` and `127.0.0.1` in backend CORS
+  - no payment business logic changes were required after runtime validation
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

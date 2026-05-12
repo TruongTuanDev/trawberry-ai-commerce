@@ -2,6 +2,11 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
+  const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001").replace(
+    "://localhost",
+    "://127.0.0.1",
+  );
+
   return (
     <main className="grain-overlay flex min-h-screen items-center justify-center px-4 py-8 sm:px-6">
       <div className="grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)] lg:grid-cols-[1.05fr_0.95fr]">
@@ -13,7 +18,7 @@ export default function LoginPage() {
             Log in to the new seller workspace.
           </h1>
           <p className="mt-6 max-w-lg text-base leading-8 text-white/75">
-            This page talks to the NestJS backend at <code className="rounded bg-white/10 px-2 py-1">{process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}</code>.
+            This page talks to the NestJS backend at <code className="rounded bg-white/10 px-2 py-1">{apiUrl}</code>.
           </p>
           <div className="mt-8 rounded-[1.5rem] border border-white/15 bg-white/7 p-5">
             <p className="text-sm font-semibold">Security note</p>

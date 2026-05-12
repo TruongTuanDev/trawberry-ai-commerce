@@ -53,6 +53,7 @@ export default function HomePage() {
                 <li>/seller/products/[id]/images</li>
                 <li>/seller/ai-images</li>
                 <li>/seller/orders</li>
+                <li>/seller/payments</li>
                 <li>/seller/settings</li>
               </ul>
             </div>

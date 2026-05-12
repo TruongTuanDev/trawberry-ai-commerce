@@ -13,7 +13,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const corsOrigin = configService.get<string>(
     'CORS_ORIGIN',
-    'http://localhost:3000,http://localhost:4200',
+    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:4200,http://127.0.0.1:4200',
   );
   const uploadRoot = configService.get<string>('UPLOAD_ROOT', 'uploads');
   const cookieParserFactory = cookieParser as unknown as () => RequestHandler;
