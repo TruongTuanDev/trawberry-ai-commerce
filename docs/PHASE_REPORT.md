@@ -200,6 +200,54 @@ while allowing:
   - close frontend auth/cookie messaging drift
   - deepen orders/payment/customer-side verification
 
+## Cookie Auth UX Hardening
+
+- Scope:
+  - complete cookie-first auth UX in `frontend-next`
+  - keep `Authorization: Bearer` fallback in `backend-nest`
+  - add logout endpoint coverage and cookie assertions
+- Files changed:
+  - `backend-nest/src/modules/auth/auth.controller.ts`
+  - `backend-nest/test/auth.e2e-spec.ts`
+  - `frontend-next/src/lib/auth-api.ts`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `frontend-next/src/stores/auth-store.ts`
+  - `frontend-next/src/stores/seller-workspace-store.ts`
+  - `frontend-next/src/components/auth/login-form.tsx`
+  - `frontend-next/src/components/auth/protected-shell.tsx`
+  - `frontend-next/src/components/seller/seller-shell.tsx`
+  - `frontend-next/src/app/login/page.tsx`
+  - `frontend-next/src/app/page.tsx`
+  - `frontend-next/src/app/seller/products/[id]/page.tsx`
+  - `frontend-next/src/app/seller/products/[id]/images/page.tsx`
+  - `docs/SECURITY.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/FRONTEND_PRODUCTS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - login remains compatible with response-body tokens for scripts, but frontend runtime no longer stores raw JWTs
+  - protected routes re-hydrate the real session via `GET /api/auth/me`
+  - logout now clears cookie on the backend and clears local auth/shop hydration state on the frontend
+  - auth e2e now covers `Set-Cookie`, cookie-backed `/api/auth/me`, logout cookie clearing, and bearer fallback
+- Verification for this pass:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `docker compose ... ps`: pass (`6/6` healthy)
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/login`: pass
+- Manual auth smoke:
+  - backend HTTP cookie smoke passed:
+    - register: `201`
+    - login: `200`
+    - cookie stored in session: yes
+    - `GET /api/auth/me` with cookie: `200`
+    - `POST /api/auth/logout`: `200`
+    - `GET /api/auth/me` after logout: `401`
+  - browser-only refresh/redirect behavior was not replayed with a headless browser in this pass
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

@@ -59,6 +59,7 @@ export class AuthController {
       secure: isSecure,
       sameSite,
       maxAge: maxAge * 1000,
+      path: '/',
     });
   }
 
@@ -121,6 +122,7 @@ export class AuthController {
       httpOnly: true,
       secure: isSecure,
       sameSite,
+      path: '/',
     });
     return { success: true };
   }

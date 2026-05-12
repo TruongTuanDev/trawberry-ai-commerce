@@ -50,8 +50,8 @@ export default function HomePage() {
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
               <p className="text-sm font-semibold text-[var(--foreground)]">Auth storage note</p>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                This first step stores JWT in localStorage because the current NestJS auth does not yet issue
-                httpOnly cookies. Move to secure cookie-based session handling in a later hardening phase.
+                Seller login now uses httpOnly cookies from NestJS. The frontend only caches lightweight user and shop
+                context for hydration and revalidates the session from the backend on protected routes.
               </p>
             </div>
           </div>

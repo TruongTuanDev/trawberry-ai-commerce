@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { useAuthStore } from "@/stores/auth-store";
@@ -17,15 +18,27 @@ const navigation = [
 ];
 
 export function SellerShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    void loadShops("");
+    void loadShops();
   }, [loadShops, user]);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.replace("/login");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6">
@@ -65,10 +78,11 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
             <p className="text-sm text-white/65">{user?.email ?? "No email loaded"}</p>
             <button
               type="button"
-              onClick={logout}
+              onClick={() => void handleLogout()}
+              disabled={loggingOut}
               className="mt-4 inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-[#2d181e]"
             >
-              Logout
+              {loggingOut ? "Signing out..." : "Logout"}
             </button>
           </div>
         </aside>
@@ -85,6 +99,14 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <ShopSwitcher />
+                <button
+                  type="button"
+                  onClick={() => void handleLogout()}
+                  disabled={loggingOut}
+                  className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
+                >
+                  {loggingOut ? "Signing out..." : "Logout"}
+                </button>
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{user?.role ?? "SELLER"}</p>
                   <p className="text-[var(--muted)]">Cookie-based authentication active.</p>

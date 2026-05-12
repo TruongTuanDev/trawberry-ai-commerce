@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { currentUserRequest, type CurrentUserResponse } from "@/lib/auth-api";
+import { currentUserRequest, logoutRequest, type CurrentUserResponse } from "@/lib/auth-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const AUTH_STORAGE_KEY = "strawberry-next-auth";
@@ -11,13 +11,13 @@ type PersistedAuth = {
 };
 
 type AuthState = PersistedAuth & {
-  token: string | null;
-  refreshToken: string | null;
   hydrated: boolean;
-  setSession: (payload: PersistedAuth & { token: string | null; refreshToken: string | null }) => void;
+  sessionLoading: boolean;
+  sessionError: string | null;
+  setSession: (payload: PersistedAuth) => void;
   hydrate: () => void;
-  refreshMe: () => Promise<void>;
-  logout: () => void;
+  refreshMe: () => Promise<boolean>;
+  logout: () => Promise<void>;
 };
 
 function save(payload: PersistedAuth) {
@@ -36,17 +36,16 @@ function clear() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  token: null,
-  refreshToken: null,
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   hydrated: false,
+  sessionLoading: false,
+  sessionError: null,
   setSession: (payload) => {
     save({ user: payload.user });
     set({
-      token: payload.token,
-      refreshToken: payload.refreshToken,
       user: payload.user,
+      sessionError: null,
     });
   },
   hydrate: () => {
@@ -63,36 +62,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const parsed = JSON.parse(raw) as PersistedAuth;
       set({
-        token: null,
-        refreshToken: null,
         user: parsed.user,
         hydrated: true,
       });
     } catch {
       clear();
-      set({ token: null, refreshToken: null, user: null, hydrated: true });
+      set({ user: null, hydrated: true, sessionError: null });
     }
   },
   refreshMe: async () => {
-    const token = get().token;
-    if (!token) {
-      return;
-    }
+    set({ sessionLoading: true, sessionError: null });
 
-    const user = await currentUserRequest(token);
-    get().setSession({
-      token,
-      refreshToken: get().refreshToken,
-      user,
-    });
+    try {
+      const user = await currentUserRequest();
+      save({ user });
+      set({
+        user,
+        sessionLoading: false,
+        sessionError: null,
+      });
+      return true;
+    } catch (error) {
+      clear();
+      useSellerWorkspaceStore.getState().clear();
+      set({
+        user: null,
+        sessionLoading: false,
+        sessionError: error instanceof Error ? error.message : "Session expired.",
+      });
+      return false;
+    }
   },
-  logout: () => {
-    clear();
-    useSellerWorkspaceStore.getState().clear();
-    set({
-      token: null,
-      refreshToken: null,
-      user: null,
-    });
+  logout: async () => {
+    try {
+      await logoutRequest();
+    } catch {
+      // Clear local auth state even if the backend cookie has already expired.
+    } finally {
+      clear();
+      useSellerWorkspaceStore.getState().clear();
+      set({
+        user: null,
+        sessionLoading: false,
+        sessionError: null,
+      });
+    }
   },
 }));

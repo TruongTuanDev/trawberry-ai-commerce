@@ -16,10 +16,10 @@ export default function LoginPage() {
             This page talks to the NestJS backend at <code className="rounded bg-white/10 px-2 py-1">{process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}</code>.
           </p>
           <div className="mt-8 rounded-[1.5rem] border border-white/15 bg-white/7 p-5">
-            <p className="text-sm font-semibold">Bootstrap note</p>
+            <p className="text-sm font-semibold">Security note</p>
             <p className="mt-2 text-sm leading-6 text-white/70">
-              Authentication state is temporarily stored in localStorage because the backend does not yet issue
-              httpOnly cookies. Move this to secure cookie-based auth in a later phase.
+              The NestJS backend now issues httpOnly auth cookies. This frontend keeps only minimal user state in
+              localStorage for UI hydration and restores the real session from <code className="rounded bg-white/10 px-2 py-1">/api/auth/me</code>.
             </p>
           </div>
         </section>

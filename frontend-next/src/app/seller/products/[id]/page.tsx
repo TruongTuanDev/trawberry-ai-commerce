@@ -6,7 +6,6 @@ import { SectionCard } from "@/components/seller/section-card";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
 import { getShopProductById, updateShopProduct, type ProductDetail, type UpdateProductPayload } from "@/lib/seller-api";
-import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export default function SellerProductDetailPage({
@@ -14,7 +13,6 @@ export default function SellerProductDetailPage({
 }: {
   params: { id: string };
 }) {
-  const token = useAuthStore((state) => state.token);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,13 +23,13 @@ export default function SellerProductDetailPage({
     let mounted = true;
 
     const run = async () => {
-      if (!token || !currentShopId) {
+      if (!currentShopId) {
         setLoading(false);
         return;
       }
 
       try {
-        const result = await getShopProductById(currentShopId, params.id, token);
+        const result = await getShopProductById(currentShopId, params.id);
         if (mounted) {
           setProduct(result);
           setError(null);
@@ -52,16 +50,16 @@ export default function SellerProductDetailPage({
     return () => {
       mounted = false;
     };
-  }, [currentShopId, params.id, token]);
+  }, [currentShopId, params.id]);
 
   const handleSave = async (payload: UpdateProductPayload) => {
-    if (!token || !currentShopId || !product) {
+    if (!currentShopId || !product) {
       return;
     }
 
     setSaving(true);
     try {
-      const updated = await updateShopProduct(currentShopId, product.id, payload, token);
+      const updated = await updateShopProduct(currentShopId, product.id, payload);
       setProduct(updated);
       setError(null);
     } catch (err) {

@@ -240,7 +240,7 @@ export type UpdateProductPayload = Partial<{
   localTags: string[];
 }>;
 
-export async function getSellerShops(token: string) {
+export async function getSellerShops(token?: string) {
   return apiRequest<ShopSummary[]>("/api/shops", {
     method: "GET",
     token,
@@ -255,7 +255,7 @@ export async function getShopProducts(
     search?: string;
     status?: string;
   },
-  token: string,
+  token?: string,
 ) {
   const params = new URLSearchParams({
     page: String(query.page),
@@ -276,7 +276,7 @@ export async function getShopProducts(
   });
 }
 
-export async function getShopProductById(shopId: string, productId: string, token: string) {
+export async function getShopProductById(shopId: string, productId: string, token?: string) {
   return apiRequest<ProductDetail>(`/api/shops/${shopId}/products/${productId}`, {
     method: "GET",
     token,
@@ -287,7 +287,7 @@ export async function updateShopProduct(
   shopId: string,
   productId: string,
   payload: UpdateProductPayload,
-  token: string,
+  token?: string,
 ) {
   return apiRequest<ProductDetail>(`/api/shops/${shopId}/products/${productId}`, {
     method: "PATCH",
@@ -296,7 +296,7 @@ export async function updateShopProduct(
   });
 }
 
-export async function getShopProductImages(shopId: string, productId: string, token: string) {
+export async function getShopProductImages(shopId: string, productId: string, token?: string) {
   return apiRequest<ProductImage[]>(`/api/shops/${shopId}/products/${productId}/images`, {
     method: "GET",
     token,
@@ -307,7 +307,7 @@ export async function uploadShopProductImages(
   shopId: string,
   productId: string,
   files: File[],
-  token: string,
+  token?: string,
 ) {
   const formData = new FormData();
   for (const file of files) {
@@ -325,7 +325,7 @@ export async function deleteShopProductImage(
   shopId: string,
   productId: string,
   imageId: string,
-  token: string,
+  token?: string,
 ) {
   return apiRequest<void>(`/api/shops/${shopId}/products/${productId}/images/${imageId}`, {
     method: "DELETE",
@@ -338,7 +338,7 @@ export async function updateShopProductImage(
   productId: string,
   imageId: string,
   payload: Partial<Pick<ProductImage, "isMain" | "sortOrder" | "imageType">>,
-  token: string,
+  token?: string,
 ) {
   return apiRequest<ProductImage>(`/api/shops/${shopId}/products/${productId}/images/${imageId}`, {
     method: "PATCH",
@@ -351,7 +351,7 @@ export async function createShopAiImageTask(
   shopId: string,
   productId: string,
   payload: CreateAiImageTaskPayload,
-  token: string,
+  token?: string,
 ) {
   return apiRequest<AiImageTask>(`/api/shops/${shopId}/products/${productId}/ai-images/tasks`, {
     method: "POST",
@@ -360,7 +360,7 @@ export async function createShopAiImageTask(
   });
 }
 
-export async function getAiCredits(shopId: string, token: string) {
+export async function getAiCredits(shopId: string, token?: string) {
   return apiRequest<AiCredits>(`/api/shops/${shopId}/ai-credits`, {
     method: "GET",
     token,
@@ -375,7 +375,7 @@ export async function getShopAiImageTasks(
     productId?: string;
     status?: string;
   },
-  token: string,
+  token?: string,
 ) {
   const params = new URLSearchParams();
   if (query.productId) {
@@ -391,7 +391,7 @@ export async function getShopAiImageTasks(
   });
 }
 
-export async function getShopAiImageTaskById(shopId: string, taskId: string, token: string) {
+export async function getShopAiImageTaskById(shopId: string, taskId: string, token?: string) {
   return apiRequest<AiImageTask>(`/api/shops/${shopId}/ai-images/tasks/${taskId}`, {
     method: "GET",
     token,
@@ -404,7 +404,7 @@ export async function attachAiGeneratedImageToProduct(
   shopId: string,
   productId: string,
   generatedImageId: string,
-  token: string,
+  token?: string,
 ) {
   return apiRequest<ProductImage>(`/api/shops/${shopId}/products/${productId}/ai-images/${generatedImageId}/attach`, {
     method: "POST",
@@ -424,7 +424,7 @@ export async function getShopOrders(
     dateFrom?: string;
     dateTo?: string;
   },
-  token: string,
+  token?: string,
 ) {
   const params = new URLSearchParams({
     page: String(query.page),
@@ -450,7 +450,7 @@ export async function getShopOrders(
   });
 }
 
-export async function getShopOrderById(shopId: string, orderId: string, token: string) {
+export async function getShopOrderById(shopId: string, orderId: string, token?: string) {
   return apiRequest<SellerOrderListItem>(`/api/shops/${shopId}/orders/${orderId}`, {
     method: "GET",
     token,
@@ -461,7 +461,7 @@ export async function updateShopOrderStatus(
   shopId: string,
   orderId: string,
   status: SellerOrderStatus,
-  token: string,
+  token?: string,
 ) {
   return apiRequest<SellerOrderListItem>(`/api/shops/${shopId}/orders/${orderId}/status`, {
     method: "PATCH",

@@ -151,8 +151,8 @@ This is required because the NestJS product API is shop-scoped.
 - shop context is driven by a reusable seller workspace store
 
 ## Security / Auth Note
-- frontend currently stores JWT in localStorage during bootstrap phase
-- this should be migrated later to httpOnly cookie auth when backend supports it
+- frontend seller routes now rely on NestJS `httpOnly` cookie auth with `credentials: "include"`
+- the frontend only persists lightweight UI hydration state in `localStorage`; raw JWT auth tokens are no longer stored there
 
 ## Verification
 

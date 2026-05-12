@@ -40,8 +40,6 @@ export function LoginForm() {
       const user = await currentUserRequest();
 
       setSession({
-        token: null,
-        refreshToken: null,
         user,
       });
 

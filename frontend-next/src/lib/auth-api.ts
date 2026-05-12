@@ -37,3 +37,9 @@ export async function currentUserRequest(token?: string) {
     token,
   });
 }
+
+export async function logoutRequest() {
+  return apiRequest<{ success: boolean }>("/api/auth/logout", {
+    method: "POST",
+  });
+}

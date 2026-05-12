@@ -181,19 +181,23 @@
   - internal Postgres port remains `5432`
 
 ### Cookie auth security hardening
-- Status: Partial
+- Status: Done
 - Evidence:
-  - `AuthController` sets and clears `httpOnly` cookie
+  - `AuthController` sets and clears `httpOnly` cookie with `path=/`
   - `JwtStrategy` reads cookie first, bearer fallback second
   - frontend API client uses `credentials: "include"`
+  - auth e2e covers `Set-Cookie`, cookie-backed `/api/auth/me`, logout cookie clearing, and bearer fallback
 - Main files/modules:
   - `backend-nest/src/modules/auth/auth.controller.ts`
   - `backend-nest/src/modules/auth/strategies/jwt.strategy.ts`
+  - `backend-nest/test/auth.e2e-spec.ts`
   - `frontend-next/src/lib/api.ts`
+  - `frontend-next/src/stores/auth-store.ts`
+  - `frontend-next/src/components/auth/protected-shell.tsx`
 - Notes:
-  - runtime support exists
-  - frontend store still keeps session user in `localStorage`
-  - login page copy still says cookie auth is not available, which is stale
+  - login/logout/session refresh are now cookie-first in the Next.js app
+  - `localStorage` keeps only lightweight user/shop hydration state, not raw auth tokens
+  - bearer fallback remains in place for smoke scripts and legacy-compatible API usage
 
 ### Docs / env standardization
 - Status: Done
@@ -217,7 +221,7 @@
 | `POST` | `/api/auth/register` | auth | Done | No | Yes |
 | `POST` | `/api/auth/login` | auth | Done | No | Yes |
 | `POST` | `/api/auth/refresh` | auth | Done | No | Covered by tests |
-| `POST` | `/api/auth/logout` | auth | Done | No | Code exists, not explicitly smoke-tested |
+| `POST` | `/api/auth/logout` | auth | Done | No | Covered by auth e2e |
 | `GET` | `/api/auth/me` | auth | Done | Yes | Yes |
 | `GET` | `/api/users/me` | users | Done | Yes | Covered by tests |
 | `POST` | `/api/shops` | shops | Done | Yes | Yes |
@@ -248,7 +252,7 @@
 
 | Route | Purpose | Status | Backend connected? | Notes |
 |---|---|---|---|---|
-| `/login` | Seller login | Done | Yes | Connected to auth API; stale copy still mentions no cookie support. |
+| `/login` | Seller login | Done | Yes | Cookie-based login flow active; redirects into seller center after success. |
 | `/seller/dashboard` | Seller overview | Partial | No | Placeholder KPIs only. |
 | `/seller/products` | Product list | Done | Yes | Search/pagination UI connected. |
 | `/seller/products/[id]` | Product detail/edit | Done | Yes | Product metadata connected; variants read-only summary. |
@@ -306,7 +310,7 @@ Current flow:
 | Area | Command | Last known result | Notes |
 |---|---|---|---|
 | backend-nest | `npm run lint` | Pass | Re-run in this audit. |
-| backend-nest | `npm test -- --runInBand` | Pass | `7` suites, `30` tests. |
+| backend-nest | `npm test -- --runInBand` | Pass | Includes auth cookie / logout / bearer fallback coverage. |
 | backend-nest | `npm run build` | Pass | Re-run in this audit. |
 | backend-nest | `npm run smoke:auth` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:products` | Exists | Not re-run in this audit. |
@@ -329,11 +333,7 @@ Current flow:
 
 - Real OpenAI runtime is not treated as fully proven in this audit.
 - Previous project notes mention an OpenAI billing hard-limit failure; if billing is still unresolved, real OpenAI smoke can fail even though code paths exist.
-- Frontend login page copy still says backend does not issue `httpOnly` cookies, but backend code now does.
-- Auth hardening is only partially reflected in frontend state:
-  - API client uses `credentials: "include"`
-  - store still persists user state in `localStorage`
-  - full manual cookie-auth UX verification is still advisable
+- Cookie-based auth now appears complete in code and automated verification, but a final browser-only manual pass is still advisable before production.
 - `ai-service` tree still contains `__pycache__` artifacts in the working tree; they are ignored/noise, not functional code.
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.

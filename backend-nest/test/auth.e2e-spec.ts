@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { NextFunction, Request, Response } from 'express';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -35,6 +36,29 @@ type CurrentUserResponse = {
   currentShopId: string | null;
   sellerApprovalStatus: string | null;
 };
+
+function parseCookies(rawCookieHeader: string | undefined) {
+  if (!rawCookieHeader) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    rawCookieHeader
+      .split(';')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separatorIndex = part.indexOf('=');
+        if (separatorIndex < 0) {
+          return [part, ''] as const;
+        }
+
+        const name = part.slice(0, separatorIndex);
+        const value = part.slice(separatorIndex + 1);
+        return [name, decodeURIComponent(value)] as const;
+      }),
+  );
+}
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
@@ -139,6 +163,10 @@ describe('AuthController (e2e)', () => {
         forbidNonWhitelisted: true,
       }),
     );
+    app.use((req: Request, _res: Response, next: NextFunction) => {
+      req.cookies = parseCookies(req.headers.cookie);
+      next();
+    });
     await app.init();
   });
 
@@ -207,9 +235,46 @@ describe('AuthController (e2e)', () => {
     expect(body.accessToken).toBeTruthy();
     expect(body.email).toBe('customer@example.com');
     expect(body.role).toBe('CUSTOMER');
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('access_token='),
+        expect.stringContaining('HttpOnly'),
+        expect.stringContaining('Path=/'),
+      ]),
+    );
   });
 
-  it('returns current user from /api/auth/me', async () => {
+  it('returns current user from /api/auth/me when authenticated by cookie', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+        fullName: 'Customer One',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+    const cookies = loginResponse.headers['set-cookie'];
+
+    const response = await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Cookie', cookies)
+      .expect(200);
+    const body = readBody<CurrentUserResponse>(response);
+
+    expect(body.email).toBe('customer@example.com');
+    expect(body.role).toBe('CUSTOMER');
+    expect(body.fullName).toBe('Customer One');
+  });
+
+  it('keeps Authorization bearer fallback for /api/auth/me', async () => {
     const registerResponse = await request(app.getHttpServer())
       .post('/api/auth/register')
       .send({
@@ -220,17 +285,14 @@ describe('AuthController (e2e)', () => {
       .expect(201);
     const registerBody = readBody<AuthResponseDto>(registerResponse);
 
-    const accessToken = registerBody.accessToken;
-
     const response = await request(app.getHttpServer())
       .get('/api/auth/me')
-      .set('Authorization', `Bearer ${accessToken}`)
+      .set('Authorization', `Bearer ${registerBody.accessToken}`)
       .expect(200);
     const body = readBody<CurrentUserResponse>(response);
 
     expect(body.email).toBe('customer@example.com');
     expect(body.role).toBe('CUSTOMER');
-    expect(body.fullName).toBe('Customer One');
   });
 
   it('refreshes token pair', async () => {
@@ -255,5 +317,33 @@ describe('AuthController (e2e)', () => {
     expect(body.accessToken).toBeTruthy();
     expect(body.refreshToken).toBeTruthy();
     expect(body.email).toBe('customer@example.com');
+  });
+
+  it('clears the auth cookie on logout', async () => {
+    await request(app.getHttpServer()).post('/api/auth/register').send({
+      email: 'customer@example.com',
+      password: 'password123',
+      fullName: 'Customer One',
+    });
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(200);
+
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('access_token=;'),
+        expect.stringContaining('Path=/'),
+      ]),
+    );
   });
 });

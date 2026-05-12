@@ -24,7 +24,6 @@ import {
   type ProductDetail,
   type ProductImage,
 } from "@/lib/seller-api";
-import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const POLLING_STATUSES = new Set<AiImageTask["status"]>(["PENDING", "PROCESSING"]);
@@ -36,7 +35,6 @@ export default function SellerProductImagesPage({
 }: {
   params: { id: string };
 }) {
-  const token = useAuthStore((state) => state.token);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [images, setImages] = useState<ProductImage[]>([]);
@@ -59,17 +57,17 @@ export default function SellerProductImagesPage({
     let mounted = true;
 
     const run = async () => {
-      if (!token || !currentShopId) {
+      if (!currentShopId) {
         setLoading(false);
         return;
       }
 
       try {
         const [productResult, imagesResult, tasksResult, creditsResult] = await Promise.all([
-          getShopProductById(currentShopId, params.id, token),
-          getShopProductImages(currentShopId, params.id, token),
-          getShopAiImageTasks(currentShopId, { productId: params.id }, token),
-          getAiCredits(currentShopId, token),
+          getShopProductById(currentShopId, params.id),
+          getShopProductImages(currentShopId, params.id),
+          getShopAiImageTasks(currentShopId, { productId: params.id }),
+          getAiCredits(currentShopId),
         ]);
 
         if (!mounted) {
@@ -97,23 +95,23 @@ export default function SellerProductImagesPage({
     return () => {
       mounted = false;
     };
-  }, [currentShopId, params.id, token]);
+  }, [currentShopId, params.id]);
 
   useEffect(() => {
-    if (!token || !currentShopId || !currentTask || !POLLING_STATUSES.has(currentTask.status)) {
+    if (!currentShopId || !currentTask || !POLLING_STATUSES.has(currentTask.status)) {
       return;
     }
 
     let attempts = 0;
     const interval = window.setInterval(() => {
       attempts += 1;
-      void getAiImageTask(currentShopId, currentTask.id, token)
+      void getAiImageTask(currentShopId, currentTask.id)
         .then(async (task) => {
           setCurrentTask(task);
           if (!POLLING_STATUSES.has(task.status)) {
             window.clearInterval(interval);
             try {
-              const nextCredits = await getAiCredits(currentShopId, token);
+              const nextCredits = await getAiCredits(currentShopId);
               setCredits(nextCredits);
             } catch {}
             return;
@@ -133,7 +131,7 @@ export default function SellerProductImagesPage({
     return () => {
       window.clearInterval(interval);
     };
-  }, [currentShopId, currentTask, token]);
+  }, [currentShopId, currentTask]);
 
   const selectedSummary = useMemo(
     () => selectedFiles.map((file) => file.name).join(", "),
@@ -141,25 +139,25 @@ export default function SellerProductImagesPage({
   );
 
   const refreshImages = async () => {
-    if (!token || !currentShopId) {
+    if (!currentShopId) {
       return;
     }
 
-    const nextImages = await getShopProductImages(currentShopId, params.id, token);
+    const nextImages = await getShopProductImages(currentShopId, params.id);
     setImages(nextImages);
   };
 
   const refreshCredits = async () => {
-    if (!token || !currentShopId) {
+    if (!currentShopId) {
       return;
     }
 
-    const nextCredits = await getAiCredits(currentShopId, token);
+    const nextCredits = await getAiCredits(currentShopId);
     setCredits(nextCredits);
   };
 
   const handleUpload = async () => {
-    if (!token || !currentShopId || !selectedFiles.length) {
+    if (!currentShopId || !selectedFiles.length) {
       return;
     }
 
@@ -168,7 +166,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      const uploaded = await uploadShopProductImages(currentShopId, params.id, selectedFiles, token);
+      const uploaded = await uploadShopProductImages(currentShopId, params.id, selectedFiles);
       setImages((current) => [...current, ...uploaded].sort((left, right) => left.sortOrder - right.sortOrder));
       setSelectedFiles([]);
       setSuccessMessage(`Uploaded ${uploaded.length} image${uploaded.length > 1 ? "s" : ""}.`);
@@ -180,7 +178,7 @@ export default function SellerProductImagesPage({
   };
 
   const handleDelete = async (imageId: string) => {
-    if (!token || !currentShopId) {
+    if (!currentShopId) {
       return;
     }
 
@@ -189,7 +187,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      await deleteShopProductImage(currentShopId, params.id, imageId, token);
+      await deleteShopProductImage(currentShopId, params.id, imageId);
       setImages((current) => current.filter((image) => image.id !== imageId));
       setSuccessMessage("Image deleted.");
     } catch (err) {
@@ -203,7 +201,7 @@ export default function SellerProductImagesPage({
     imageId: string,
     payload: Partial<Pick<ProductImage, "isMain" | "imageType">>,
   ) => {
-    if (!token || !currentShopId) {
+    if (!currentShopId) {
       return;
     }
 
@@ -212,7 +210,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      const updatedImage = await updateShopProductImage(currentShopId, params.id, imageId, payload, token);
+      const updatedImage = await updateShopProductImage(currentShopId, params.id, imageId, payload);
       setImages((current) =>
         current
           .map((image) => {
@@ -262,7 +260,7 @@ export default function SellerProductImagesPage({
     stylePreset: AiStylePreset;
     taskType: AiTaskType;
   }) => {
-    if (!token || !currentShopId) {
+    if (!currentShopId) {
       return;
     }
 
@@ -288,7 +286,6 @@ export default function SellerProductImagesPage({
             : `Create ${quantity} ${stylePreset.replaceAll("_", " ").toLowerCase()} marketplace image${quantity > 1 ? "s" : ""} for this product while keeping the item unchanged.`,
           stylePreset,
         },
-        token,
       );
       setCurrentTask(task);
       setAiModalOpen(false);
@@ -305,7 +302,7 @@ export default function SellerProductImagesPage({
   };
 
   const handleAttach = async (generatedImageId: string) => {
-    if (!token || !currentShopId || !currentTask) {
+    if (!currentShopId || !currentTask) {
       return;
     }
 
@@ -314,9 +311,9 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      const attachedImage = await attachGeneratedImage(currentShopId, params.id, generatedImageId, token);
+      const attachedImage = await attachGeneratedImage(currentShopId, params.id, generatedImageId);
       setImages((current) => [...current, attachedImage].sort((left, right) => left.sortOrder - right.sortOrder));
-      const refreshedTask = await getAiImageTask(currentShopId, currentTask.id, token);
+      const refreshedTask = await getAiImageTask(currentShopId, currentTask.id);
       setCurrentTask(refreshedTask);
       setSuccessMessage("AI image attached to product gallery.");
       await refreshImages();

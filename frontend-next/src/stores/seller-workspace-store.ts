@@ -11,7 +11,7 @@ type SellerWorkspaceState = {
   loading: boolean;
   hydrated: boolean;
   hydrate: () => void;
-  loadShops: (token: string) => Promise<void>;
+  loadShops: (token?: string) => Promise<void>;
   selectShop: (shopId: string) => void;
   clear: () => void;
 };
@@ -52,7 +52,7 @@ export const useSellerWorkspaceStore = create<SellerWorkspaceState>((set, get) =
       set({ currentShopId: null, hydrated: true });
     }
   },
-  loadShops: async (token: string) => {
+  loadShops: async (token?: string) => {
     set({ loading: true });
 
     try {
