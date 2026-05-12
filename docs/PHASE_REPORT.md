@@ -472,6 +472,36 @@ while allowing:
   - `GET http://localhost:3000/login`: pass
   - `GET http://localhost:8000/health`: pass
 
+## Public Marketplace UI Polish
+
+- Scope:
+  - polish the customer-facing pages in `frontend-next`
+  - add shared public navigation and footer without touching seller shell
+  - improve loading, empty, error, and confirmation states for public flows
+  - add lightweight Playwright smoke for public routes
+- Files changed:
+  - `frontend-next/src/app/page.tsx`
+  - `frontend-next/src/app/products/*`
+  - `frontend-next/src/components/public/*`
+  - `frontend-next/src/app/layout.tsx`
+  - `frontend-next/src/app/globals.css`
+  - `frontend-next/tests/e2e/public-smoke.spec.ts`
+  - `frontend-next/package.json`
+  - `frontend-next/README.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - home page now behaves like a storefront landing page
+  - `/products` is more responsive and resilient for demo use
+  - product detail uses a gallery and clearer checkout CTA
+  - checkout presents a clearer multi-step narrative and stronger confirmation state
+  - tracking pages are easier to use and proof upload feedback is clearer
+  - seller pages remain untouched in structure and behavior
+- Verification for this pass:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - runtime verification recorded in the final verification section for this phase
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

@@ -12,6 +12,12 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - Zustand
 
 ## Routes
+- `/`
+- `/products`
+- `/products/[id]`
+- `/checkout`
+- `/orders/track`
+- `/orders/[id]`
 - `/login`
 - `/seller/dashboard`
 - `/seller/products`
@@ -22,6 +28,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/settings`
 
 ## Current features
+- Public marketplace UI with:
+  - polished home page
+  - responsive product grid
+  - product gallery and checkout CTA
+  - order tracking and payment proof upload UI
 - Seller center layout with sidebar, header, and shop switcher
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages
@@ -75,6 +86,19 @@ Optional overrides:
 PLAYWRIGHT_BASE_URL=http://localhost:3000
 PLAYWRIGHT_BACKEND_URL=http://localhost:3001
 ```
+
+## Playwright public smoke
+With the Docker stack or local frontend/backend already running:
+
+```bash
+npm run test:e2e:public
+```
+
+Current coverage:
+- `/` loads
+- `/products` loads
+- first product detail opens when at least one product exists
+- `/orders/track` loads
 
 ## Main files
 - `src/app/login/page.tsx`

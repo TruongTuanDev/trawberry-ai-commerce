@@ -14,8 +14,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Strawberry Seller Center",
-  description: "Next.js seller workspace running in parallel with the Angular application.",
+  title: "Strawberry AI Commerce",
+  description: "Public marketplace and seller workspace running on the new Next.js and NestJS stack.",
 };
 
 export default function RootLayout({

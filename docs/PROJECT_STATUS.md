@@ -135,6 +135,21 @@
   - seller payment detail now shows payment proof metadata and proof link
   - customer tracking reflects updated `paymentStatus` after seller review
 
+### Public Marketplace UI Polish
+- Status: MVP polish done
+- Evidence:
+  - `frontend-next/src/components/public/public-shell.tsx`
+  - `frontend-next/src/components/public/public-header.tsx`
+  - `frontend-next/src/components/public/public-footer.tsx`
+  - `frontend-next/src/components/public/product-card.tsx`
+  - `frontend-next/src/components/public/product-gallery.tsx`
+  - `frontend-next/tests/e2e/public-smoke.spec.ts`
+- Notes:
+  - home page now presents a storefront-oriented hero and CTA flow
+  - public pages share a dedicated customer navbar/footer without affecting seller shell
+  - `/products`, `/products/[id]`, `/checkout`, `/orders/track`, and `/orders/[id]` now have stronger loading, empty, and error states
+  - public Playwright smoke now verifies the main customer routes load
+
 ### Payments
 - Status: MVP done for manual review
 - Evidence:
@@ -412,6 +427,7 @@ Current flow:
 | frontend-next | `npm run lint` | Pass | Re-run in this audit. |
 | frontend-next | `npm run build` | Pass | Re-run in this audit. |
 | frontend-next | `npm run test:e2e:auth` | Pass | Playwright browser smoke for cookie auth flow. |
+| frontend-next | `npm run test:e2e:public` | Pass | Playwright smoke for public home, products, and order tracking routes. |
 | ai-service | `python -m compileall app` | Pass | Re-run in this audit. |
 | ai-service | `python -m pytest -q` | Pass | `18` tests. |
 | infra | `docker compose ... config` | Pass | Re-run in this audit. |
@@ -431,6 +447,7 @@ Current flow:
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
 - Payments are now partially migrated for manual seller review, but provider-backed settlement is still missing.
 - Customer checkout, public tracking, and manual transfer proof upload are now in the new stack, but customer order history is still incomplete.
+- Public marketplace is now demo-ready, but richer merchandising, sorting, and customer account history are still incomplete.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
 ## J. Next Recommended Phases

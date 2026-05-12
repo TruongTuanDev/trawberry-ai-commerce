@@ -40,6 +40,11 @@ body {
   font-family: var(--font-sans-app), sans-serif;
 }
 
+::selection {
+  background: rgba(182, 49, 75, 0.18);
+  color: var(--foreground);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -50,6 +55,24 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 75%, white 25%);
+  outline-offset: 2px;
 }
 
 .grain-overlay {
@@ -71,4 +94,52 @@ textarea {
   border: 1px solid var(--border);
   background: var(--panel);
   box-shadow: var(--shadow);
+}
+
+.public-button-primary {
+  border-radius: 9999px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+.public-button-primary:hover {
+  background: var(--accent-strong);
+}
+
+.public-button-secondary {
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: white;
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.public-button-secondary:hover {
+  background: var(--panel-strong);
+}
+
+.public-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: white;
+  color: var(--foreground);
+  padding: 0.85rem 1rem;
+}
+
+.public-input::placeholder {
+  color: color-mix(in srgb, var(--muted) 78%, white 22%);
+}
+
+.public-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(182, 49, 75, 0.12);
+  outline: none;
+}
+
+.public-muted-card {
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  background: white;
 }

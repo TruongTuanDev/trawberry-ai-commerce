@@ -1,0 +1,38 @@
+import Link from "next/link";
+import type { PublicProduct } from "@/lib/public-api";
+
+export function ProductCard({ product }: { product: PublicProduct }) {
+  return (
+    <article className="card-panel group flex h-full flex-col overflow-hidden rounded-[1.75rem]" data-testid="product-card">
+      <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(180deg,#efe0ce,#e2c7aa)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={product.images[0]?.url ?? "https://placehold.co/960x720?text=No+Image"}
+          alt={product.name}
+          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(35,24,20,0.78))] px-5 pb-5 pt-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/72">{product.shop.name ?? "Marketplace shop"}</p>
+          <p className="mt-2 text-xl font-semibold text-white">{product.name}</p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-4 px-5 py-5">
+        <p className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{product.description ?? "No description yet."}</p>
+        <div className="mt-auto flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">From</p>
+            <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{product.price ?? "Contact shop"}</p>
+          </div>
+          <div className="flex gap-3">
+            <Link href={`/products/${product.id}`} className="public-button-secondary px-4 py-2 text-sm">
+              View
+            </Link>
+            <Link href={`/checkout?productId=${product.id}&quantity=1`} className="public-button-primary px-4 py-2 text-sm">
+              Checkout
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
