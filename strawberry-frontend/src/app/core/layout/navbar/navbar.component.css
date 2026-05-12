@@ -1,0 +1,114 @@
+:host {
+  display: block;
+}
+
+/* ── Top utility bar ── */
+.top-bar {
+  background: #3b0764;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Main search bar ── */
+.main-bar {
+  background: linear-gradient(135deg, #581c87 0%, #7e22ce 55%, #9333ea 100%);
+  box-shadow: 0 4px 20px rgba(88, 28, 135, 0.4);
+}
+
+.search-input {
+  font-size: 14px;
+  outline: none;
+  background: transparent;
+  width: 100%;
+}
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-wrap {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.search-btn {
+  background: #7e22ce;
+  border: none;
+  cursor: pointer;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.search-btn:hover {
+  background: #6b21a8;
+}
+
+/* icon action buttons on the right */
+.icon-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+
+/* top nav links */
+.top-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.top-link:hover,
+.top-link.active {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Menu button */
+.menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+  font-size: 14px;
+}
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,127 @@
+<div class="page-container py-8">
+  <h1 class="section-title">Checkout</h1>
+
+  @if (loading()) {
+  <app-loading-spinner />
+  } @else {
+  <div class="flex flex-col lg:flex-row gap-8">
+
+    <!-- Left: Form -->
+    <div class="flex-1">
+      <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+
+        <!-- Shipping Info -->
+        <div class="card p-6">
+          <h2 class="font-bold text-gray-900 mb-5">Delivery Details</h2>
+          <div class="space-y-4">
+            <app-input formControlName="customerName" label="Full Name" placeholder="Your full name" [error]="getError('customerName')"></app-input>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <app-input formControlName="customerPhone" type="tel" label="Phone" placeholder="+7 900 000 0000" [error]="getError('customerPhone')"></app-input>
+              <app-input formControlName="customerEmail" type="email" label="Email" placeholder="you@example.com" [error]="getError('customerEmail')"></app-input>
+            </div>
+            
+            <app-input formControlName="shippingAddress" label="Delivery Address" placeholder="City, Street, House, Apt" [error]="getError('shippingAddress')"></app-input>
+            <app-input formControlName="customerNote" label="Note (optional)" placeholder="Any special instructions?" [error]="getError('customerNote')"></app-input>
+          </div>
+        </div>
+
+        <!-- Shipping Method -->
+        <div class="card p-6">
+          <h2 class="font-bold text-gray-900 mb-5">Shipping Method</h2>
+          <!-- Zone selector -->
+          <div class="mb-4">
+            <label class="label">Delivery Zone</label>
+            <select formControlName="shippingZoneId" class="input" (change)="onZoneChange()">
+              <option value="">Select a zone...</option>
+              @for (zone of zones(); track zone.id) {
+              <option [value]="zone.id">{{ zone.name }}</option>
+              }
+            </select>
+          </div>
+          <!-- Method selector -->
+          @if (methods().length > 0) {
+          <div>
+            <label class="label">Shipping Method</label>
+            <div class="space-y-2">
+              @for (m of methods(); track m.id) {
+              <label class="flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all"
+                [ngClass]="form.get('shippingMethodId')?.value === m.id
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 hover:border-purple-200'">
+                <div class="flex items-center gap-3">
+                  <input type="radio" formControlName="shippingMethodId" [value]="m.id" class="sr-only" />
+                  <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center" [ngClass]="form.get('shippingMethodId')?.value === m.id
+                                ? 'border-purple-600'
+                                : 'border-gray-300'">
+                    @if (form.get('shippingMethodId')?.value === m.id) {
+                    <div class="w-2 h-2 rounded-full bg-purple-600"></div>
+                    }
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">{{ m.name }}</p>
+                    @if (m.description) {
+                    <p class="text-xs text-gray-400">{{ m.description }}</p>
+                    }
+                    @if (m.estimatedDays) {
+                    <p class="text-xs text-gray-400">~{{ m.estimatedDays }} days</p>
+                    }
+                  </div>
+                </div>
+                <span class="font-bold text-sm" style="color: var(--color-primary)">
+                  {{ m.basePrice | currency:'RUB':'₽ ':'1.0-0' }}
+                </span>
+              </label>
+              }
+            </div>
+          </div>
+          }
+        </div>
+
+        @if (error()) {
+        <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{{ error() }}</div>
+        }
+
+        <app-button type="submit" [fullWidth]="true" [disabled]="submitting() || form.invalid" [loading]="submitting()">
+          Place Order
+        </app-button>
+      </form>
+    </div>
+
+    <!-- Right: Summary -->
+    <div class="lg:w-80 shrink-0">
+      <div class="card p-6 sticky top-20">
+        <h2 class="font-bold text-gray-900 mb-4">Order Summary</h2>
+        @if (cart()) {
+        <div class="space-y-3 mb-4">
+          @for (item of cart()!.items; track item.id) {
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-600 line-clamp-1 flex-1 pr-3">{{ item.productTitle }} × {{ item.quantity }}</span>
+            <span class="font-medium shrink-0">{{ item.subtotal | currency:'RUB':'₽ ':'1.0-0' }}</span>
+          </div>
+          }
+        </div>
+        <div class="divider"></div>
+        <div class="space-y-1.5 text-sm">
+          <div class="flex justify-between text-gray-500">
+            <span>Subtotal</span>
+            <span>{{ cart()!.totalPrice | currency:'RUB':'₽ ':'1.0-0' }}</span>
+          </div>
+          <div class="flex justify-between text-gray-500">
+            <span>Shipping</span>
+            <span>{{ selectedShippingCost() | currency:'RUB':'₽ ':'1.0-0' }}</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="flex justify-between items-baseline">
+          <span class="font-bold text-gray-900">Total</span>
+          <span class="text-xl font-extrabold" style="color: var(--color-primary)">
+            {{ (cart()!.totalPrice + selectedShippingCost()) | currency:'RUB':'₽ ':'1.0-0' }}
+          </span>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+  }
+</div>

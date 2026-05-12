@@ -1,0 +1,52 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 mb-6">
+                <div
+                    class="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                    <span class="text-xl font-black">S</span>
+                </div>
+                <span class="text-2xl font-black text-gray-900 tracking-tight">Seller Portal</span>
+            </div>
+            <h1 class="text-3xl font-black text-gray-900 mb-2">Welcome back!</h1>
+            <p class="text-gray-500">Sign in to manage your shop and orders</p>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl shadow-gray-100 p-8 border border-gray-100">
+            <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+                <app-input formControlName="email" type="email" label="Work Email" placeholder="name@company.com"
+                    [error]="getError('email')"></app-input>
+
+                <app-input formControlName="password" type="password" label="Password" placeholder="••••••••"
+                    [error]="getError('password')"></app-input>
+
+                @if (errorMessage()) {
+                <div
+                    class="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                    {{ errorMessage() }}
+                </div>
+                }
+
+                <app-button type="submit" variant="primary" size="lg" class="w-full h-14 text-lg" [loading]="loading()"
+                    [disabled]="loading()">
+                    Sign In to Dashboard
+                </app-button>
+            </form>
+
+            <div class="mt-8 pt-8 border-t border-gray-50 text-center">
+                <p class="text-gray-500 text-sm">
+                    Don't have a seller account yet?
+                    <a routerLink="/seller/register" class="text-purple-600 font-bold hover:underline ml-1">
+                        Apply to Sell
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <a routerLink="/" class="text-gray-400 text-sm hover:text-gray-600 transition-colors">
+                ← Back to Strawberry Storefront
+            </a>
+        </div>
+    </div>
+</div>

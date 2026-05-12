@@ -1,0 +1,4 @@
+INFO:     127.0.0.1:63035 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56928 - "POST /internal/ai-images/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56930 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50749 - "GET /health HTTP/1.1" 200 OK

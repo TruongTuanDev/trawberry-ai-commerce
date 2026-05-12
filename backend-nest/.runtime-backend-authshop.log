@@ -1,0 +1,102 @@
+
+> backend-nest@0.0.1 start
+> nest start
+
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +25ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRedisModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mQueueModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mShopsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mProductsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mOrdersModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mFilesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mProductImagesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAiImagesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/api/health}:[39m[38;5;3m +57ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/health, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUsersController {/api/users}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/users/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mShopsController {/api/shops}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProductsController {/api/shops/:shopId/products}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProductImagesController {/api/shops/:shopId/products/:productId/images}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId/images, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId/images, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId/images/:imageId, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mFilesController {/api/files}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/upload-url, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAiImagesController {/api/shops/:shopId}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId/ai-images/tasks, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/ai-images/tasks, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/ai-images/tasks/:taskId, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/ai-images/tasks/:taskId/retry, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/products/:productId/images/:imageId/attach, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrdersController {/api/shops/:shopId/orders}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/orders, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/orders/:orderId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/shops/:shopId/orders/:orderId/status, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 25936  - [39m05/10/2026, 8:01:47 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +5ms[39m
+[31m[Nest] 25936  - [39m05/10/2026, 8:02:01 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientInitializationError: 
+Invalid `this.prisma.user.findUnique()` invocation in
+C:\Users\admin\trawberry\backend-nest\src\modules\auth\auth.service.ts:26:49
+
+  23 ) {}
+  24 
+  25 async register(dto: RegisterDto) {
+→ 26   const existingUser = await this.prisma.user.findUnique(
+Authentication failed against database server, the provided database credentials for `strawberry_user` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+    at ei.handleRequestError [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\RequestHandler.ts:242:13[90m)[39m
+    at ei.handleAndLogRequestError [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\RequestHandler.ts:174:12[90m)[39m
+    at ei.request [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\RequestHandler.ts:143:12[90m)[39m
+    at async a [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\getPrismaClient.ts:833:24[90m)[39m
+    at async AuthService.register [90m(C:\Users\admin\trawberry\backend-nest\[39msrc\modules\auth\auth.service.ts:26:26[90m)[39m
+    at async [90mC:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@nestjs[24m\core\router\router-execution-context.js:46:28
+    at async [90mC:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@nestjs[24m\core\router\router-proxy.js:9:17 {
+  clientVersion: [32m'6.16.2'[39m,
+  errorCode: [90mundefined[39m,
+  retryable: [90mundefined[39m
+}
+[31m[Nest] 25936  - [39m05/10/2026, 8:02:01 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39mPrismaClientInitializationError: 
+Invalid `this.prisma.user.findUnique()` invocation in
+C:\Users\admin\trawberry\backend-nest\src\modules\auth\auth.service.ts:65:41
+
+  62 }
+  63 
+  64 async login(dto: LoginDto) {
+→ 65   const user = await this.prisma.user.findUnique(
+Authentication failed against database server, the provided database credentials for `strawberry_user` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+    at ei.handleRequestError [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\RequestHandler.ts:242:13[90m)[39m
+    at ei.handleAndLogRequestError [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\RequestHandler.ts:174:12[90m)[39m
+    at ei.request [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\RequestHandler.ts:143:12[90m)[39m
+    at async a [90m(C:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@prisma[24m\client\src\runtime\getPrismaClient.ts:833:24[90m)[39m
+    at async AuthService.login [90m(C:\Users\admin\trawberry\backend-nest\[39msrc\modules\auth\auth.service.ts:65:18[90m)[39m
+    at async [90mC:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@nestjs[24m\core\router\router-execution-context.js:46:28
+    at async [90mC:\Users\admin\trawberry\backend-nest\[39mnode_modules\[4m@nestjs[24m\core\router\router-proxy.js:9:17 {
+  clientVersion: [32m'6.16.2'[39m,
+  errorCode: [90mundefined[39m,
+  retryable: [90mundefined[39m
+}

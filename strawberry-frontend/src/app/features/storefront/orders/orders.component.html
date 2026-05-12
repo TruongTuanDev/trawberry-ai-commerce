@@ -1,0 +1,48 @@
+<div class="page-container py-8">
+  <h1 class="section-title">My Orders</h1>
+
+  @if (loading()) {
+  <app-loading-spinner />
+  } @else if (orders().length === 0) {
+  <div class="text-center py-20">
+    <div class="w-20 h-20 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4">
+      <svg class="w-10 h-10 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    </div>
+    <p class="text-xl font-bold text-gray-700 mb-2">No orders yet</p>
+    <p class="text-gray-400 mb-6">Your orders will appear here once you place them.</p>
+    <a routerLink="/catalog" class="btn-primary">Start Shopping</a>
+  </div>
+  } @else {
+  <div class="space-y-4">
+    @for (order of orders(); track order.id) {
+    <a [routerLink]="['/orders', order.id]"
+      class="card p-5 flex flex-col sm:flex-row gap-4 sm:items-center hover:shadow-md transition-shadow block">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-3 mb-2">
+          <h3 class="font-bold text-gray-900">{{ order.orderNumber }}</h3>
+          <span class="badge" [ngClass]="orderStatusClass(order.status)">{{ order.status }}</span>
+          <span class="badge" [ngClass]="paymentStatusClass(order.paymentStatus)">{{ order.paymentStatus }}</span>
+        </div>
+        <p class="text-sm text-gray-500">
+          {{ order.items.length }} item(s) · {{ order.createdAt | date:'MMM d, y' }}
+          @if (order.shippingMethodName) {
+          · {{ order.shippingMethodName }}
+          }
+        </p>
+      </div>
+      <div class="flex items-center gap-4 shrink-0">
+        <span class="text-xl font-extrabold" style="color: var(--color-primary)">
+          {{ order.totalAmount | currency:'RUB':'₽ ':'1.0-0' }}
+        </span>
+        <svg class="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </a>
+    }
+  </div>
+  }
+</div>

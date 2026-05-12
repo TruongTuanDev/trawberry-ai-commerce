@@ -1,0 +1,12 @@
+spring:
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    org.springframework.security: INFO
+    com.strawberry.ecommerce: INFO
+    org.hibernate.orm.query: WARN
+    org.springframework.data.repository: WARN
+    org.springframework.beans.factory: WARN
+    org.flywaydb: INFO

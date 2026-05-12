@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+generated/
+
+# env files
+.env
+.env.local
+*.env
+!.env.example
+!*.env.example

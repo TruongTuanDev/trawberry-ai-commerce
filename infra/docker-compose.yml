@@ -1,0 +1,207 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: strawberry-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-strawberry_db}
+      POSTGRES_USER: ${POSTGRES_USER:-strawberry_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-strawberry_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: strawberry-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-net
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: strawberry-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-net
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: strawberry-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
+      mc mb --ignore-existing local/${MINIO_BUCKET:-strawberry-ai-assets} &&
+      mc anonymous set public local/${MINIO_BUCKET:-strawberry-ai-assets}
+      "
+    restart: "no"
+    networks:
+      - strawberry-net
+
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    container_name: strawberry-ai-service
+    restart: unless-stopped
+    environment:
+      AI_SERVICE_HOST: 0.0.0.0
+      AI_SERVICE_PORT: 8000
+      AI_IMAGE_PROVIDER: ${AI_IMAGE_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-gpt-image-1}
+      OPENAI_IMAGE_SIZE: ${OPENAI_IMAGE_SIZE:-1024x1536}
+      OPENAI_IMAGE_QUALITY: ${OPENAI_IMAGE_QUALITY:-medium}
+      OPENAI_IMAGE_OUTPUT_FORMAT: ${OPENAI_IMAGE_OUTPUT_FORMAT:-jpeg}
+      OPENAI_IMAGE_TIMEOUT_SECONDS: ${OPENAI_IMAGE_TIMEOUT_SECONDS:-120}
+      OPENAI_IMAGE_MAX_RETRIES: ${OPENAI_IMAGE_MAX_RETRIES:-1}
+      MAX_INPUT_IMAGE_SIZE_MB: ${MAX_INPUT_IMAGE_SIZE_MB:-15}
+      RUN_OPENAI_SMOKE: ${RUN_OPENAI_SMOKE:-false}
+      AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-dev-internal-token}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+      STORAGE_LOCAL_ROOT: generated
+      STORAGE_PUBLIC_BASE_URL: http://localhost:${AI_SERVICE_PORT:-8000}/generated
+      S3_BUCKET: ${MINIO_BUCKET:-strawberry-ai-assets}
+      S3_REGION: us-east-1
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_PUBLIC_BASE_URL: http://localhost:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
+      NEST_CALLBACK_AUTH_TOKEN: ""
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "${AI_SERVICE_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-net
+
+  backend-nest:
+    build:
+      context: ../backend-nest
+      dockerfile: Dockerfile
+    container_name: strawberry-backend-nest
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-strawberry_user}:${POSTGRES_PASSWORD:-strawberry_password}@postgres:5432/${POSTGRES_DB:-strawberry_db}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      BULLMQ_DISABLED: "false"
+      CORS_ORIGIN: http://localhost:${FRONTEND_PORT:-3000}
+      FILE_STORAGE_DRIVER: local
+      UPLOAD_ROOT: uploads
+      FILES_PUBLIC_BASE_URL: http://localhost:${BACKEND_PORT:-3001}
+      S3_BUCKET: ${MINIO_BUCKET:-strawberry-ai-assets}
+      S3_REGION: us-east-1
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      STORAGE_DRIVER: local
+      S3_PUBLIC_BASE_URL: http://localhost:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+      AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-dev-internal-token}
+      AI_SERVICE_TIMEOUT_MS: 45000
+      AI_SERVICE_RETRY_ATTEMPTS: 3
+      AI_SERVICE_RETRY_DELAY_MS: 1000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    volumes:
+      - backend-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3001/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-net
+
+  frontend-next:
+    build:
+      context: ../frontend-next
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-3001}
+    container_name: strawberry-frontend-next
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-3001}
+    depends_on:
+      backend-nest:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/login >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-net
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  backend-uploads:
+
+networks:
+  strawberry-net:
+    driver: bridge

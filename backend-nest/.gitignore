@@ -1,0 +1,11 @@
+dist/
+node_modules/
+coverage/
+uploads/
+
+# env files
+.env
+.env.local
+*.env
+!.env.example
+!*.env.example

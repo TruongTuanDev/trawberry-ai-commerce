@@ -1,0 +1,22 @@
+<div class="mb-4">
+  <label *ngIf="label()" [for]="id()" class="label">
+    {{ label() }}
+  </label>
+  <div class="relative">
+    <input
+      [type]="type()"
+      [id]="id()"
+      [placeholder]="placeholder()"
+      [disabled]="isDisabled"
+      [value]="value"
+      (input)="onInput($event)"
+      (blur)="onTouch()"
+      class="input"
+      [class.border-red-500]="error()"
+      [class.focus:ring-red-500]="error()"
+    />
+  </div>
+  <p *ngIf="error()" class="mt-1.5 text-sm text-red-600">
+    {{ error() }}
+  </p>
+</div>

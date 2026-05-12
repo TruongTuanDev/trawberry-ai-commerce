@@ -1,0 +1,16 @@
+import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+
+@ApiTags('health')
+@Controller('api/health')
+export class HealthController {
+  @Get()
+  @ApiOperation({ summary: 'Basic health check for the NestJS backend.' })
+  getHealth() {
+    return {
+      status: 'ok',
+      service: 'backend-nest',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}

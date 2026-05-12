@@ -1,0 +1,127 @@
+<section
+  class="relative overflow-hidden"
+  [style.background]="slides[currentSlide()].gradient"
+  style="min-height: 280px;"
+>
+  <div class="pointer-events-none absolute inset-0 opacity-10 hero-pattern-circles"></div>
+  <div class="absolute -right-20 -top-20 h-72 w-72 rounded-full opacity-20 blur-3xl" style="background:white"></div>
+  <div class="absolute -bottom-10 -left-10 h-48 w-48 rounded-full opacity-10 blur-2xl" style="background:white"></div>
+
+  <div class="page-container relative py-12 lg:py-16">
+    <div class="max-w-xl">
+      <span class="mb-5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
+        {{ slides[currentSlide()].tag }}
+      </span>
+
+      <h1 class="mb-4 text-4xl font-black leading-tight text-white lg:text-5xl">
+        {{ slides[currentSlide()].title }}
+      </h1>
+
+      <p class="mb-8 text-base leading-relaxed text-purple-100">
+        {{ slides[currentSlide()].subtitle }}
+      </p>
+
+      <a
+        routerLink="/catalog"
+        class="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3 font-black text-purple-900 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-purple-50"
+      >
+        {{ slides[currentSlide()].cta }}
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="absolute bottom-4 right-8 flex gap-2">
+    @for (s of slides; track $index) {
+    <button
+      (click)="currentSlide.set($index)"
+      class="h-2 rounded-full transition-all"
+      [ngClass]="$index === currentSlide() ? 'bg-white w-5' : 'bg-white/40 w-2'"
+    ></button>
+    }
+  </div>
+</section>
+
+<div class="overflow-x-auto border-b border-gray-100 bg-white py-3 scrollbar-none">
+  <div class="page-container flex min-w-max items-center justify-center gap-8">
+    @for (f of features; track f.label) {
+    <div class="flex shrink-0 items-center gap-2 text-sm text-gray-500">
+      <div class="flex h-7 w-7 items-center justify-center rounded-full" style="background-color: var(--color-primary-100)">
+        <span class="text-base">{{ f.icon }}</span>
+      </div>
+      {{ f.label }}
+    </div>
+    }
+  </div>
+</div>
+
+@if (categories().length > 0) {
+<section class="page-container py-5">
+  <div
+    #categoryStrip
+    class="flex gap-2 overflow-x-auto pb-2 scrollbar-none select-none cursor-grab active:cursor-grabbing"
+    (wheel)="onCategoryWheel($event)"
+    (pointerdown)="onCategoryPointerDown($event)"
+    (pointermove)="onCategoryPointerMove($event)"
+    (pointerup)="onCategoryPointerUp($event)"
+    (pointercancel)="onCategoryPointerUp($event)"
+  >
+    <a
+      routerLink="/catalog"
+      class="shrink-0 rounded-full border border-transparent px-4 py-1.5 text-sm font-semibold transition-all"
+      [ngClass]="activeCategoryId() === null ? 'bg-purple-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+    >
+      All
+    </a>
+    @for (cat of categories(); track cat.id) {
+    <a
+      routerLink="/catalog"
+      [queryParams]="{ categoryId: cat.id }"
+      class="shrink-0 rounded-full border border-transparent px-4 py-1.5 text-sm font-semibold transition-all"
+      [ngClass]="activeCategoryId() === cat.id ? 'bg-purple-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+    >
+      {{ cat.name }}
+    </a>
+    }
+  </div>
+</section>
+}
+
+<section class="page-container pb-12">
+  <div class="mb-5 flex items-center justify-between">
+    <h2 class="text-lg font-black text-gray-900">
+      {{ activeCategoryName() }}
+      @if (totalElements() > 0) {
+      <span class="ml-2 text-sm font-normal text-gray-400">{{ totalElements() }} items</span>
+      }
+    </h2>
+    <a routerLink="/catalog" class="text-sm font-semibold text-purple-600 hover:underline">
+      See all →
+    </a>
+  </div>
+
+  @if (loading() && products().length === 0) {
+  <app-loading-spinner />
+  } @else if (products().length === 0 && !loading()) {
+  <div class="py-20 text-center text-gray-400">
+    <p class="text-lg font-medium">No products found for this category.</p>
+    <a routerLink="/catalog" class="mt-2 inline-block font-bold text-purple-600 hover:underline">Clear Filters</a>
+  </div>
+  } @else {
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    @for (product of products(); track product.id) {
+    <app-product-card [product]="product" />
+    }
+  </div>
+  }
+
+  <div #scrollAnchor class="mt-5 h-10">
+    @if (loading() && products().length > 0) {
+    <div class="flex justify-center py-4">
+      <div class="h-8 w-8 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600"></div>
+    </div>
+    }
+  </div>
+</section>

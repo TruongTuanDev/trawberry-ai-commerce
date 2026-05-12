@@ -1,0 +1,227 @@
+<div class="space-y-6">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <h1 class="text-2xl font-black tracking-tight text-gray-900">Fulfillment Workspace</h1>
+      <p class="text-gray-500">Manage seller orders by real backend stages: new, packing, shipping, delivered, and cancelled.</p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
+      @for (tab of tabs; track tab.status) {
+      <button
+        type="button"
+        (click)="selectTab(tab.status)"
+        class="rounded-xl px-4 py-2.5 text-sm font-bold transition-colors"
+        [class.bg-gray-900]="activeTab() === tab.status"
+        [class.text-white]="activeTab() === tab.status"
+        [class.bg-white]="activeTab() !== tab.status"
+        [class.text-gray-600]="activeTab() !== tab.status"
+        [class.hover:bg-gray-100]="activeTab() !== tab.status"
+      >
+        {{ tab.label }}
+      </button>
+      }
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+    <p class="text-sm font-bold text-gray-900">{{ activeTabMeta().label }}</p>
+    <p class="mt-1 text-sm text-gray-500">{{ activeTabMeta().description }}</p>
+
+    @if (activeTab() === 'NEW') {
+    <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+      The current backend supports whole-order fulfillment only. Item-level picking, partial quantities, and package/box grouping require a new fulfillment package backend model and are intentionally not faked here.
+    </div>
+    }
+  </div>
+
+  @if (facade.loading() || shipmentLoading()) {
+  <app-loading-spinner></app-loading-spinner>
+  } @else if (facade.orders().length === 0) {
+  <app-empty-state
+    title="No orders in this stage"
+    description="Orders matching the selected fulfillment stage will appear here.">
+  </app-empty-state>
+  } @else {
+  <div class="space-y-5">
+    @for (order of facade.orders(); track order.id) {
+    <section class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+      <div class="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-black text-gray-900">#{{ order.orderNumber }}</h2>
+            <app-badge [variant]="getStatusVariant(order.status)">{{ order.status }}</app-badge>
+            <app-badge [variant]="getPaymentVariant(order.paymentStatus)">{{ order.paymentStatus }}</app-badge>
+          </div>
+
+          <div class="grid gap-1 text-sm text-gray-500 sm:grid-cols-2">
+            <p><span class="font-semibold text-gray-700">Customer:</span> {{ order.customerName || 'Guest' }}</p>
+            <p><span class="font-semibold text-gray-700">Created:</span> {{ order.createdAt | date:'medium' }}</p>
+            <p><span class="font-semibold text-gray-700">Items:</span> {{ order.items.length }}</p>
+            <p><span class="font-semibold text-gray-700">Total:</span> {{ order.totalAmount | currency:'RUB':'symbol-narrow':'1.0-0' }}</p>
+          </div>
+
+          @if (order.shippingMethodName || order.shippingAddress) {
+          <div class="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            @if (order.shippingMethodName) {
+            <p>
+              <span class="font-semibold text-gray-700">Shipping:</span>
+              {{ order.shippingMethodName }}
+              @if (order.shippingZoneName) { · {{ order.shippingZoneName }} }
+            </p>
+            }
+            @if (order.shippingAddress) {
+            <p class="mt-1 line-clamp-2">
+              <span class="font-semibold text-gray-700">Address:</span> {{ order.shippingAddress }}
+            </p>
+            }
+          </div>
+          }
+        </div>
+
+        <div class="flex min-w-[260px] flex-col gap-2">
+          @if (activeTab() === 'NEW') {
+          <button
+            type="button"
+            (click)="moveToPacking(order.id)"
+            [disabled]="facade.updatingStatusId() === order.id || order.paymentStatus !== 'APPROVED'"
+            class="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ facade.updatingStatusId() === order.id ? 'Moving...' : 'Move Entire Order to Packing' }}
+          </button>
+
+          <button
+            type="button"
+            (click)="cancel(order.id)"
+            [disabled]="facade.updatingStatusId() === order.id"
+            class="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+          >
+            Cancel Order
+          </button>
+
+          @if (order.paymentStatus !== 'APPROVED') {
+          <p class="text-xs text-amber-700">
+            Payment must be approved on the separate Payments screen before fulfillment can start.
+          </p>
+          }
+          } @else if (activeTab() === 'ASSEMBLING') {
+          <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-sm font-bold text-gray-900">Create Shipment</p>
+            <p class="mt-1 text-xs text-gray-500">Creating a shipment moves the whole order into the Shipping stage.</p>
+
+            <label class="mt-3 block text-xs font-semibold uppercase tracking-wide text-gray-500">Carrier</label>
+            <input
+              type="text"
+              [value]="shipmentDraft(order.id).carrier"
+              (input)="updateShipmentDraft(order.id, 'carrier', inputValue($event))"
+              class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none"
+              placeholder="e.g. SDEK"
+            />
+
+            <label class="mt-3 block text-xs font-semibold uppercase tracking-wide text-gray-500">Tracking Number</label>
+            <input
+              type="text"
+              [value]="shipmentDraft(order.id).trackingNumber"
+              (input)="updateShipmentDraft(order.id, 'trackingNumber', inputValue($event))"
+              class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none"
+              placeholder="Optional tracking number"
+            />
+
+            <div class="mt-4 flex gap-2">
+              <button
+                type="button"
+                (click)="createShipment(order.id)"
+                [disabled]="creatingShipmentOrderId() === order.id || !shipmentDraft(order.id).carrier.trim()"
+                class="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black disabled:opacity-50"
+              >
+                {{ creatingShipmentOrderId() === order.id ? 'Creating...' : 'Ship Order' }}
+              </button>
+
+              <button
+                type="button"
+                (click)="cancel(order.id)"
+                [disabled]="facade.updatingStatusId() === order.id"
+                class="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          } @else if (activeTab() === 'SHIPPING' || activeTab() === 'DELIVERED') {
+          @if (shipmentByOrder(order.id); as shipment) {
+          <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+            <p><span class="font-semibold text-gray-700">Carrier:</span> {{ shipment.carrier || '—' }}</p>
+            <p><span class="font-semibold text-gray-700">Tracking:</span> {{ shipment.trackingNumber || '—' }}</p>
+            <p class="mt-1"><span class="font-semibold text-gray-700">Shipment Status:</span> {{ shipment.shipmentStatus }}</p>
+
+            @if (activeTab() === 'SHIPPING') {
+            <div class="mt-4 flex flex-wrap gap-2">
+              @for (status of nextShipmentStatuses(shipment); track status) {
+              <button
+                type="button"
+                (click)="updateShipment(shipment.id, status)"
+                [disabled]="updatingShipmentId() === shipment.id"
+                class="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-bold text-purple-700 transition-colors hover:bg-purple-100 disabled:opacity-50"
+              >
+                {{ shipmentActionLabel(status) }}
+              </button>
+              }
+            </div>
+            }
+          </div>
+          } @else {
+          <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+            No shipment record found for this order yet.
+          </div>
+          }
+          } @else {
+          <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+            This stage is read-only in the current workflow.
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="divide-y divide-gray-100">
+        @for (item of order.items; track item.id) {
+        <div class="grid gap-4 px-6 py-4 lg:grid-cols-[auto_1fr_auto_auto] lg:items-center">
+          <div class="h-16 w-16 overflow-hidden rounded-2xl bg-gray-100">
+            @if (item.productImageSnapshot) {
+            <img [src]="item.productImageSnapshot" [alt]="item.productTitleSnapshot" class="h-full w-full object-cover" />
+            } @else {
+            <div class="flex h-full w-full items-center justify-center text-gray-300">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+              </svg>
+            </div>
+            }
+          </div>
+
+          <div class="min-w-0">
+            <p class="font-bold text-gray-900">{{ item.productTitleSnapshot }}</p>
+            <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+              @if (item.wbNmIdSnapshot) {
+              <p>WB ID: {{ item.wbNmIdSnapshot }}</p>
+              }
+              @if (item.variantAttributesSnapshot) {
+              <p>{{ item.variantAttributesSnapshot }}</p>
+              }
+            </div>
+          </div>
+
+          <div class="text-sm text-gray-600">
+            <p><span class="font-semibold text-gray-700">Qty:</span> {{ item.quantity }}</p>
+            <p><span class="font-semibold text-gray-700">Price:</span> {{ item.priceAtPurchase | currency:'RUB':'symbol-narrow':'1.0-0' }}</p>
+          </div>
+
+          <div class="text-right">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Line Total</p>
+            <p class="text-base font-black text-gray-900">{{ lineSubtotal(item) | currency:'RUB':'symbol-narrow':'1.0-0' }}</p>
+          </div>
+        </div>
+        }
+      </div>
+    </section>
+    }
+  </div>
+  }
+</div>

@@ -1,0 +1,65 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+    <div class="w-full max-w-xl">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 mb-6">
+                <div
+                    class="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-200">
+                    <span class="text-xl font-black">S</span>
+                </div>
+                <span class="text-2xl font-black text-gray-900 tracking-tight">Seller Portal</span>
+            </div>
+            <h1 class="text-3xl font-black text-gray-900 mb-2">Apply to Sell</h1>
+            <p class="text-gray-500">Join our community of premium sellers and reach local customers</p>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-xl shadow-gray-100 p-8 border border-gray-100">
+            <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <app-input formControlName="fullName" label="Full name" placeholder="John Doe"
+                        [error]="getError('fullName')"></app-input>
+
+                    <app-input formControlName="email" type="email" label="Work Email" placeholder="john@company.com"
+                        [error]="getError('email')"></app-input>
+                </div>
+
+                <app-input formControlName="phone" type="tel" label="Phone number" placeholder="+7 (___) ___-____"
+                    [error]="getError('phone')"></app-input>
+
+                <app-input formControlName="password" type="password" label="Password"
+                    placeholder="Minimum 8 characters" [error]="getError('password')"></app-input>
+
+                <div
+                    class="p-5 rounded-2xl bg-purple-50 border border-purple-100 italic text-xs text-purple-600 leading-relaxed">
+                    <strong>Note:</strong> Seller accounts are subject to administrative review. After registration, you
+                    will be able to set up your shop, but it will remain in "Pending Approval" status until verified.
+                </div>
+
+                @if (errorMessage()) {
+                <div
+                    class="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                    {{ errorMessage() }}
+                </div>
+                }
+
+                <app-button type="submit" variant="primary" size="lg" class="w-full h-14 text-lg" [loading]="loading()"
+                    [disabled]="loading()">
+                    Submit Application
+                </app-button>
+            </form>
+
+            <div class="mt-8 pt-8 border-t border-gray-50 text-center">
+                <p class="text-gray-500 text-sm">
+                    Already have a seller account?
+                    <a routerLink="/seller/login" class="text-purple-600 font-bold hover:underline ml-1">
+                        Sign In
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center text-xs text-gray-400">
+            By submitting this form, you agree to the Strawberry E-Commerce Seller Terms & Conditions and Privacy
+            Policy.
+        </div>
+    </div>
+</div>

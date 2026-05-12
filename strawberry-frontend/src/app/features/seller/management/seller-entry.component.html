@@ -1,0 +1,120 @@
+@if (isLoading()) {
+<div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-950 via-purple-900 to-fuchsia-900">
+  <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-indigo-600"></div>
+</div>
+} @else {
+<div class="min-h-screen bg-gradient-to-br from-violet-950 via-purple-900 to-fuchsia-900 px-4 py-10 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-6xl">
+    @if (approvalStatus() === 'PENDING') {
+    <section class="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-2xl shadow-violet-950/30 backdrop-blur">
+      <div class="grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:px-8">
+        <div>
+          <p class="text-xs font-black uppercase tracking-[0.24em] text-amber-600">Seller Approval</p>
+          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Your seller account is waiting for admin approval</h1>
+          <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            {{ sellerName() }}, your seller account has been created successfully. Our team still needs to review and approve it before you can open a shop and start selling on Strawberry.
+          </p>
+
+          <div class="mt-6 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
+            Approval Status: PENDING
+          </div>
+
+          @if (reviewNote()) {
+          <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Admin Note</p>
+            <p class="mt-2 text-sm text-slate-700">{{ reviewNote() }}</p>
+          </div>
+          }
+        </div>
+
+        <div class="rounded-[28px] bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-6 text-white shadow-lg shadow-fuchsia-900/30">
+          <p class="text-xs font-black uppercase tracking-[0.2em] text-white/70">What Happens Next</p>
+          <h2 class="mt-3 text-2xl font-black">We review seller applications before shop access is enabled.</h2>
+          <ul class="mt-5 space-y-3 text-sm leading-6 text-white/85">
+            <li>We confirm the seller account details and business readiness.</li>
+            <li>Once approved, you will see the seller welcome screen and can create your first shop.</li>
+            <li>After your shop is created, Strawberry will open the active seller workspace automatically.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+    } @else if (approvalStatus() === 'REJECTED') {
+    <section class="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-2xl shadow-violet-950/30 backdrop-blur">
+      <div class="grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:px-8">
+        <div>
+          <p class="text-xs font-black uppercase tracking-[0.24em] text-rose-600">Seller Approval</p>
+          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Your seller access is not approved yet</h1>
+          <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            Your seller account still cannot open shops. Please review the note below and contact the platform admin if you need help with the approval process.
+          </p>
+
+          <div class="mt-6 inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700">
+            Approval Status: REJECTED
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Admin Note</p>
+            <p class="mt-2 text-sm text-slate-700">{{ reviewNote() || 'No review note was provided yet.' }}</p>
+          </div>
+        </div>
+
+        <div class="rounded-[28px] bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-6 text-white shadow-lg shadow-fuchsia-900/30">
+          <p class="text-xs font-black uppercase tracking-[0.2em] text-white/70">Need To Retry</p>
+          <h2 class="mt-3 text-2xl font-black">Update your seller information and request support from the admin team.</h2>
+          <p class="mt-4 text-sm leading-6 text-white/85">
+            Shop creation stays locked until the seller profile is approved again.
+          </p>
+        </div>
+      </div>
+    </section>
+    } @else {
+    <section class="overflow-hidden rounded-[32px] border border-white/10 bg-white/95 shadow-2xl shadow-violet-950/30 backdrop-blur">
+      <div class="grid gap-6 px-6 py-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:px-8">
+        <div>
+          <p class="text-xs font-black uppercase tracking-[0.24em] text-purple-600">Seller Welcome</p>
+          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Start selling on Strawberry</h1>
+          <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            Your seller account is approved. Create your first shop to manage products, pricing, inventory, orders, payments, shipments, and sync operations from one focused seller workspace.
+          </p>
+
+          <div class="mt-6 grid gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Seller Status</p>
+              <p class="mt-2 text-lg font-black text-slate-950">Approved</p>
+            </div>
+            <div class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-4">
+              <p class="text-[11px] font-black uppercase tracking-[0.16em] text-indigo-600">Current Shops</p>
+              <p class="mt-2 text-lg font-black text-slate-950">{{ shopCount() }}</p>
+            </div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+              <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">Ready To Launch</p>
+              <p class="mt-2 text-lg font-black text-slate-950">Create your first shop</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-[28px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-lg shadow-violet-200">
+          <p class="text-xs font-black uppercase tracking-[0.2em] text-white/70">Why Sellers Use Strawberry</p>
+          <ul class="mt-4 space-y-3 text-sm leading-6 text-white/85">
+            <li>Multi-shop seller workspace with shop-scoped operations.</li>
+            <li>Variant-level pricing and inventory control.</li>
+            <li>Payment review, fulfillment, shipment tracking, and sync tools in one place.</li>
+          </ul>
+
+          <button
+            type="button"
+            (click)="createShop()"
+            class="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-violet-700 transition-transform hover:-translate-y-0.5"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create Your Shop
+          </button>
+        </div>
+      </div>
+    </section>
+    }
+  </div>
+</div>
+}

@@ -1,0 +1,10 @@
+<div class="min-h-screen flex flex-col">
+  @if (showGlobalNavbar()) {
+  <app-navbar />
+  }
+  <main class="flex-1">
+    <router-outlet />
+  </main>
+  <app-footer />
+  <app-toast />
+</div>

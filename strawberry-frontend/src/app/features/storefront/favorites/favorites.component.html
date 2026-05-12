@@ -1,0 +1,42 @@
+<div class="page-container py-8">
+  <nav class="mb-6 flex items-center gap-2 text-sm text-gray-400">
+    <a routerLink="/" class="transition-colors hover:text-purple-700">Home</a>
+    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="text-gray-600">Favorites</span>
+  </nav>
+
+  <div class="mb-8 flex items-end justify-between gap-4">
+    <div>
+      <p class="mb-2 text-xs font-black uppercase tracking-[0.3em] text-purple-600">My Favorites</p>
+      <h1 class="text-3xl font-black text-gray-900">Favorite Products</h1>
+      <p class="mt-2 text-sm text-gray-500">Products you saved for later shopping.</p>
+    </div>
+    <p class="text-sm text-gray-500">
+      @if (!loading()) { {{ products().length }} items }
+    </p>
+  </div>
+
+  @if (loading()) {
+  <app-loading-spinner />
+  } @else if (products().length === 0) {
+  <app-empty-state
+    title="No favorites yet"
+    description="Tap the heart on any product card to save it here for later."
+  >
+    <svg icon class="mx-auto mb-4 h-14 w-14 opacity-40 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+    <div actions class="flex justify-center">
+      <a routerLink="/catalog" class="btn-primary px-8">Browse Products</a>
+    </div>
+  </app-empty-state>
+  } @else {
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+    @for (product of products(); track product.id) {
+    <app-product-card [product]="product" />
+    }
+  </div>
+  }
+</div>

@@ -1,0 +1,112 @@
+<div class="page-container py-12">
+  <div class="mx-auto max-w-3xl">
+    @if (loading()) {
+      <app-loading-spinner></app-loading-spinner>
+    } @else if (order(); as currentOrder) {
+      <div class="grid gap-6 lg:grid-cols-[1.25fr_0.85fr]">
+        <section class="card p-8">
+          <div class="mb-6">
+            <p class="text-sm font-bold uppercase tracking-wide text-purple-600">Payment Confirmation</p>
+            <h1 class="mt-2 text-2xl font-bold text-gray-900">{{ currentOrder.orderNumber }}</h1>
+            <p class="mt-2 text-sm text-gray-500">{{ statusMessage() }}</p>
+          </div>
+
+          <div class="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">
+            <p><span class="font-semibold text-gray-800">Current payment status:</span> {{ currentOrder.paymentStatus }}</p>
+            @if (currentOrder.paymentSubmittedAt) {
+              <p class="mt-2"><span class="font-semibold text-gray-800">Last submitted:</span> {{ currentOrder.paymentSubmittedAt | date:'medium' }}</p>
+            }
+            @if (currentOrder.paymentReviewNote) {
+              <p class="mt-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                <span class="font-semibold">Seller note:</span> {{ currentOrder.paymentReviewNote }}
+              </p>
+            }
+          </div>
+
+          @if (currentOrder.shopPaymentInstructions) {
+            <div class="mb-6 rounded-2xl border border-purple-200 bg-purple-50 p-5">
+              <p class="text-sm font-bold text-purple-900">Payment Instructions</p>
+              <p class="mt-2 whitespace-pre-line text-sm text-purple-800">{{ currentOrder.shopPaymentInstructions }}</p>
+            </div>
+          }
+
+          @if (canSubmit()) {
+            <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-5">
+              <app-input formControlName="payerName" label="Payer Name" placeholder="Name on the bank transfer" [error]="getError('payerName')"></app-input>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <app-input formControlName="transferAmount" type="number" label="Transferred Amount" placeholder="0.00" [error]="getError('transferAmount')"></app-input>
+                <app-input formControlName="transferTime" type="datetime-local" label="Transfer Time" [error]="getError('transferTime')"></app-input>
+              </div>
+
+              <div
+                class="cursor-pointer rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center transition-colors hover:border-purple-300"
+                (click)="fileInput.click()"
+                (dragover)="$event.preventDefault()"
+                (drop)="onDrop($event)">
+                <input #fileInput type="file" accept="image/*" class="hidden" (change)="onFileChange($event)" />
+                @if (selectedFile()) {
+                  <p class="font-semibold text-gray-900">{{ selectedFile()!.name }}</p>
+                  <p class="mt-1 text-xs text-gray-400">{{ (selectedFile()!.size / 1024) | number:'1.0-0' }} KB</p>
+                } @else {
+                  <p class="font-semibold text-gray-700">Upload receipt image</p>
+                  <p class="mt-1 text-xs text-gray-400">Use the exact transfer proof you want the seller to review.</p>
+                }
+              </div>
+
+              @if (error()) {
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div>
+              }
+
+              <app-button type="submit" [fullWidth]="true" [loading]="uploading()" [disabled]="uploading() || form.invalid">
+                Submit Payment Proof
+              </app-button>
+            </form>
+          } @else {
+            <div class="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800">
+              No further payment proof upload is available for this order in its current state.
+            </div>
+          }
+        </section>
+
+        <aside class="card p-6">
+          <h2 class="text-lg font-bold text-gray-900">Order Summary</h2>
+          <div class="mt-4 space-y-3 text-sm text-gray-600">
+            <div class="flex justify-between">
+              <span>Shop</span>
+              <span class="font-semibold text-gray-900">{{ currentOrder.shopName }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Total</span>
+              <span class="font-semibold text-gray-900">{{ currentOrder.totalAmount | currency:'RUB':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+            @if (currentOrder.transferAmount) {
+              <div class="flex justify-between">
+                <span>Last submitted amount</span>
+                <span class="font-semibold text-gray-900">{{ currentOrder.transferAmount | currency:'RUB':'symbol-narrow':'1.0-0' }}</span>
+              </div>
+            }
+          </div>
+
+          @if (currentOrder.receiptImageUrl) {
+            <div class="mt-6">
+              <p class="text-sm font-bold text-gray-900">Latest Receipt</p>
+              <a [href]="currentOrder.receiptImageUrl" target="_blank" class="mt-3 block overflow-hidden rounded-2xl border border-gray-200">
+                <img [src]="currentOrder.receiptImageUrl" class="h-56 w-full object-cover" alt="Receipt preview" />
+              </a>
+            </div>
+          }
+
+          <a [routerLink]="['/orders', currentOrder.id]" class="mt-6 inline-flex text-sm font-semibold text-purple-700 hover:text-purple-900">
+            Back to order details
+          </a>
+        </aside>
+      </div>
+    } @else {
+      <div class="card p-8 text-center">
+        <p class="text-gray-600">{{ error() || 'Order not found.' }}</p>
+        <a routerLink="/orders" class="btn-primary mt-4">Go to Orders</a>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,83 @@
+<div class="page-container py-8">
+  <nav class="mb-6 flex items-center gap-2 text-sm text-gray-400">
+    <a routerLink="/" class="transition-colors hover:text-purple-700">Home</a>
+    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+    <a routerLink="/catalog" class="transition-colors hover:text-purple-700">Catalog</a>
+    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+    <span class="line-clamp-1 text-gray-600">{{ brandName() }}</span>
+  </nav>
+
+  <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p class="mb-2 text-xs font-black uppercase tracking-[0.3em] text-purple-600">Brand Collection</p>
+      <h1 class="text-3xl font-black text-gray-900">{{ brandName() }}</h1>
+      <p class="mt-2 text-sm text-gray-500">Browse all active products from this brand.</p>
+    </div>
+    <p class="shrink-0 text-sm text-gray-500">
+      @if (!loading()) { {{ totalElements() }} products }
+    </p>
+  </div>
+
+  @if (categories().length > 0) {
+  <section class="mb-6">
+    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <button
+        (click)="setCategory(null)"
+        class="shrink-0 rounded-full border border-transparent px-4 py-1.5 text-sm font-semibold transition-all"
+        [ngClass]="selectedCategoryId() === null ? 'bg-purple-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+      >
+        All Categories
+      </button>
+      @for (cat of categories(); track cat.id) {
+      <button
+        (click)="setCategory(cat.id)"
+        class="shrink-0 rounded-full border border-transparent px-4 py-1.5 text-sm font-semibold transition-all"
+        [ngClass]="selectedCategoryId() === cat.id ? 'bg-purple-700 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+      >
+        {{ cat.name }}
+      </button>
+      }
+    </div>
+  </section>
+  }
+
+  @if (loading() && products().length === 0) {
+  <app-loading-spinner />
+  } @else if (products().length === 0) {
+  <app-empty-state
+    title="No products found"
+    description="No active products match this brand and category combination right now."
+  >
+    <svg icon class="mx-auto mb-4 h-14 w-14 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+    <div actions class="flex justify-center gap-4">
+      <button (click)="setCategory(null)" class="btn-primary px-8">Clear Category Filter</button>
+    </div>
+  </app-empty-state>
+  } @else {
+  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+    @for (product of products(); track product.id) {
+    <app-product-card [product]="product" />
+    }
+  </div>
+
+  <div #scrollAnchor class="mt-8 flex h-10 w-full items-center justify-center">
+    @if (loading() && products().length > 0) {
+    <div class="flex items-center gap-2 text-sm font-bold text-purple-600">
+      <span class="h-5 w-5 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600"></span>
+      Loading more...
+    </div>
+    }
+  </div>
+  }
+</div>
