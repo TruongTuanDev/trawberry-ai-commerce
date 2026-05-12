@@ -57,7 +57,7 @@ If the token is missing or invalid, the service returns `401`.
 - `OPENAI_INPUT_IMAGE_TIMEOUT_SECONDS=20`
 - `STORAGE_DRIVER=mock|local|s3`
 - `STORAGE_LOCAL_ROOT=generated`
-- `STORAGE_PUBLIC_BASE_URL=http://localhost:8010/generated`
+- `STORAGE_PUBLIC_BASE_URL=http://localhost:8000/generated`
 
 ## Request contract
 
@@ -86,7 +86,7 @@ If the token is missing or invalid, the service returns `401`.
   "status": "COMPLETED",
   "images": [
     {
-      "url": "http://localhost:8010/generated/ai-images/shop-1/prod-1/task-123/1.jpg",
+      "url": "http://localhost:8000/generated/ai-images/shop-1/prod-1/task-123/1.jpg",
       "storageKey": "ai-images/shop-1/prod-1/task-123/1.jpg",
       "provider": "OPENAI",
       "width": 1024,
@@ -125,7 +125,7 @@ Copy-Item .env.example .env
 
 ### 3. Start with mock provider
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Recommended local defaults:
@@ -140,7 +140,7 @@ Set:
 
 Then start:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ## Tests
@@ -164,7 +164,7 @@ If `RUN_OPENAI_SMOKE` is false or `OPENAI_API_KEY` is missing, the script prints
 ## Docker
 ```bash
 docker build -t strawberry-ai-service .
-docker run --rm -p 8010:8010 --env-file .env strawberry-ai-service
+docker run --rm -p 8000:8000 --env-file .env strawberry-ai-service
 ```
 
 ## Notes

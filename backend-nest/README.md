@@ -59,24 +59,28 @@ Create `.env` if needed:
 
 ```env
 PORT=3001
-DATABASE_URL=postgresql://strawberry_user:strawberry_password@localhost:5432/strawberry_db?schema=public
-JWT_ACCESS_SECRET=dev-access-secret
-JWT_REFRESH_SECRET=dev-refresh-secret
-REDIS_HOST=127.0.0.1
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/strawberry?schema=public
+JWT_SECRET=change-me-local-secret
+JWT_EXPIRES_IN=7d
+REDIS_HOST=localhost
 REDIS_PORT=6379
-BULLMQ_DISABLED=true
-CORS_ORIGIN=http://localhost:3000,http://localhost:4200
-FILE_STORAGE_DRIVER=local
-UPLOAD_ROOT=uploads
-FILES_PUBLIC_BASE_URL=http://localhost:3001
+AI_WORKER_MODE=ai-service
+AI_SERVICE_BASE_URL=http://localhost:8000
+AI_SERVICE_INTERNAL_TOKEN=local-internal-token
+AI_SERVICE_TIMEOUT_MS=120000
+STORAGE_DRIVER=local
+MAX_IMAGE_SIZE_MB=10
 ```
 
 Notes:
 - Default port is `3001` so it does not conflict with Spring Boot on `8080`.
-- `FILE_STORAGE_DRIVER=local` is the bootstrap default for product image upload.
+- If you are using the Docker PostgreSQL from `infra/docker-compose.yml`, the host port is `5433`.
+- Inside Docker, `DATABASE_URL` must use `postgres:5432`, not `localhost`.
+- `STORAGE_DRIVER=local` is the bootstrap default for product image upload.
 - Local uploaded files are served from `/uploads/*`.
 - AI image task tables are defined in `prisma/migrations/20260510_add_ai_image_tables/migration.sql`.
-- AI worker expects `AI_SERVICE_BASE_URL` to reach the separate Python `ai-service`.
+- Local non-Docker runtime should use `AI_SERVICE_BASE_URL=http://localhost:8000`.
+- Docker runtime should use `AI_SERVICE_BASE_URL=http://ai-service:8000`.
 - Prisma maps existing legacy tables and does not change Spring Boot business logic.
 
 ### 3. Generate Prisma client

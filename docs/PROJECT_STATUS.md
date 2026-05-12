@@ -1,0 +1,370 @@
+# Project Status
+
+## A. Project Summary
+
+- Project name: `Trawberry AI Commerce`
+- Current architecture:
+  - `frontend-next`: Next.js seller workspace
+  - `backend-nest`: NestJS API and orchestration layer
+  - `ai-service`: FastAPI AI image service
+  - `infra`: Docker Compose with PostgreSQL, Redis, MinIO
+  - legacy apps kept in parallel:
+    - `strawberry-frontend`
+    - `strawberry-backend`
+- Active stack:
+  - Next.js App Router
+  - React + TypeScript + Zustand + React Hook Form + Zod
+  - NestJS + Prisma + PostgreSQL + BullMQ + Redis
+  - FastAPI + Pydantic + OpenAI SDK + Pillow + boto3
+  - Docker Compose + MinIO
+- Product goal:
+  - migrate seller-side e-commerce workflows from Angular/Spring Boot to Next.js/NestJS
+  - support product image management
+  - support AI image generation pipeline
+  - prepare for try-on and broader marketplace workflows
+
+## B. Architecture Status
+
+| Component | Tech stack | Status | Runtime verified? | Notes |
+|---|---|---|---|---|
+| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; product/images/orders connected; dashboard/settings/AI route still partly placeholder. |
+| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, images, orders, AI tasks all present. |
+| `ai-service` | FastAPI, Pydantic, OpenAI SDK, Pillow, boto3 | Partial | Yes | Mock provider verified; OpenAI provider implemented but real OpenAI runtime not fully confirmed in this audit. |
+| `postgres` | PostgreSQL 16 | Done | Yes | Running in Docker; host `5433`, network `5432`. |
+| `redis` | Redis 7 | Done | Yes | Running in Docker and used by BullMQ. |
+| `minio` | MinIO | Done | Yes | Running in Docker; bucket bootstrap via `minio-init`. |
+| `docker compose` | Docker Compose | Done | Yes | `config` pass, `ps` healthy, smoke integration pass. |
+| `strawberry-frontend` | Angular | Legacy retained | Not re-verified in this audit | Kept untouched for parallel migration. |
+| `strawberry-backend` | Spring Boot | Legacy retained | Not re-verified in this audit | Kept untouched for parallel migration. |
+
+## C. Completed Features
+
+### Auth / User / Shop
+- Status: Done
+- Evidence:
+  - `backend-nest`: `npm run lint` pass
+  - `backend-nest`: `npm test -- --runInBand` pass
+  - `backend-nest`: `npm run build` pass
+  - Docker backend health pass
+- Main files/modules:
+  - `backend-nest/src/modules/auth`
+  - `backend-nest/src/modules/users`
+  - `backend-nest/src/modules/shops`
+  - `backend-nest/test/auth.e2e-spec.ts`
+  - `backend-nest/test/users.e2e-spec.ts`
+  - `backend-nest/test/shops.e2e-spec.ts`
+- Notes:
+  - `httpOnly` cookie support exists
+  - Bearer fallback still exists for scripts and backward compatibility
+
+### Product CRUD
+- Status: Done
+- Evidence:
+  - `backend-nest` test suite pass
+  - `npm run smoke:products` exists
+  - Docker smoke integration indirectly exercises product create
+- Main files/modules:
+  - `backend-nest/src/modules/products`
+  - `backend-nest/test/product.e2e-spec.ts`
+  - `frontend-next/src/app/seller/products`
+  - `frontend-next/src/components/products`
+- Notes:
+  - seller product list/detail/edit are connected
+  - shop-scoped access enforced with `ShopAccessGuard`
+
+### Product Image Upload
+- Status: Done
+- Evidence:
+  - `backend-nest/test/product-images.e2e-spec.ts`
+  - `npm run smoke:product-images` exists
+  - Docker smoke integration uploads product images successfully
+- Main files/modules:
+  - `backend-nest/src/modules/product-images`
+  - `backend-nest/src/modules/files`
+  - `frontend-next/src/app/seller/products/[id]/images/page.tsx`
+  - `frontend-next/src/components/products/product-image-gallery.tsx`
+- Notes:
+  - local storage path active in backend Docker runtime
+  - metadata supports AI-related image types
+
+### AI Image Task Backend
+- Status: Done
+- Evidence:
+  - `backend-nest/test/ai-images.e2e-spec.ts`
+  - `backend-nest/test/ai-images.worker.spec.ts`
+  - `npm run smoke:ai-images` exists
+  - Docker `smoke:ai-service-integration` pass
+- Main files/modules:
+  - `backend-nest/src/modules/ai-images`
+  - Prisma AI task/image/credit models
+- Notes:
+  - includes credit deduction and refund
+  - supports retry and attach
+
+### AI Service FastAPI
+- Status: Done
+- Evidence:
+  - `python -m compileall app` pass
+  - `python -m pytest -q` pass
+  - `GET /health` pass
+  - `POST /internal/ai-images/generate` pass in mock mode
+- Main files/modules:
+  - `ai-service/app/api`
+  - `ai-service/app/services`
+  - `ai-service/tests`
+- Notes:
+  - internal-only service
+  - token-protected
+
+### backend-nest calling ai-service
+- Status: Done
+- Evidence:
+  - `backend-nest/test/ai-service-client.spec.ts`
+  - `npm run smoke:ai-service-integration` pass
+- Main files/modules:
+  - `backend-nest/src/modules/ai-images/ai-service-client.service.ts`
+  - `backend-nest/src/modules/ai-images/ai-images.worker.ts`
+- Notes:
+  - timeout, retry, and response validation are implemented
+
+### Generate AI Image Modal
+- Status: Done
+- Evidence:
+  - `frontend-next` lint/build pass
+  - Docker smoke integration proves backend task + attach flow
+  - page code polls task and attaches image
+- Main files/modules:
+  - `frontend-next/src/components/products/ai-image-generate-modal.tsx`
+  - `frontend-next/src/components/products/ai-task-panel.tsx`
+  - `frontend-next/src/app/seller/products/[id]/images/page.tsx`
+- Notes:
+  - runtime UI path is connected through backend only
+
+### OpenAIImageProvider
+- Status: Partial
+- Evidence:
+  - provider code present
+  - `ai-service/tests/test_openai_provider.py` pass
+  - optional smoke script exists
+- Main files/modules:
+  - `ai-service/app/services/openai_image_provider.py`
+  - `ai-service/scripts/smoke_openai_provider.py`
+- Notes:
+  - implemented in code
+  - real OpenAI runtime remains conditionally available
+  - not treated as fully verified in this audit
+
+### Quality Guard
+- Status: Done
+- Evidence:
+  - `ai-service/tests/test_quality_guard.py` pass
+  - backend tests for malformed response / error mapping pass
+- Main files/modules:
+  - `ai-service/app/services/image_quality_guard.py`
+  - `backend-nest/test/ai-service-client.spec.ts`
+- Notes:
+  - validates output image readability, MIME, width, and height
+
+### Docker Compose Runtime
+- Status: Done
+- Evidence:
+  - `docker compose ... config` pass
+  - `docker compose ... ps` shows 6/6 healthy
+  - backend/ai/frontend/minio URLs reachable
+  - `npm run smoke:ai-service-integration` pass against running stack
+- Main files/modules:
+  - `infra/docker-compose.yml`
+  - `infra/.env.example`
+  - `infra/postgres-init/01-extensions.sql`
+- Notes:
+  - host Postgres port is `5433`
+  - internal Postgres port remains `5432`
+
+### Cookie auth security hardening
+- Status: Partial
+- Evidence:
+  - `AuthController` sets and clears `httpOnly` cookie
+  - `JwtStrategy` reads cookie first, bearer fallback second
+  - frontend API client uses `credentials: "include"`
+- Main files/modules:
+  - `backend-nest/src/modules/auth/auth.controller.ts`
+  - `backend-nest/src/modules/auth/strategies/jwt.strategy.ts`
+  - `frontend-next/src/lib/api.ts`
+- Notes:
+  - runtime support exists
+  - frontend store still keeps session user in `localStorage`
+  - login page copy still says cookie auth is not available, which is stale
+
+### Docs / env standardization
+- Status: Done
+- Evidence:
+  - reviewed docs updated to current repo path and port set
+  - `.env.example` files are tracked, real `.env` files are not
+- Main files/modules:
+  - `docs/RUNTIME_ENV.md`
+  - `docs/DEPLOYMENT.md`
+  - `docs/CONFIG_AUDIT.md`
+  - service README files
+- Notes:
+  - runtime docs now align with Docker stack using `ai-service:8000` and host PostgreSQL `5433`
+
+## D. Backend API Status
+
+| Method | Endpoint | Module | Status | Auth required? | Smoke tested? |
+|---|---|---|---|---|---|
+| `GET` | `/api/health` | app / health | Done | No | Yes |
+| `GET` | `/api/docs` | swagger | Done | No | Yes |
+| `POST` | `/api/auth/register` | auth | Done | No | Yes |
+| `POST` | `/api/auth/login` | auth | Done | No | Yes |
+| `POST` | `/api/auth/refresh` | auth | Done | No | Covered by tests |
+| `POST` | `/api/auth/logout` | auth | Done | No | Code exists, not explicitly smoke-tested |
+| `GET` | `/api/auth/me` | auth | Done | Yes | Yes |
+| `GET` | `/api/users/me` | users | Done | Yes | Covered by tests |
+| `POST` | `/api/shops` | shops | Done | Yes | Yes |
+| `GET` | `/api/shops` | shops | Done | Yes | Covered by smoke/tests |
+| `GET` | `/api/shops/:shopId` | shops | Done | Yes | Covered by tests |
+| `GET` | `/api/shops/:shopId/products` | products | Done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/products` | products | Done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/products/:productId` | products | Done | Yes | Yes |
+| `PATCH` | `/api/shops/:shopId/products/:productId` | products | Done | Yes | Yes |
+| `DELETE` | `/api/shops/:shopId/products/:productId` | products | Done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/products/:productId/images` | product-images | Done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/products/:productId/images` | product-images | Done | Yes | Yes |
+| `PATCH` | `/api/shops/:shopId/products/:productId/images/:imageId` | product-images | Done | Yes | Yes |
+| `DELETE` | `/api/shops/:shopId/products/:productId/images/:imageId` | product-images | Done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/products/:productId/ai-images/tasks` | ai-images | Done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/ai-images/tasks` | ai-images | Done | Yes | Covered by tests |
+| `GET` | `/api/shops/:shopId/ai-images/tasks/:taskId` | ai-images | Done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/ai-images/tasks/:taskId/retry` | ai-images | Done | Yes | Covered by tests |
+| `GET` | `/api/shops/:shopId/ai-credits` | ai-images | Done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/products/:productId/ai-images/:imageId/attach` | ai-images | Done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/products/:productId/images/:imageId/attach` | ai-images alias | Done | Yes | Covered indirectly |
+| `GET` | `/api/shops/:shopId/orders` | orders | Done | Yes | Not covered by dedicated smoke in this audit |
+| `GET` | `/api/shops/:shopId/orders/:orderId` | orders | Done | Yes | Covered by tests/build, not dedicated smoke in this audit |
+| `PATCH` | `/api/shops/:shopId/orders/:orderId/status` | orders | Done | Yes | Covered by tests/build, not dedicated smoke in this audit |
+| `POST` | `/api/files/upload-url` | files | Partial | Yes | No |
+
+## E. Frontend Page Status
+
+| Route | Purpose | Status | Backend connected? | Notes |
+|---|---|---|---|---|
+| `/login` | Seller login | Done | Yes | Connected to auth API; stale copy still mentions no cookie support. |
+| `/seller/dashboard` | Seller overview | Partial | No | Placeholder KPIs only. |
+| `/seller/products` | Product list | Done | Yes | Search/pagination UI connected. |
+| `/seller/products/[id]` | Product detail/edit | Done | Yes | Product metadata connected; variants read-only summary. |
+| `/seller/products/[id]/images` | Product gallery + AI generate | Done | Yes | Upload, gallery, set main, delete, AI task create/poll/attach connected. |
+| `/seller/ai-images` | Future AI center / try-on area | Partial | No | Placeholder route only. |
+| `/seller/orders` | Seller order list | Done | Yes | Connected to NestJS orders API. |
+| `/seller/orders/[id]` | Seller order detail | Done | Yes | Connected to NestJS orders API. |
+| `/seller/settings` | Seller settings area | Partial | No | Placeholder content only. |
+
+## F. AI Pipeline Status
+
+Current flow:
+- `Next.js`
+- `NestJS`
+- `BullMQ / worker`
+- `ai-service`
+- `Mock / OpenAI provider`
+- `Storage`
+- `generated image`
+- `attach into product_images`
+
+| Capability | Status | Notes |
+|---|---|---|
+| Mock provider | Done | Runtime verified in Docker smoke integration. |
+| OpenAI provider | Partial | Code and tests exist; real runtime still conditional. |
+| Quality guard | Done | Unit-tested and integrated into error mapping. |
+| Credit deduction | Done | Verified by AI smoke and Docker integration smoke. |
+| Refund on failure | Done | Covered in backend worker logic and tests. |
+| Attach generated image | Done | Runtime verified in Docker smoke integration. |
+| Try-on online | Not started / partial design only | `taskType=TRY_ON` exists in API/domain, but no end-to-end user workflow verified. |
+
+## G. Docker Runtime Status
+
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass
+- Expected containers:
+  - `postgres`
+  - `redis`
+  - `minio`
+  - `ai-service`
+  - `backend-nest`
+  - `frontend-next`
+- Ports:
+  - frontend: `3000`
+  - backend: `3001`
+  - ai-service: `8000`
+  - MinIO API / console: `9000 / 9001`
+  - PostgreSQL host: `5433`
+  - PostgreSQL Docker network: `5432`
+- Smoke integration status:
+  - pass
+
+## H. Testing & Verification Status
+
+| Area | Command | Last known result | Notes |
+|---|---|---|---|
+| backend-nest | `npm run lint` | Pass | Re-run in this audit. |
+| backend-nest | `npm test -- --runInBand` | Pass | `7` suites, `30` tests. |
+| backend-nest | `npm run build` | Pass | Re-run in this audit. |
+| backend-nest | `npm run smoke:auth` | Exists | Not re-run in this audit. |
+| backend-nest | `npm run smoke:products` | Exists | Not re-run in this audit. |
+| backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
+| backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
+| backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
+| backend-nest | `npm run smoke:ai-service-openai` | Exists | Not run in this audit. |
+| frontend-next | `npm run lint` | Pass | Re-run in this audit. |
+| frontend-next | `npm run build` | Pass | Re-run in this audit. |
+| ai-service | `python -m compileall app` | Pass | Re-run in this audit. |
+| ai-service | `python -m pytest -q` | Pass | `18` tests. |
+| infra | `docker compose ... config` | Pass | Re-run in this audit. |
+| infra | `docker compose ... ps` | Pass | `6/6` healthy. |
+| runtime | `GET http://localhost:3001/api/health` | Pass | Re-run in this audit. |
+| runtime | `GET http://localhost:8000/health` | Pass | Re-run in this audit. |
+| runtime | `GET http://localhost:3000/login` | Pass | Re-run in this audit. |
+| runtime | `GET http://localhost:9001` | Pass | Re-run in this audit. |
+
+## I. Known Issues / Risks
+
+- Real OpenAI runtime is not treated as fully proven in this audit.
+- Previous project notes mention an OpenAI billing hard-limit failure; if billing is still unresolved, real OpenAI smoke can fail even though code paths exist.
+- Frontend login page copy still says backend does not issue `httpOnly` cookies, but backend code now does.
+- Auth hardening is only partially reflected in frontend state:
+  - API client uses `credentials: "include"`
+  - store still persists user state in `localStorage`
+  - full manual cookie-auth UX verification is still advisable
+- `ai-service` tree still contains `__pycache__` artifacts in the working tree; they are ignored/noise, not functional code.
+- `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
+- `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
+- Orders module exists and builds/tests, but it did not receive the same dedicated Docker smoke coverage as product/image/AI in this audit.
+- Local/demo credentials in Docker/env examples are for development only and must not be used in production.
+
+## J. Next Recommended Phases
+
+1. Final project status verification on a fresh machine using only documented steps.
+2. Add dev seed accounts and predictable seller/shop bootstrap to reduce smoke-script setup friction.
+3. Deepen Orders / Payments verification and UI completeness.
+4. Build customer-side marketplace frontend and public catalog flows.
+5. Implement true try-on online flow end-to-end.
+6. Add admin moderation and operational tooling.
+7. Production hardening:
+   - auth/cookie/session review
+   - secret management
+   - object storage strategy
+   - logging and observability
+8. Add CI/CD with GitHub Actions.
+9. Prepare VPS / cloud deployment pipeline.
+
+## K. Definition of Done for MVP
+
+To demo the MVP cleanly, the following should be available:
+- seller login
+- create shop
+- create product
+- upload product image
+- generate AI image with mock or OpenAI path
+- attach generated image into product gallery
+- view product gallery with AI-generated assets
+- run the full stack through Docker Compose
+- runtime docs ready and accurate

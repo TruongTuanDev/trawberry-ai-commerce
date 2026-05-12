@@ -1,59 +1,60 @@
 # Deployment
 
-Tài liệu này mô tả cách chạy kiến trúc mới bằng Docker Compose, song song với hệ thống Spring Boot/Angular cũ.
+This document describes the current Docker Compose deployment flow for the repository at `C:\Users\admin\trawberry-ai-commerce`.
 
 ## Services
-- `frontend-next`: Next.js seller center trên `http://localhost:3000`
-- `backend-nest`: NestJS API trên `http://localhost:3001`
-- `ai-service`: FastAPI AI service trên `http://localhost:8010`
-- `postgres`: PostgreSQL trên `localhost:5432`
-- `redis`: Redis trên `localhost:6379`
-- `minio`: S3-compatible object storage trên `http://localhost:9000`
-- `minio console`: MinIO Console trên `http://localhost:9001`
+- `frontend-next`: `http://localhost:3000`
+- `backend-nest`: `http://localhost:3001`
+- `ai-service`: `http://localhost:8000`
+- `postgres`: `localhost:5433`
+- `redis`: `localhost:6379`
+- `minio api`: `http://localhost:9000`
+- `minio console`: `http://localhost:9001`
 
 ## Files
-- Compose file: [infra/docker-compose.yml](C:\Users\admin\trawberry\infra\docker-compose.yml)
-- Compose env example: [infra/.env.example](C:\Users\admin\trawberry\infra\.env.example)
-- Backend env example: [backend-nest/.env.example](C:\Users\admin\trawberry\backend-nest\.env.example)
-- Frontend env example: [frontend-next/.env.example](C:\Users\admin\trawberry\frontend-next\.env.example)
-- AI service env example: [ai-service/.env.example](C:\Users\admin\trawberry\ai-service\.env.example)
+- Compose file: [infra/docker-compose.yml](C:/Users/admin/trawberry-ai-commerce/infra/docker-compose.yml)
+- Compose env example: [infra/.env.example](C:/Users/admin/trawberry-ai-commerce/infra/.env.example)
+- Backend env example: [backend-nest/.env.example](C:/Users/admin/trawberry-ai-commerce/backend-nest/.env.example)
+- Frontend env example: [frontend-next/.env.example](C:/Users/admin/trawberry-ai-commerce/frontend-next/.env.example)
+- AI service env example: [ai-service/.env.example](C:/Users/admin/trawberry-ai-commerce/ai-service/.env.example)
 
 ## Prerequisites
-- Docker Desktop hoặc Docker Engine có `docker compose`
-- Port trống: `3000`, `3001`, `5432`, `6379`, `8010`, `9000`, `9001`
+- Docker Desktop or Docker Engine with `docker compose`
+- Free host ports:
+  - `3000`
+  - `3001`
+  - `5433`
+  - `6379`
+  - `8000`
+  - `9000`
+  - `9001`
 
 ## Quick Start
-1. Tùy chọn override biến compose:
-
 ```powershell
-Copy-Item infra/.env.example infra/.env
+cd C:\Users\admin\trawberry-ai-commerce
+Copy-Item infra\.env.example infra\.env
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
 ```
-
-2. Chạy toàn bộ stack:
-
-```powershell
-docker compose --env-file infra/.env -f infra/docker-compose.yml up --build
-```
-
-Nếu không cần override:
-
-```powershell
-docker compose -f infra/docker-compose.yml up --build
-```
-
-3. Truy cập:
-- Frontend: `http://localhost:3000`
-- Backend health: `http://localhost:3001/api/health`
-- Swagger: `http://localhost:3001/api/docs`
-- AI service health: `http://localhost:8010/health`
-- MinIO Console: `http://localhost:9001`
 
 ## Runtime Notes
-- `backend-nest` chạy `prisma generate` và `prisma db push` khi container start để bootstrap schema trên PostgreSQL mới.
-- `backend-nest` hiện lưu product upload vào local volume `backend-uploads` qua `FILE_STORAGE_DRIVER=local`.
-- `ai-service` dùng MinIO theo giao thức S3-compatible. Service `minio-init` sẽ tạo bucket và mở public bucket để URL ảnh truy cập được từ browser.
-- `frontend-next` build với `NEXT_PUBLIC_API_URL=http://localhost:3001`, để browser ngoài container gọi đúng NestJS.
-- Redis được dùng cho BullMQ queue giữa `backend-nest` và AI worker flow.
+- Browser traffic uses:
+  - frontend: `http://localhost:3000`
+  - backend: `http://localhost:3001`
+- Docker-internal service traffic uses:
+  - `backend-nest -> ai-service`: `http://ai-service:8000`
+  - `backend-nest -> postgres`: `postgres:5432`
+  - `backend-nest -> redis`: `redis:6379`
+  - `ai-service -> minio`: `http://minio:9000`
+- Host PostgreSQL port is `5433`
+- Container PostgreSQL port is still `5432`
+- `minio-init` creates the bucket automatically and makes it public for browser-usable local URLs
+
+## Access URLs
+- Frontend login: `http://localhost:3000/login`
+- Backend health: `http://localhost:3001/api/health`
+- Backend Swagger: `http://localhost:3001/api/docs`
+- AI service health: `http://localhost:8000/health`
+- MinIO Console: `http://localhost:9001`
 
 ## Health Checks
 - `frontend-next`: `GET /login`
@@ -64,30 +65,49 @@ docker compose -f infra/docker-compose.yml up --build
 - `minio`: `GET /minio/health/live`
 
 ## Common Commands
-Start detached:
+Start:
 
 ```powershell
-docker compose -f infra/docker-compose.yml up --build -d
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
+```
+
+Inspect:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env config
+docker compose -f infra/docker-compose.yml --env-file infra/.env ps
+```
+
+Logs:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env logs -f backend-nest frontend-next ai-service
 ```
 
 Stop:
 
 ```powershell
-docker compose -f infra/docker-compose.yml down
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env down
 ```
 
 Stop and remove volumes:
 
 ```powershell
-docker compose -f infra/docker-compose.yml down -v
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env down -v
 ```
 
-View logs:
-
+## Smoke Integration
 ```powershell
-docker compose -f infra/docker-compose.yml logs -f backend-nest frontend-next ai-service
+cd C:\Users\admin\trawberry-ai-commerce\backend-nest
+npm run smoke:ai-service-integration
 ```
 
-## Known Limitations
-- Compose stack này không thay thế hệ thống legacy; nó chỉ dựng kiến trúc mới để migrate dần.
-- `backend-nest` hiện chưa ghi product images trực tiếp lên MinIO; phần đó vẫn dùng local uploads. MinIO hiện chủ yếu phục vụ `ai-service` và future S3 migration path.
+## Git Safety
+- Do not commit `infra/.env`
+- Do not commit real service `.env` files
+- Commit only `.env.example` files

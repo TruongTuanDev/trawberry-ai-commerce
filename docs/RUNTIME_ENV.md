@@ -1,89 +1,164 @@
-# Runtime Environment Configuration
+# Runtime Environment
 
-This guide explains how to set up the environment variables for local development and Docker deployment for the Strawberry project.
+This document describes the current verified runtime setup for the repository at `C:\Users\admin\trawberry-ai-commerce`.
 
 > [!WARNING]
-> **NEVER COMMIT REAL `.env` FILES TO VERSION CONTROL.** Real `.env` files contain sensitive secrets such as JWT tokens and API keys. The `.gitignore` file is configured to exclude them. Only commit `.env.example` files.
+> Do not commit real `.env` files such as `infra/.env`, `backend-nest/.env`, `ai-service/.env`, or `frontend-next/.env`.
 
-## Environment Variables Setup
+## Services
+- `frontend-next`: `http://localhost:3000`
+- `backend-nest`: `http://localhost:3001`
+- `ai-service`: `http://localhost:8000`
+- `postgres` host port: `localhost:5433`
+- `redis`: `localhost:6379`
+- `minio api`: `http://localhost:9000`
+- `minio console`: `http://localhost:9001`
 
-Depending on how you run the applications, you will need to create the appropriate `.env` or `.env.local` files based on their examples.
+## Important Port Rules
+- Host PostgreSQL port is `5433`
+- PostgreSQL container still listens on `5432`
+- Inside Docker network:
+  - `backend-nest -> postgres` uses `postgres:5432`
+  - `backend-nest -> redis` uses `redis:6379`
+  - `backend-nest -> ai-service` uses `http://ai-service:8000`
+  - `ai-service -> minio` uses `http://minio:9000`
+- From the browser:
+  - `frontend-next -> backend-nest` uses `http://localhost:3001`
 
-### 1. Local Development Setup
-To run the services directly on your local machine, run the following copy operations. The local setup uses `localhost` for inter-service communication.
+## Docker Compose
 
-**backend-nest:**
-Copy `backend-nest/.env.example` to `backend-nest/.env`:
-```bash
-cp backend-nest/.env.example backend-nest/.env
+Create the runtime env file from the example:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+Copy-Item infra\.env.example infra\.env
 ```
 
-**ai-service:**
-Copy `ai-service/.env.example` to `ai-service/.env`:
-```bash
-cp ai-service/.env.example ai-service/.env
+Start the stack:
+
+```powershell
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
 ```
 
-**frontend-next:**
-Copy `frontend-next/.env.example` to `frontend-next/.env.local`:
-```bash
-cp frontend-next/.env.example frontend-next/.env.local
+Validate compose rendering:
+
+```powershell
+docker compose -f infra/docker-compose.yml --env-file infra/.env config
 ```
 
-### 2. Docker Deployment Setup
-To run the entire stack using Docker Compose, you must use the `infra/.env.example`. This file uses Docker network service names (like `ai-service` and `postgres`) instead of `localhost`.
+Check running containers:
 
-**infra:**
-Copy `infra/.env.example` to `infra/.env`:
-```bash
-cp infra/.env.example infra/.env
-```
-Run docker-compose from the repository root:
-```bash
-docker compose -f infra/docker-compose.yml --env-file infra/.env up -d
+```powershell
+docker compose -f infra/docker-compose.yml --env-file infra/.env ps
 ```
 
-> [!TIP]
-> The host PostgreSQL port is mapped to `5433` by default in `infra/.env` to avoid conflicts if you already have a local PostgreSQL running on port `5432`. Inside the Docker network, services communicate with the database via `postgres:5432`.
+## Current Verified Container Set
+- `postgres`
+- `redis`
+- `minio`
+- `ai-service`
+- `backend-nest`
+- `frontend-next`
 
-## Local vs Docker URLs
+The current verified state is `6/6` containers healthy.
 
-> [!IMPORTANT]
-> The most critical difference between local development and Docker deployment is the URLs used for service communication.
+## Health URLs
+- Frontend login: `http://localhost:3000/login`
+- Backend health: `http://localhost:3001/api/health`
+- Backend Swagger: `http://localhost:3001/api/docs`
+- AI service health: `http://localhost:8000/health`
+- MinIO console: `http://localhost:9001`
 
-- **Local Development**: Services are running directly on your host machine. They communicate over `localhost`.
-  - `AI_SERVICE_BASE_URL=http://localhost:8000`
-- **Docker Deployment**: Services are isolated within a Docker bridge network (`strawberry-net`). They communicate using their container service names.
-  - `AI_SERVICE_BASE_URL=http://ai-service:8000`
+Quick checks:
 
-## AI Image Generation Modes
+```powershell
+Invoke-WebRequest -UseBasicParsing http://localhost:3001/api/health
+Invoke-WebRequest -UseBasicParsing http://localhost:8000/health
+Invoke-WebRequest -UseBasicParsing http://localhost:3000/login
+Invoke-WebRequest -UseBasicParsing http://localhost:9001
+```
 
-### Running Mock Mode (Default)
-By default, the AI service runs in mock mode. No external API calls to OpenAI will be made, saving costs and ensuring fast local testing.
-- Ensure `AI_IMAGE_PROVIDER=mock` is set in `ai-service/.env`.
-- Ensure `RUN_OPENAI_SMOKE=false` is set.
+## PostgreSQL Notes
+- Host machine connects to PostgreSQL using `localhost:5433`
+- Containers connect to PostgreSQL using `postgres:5432`
+- `infra/postgres-init/01-extensions.sql` enables `uuid-ossp`
+- `backend-nest` container uses Docker-safe `DATABASE_URL=postgresql://...@postgres:5432/...`
 
-### Running Real OpenAI Mode
-To use real OpenAI image generation:
-1. Open `ai-service/.env` (or `infra/.env` if using Docker).
-2. Set `AI_IMAGE_PROVIDER=openai`.
-3. Provide your real API key: `OPENAI_API_KEY=sk-...`
+## MinIO / S3 Notes
+- Docker S3 endpoint for containers: `http://minio:9000`
+- Browser-facing public base URL: `http://localhost:9000/<bucket>`
+- Bucket bootstrap is handled by the `minio-init` service in `docker-compose.yml`
+- No manual bucket creation is required for the default local Docker setup
 
-## Required vs Optional Variables
+## AI Service Notes
+- Default provider is `AI_IMAGE_PROVIDER=mock`
+- Docker default does not call OpenAI
+- `backend-nest` and `ai-service` must share the same `AI_SERVICE_INTERNAL_TOKEN`
+- Current compose wiring already does this through `infra/.env`
 
-### Required Variables
-- `DATABASE_URL` (backend-nest): Connection string for PostgreSQL.
-- `JWT_SECRET` (backend-nest, infra): Used to sign JWT tokens.
-- `AI_SERVICE_INTERNAL_TOKEN` (backend-nest, ai-service, infra): Used to authenticate internal requests between backend-nest and ai-service. Both services MUST share the same exact token.
-- `NEXT_PUBLIC_API_URL` (frontend-next, infra): The backend URL the frontend browser will call.
+## Smoke Integration
+Run the integration smoke from the host:
 
-### Security / Authentication Variables (backend-nest, infra)
-- `AUTH_COOKIE_NAME`: Name of the `httpOnly` cookie containing the JWT. (Default: `access_token`)
-- `AUTH_COOKIE_SECURE`: Must be `true` in production to enforce HTTPS. (Default: `false` for local)
-- `AUTH_COOKIE_SAME_SITE`: Protection policy (`lax`, `strict`, `none`). (Default: `lax`)
-- `AUTH_COOKIE_MAX_AGE_SECONDS`: Expiration of the cookie in seconds. (Default: `86400`)
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce\backend-nest
+npm run smoke:ai-service-integration
+```
 
-### Optional Variables
-- `OPENAI_API_KEY` (ai-service, infra): Only required if `AI_IMAGE_PROVIDER=openai`.
-- `S3_*` variables (ai-service, infra): Only required if `STORAGE_DRIVER=s3`. Default is `local` for local development.
+This verifies:
+- seller registration
+- local seller approval bootstrap
+- login
+- shop creation
+- product creation
+- product image upload
+- AI mock image generation via `ai-service`
+- generated image attach into product gallery
+- credit decrease
 
+## Optional Verification Commands
+
+### backend-nest
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce\backend-nest
+npm run lint
+npm test -- --runInBand
+npm run build
+```
+
+### frontend-next
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce\frontend-next
+npm run lint
+npm run build
+```
+
+### ai-service
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce\ai-service
+python -m compileall app
+python -m pytest -q
+```
+
+## Stop Commands
+Stop the stack:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env down
+```
+
+Stop and remove volumes:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env down -v
+```
+
+## Git Safety
+- Commit only `.env.example` files
+- Do not commit:
+  - `infra/.env`
+  - `backend-nest/.env`
+  - `ai-service/.env`
+  - `frontend-next/.env`
+  - `frontend-next/.env.local`

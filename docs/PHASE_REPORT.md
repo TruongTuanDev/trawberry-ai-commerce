@@ -1,152 +1,249 @@
 # Phase Report
 
 ## Scope
-Standardize environment configurations for the project to ensure correct behavior in local and Docker environments without exposing secrets.
+Review the current Docker Compose runtime for `C:\Users\admin\trawberry-ai-commerce`, verify commit safety, and prepare a clean commit checklist without changing business logic.
 
 Constraints followed:
-- No changes in `strawberry-frontend`
-- No changes in `strawberry-backend`
-- No real `.env` files committed.
-- No OpenAI calls made during this phase.
-- Backward compatibility maintained for JWT configurations.
+- no changes in `strawberry-frontend`
+- no changes in `strawberry-backend`
+- no OpenAI real calls
+- no `.env` real files committed
 
-## Da Lam Gi
+## Docker Setup Review Result
 
-### Safe fixes applied
-- Standardized `.env.example` in `backend-nest`, `ai-service`, `frontend-next`, and `infra` with exact matching variables.
-- Updated `backend-nest` auth module to support `JWT_SECRET` and `JWT_EXPIRES_IN`, gracefully falling back to `JWT_ACCESS_SECRET` and `JWT_ACCESS_EXPIRES_IN` to prevent breaking existing tests or local configurations.
-- Changed default port of `ai-service` in `app/core/config.py` from `8010` to `8000` to align with expected configuration `AI_SERVICE_BASE_URL=http://localhost:8000`.
-- Updated `infra/docker-compose.yml`:
-  - `backend-nest` now explicitly connects to `ai-service` via `AI_SERVICE_BASE_URL=http://ai-service:8000`.
-  - Exposed port `8000` instead of `8010` for `ai-service`.
-- Explicitly ignored `.env` and `.env.local` files across `.gitignore` files while ensuring `.env.example` is checked in.
-- Added comprehensive documentation in `docs/RUNTIME_ENV.md` on how to set up local and Docker environments.
+### Compose wiring
+Verified current Docker runtime wiring:
+- `backend-nest -> ai-service`: `http://ai-service:8000`
+- `backend-nest -> postgres`: `postgres:5432`
+- `backend-nest -> redis`: `redis:6379`
+- `ai-service -> minio`: `http://minio:9000`
+- browser -> `frontend-next`: `http://localhost:3000`
+- browser -> `backend-nest`: `http://localhost:3001`
+- host -> PostgreSQL: `localhost:5433`
 
-## File Da Thay Doi
-- `backend-nest/.env.example`
-- `ai-service/.env.example`
-- `frontend-next/.env.example`
-- `infra/.env.example`
-- `infra/docker-compose.yml`
-- `ai-service/app/core/config.py`
-- `backend-nest/src/modules/auth/auth.module.ts`
-- `backend-nest/src/modules/auth/auth.service.ts`
-- `backend-nest/src/modules/auth/strategies/jwt.strategy.ts`
-- `frontend-next/.gitignore`
-- `ai-service/.gitignore`
-- `backend-nest/.gitignore`
-- `docs/RUNTIME_ENV.md`
-- `docs/PHASE_REPORT.md`
+### PostgreSQL
+- `infra/postgres-init/01-extensions.sql` contains:
+  - `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`
+- Docker mapping is correct:
+  - host port: `5433`
+  - container port: `5432`
+- `DATABASE_URL` inside Docker uses `postgres:5432`, not `localhost`
 
-## Verification Pass/Fail
+### AI Service
+- `ai-service` runs on port `8000`
+- default Docker provider is `AI_IMAGE_PROVIDER=mock`
+- default Docker setup does not call OpenAI
+- `AI_SERVICE_INTERNAL_TOKEN` is shared between `backend-nest` and `ai-service` through `infra/.env`
 
-### ai-service
-- `python -m compileall app`: **Pass**
-- `python -m pytest -q`: **Pass** (16 tests passed)
+### MinIO / S3
+- MinIO API: `http://localhost:9000`
+- MinIO Console: `http://localhost:9001`
+- Docker-internal S3 endpoint: `http://minio:9000`
+- public base URL in the local stack is `http://localhost:9000/<bucket>`
+- bucket bootstrap is handled automatically by the `minio-init` service
+
+### Healthchecks
+Verified configured healthchecks use commands that exist in the target images:
+- `postgres`: `pg_isready`
+- `redis`: `redis-cli ping`
+- `minio`: `curl`
+- `ai-service`: `python`
+- `backend-nest`: `wget`
+- `frontend-next`: `wget`
+
+## Containers Status
+
+`docker compose -f infra/docker-compose.yml --env-file infra/.env ps` showed:
+- `postgres`: healthy
+- `redis`: healthy
+- `minio`: healthy
+- `ai-service`: healthy
+- `backend-nest`: healthy
+- `frontend-next`: healthy
+
+Current result: `6/6` containers healthy.
+
+## Smoke Integration Result
+
+Verified:
+- backend health: pass
+- ai-service health: pass
+- frontend login page reachable: pass
+- MinIO console reachable: pass
+- `npm run smoke:ai-service-integration`: pass
+
+Smoke flow confirmed:
+- create user
+- approve seller local
+- create shop
+- create product
+- upload image
+- AI mock generate image
+- attach generated image
+- credit decreases correctly
+
+## Verification Run
+
+### Docker
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass
+
+### Health endpoints
+- `GET http://localhost:3001/api/health`: pass
+- `GET http://localhost:8000/health`: pass
+- `GET http://localhost:3000/login`: pass
+- `GET http://localhost:9001`: pass
 
 ### backend-nest
-- `npm run lint`: **Pass**
-- `npm test -- --runInBand`: **Pass** (30 tests passed)
-- `npm run build`: **Pass**
+- `npm run smoke:ai-service-integration`: pass
+- `npm run lint`: pass
+- `npm test -- --runInBand`: pass
+- `npm run build`: pass
 
 ### frontend-next
-- `npm run lint`: **Pass**
-- `npm run build`: **Pass**
+- `npm run lint`: pass
+- `npm run build`: pass
 
-### infra
-- `docker compose -f infra/docker-compose.yml config`: **Pass**
+### ai-service
+- `python -m compileall app`: pass
+- `python -m pytest -q`: pass
 
-## Báo cáo lỗi OpenAI (DALL-E 2)
-Trong quá trình thực hiện End-to-End smoke test cho OpenAI provider, chúng tôi đã gặp phải lỗi từ OpenAI (400 Bad Request):
-- **Loại lỗi**: `billing` (Billing hard limit has been reached)
-- **Chi tiết**: `{'error': {'message': 'Billing hard limit has been reached', 'type': 'image_generation_user_error', 'param': None, 'code': 'billing_hard_limit_reached'}}`
-- **Tác động**: Yêu cầu gọi OpenAI thật thất bại vì tài khoản đã hết hạn mức thanh toán.
-- **Kết quả xử lý**: Hệ thống backend-nest đã xử lý an toàn:
-  - Task status được chuyển thành `FAILED` với `errorMessage` được ghi đầy đủ và rõ ràng.
-  - Credit đã được **hoàn trả (refund) đúng số lượng (0 credit bị trừ)**.
-  - Quá trình chuyển đổi định dạng ảnh từ JPEG sang PNG (đáp ứng đúng requirement của OpenAI edit) được thực hiện trong memory (PIL) mà không làm lộ secret hay thay đổi logic bừa bãi, và giờ đây chỉ kích hoạt cho `dall-e-2` model thay vì ép buộc đối với mọi model.
-  - Không có secret nào bị in ra log.
+## Git Safety Review
 
-## Moi Truong & Blocker
-- Docker daemon is currently not running/available in the underlying environment, so `docker compose up` could not be fully run (noted as an environment blocker).
-- Real OpenAI smoke test failed due to billing hard limits.
+### Git status summary before this doc update
+- working tree was clean
+- no pending code changes were found before the documentation refresh
 
-## Ket Qua Chinh
-- Env naming is strictly standardized across services.
-- Local setups map to `http://localhost:8000` while Docker seamlessly targets `http://ai-service:8000`.
-- Missing `.env` real files are not tracked.
-- Backward compatibility with legacy `JWT_ACCESS_SECRET` preserves existing developer setups and tests.
-- Backend OpenAI smoke script successfully handles end-to-end task polling, verifying failure and credit refund accurately.
-- OpenAIImageProvider dynamically prioritizes GPT Image models (supporting JPEG/PNG/WEBP without forced conversion) while safely isolating legacy DALL-E 2 constraints.
+### Tracked env files
+`git ls-files | Select-String "\.env"` returned only:
+- `ai-service/.env.example`
+- `backend-nest/.env.example`
+- `frontend-next/.env.example`
+- `infra/.env.example`
 
-## OpenAI Smoke Test (End-to-End)
-**Status**: FAILED (Expected failure due to billing limit)
-**Reason**: OpenAI API key provided has reached its billing hard limit.
-- AI service gracefully catches and propagates the error.
-- AI service gracefully catches and propagates the error.
-- Backend gracefully transitions task to FAILED and successfully refunds credits.
+Conclusion:
+- no real `.env` files are tracked by Git
 
-## Production Cleanup & Security Hardening
-**Status**: Completed successfully.
-- **`ai-service` Cleanup**: Deleted all legacy/unused provider files (`app/providers/base.py`, `app/providers/mock.py`, `app/providers/openai_provider.py`) and `image_generation_service.py` to minimize attack surface and reduce tech debt.
-- **`backend-nest` Security**:
-  - Implemented `httpOnly` cookie injection inside `AuthController.login` and `refresh` to securely store JWT tokens without exposing them to client-side scripts.
-  - Implemented `AuthController.logout` to clear the authentication cookie securely.
-  - Updated `JwtStrategy` to support multiple extractors: checking the `httpOnly` cookie first, while preserving backward compatibility with `Authorization: Bearer` for legacy third-party clients and smoke test scripts.
-- **`frontend-next` Security**:
-  - `auth-store.ts` refactored to stop saving `token` and `refreshToken` into `localStorage`. The state only persists the user object to signify authenticated status.
-  - All protected components correctly use `user` presence check instead of `token` checks.
-  - Setup `credentials: "include"` in `lib/api.ts` so the fetch client automatically propagates the new `httpOnly` cookies set by `backend-nest`.
-- **Validation**:
-  - Backend integration suite (30 tests) passed with backward compatibility explicitly preserved.
-  - Frontend compiled with strictly typed refactors and 0 lint warnings.
-  - Documented `AUTH_COOKIE_*` env flags in `RUNTIME_ENV.md` and created `SECURITY.md` for architectural overview.
+### Root and service ignore rules
+Reviewed:
+- `.gitignore`
+- `backend-nest/.gitignore`
+- `ai-service/.gitignore`
+- `frontend-next/.gitignore`
 
-## Git Workflow & Checklist
-**Environment Security Check**:
-- `git ls-files | Select-String "\.env"` returned NO real `.env` files. Only `.env.example` files are safely tracked.
-- *Status*: ✅ **Safe to commit**.
+Current ignore rules correctly exclude:
+- `.env`
+- `.env.local`
+- `*.env`
+while allowing:
+- `.env.example`
 
-**Git Status Summary**:
-- **Modified**: `backend-nest/.env.example`, `backend-nest/src/modules/auth/auth.controller.ts`, `backend-nest/src/modules/auth/strategies/jwt.strategy.ts`, `docs/PHASE_REPORT.md`, `docs/RUNTIME_ENV.md`, `frontend-next/src/components/auth/login-form.tsx`, `frontend-next/src/components/auth/protected-shell.tsx`, `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`, `frontend-next/src/components/orders/seller-orders-page-client.tsx`, `frontend-next/src/components/products/seller-products-page-client.tsx`, `frontend-next/src/components/seller/seller-shell.tsx`, `frontend-next/src/components/seller/shop-switcher.tsx`, `frontend-next/src/lib/api.ts`, `frontend-next/src/lib/auth-api.ts`, `frontend-next/src/stores/auth-store.ts`, `.gitignore`.
-- **Deleted**: `ai-service/app/providers/__init__.py`, `ai-service/app/providers/base.py`, `ai-service/app/providers/mock.py`, `ai-service/app/providers/openai_provider.py`, `ai-service/app/services/image_generation_service.py`.
-- **Untracked (New)**: `docs/SECURITY.md`.
+## Legacy Apps Review
+- no changes detected in `strawberry-frontend`
+- no changes detected in `strawberry-backend`
 
-**Commands to Commit**:
-```powershell
-cd C:\Users\admin\trawberry-ai-commerce
+## Files Changed In This Review
+- `docs/DEPLOYMENT.md`
+- `docs/CONFIG_AUDIT.md`
+- `docs/PROJECT_STATUS.md`
+- `docs/RUNTIME_ENV.md`
+- `docs/PHASE_REPORT.md`
+- `ai-service/README.md`
+- `backend-nest/README.md`
 
-# Double check status
-git status
-git diff --stat
+## Documentation Cleanup Result
+- cleaned remaining references to the old repo path `C:\Users\admin\trawberry`
+- removed remaining `ai-service` port `8010` references in reviewed runtime docs
+- aligned Docker documentation to:
+  - host PostgreSQL `localhost:5433`
+  - container PostgreSQL `postgres:5432`
+  - Docker `AI_SERVICE_BASE_URL=http://ai-service:8000`
+  - local non-Docker `AI_SERVICE_BASE_URL=http://localhost:8000`
+- confirmed OpenAI docs still describe `AI_IMAGE_PROVIDER=mock` as the default and real OpenAI only when:
+  - `AI_IMAGE_PROVIDER=openai`
+  - `RUN_OPENAI_SMOKE=true`
+  - `OPENAI_API_KEY` is present
 
-# Add files
-git add .gitignore ai-service backend-nest frontend-next docs
+## Files Reviewed
+- `docs/*.md`
+- `ai-service/README.md`
+- `backend-nest/README.md`
+- `frontend-next/README.md`
+- `infra/docker-compose.yml`
+- `infra/.env.example`
+- `infra/postgres-init/01-extensions.sql`
 
-# Commit
-git commit -m "chore: cleanup ai service and harden auth security"
+## Remaining Outdated References
+- No outdated path/port/runtime-env references remain in the reviewed runtime docs set.
+- Legacy app names `strawberry-frontend` and `strawberry-backend` still appear where they are part of migration context. Those are intentional and were not changed.
+
+## Project Status Audit
+- Created:
+  - `docs/PROJECT_STATUS.md`
+- Purpose:
+  - provide a consolidated repo-wide status report
+  - distinguish runtime-verified features from code-only or partial features
+  - summarize APIs, pages, AI pipeline, Docker runtime, risks, and roadmap
+- Verification recorded for this audit:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass
+  - `docker compose ... config`: pass
+  - `docker compose ... ps`: pass
+  - `backend-nest npm run smoke:ai-service-integration`: pass
+- Suggested next steps:
+  - verify real OpenAI runtime in a controlled environment
+  - close frontend auth/cookie messaging drift
+  - deepen orders/payment/customer-side verification
+
+## Suggested Commit Message
+```text
+chore: finalize docker compose runtime review and commit checklist
 ```
 
-## Docker Compose Verification & Hardening
-**Status**: Completed successfully.
-- **Service Configuration**: 
-  - Standardized port `8000` for `ai-service` across `Dockerfile`, `config.py`, and `docker-compose.yml`.
-  - Configured full-stack dependencies matching production parity (`PostgreSQL`, `Redis`, `MinIO`, `ai-service`, `backend-nest`, `frontend-next`).
-  - Added custom entrypoint init script `infra/postgres-init/01-extensions.sql` to explicitly enable `uuid-ossp` extension, supporting Prisma's native database migrations automatically inside the container.
-  - Adjusted host port mapping for PostgreSQL to `5433` to prevent runtime conflicts with pre-existing host processes while ensuring native container interoperability via standard port `5432`.
-- **Healthcheck & Inter-Service Parity**:
-  - Validated specific minimal CLI tools per base Alpine image (`curl` for `minio`/`ai-service`, `wget` for `backend-nest`/`frontend-next`), guaranteeing rock-solid automatic Compose dependency triggers.
-- **Validation**:
-  - Full infrastructure launched in background with all 6 containers stabilizing cleanly (`Up healthy`).
-  - Smoke Integration suite (`smoke-ai-service-integration.ps1`) executed successfully against the running stack, fully verifying roundtrip authentication, shop/product creation, simulated AI generation tasks, and credit balance delta.
-
-**Commands to Commit**:
+## Safe Git Commands
 ```powershell
 cd C:\Users\admin\trawberry-ai-commerce
 
-# Add infrastructure files
-git add infra docs
+# Check current status
+git status
+git diff --stat
+git diff --name-only
+
+# Confirm no real env file is tracked
+git ls-files | Select-String "\.env"
+
+# Review the key docs before staging
+git diff docs/RUNTIME_ENV.md
+git diff docs/PHASE_REPORT.md
+
+# Stage only the reviewed files
+git add docs/RUNTIME_ENV.md docs/PHASE_REPORT.md
+
+# Final pre-commit checks
+git status
+git diff --cached --stat
+git diff --cached --name-only
+git diff --cached --check
 
 # Commit
-git commit -m "chore: complete docker compose verification and harden environment configurations"
+git commit -m "chore: finalize docker compose runtime review and commit checklist"
+
+# Push
+git push origin HEAD
+```
+
+## Warning If Real Env Files Ever Become Tracked
+Do not commit. Remove them from the index first, for example:
+
+```powershell
+git rm --cached infra\.env
+git rm --cached backend-nest\.env
+git rm --cached ai-service\.env
+git rm --cached frontend-next\.env
+git rm --cached frontend-next\.env.local
 ```
