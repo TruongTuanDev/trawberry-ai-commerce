@@ -129,6 +129,26 @@ Current coverage:
 - order tracking by phone
 - payment proof upload
 
+## Playwright public payment review flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:public-payment-review
+```
+
+Current coverage:
+- customer checkout from seeded catalog
+- customer order tracking
+- customer payment proof upload
+- seller login with seeded demo account
+- seller payment review detail
+- seller mark paid
+- customer sees `PAID` on tracking re-check
+
+Seeded seller credentials used by this flow:
+- email: `demo-seller@trawberry.local`
+- password: `DemoSeller123!`
+
 ## Main files
 - `src/app/login/page.tsx`
 - `src/app/seller/layout.tsx`

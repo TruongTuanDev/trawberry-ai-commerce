@@ -141,8 +141,8 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Order snapshot</p>
                   <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)]">{order.orderCode}</h1>
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <Metric label="Order status"><OrderStatusBadge status={order.status} /></Metric>
-                    <Metric label="Payment status"><PaymentStatusBadge status={order.paymentStatus} /></Metric>
+                    <Metric label="Order status"><div data-testid="tracked-order-status"><OrderStatusBadge status={order.status} /></div></Metric>
+                    <Metric label="Payment status"><PaymentStatusBadge status={order.paymentStatus} testId="tracked-payment-status" /></Metric>
                     <Metric label="Payment method">{order.paymentMethod ?? "Unknown"}</Metric>
                     <Metric label="Total">{order.totalAmount}</Metric>
                   </div>
@@ -188,7 +188,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       <p className="text-sm text-[var(--muted)]">
                         Uploaded at: {order.paymentProof.uploadedAt ? new Date(order.paymentProof.uploadedAt).toLocaleString() : "Unknown"}
                       </p>
-                      <a href={order.paymentProof.url} target="_blank" rel="noreferrer" className="public-button-secondary inline-flex px-4 py-2 text-sm">
+                      <a href={order.paymentProof.url} target="_blank" rel="noreferrer" className="public-button-secondary inline-flex px-4 py-2 text-sm" data-testid="tracked-payment-proof-link">
                         Open proof
                       </a>
                     </div>

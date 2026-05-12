@@ -119,7 +119,7 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
         </Link>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]" data-testid="seller-payment-detail-page">
         <SectionCard eyebrow="Payment" title={payment.orderNumber} description="Manual payment review state for the selected order.">
           <div className="grid gap-4 md:grid-cols-2">
             <Metric label="Customer" value={payment.customer.name} />
@@ -129,7 +129,7 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
             <Metric label="Created" value={new Date(payment.createdAt).toLocaleString()} />
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Payment status</p>
-              <div className="mt-3"><PaymentStatusBadge status={payment.paymentStatus} /></div>
+              <div className="mt-3"><PaymentStatusBadge status={payment.paymentStatus} testId="seller-payment-status" /></div>
             </div>
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Order status</p>
@@ -161,6 +161,7 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
                   target="_blank"
                   rel="noreferrer"
                   className="mt-3 inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+                  data-testid="seller-payment-proof-link"
                 >
                   Open proof
                 </a>
@@ -192,6 +193,7 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
                 onClick={() => void performAction("markPaid")}
                 disabled={saving}
                 className="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                data-testid="seller-mark-paid-button"
               >
                 {saving ? "Saving..." : "Mark as paid"}
               </button>

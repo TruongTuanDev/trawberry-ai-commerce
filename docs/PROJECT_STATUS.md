@@ -162,6 +162,16 @@
   - public catalog can now be bootstrapped with a stable approved seller, active shop, and 3 active products
   - Playwright full public E2E now covers browse, product detail, checkout, confirmation, tracking, and payment proof upload
 
+### Full E2E Seller Payment Review After Customer Proof
+- Status: Done
+- Evidence:
+  - `frontend-next/tests/e2e/public-payment-review.spec.ts`
+  - `frontend-next/src/components/payments/seller-payment-detail-page-client.tsx`
+  - `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+- Notes:
+  - browser-level E2E now covers customer proof upload, seller review, seller mark paid, and customer re-check of `paymentStatus=PAID`
+  - seller phase uses the seeded demo seller account and navigates directly to `/seller/payments/[orderId]` for stability
+
 ### Payments
 - Status: MVP done for manual review
 - Evidence:
@@ -442,6 +452,7 @@ Current flow:
 | frontend-next | `npm run test:e2e:auth` | Pass | Playwright browser smoke for cookie auth flow. |
 | frontend-next | `npm run test:e2e:public` | Pass | Playwright smoke for public home, products, and order tracking routes. |
 | frontend-next | `npm run test:e2e:public-full` | Pass | Playwright full customer flow with seeded demo data. |
+| frontend-next | `npm run test:e2e:public-payment-review` | Pass | Browser E2E for customer proof upload -> seller mark paid -> customer sees `PAID`. |
 | ai-service | `python -m compileall app` | Pass | Re-run in this audit. |
 | ai-service | `python -m pytest -q` | Pass | `18` tests. |
 | infra | `docker compose ... config` | Pass | Re-run in this audit. |

@@ -563,6 +563,55 @@ while allowing:
   - `public-full` initially failed because it clicked the first public product card, which was unstable in a mixed demo + smoke dataset
   - the test now targets a seeded product by name and uses stricter route assertions
 
+## Full E2E Seller Payment Review After Customer Proof
+
+- Scope:
+  - extend Playwright coverage to include seller review after customer payment proof upload
+  - keep the flow browser-level where practical and reuse the demo seed account
+  - preserve existing auth, public, checkout, tracking, and payments smoke coverage
+- Files changed:
+  - `frontend-next/package.json`
+  - `frontend-next/tests/e2e/public-payment-review.spec.ts`
+  - `frontend-next/src/components/payments/payment-status-badge.tsx`
+  - `frontend-next/src/components/payments/seller-payment-detail-page-client.tsx`
+  - `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+  - `frontend-next/README.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - a full browser E2E now covers:
+    - customer checkout with unique phone
+    - customer tracking lookup
+    - customer payment proof upload
+    - seller login with seeded demo seller
+    - seller payment proof visibility
+    - seller mark paid
+    - customer re-check showing `paymentStatus=PAID`
+  - seller review uses direct detail route `/seller/payments/[orderId]` instead of list search to keep the test deterministic without expanding seller UI scope
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+- Runtime notes:
+  - the new flow required a frontend container rebuild before Playwright could see newly added `data-testid` hooks on tracking and seller payment detail pages
+  - no backend API or status transition changes were required for this phase
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist
