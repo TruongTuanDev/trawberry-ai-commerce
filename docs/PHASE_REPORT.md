@@ -83,4 +83,46 @@ Trong quá trình thực hiện End-to-End smoke test cho OpenAI provider, chún
 **Status**: FAILED (Expected failure due to billing limit)
 **Reason**: OpenAI API key provided has reached its billing hard limit.
 - AI service gracefully catches and propagates the error.
+- AI service gracefully catches and propagates the error.
 - Backend gracefully transitions task to FAILED and successfully refunds credits.
+
+## Production Cleanup & Security Hardening
+**Status**: Completed successfully.
+- **`ai-service` Cleanup**: Deleted all legacy/unused provider files (`app/providers/base.py`, `app/providers/mock.py`, `app/providers/openai_provider.py`) and `image_generation_service.py` to minimize attack surface and reduce tech debt.
+- **`backend-nest` Security**:
+  - Implemented `httpOnly` cookie injection inside `AuthController.login` and `refresh` to securely store JWT tokens without exposing them to client-side scripts.
+  - Implemented `AuthController.logout` to clear the authentication cookie securely.
+  - Updated `JwtStrategy` to support multiple extractors: checking the `httpOnly` cookie first, while preserving backward compatibility with `Authorization: Bearer` for legacy third-party clients and smoke test scripts.
+- **`frontend-next` Security**:
+  - `auth-store.ts` refactored to stop saving `token` and `refreshToken` into `localStorage`. The state only persists the user object to signify authenticated status.
+  - All protected components correctly use `user` presence check instead of `token` checks.
+  - Setup `credentials: "include"` in `lib/api.ts` so the fetch client automatically propagates the new `httpOnly` cookies set by `backend-nest`.
+- **Validation**:
+  - Backend integration suite (30 tests) passed with backward compatibility explicitly preserved.
+  - Frontend compiled with strictly typed refactors and 0 lint warnings.
+  - Documented `AUTH_COOKIE_*` env flags in `RUNTIME_ENV.md` and created `SECURITY.md` for architectural overview.
+
+## Git Workflow & Checklist
+**Environment Security Check**:
+- `git ls-files | Select-String "\.env"` returned NO real `.env` files. Only `.env.example` files are safely tracked.
+- *Status*: ✅ **Safe to commit**.
+
+**Git Status Summary**:
+- **Modified**: `backend-nest/.env.example`, `backend-nest/src/modules/auth/auth.controller.ts`, `backend-nest/src/modules/auth/strategies/jwt.strategy.ts`, `docs/PHASE_REPORT.md`, `docs/RUNTIME_ENV.md`, `frontend-next/src/components/auth/login-form.tsx`, `frontend-next/src/components/auth/protected-shell.tsx`, `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`, `frontend-next/src/components/orders/seller-orders-page-client.tsx`, `frontend-next/src/components/products/seller-products-page-client.tsx`, `frontend-next/src/components/seller/seller-shell.tsx`, `frontend-next/src/components/seller/shop-switcher.tsx`, `frontend-next/src/lib/api.ts`, `frontend-next/src/lib/auth-api.ts`, `frontend-next/src/stores/auth-store.ts`, `.gitignore`.
+- **Deleted**: `ai-service/app/providers/__init__.py`, `ai-service/app/providers/base.py`, `ai-service/app/providers/mock.py`, `ai-service/app/providers/openai_provider.py`, `ai-service/app/services/image_generation_service.py`.
+- **Untracked (New)**: `docs/SECURITY.md`.
+
+**Commands to Commit**:
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+
+# Double check status
+git status
+git diff --stat
+
+# Add files
+git add .gitignore ai-service backend-nest frontend-next docs
+
+# Commit
+git commit -m "chore: cleanup ai service and harden auth security"
+```

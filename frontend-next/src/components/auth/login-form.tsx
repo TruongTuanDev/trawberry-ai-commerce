@@ -36,12 +36,12 @@ export function LoginForm() {
     setFormError(null);
 
     try {
-      const auth = await loginRequest(values);
-      const user = await currentUserRequest(auth.accessToken);
+      await loginRequest(values);
+      const user = await currentUserRequest();
 
       setSession({
-        token: auth.accessToken,
-        refreshToken: auth.refreshToken,
+        token: null,
+        refreshToken: null,
         user,
       });
 

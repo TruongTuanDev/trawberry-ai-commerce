@@ -18,15 +18,14 @@ const navigation = [
 
 export function SellerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
 
   useEffect(() => {
-    if (!token) return;
-    void loadShops(token);
-  }, [loadShops, token]);
+    if (!user) return;
+    void loadShops("");
+  }, [loadShops, user]);
 
   return (
     <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6">
@@ -88,7 +87,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 <ShopSwitcher />
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{user?.role ?? "SELLER"}</p>
-                  <p className="text-[var(--muted)]">Token stored in localStorage for this bootstrap phase.</p>
+                  <p className="text-[var(--muted)]">Cookie-based authentication active.</p>
                 </div>
               </div>
             </div>

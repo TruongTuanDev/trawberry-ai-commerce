@@ -6,7 +6,10 @@ import {
   HttpStatus,
   Post,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -25,7 +28,39 @@ import { RegisterDto } from './dto/register.dto';
 @ApiTags('auth')
 @Controller('api/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private setAuthCookie(res: Response, token: string) {
+    const cookieName = this.configService.get<string>(
+      'AUTH_COOKIE_NAME',
+      'access_token',
+    );
+    const isSecure =
+      this.configService.get<string>('AUTH_COOKIE_SECURE', 'false') === 'true';
+    const sameSiteConfig = this.configService.get<string>(
+      'AUTH_COOKIE_SAME_SITE',
+      'lax',
+    );
+    const sameSite = (
+      ['lax', 'strict', 'none'].includes(sameSiteConfig)
+        ? sameSiteConfig
+        : 'lax'
+    ) as boolean | 'lax' | 'strict' | 'none';
+    const maxAge = this.configService.get<number>(
+      'AUTH_COOKIE_MAX_AGE_SECONDS',
+      15 * 60,
+    );
+
+    res.cookie(cookieName, token, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite,
+      maxAge: maxAge * 1000,
+    });
+  }
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new customer or seller account.' })
@@ -38,8 +73,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log in with email and password.' })
   @ApiOkResponse({ type: AuthResponseDto })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.login(dto);
+    this.setAuthCookie(res, response.accessToken);
+    return response;
   }
 
   @Post('refresh')
@@ -48,8 +88,41 @@ export class AuthController {
     summary: 'Exchange a refresh token for a fresh access token.',
   })
   @ApiOkResponse({ type: AuthResponseDto })
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refresh(dto);
+  async refresh(
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.refresh(dto);
+    this.setAuthCookie(res, response.accessToken);
+    return response;
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log out and clear the auth cookie.' })
+  logout(@Res({ passthrough: true }) res: Response) {
+    const cookieName = this.configService.get<string>(
+      'AUTH_COOKIE_NAME',
+      'access_token',
+    );
+    const isSecure =
+      this.configService.get<string>('AUTH_COOKIE_SECURE', 'false') === 'true';
+    const sameSiteConfig = this.configService.get<string>(
+      'AUTH_COOKIE_SAME_SITE',
+      'lax',
+    );
+    const sameSite = (
+      ['lax', 'strict', 'none'].includes(sameSiteConfig)
+        ? sameSiteConfig
+        : 'lax'
+    ) as boolean | 'lax' | 'strict' | 'none';
+
+    res.clearCookie(cookieName, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite,
+    });
+    return { success: true };
   }
 
   @Get('me')

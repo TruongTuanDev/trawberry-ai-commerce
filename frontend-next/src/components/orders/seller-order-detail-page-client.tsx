@@ -11,7 +11,7 @@ import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 const statusOptions = ["NEW", "ASSEMBLING", "SHIPPING", "DELIVERED", "CANCELLED"] as const;
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
-  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [order, setOrder] = useState<SellerOrderListItem | null>(null);
   const [nextStatus, setNextStatus] = useState<SellerOrderListItem["status"]>("NEW");
@@ -24,13 +24,13 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     let mounted = true;
 
     const run = async () => {
-      if (!token || !currentShopId) {
+      if (!user || !currentShopId) {
         setLoading(false);
         return;
       }
 
       try {
-        const result = await getShopOrderById(currentShopId, orderId, token);
+        const result = await getShopOrderById(currentShopId, orderId, "");
         if (!mounted) return;
         setOrder(result);
         setNextStatus(result.status as SellerOrderListItem["status"]);
@@ -50,10 +50,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, orderId, token]);
+  }, [currentShopId, orderId, user]);
 
   const handleUpdateStatus = async () => {
-    if (!token || !currentShopId || !order) {
+    if (!user || !currentShopId || !order) {
       return;
     }
 
@@ -61,7 +61,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     setError(null);
     setSuccessMessage(null);
     try {
-      const updated = await updateShopOrderStatus(currentShopId, order.id, nextStatus, token);
+      const updated = await updateShopOrderStatus(currentShopId, order.id, nextStatus, "");
       setOrder(updated);
       setNextStatus(updated.status as SellerOrderListItem["status"]);
       setSuccessMessage(`Order moved to ${updated.status}.`);

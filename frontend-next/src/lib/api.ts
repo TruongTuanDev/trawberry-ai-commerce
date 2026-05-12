@@ -16,6 +16,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(headers ?? {}),
     },
+    credentials: "include",
     cache: "no-store",
   });
 

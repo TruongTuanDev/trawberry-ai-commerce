@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export function ShopSwitcher() {
-  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const shops = useSellerWorkspaceStore((state) => state.shops);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const loading = useSellerWorkspaceStore((state) => state.loading);
@@ -24,7 +24,7 @@ export function ShopSwitcher() {
         <select
           value={currentShopId ?? ""}
           onChange={(event) => selectShop(event.target.value)}
-          disabled={!token || loading || shops.length === 0}
+          disabled={!user || loading || shops.length === 0}
           className={clsx(
             "min-w-[220px] rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] outline-none",
             "disabled:cursor-not-allowed disabled:bg-[var(--panel)] disabled:text-[var(--muted)]",

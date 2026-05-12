@@ -14,7 +14,7 @@ const PAGE_SIZE = 10;
 export function SellerProductsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
 
   const [filters, setFilters] = useState({
@@ -45,7 +45,7 @@ export function SellerProductsPageClient() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!token || !currentShopId) {
+    if (!user || !currentShopId) {
       return;
     }
 
@@ -61,7 +61,7 @@ export function SellerProductsPageClient() {
             search: filters.search || undefined,
             status: filters.status || undefined,
           },
-          token,
+          "",
         );
 
         setState({
@@ -80,7 +80,7 @@ export function SellerProductsPageClient() {
     };
 
     void run();
-  }, [currentShopId, filters.search, filters.status, page, token]);
+  }, [currentShopId, filters.search, filters.status, page, user]);
 
   const applyFilters = () => {
     const params = new URLSearchParams();

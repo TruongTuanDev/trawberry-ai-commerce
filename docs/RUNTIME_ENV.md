@@ -75,6 +75,12 @@ To use real OpenAI image generation:
 - `AI_SERVICE_INTERNAL_TOKEN` (backend-nest, ai-service, infra): Used to authenticate internal requests between backend-nest and ai-service. Both services MUST share the same exact token.
 - `NEXT_PUBLIC_API_URL` (frontend-next, infra): The backend URL the frontend browser will call.
 
+### Security / Authentication Variables (backend-nest, infra)
+- `AUTH_COOKIE_NAME`: Name of the `httpOnly` cookie containing the JWT. (Default: `access_token`)
+- `AUTH_COOKIE_SECURE`: Must be `true` in production to enforce HTTPS. (Default: `false` for local)
+- `AUTH_COOKIE_SAME_SITE`: Protection policy (`lax`, `strict`, `none`). (Default: `lax`)
+- `AUTH_COOKIE_MAX_AGE_SECONDS`: Expiration of the cookie in seconds. (Default: `86400`)
+
 ### Optional Variables
 - `OPENAI_API_KEY` (ai-service, infra): Only required if `AI_IMAGE_PROVIDER=openai`.
 - `S3_*` variables (ai-service, infra): Only required if `STORAGE_DRIVER=s3`. Default is `local` for local development.

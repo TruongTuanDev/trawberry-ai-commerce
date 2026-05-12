@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth-store";
 export function ProtectedShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const hydrated = useAuthStore((state) => state.hydrated);
 
   useEffect(() => {
@@ -15,12 +15,12 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!token) {
+    if (!user) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
-  }, [hydrated, pathname, router, token]);
+  }, [hydrated, pathname, router, user]);
 
-  if (!hydrated || !token) {
+  if (!hydrated || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-panel rounded-[1.5rem] px-8 py-6 text-sm text-[var(--muted)]">

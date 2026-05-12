@@ -7,14 +7,14 @@ import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 const AUTH_STORAGE_KEY = "strawberry-next-auth";
 
 type PersistedAuth = {
-  token: string | null;
-  refreshToken: string | null;
   user: CurrentUserResponse | null;
 };
 
 type AuthState = PersistedAuth & {
+  token: string | null;
+  refreshToken: string | null;
   hydrated: boolean;
-  setSession: (payload: PersistedAuth) => void;
+  setSession: (payload: PersistedAuth & { token: string | null; refreshToken: string | null }) => void;
   hydrate: () => void;
   refreshMe: () => Promise<void>;
   logout: () => void;
@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   hydrated: false,
   setSession: (payload) => {
-    save(payload);
+    save({ user: payload.user });
     set({
       token: payload.token,
       refreshToken: payload.refreshToken,
@@ -63,8 +63,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const parsed = JSON.parse(raw) as PersistedAuth;
       set({
-        token: parsed.token,
-        refreshToken: parsed.refreshToken,
+        token: null,
+        refreshToken: null,
         user: parsed.user,
         hydrated: true,
       });

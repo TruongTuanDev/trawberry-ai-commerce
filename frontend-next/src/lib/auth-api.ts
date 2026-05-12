@@ -31,7 +31,7 @@ export async function loginRequest(input: { email: string; password: string }) {
   });
 }
 
-export async function currentUserRequest(token: string) {
+export async function currentUserRequest(token?: string) {
   return apiRequest<CurrentUserResponse>("/api/auth/me", {
     method: "GET",
     token,

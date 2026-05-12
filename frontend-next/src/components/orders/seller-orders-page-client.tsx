@@ -9,7 +9,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export function SellerOrdersPageClient() {
-  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [orders, setOrders] = useState<SellerOrderListItem[]>([]);
   const [page, setPage] = useState(1);
@@ -26,7 +26,7 @@ export function SellerOrdersPageClient() {
     let mounted = true;
 
     const run = async () => {
-      if (!token || !currentShopId) {
+      if (!user || !currentShopId) {
         setLoading(false);
         return;
       }
@@ -43,7 +43,7 @@ export function SellerOrdersPageClient() {
             dateFrom: dateFrom || undefined,
             dateTo: dateTo || undefined,
           },
-          token,
+          "",
         );
         if (!mounted) return;
         setOrders(response.items);
@@ -64,7 +64,7 @@ export function SellerOrdersPageClient() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, dateFrom, dateTo, page, search, size, status, token]);
+  }, [currentShopId, dateFrom, dateTo, page, search, size, status, user]);
 
   return (
     <div className="space-y-6">
