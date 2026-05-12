@@ -38,11 +38,13 @@ Copy `infra/.env.example` to `infra/.env`:
 ```bash
 cp infra/.env.example infra/.env
 ```
-Run docker-compose:
+Run docker-compose from the repository root:
 ```bash
-cd infra
-docker compose up -d
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d
 ```
+
+> [!TIP]
+> The host PostgreSQL port is mapped to `5433` by default in `infra/.env` to avoid conflicts if you already have a local PostgreSQL running on port `5432`. Inside the Docker network, services communicate with the database via `postgres:5432`.
 
 ## Local vs Docker URLs
 

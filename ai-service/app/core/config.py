@@ -56,7 +56,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("STORAGE_LOCAL_ROOT", "AI_OUTPUT_DIR"),
     )
     storage_public_base_url: str = Field(
-        default="http://localhost:8010/generated",
+        default="http://localhost:8000/generated",
         validation_alias=AliasChoices("STORAGE_PUBLIC_BASE_URL", "PUBLIC_BASE_URL"),
     )
 

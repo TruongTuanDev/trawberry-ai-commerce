@@ -126,3 +126,27 @@ git add .gitignore ai-service backend-nest frontend-next docs
 # Commit
 git commit -m "chore: cleanup ai service and harden auth security"
 ```
+
+## Docker Compose Verification & Hardening
+**Status**: Completed successfully.
+- **Service Configuration**: 
+  - Standardized port `8000` for `ai-service` across `Dockerfile`, `config.py`, and `docker-compose.yml`.
+  - Configured full-stack dependencies matching production parity (`PostgreSQL`, `Redis`, `MinIO`, `ai-service`, `backend-nest`, `frontend-next`).
+  - Added custom entrypoint init script `infra/postgres-init/01-extensions.sql` to explicitly enable `uuid-ossp` extension, supporting Prisma's native database migrations automatically inside the container.
+  - Adjusted host port mapping for PostgreSQL to `5433` to prevent runtime conflicts with pre-existing host processes while ensuring native container interoperability via standard port `5432`.
+- **Healthcheck & Inter-Service Parity**:
+  - Validated specific minimal CLI tools per base Alpine image (`curl` for `minio`/`ai-service`, `wget` for `backend-nest`/`frontend-next`), guaranteeing rock-solid automatic Compose dependency triggers.
+- **Validation**:
+  - Full infrastructure launched in background with all 6 containers stabilizing cleanly (`Up healthy`).
+  - Smoke Integration suite (`smoke-ai-service-integration.ps1`) executed successfully against the running stack, fully verifying roundtrip authentication, shop/product creation, simulated AI generation tasks, and credit balance delta.
+
+**Commands to Commit**:
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+
+# Add infrastructure files
+git add infra docs
+
+# Commit
+git commit -m "chore: complete docker compose verification and harden environment configurations"
+```
