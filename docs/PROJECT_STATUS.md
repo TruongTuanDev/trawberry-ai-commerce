@@ -87,6 +87,37 @@
   - local storage path active in backend Docker runtime
   - metadata supports AI-related image types
 
+### Orders
+- Status: Done
+- Evidence:
+  - `backend-nest/test/orders.e2e-spec.ts`
+  - `frontend-next/src/app/seller/orders`
+  - `npm run smoke:orders`
+- Main files/modules:
+  - `backend-nest/src/modules/orders`
+  - `frontend-next/src/components/orders`
+  - `frontend-next/src/app/seller/orders`
+  - `docs/API_ORDERS.md`
+- Notes:
+  - seller list/detail/status update are implemented
+  - auth and shop isolation are enforced with `JwtAuthGuard` + `ShopAccessGuard`
+  - NestJS does not yet own checkout or customer-side order creation
+
+### Payments
+- Status: Not started / partial schema only
+- Evidence:
+  - no `payments` module exists in `backend-nest`
+  - no payment provider integration exists in `frontend-next`
+  - only `paymentStatus` field and shop `paymentInstructions` exist in current schema/API surface
+- Main files/modules:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/src/modules/shops`
+  - `backend-nest/src/modules/orders`
+- Notes:
+  - seller orders display `paymentStatus`
+  - there are no NestJS payment approval, rejection, capture, refund, or provider webhook endpoints yet
+  - legacy Spring Boot still contains richer payment workflow references per `docs/API_MAP_OLD.md`
+
 ### AI Image Task Backend
 - Status: Done
 - Evidence:
@@ -244,9 +275,12 @@
 | `GET` | `/api/shops/:shopId/ai-credits` | ai-images | Done | Yes | Yes |
 | `POST` | `/api/shops/:shopId/products/:productId/ai-images/:imageId/attach` | ai-images | Done | Yes | Yes |
 | `POST` | `/api/shops/:shopId/products/:productId/images/:imageId/attach` | ai-images alias | Done | Yes | Covered indirectly |
-| `GET` | `/api/shops/:shopId/orders` | orders | Done | Yes | Not covered by dedicated smoke in this audit |
-| `GET` | `/api/shops/:shopId/orders/:orderId` | orders | Done | Yes | Covered by tests/build, not dedicated smoke in this audit |
-| `PATCH` | `/api/shops/:shopId/orders/:orderId/status` | orders | Done | Yes | Covered by tests/build, not dedicated smoke in this audit |
+| `GET` | `/api/shops/:shopId/orders` | orders | Done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/orders/:orderId` | orders | Done | Yes | Yes |
+| `PATCH` | `/api/shops/:shopId/orders/:orderId/status` | orders | Done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/payments` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
+| `POST` | `/api/shops/:shopId/orders/:orderId/payment/approve` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
+| `POST` | `/api/shops/:shopId/orders/:orderId/payment/reject` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
 | `POST` | `/api/files/upload-url` | files | Partial | Yes | No |
 
 ## E. Frontend Page Status
@@ -261,6 +295,7 @@
 | `/seller/ai-images` | Future AI center / try-on area | Partial | No | Placeholder route only. |
 | `/seller/orders` | Seller order list | Done | Yes | Connected to NestJS orders API. |
 | `/seller/orders/[id]` | Seller order detail | Done | Yes | Connected to NestJS orders API. |
+| `/seller/payments` | Seller payment review | Not started | No | No Next.js route exists yet. |
 | `/seller/settings` | Seller settings area | Partial | No | Placeholder content only. |
 
 ## F. AI Pipeline Status
@@ -315,6 +350,7 @@ Current flow:
 | backend-nest | `npm run build` | Pass | Re-run in this audit. |
 | backend-nest | `npm run smoke:auth` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:products` | Exists | Not re-run in this audit. |
+| backend-nest | `npm run smoke:orders` | Pass | Seller orders runtime smoke covers list, detail, status update, and cross-shop `403`. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -339,24 +375,26 @@ Current flow:
 - `ai-service` tree still contains `__pycache__` artifacts in the working tree; they are ignored/noise, not functional code.
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
-- Orders module exists and builds/tests, but it did not receive the same dedicated Docker smoke coverage as product/image/AI in this audit.
+- Payments are not migrated in NestJS yet beyond `paymentStatus` fields and shop payment instructions.
+- Orders are seller-facing only in the new stack; customer checkout/order creation still appear to be legacy-owned.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
 ## J. Next Recommended Phases
 
 1. Final project status verification on a fresh machine using only documented steps.
 2. Add dev seed accounts and predictable seller/shop bootstrap to reduce smoke-script setup friction.
-3. Deepen Orders / Payments verification and UI completeness.
-4. Build customer-side marketplace frontend and public catalog flows.
-5. Implement true try-on online flow end-to-end.
-6. Add admin moderation and operational tooling.
-7. Production hardening:
+3. Implement customer checkout and customer order lifecycle in NestJS.
+4. Implement seller payment review flow and payment module boundaries.
+5. Build customer-side marketplace frontend and public catalog flows.
+6. Implement true try-on online flow end-to-end.
+7. Add admin moderation and operational tooling.
+8. Production hardening:
    - auth/cookie/session review
    - secret management
    - object storage strategy
    - logging and observability
-8. Add CI/CD with GitHub Actions.
-9. Prepare VPS / cloud deployment pipeline.
+9. Add CI/CD with GitHub Actions.
+10. Prepare VPS / cloud deployment pipeline.
 
 ## K. Definition of Done for MVP
 

@@ -280,6 +280,43 @@ while allowing:
   - Playwright initially failed because browser binaries were not installed yet
   - `npx playwright install chromium` was run successfully before the passing E2E execution
 
+## Orders / Payments Audit
+
+- Scope:
+  - audit current Orders and Payments implementation status across `backend-nest`, `frontend-next`, Prisma schema, tests, smoke scripts, and docs
+  - add minimal runtime smoke for seller Orders if basic APIs existed
+- Files changed:
+  - `backend-nest/package.json`
+  - `backend-nest/scripts/smoke-orders.ps1`
+  - `docs/API_ORDERS.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - Orders are implemented for seller-side operations in NestJS:
+    - list orders
+    - get order detail
+    - update fulfillment status
+  - Orders are connected in Next.js:
+    - `/seller/orders`
+    - `/seller/orders/[id]`
+  - Orders now have dedicated runtime smoke coverage via `npm run smoke:orders`
+  - Payments are not migrated as a standalone NestJS module
+  - Current payment support in the new stack is limited to:
+    - `paymentStatus` on orders
+    - `paymentInstructions` on shops
+  - No NestJS payment provider integration, approval/rejection endpoints, webhook handlers, or Next.js payment review pages exist yet
+- Verification for this pass:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:orders`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `docker compose ... ps`: pass (`6/6` healthy)
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/login`: pass
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist
