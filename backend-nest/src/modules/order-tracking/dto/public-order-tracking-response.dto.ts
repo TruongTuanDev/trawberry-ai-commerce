@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PaymentReviewLogResponseDto } from './payment-review-log-response.dto';
 
-class PaymentCustomerDto {
+class PublicOrderCustomerDto {
   @ApiProperty()
   name!: string;
 
@@ -10,9 +9,12 @@ class PaymentCustomerDto {
 
   @ApiProperty({ nullable: true })
   email!: string | null;
+
+  @ApiProperty()
+  address!: string;
 }
 
-class PaymentItemDto {
+class PublicOrderItemDto {
   @ApiProperty()
   id!: string;
 
@@ -32,7 +34,7 @@ class PaymentItemDto {
   productImageSnapshot!: string | null;
 }
 
-class PaymentProofDto {
+class PublicOrderPaymentProofDto {
   @ApiProperty()
   url!: string;
 
@@ -49,18 +51,35 @@ class PaymentProofDto {
   uploadedAt!: string | null;
 }
 
-export class PaymentResponseDto {
+class PublicOrderReviewLogDto {
   @ApiProperty()
   id!: string;
 
   @ApiProperty()
-  orderNumber!: string;
+  action!: string;
+
+  @ApiProperty({ nullable: true })
+  fromStatus!: string | null;
+
+  @ApiProperty({ nullable: true })
+  toStatus!: string | null;
+
+  @ApiProperty({ nullable: true })
+  note!: string | null;
+
+  @ApiProperty({ nullable: true })
+  reviewerName!: string | null;
 
   @ApiProperty()
-  shopId!: string;
+  createdAt!: string;
+}
+
+export class PublicOrderTrackingResponseDto {
+  @ApiProperty()
+  orderId!: string;
 
   @ApiProperty()
-  shopName!: string;
+  orderCode!: string;
 
   @ApiProperty()
   status!: string;
@@ -68,20 +87,17 @@ export class PaymentResponseDto {
   @ApiProperty()
   paymentStatus!: string;
 
+  @ApiProperty()
+  totalAmount!: string;
+
   @ApiProperty({ nullable: true })
   paymentMethod!: string | null;
 
   @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
 
-  @ApiProperty()
-  totalAmount!: string;
-
-  @ApiProperty()
-  shippingAddress!: string;
-
-  @ApiProperty({ type: PaymentCustomerDto })
-  customer!: PaymentCustomerDto;
+  @ApiProperty({ type: PublicOrderCustomerDto })
+  customer!: PublicOrderCustomerDto;
 
   @ApiProperty({ nullable: true })
   customerNote!: string | null;
@@ -92,12 +108,12 @@ export class PaymentResponseDto {
   @ApiProperty()
   updatedAt!: string;
 
-  @ApiProperty({ type: PaymentItemDto, isArray: true })
-  items!: PaymentItemDto[];
+  @ApiProperty({ type: PublicOrderItemDto, isArray: true })
+  items!: PublicOrderItemDto[];
 
-  @ApiProperty({ type: PaymentProofDto, nullable: true })
-  paymentProof!: PaymentProofDto | null;
+  @ApiProperty({ type: PublicOrderPaymentProofDto, nullable: true })
+  paymentProof!: PublicOrderPaymentProofDto | null;
 
-  @ApiProperty({ type: PaymentReviewLogResponseDto, isArray: true })
-  reviewLogs!: PaymentReviewLogResponseDto[];
+  @ApiProperty({ type: PublicOrderReviewLogDto, isArray: true })
+  paymentLogs!: PublicOrderReviewLogDto[];
 }

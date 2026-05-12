@@ -149,6 +149,23 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
             {payment.customerNote ? (
               <p className="text-sm text-[var(--muted)]">Customer note: {payment.customerNote}</p>
             ) : null}
+            {payment.paymentProof ? (
+              <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                <p className="text-sm font-semibold text-[var(--foreground)]">Payment proof</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">{payment.paymentProof.originalName ?? "Uploaded proof"}</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Uploaded: {payment.paymentProof.uploadedAt ? new Date(payment.paymentProof.uploadedAt).toLocaleString() : "Unknown"}
+                </p>
+                <a
+                  href={payment.paymentProof.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+                >
+                  Open proof
+                </a>
+              </div>
+            ) : null}
           </div>
         </SectionCard>
 
@@ -204,7 +221,7 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
                       {log.action}
                     </span>
                     <p className="text-sm text-[var(--muted)]">
-                      {log.fromStatus ?? "N/A"} {log.toStatus ? `→ ${log.toStatus}` : ""}
+                      {log.fromStatus ?? "N/A"} {log.toStatus ? `-> ${log.toStatus}` : ""}
                     </p>
                   </div>
                   <p className="text-xs text-[var(--muted)]">{new Date(log.createdAt).toLocaleString()}</p>

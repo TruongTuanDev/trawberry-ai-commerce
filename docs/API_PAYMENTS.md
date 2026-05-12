@@ -6,6 +6,7 @@ This document describes the manual payment review MVP implemented in `backend-ne
 Current scope includes:
 - seller payment review queue
 - payment detail with customer/order snapshots
+- payment proof visibility in seller detail
 - mark manual payment as paid
 - reject a pending payment
 - add payment review notes
@@ -13,7 +14,6 @@ Current scope includes:
 
 Current scope does not include:
 - payment provider integration
-- customer payment proof upload
 - automatic reconciliation
 - refunds, chargebacks, or provider webhooks
 
@@ -68,6 +68,7 @@ Return payment review detail for one order, including:
 - totals
 - customer snapshot
 - item snapshots
+- payment proof metadata when present
 - payment review logs
 
 ### `POST /api/shops/:shopId/payments/:orderId/mark-paid`
@@ -121,6 +122,9 @@ Coverage currently includes:
   - add note
   - cross-shop `403`
   - invalid transition
+- `backend-nest/test/order-tracking.e2e-spec.ts`
+  - seller payment detail sees customer-uploaded proof
+  - seller mark paid still works after proof upload
 - `backend-nest/scripts/smoke-payments.ps1`
   - register seller
   - approve seller
@@ -139,5 +143,5 @@ Coverage currently includes:
 ## Known Limitations
 
 - `paymentMethod` currently reuses the order snapshot from `shippingMethodName`, because the schema does not yet have a dedicated payment-method column.
-- Customer-side payment proof upload is still out of scope.
-- Provider-backed statuses and true settlement are still future work.
+- customer proof upload is public and phone-based; richer customer account history still does not exist yet.
+- provider-backed statuses and true settlement are still future work.

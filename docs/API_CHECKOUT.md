@@ -11,7 +11,7 @@ Current scope includes:
 Current scope does not include:
 - real payment provider integration
 - payment approval or capture endpoints
-- customer order history pages
+- customer account-based order history pages
 - shipment creation or tracking
 
 ## Public Catalog
@@ -100,9 +100,16 @@ Response:
   "status": "PENDING",
   "paymentStatus": "PENDING",
   "totalAmount": "198",
-  "paymentInstructions": "Transfer to bank account 123."
+  "paymentInstructions": "Transfer to bank account 123.",
+  "trackingPath": "/orders/<orderId>",
+  "customerPhone": "0123456789"
 }
 ```
+
+Tracking follow-up:
+- customer can continue directly to `/orders/:orderId`
+- customer can also use `/orders/track` later with `orderCode + phone`
+- manual transfer proof upload is now documented in `docs/API_ORDER_TRACKING.md`
 
 ## Runtime Verification
 

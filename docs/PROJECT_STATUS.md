@@ -27,8 +27,8 @@
 
 | Component | Tech stack | Status | Runtime verified? | Notes |
 |---|---|---|---|---|
-| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products` + `/checkout` MVP now exists; seller `/payments` MVP now exists; dashboard/settings/AI route still partly placeholder. |
-| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, public products, checkout, payments, seller orders, images, AI tasks all present. |
+| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products`, `/checkout`, `/orders/track`, and `/orders/[id]` MVP now exist; seller `/payments` MVP now exists; dashboard/settings/AI route still partly placeholder. |
+| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, public products, checkout, order tracking, payments, seller orders, images, AI tasks all present. |
 | `ai-service` | FastAPI, Pydantic, OpenAI SDK, Pillow, boto3 | Partial | Yes | Mock provider verified; OpenAI provider implemented but real OpenAI runtime not fully confirmed in this audit. |
 | `postgres` | PostgreSQL 16 | Done | Yes | Running in Docker; host `5433`, network `5432`. |
 | `redis` | Redis 7 | Done | Yes | Running in Docker and used by BullMQ. |
@@ -120,6 +120,21 @@
   - seller order list/detail can read the new orders without changing the seller API surface
   - Docker runtime verification passed with `smoke:checkout`, `smoke:orders`, backend/frontend health checks, and Playwright auth E2E
 
+### Customer Order Tracking / Payment Proof
+- Status: MVP done
+- Evidence:
+  - `backend-nest/test/order-tracking.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-order-tracking.ps1`
+  - `backend-nest/src/modules/order-tracking`
+  - `frontend-next/src/app/orders/track`
+  - `frontend-next/src/app/orders/[id]`
+  - `docs/API_ORDER_TRACKING.md`
+- Notes:
+  - customer can track by `orderCode + phone` or `orderId + phone`
+  - customer can upload payment proof without a customer account
+  - seller payment detail now shows payment proof metadata and proof link
+  - customer tracking reflects updated `paymentStatus` after seller review
+
 ### Payments
 - Status: MVP done for manual review
 - Evidence:
@@ -136,6 +151,7 @@
 - Notes:
   - manual seller review now supports list/detail/mark paid/reject/add note
   - additive audit logging is stored in `payment_review_logs`
+  - seller detail now surfaces customer-uploaded payment proof
   - there is still no payment provider integration, capture, refund, or webhook handling
   - legacy Spring Boot still contains broader payment workflow references per `docs/API_MAP_OLD.md`
 
@@ -307,6 +323,9 @@
 | `GET` | `/api/public/products` | public-products | Done | No | Covered by build/manual flow |
 | `GET` | `/api/public/products/:productId` | public-products | Done | No | Covered by build/manual flow |
 | `POST` | `/api/checkout/orders` | checkout | MVP done | Optional auth | Yes |
+| `GET` | `/api/public/orders/track` | order-tracking | MVP done | No | Yes |
+| `GET` | `/api/public/orders/:orderId/track` | order-tracking | MVP done | No | Yes |
+| `POST` | `/api/public/orders/:orderId/payment-proof` | order-tracking | MVP done | No | Yes |
 | `POST` | `/api/files/upload-url` | files | Partial | Yes | No |
 
 ## E. Frontend Page Status
@@ -317,6 +336,8 @@
 | `/products` | Public marketplace list | MVP done | Yes | Uses public products API only. |
 | `/products/[id]` | Public product detail | MVP done | Yes | Links into checkout. |
 | `/checkout` | Customer checkout form | MVP done | Yes | Creates order through NestJS checkout API. |
+| `/orders/track` | Public order tracking lookup | MVP done | Yes | Uses `orderCode + phone`. |
+| `/orders/[id]` | Public order tracking detail | MVP done | Yes | Shows order state and uploads payment proof. |
 | `/seller/dashboard` | Seller overview | Partial | No | Placeholder KPIs only. |
 | `/seller/products` | Product list | Done | Yes | Search/pagination UI connected. |
 | `/seller/products/[id]` | Product detail/edit | Done | Yes | Product metadata connected; variants read-only summary. |
@@ -383,6 +404,7 @@ Current flow:
 | backend-nest | `npm run smoke:orders` | Pass | Re-run in this audit; seller orders runtime smoke covers list, detail, status update, and cross-shop `403`. |
 | backend-nest | `npm run smoke:checkout` | Pass | Re-run in this audit; anonymous checkout order is visible in seller list/detail. |
 | backend-nest | `npm run smoke:payments` | Pass | Manual payment review runtime smoke covers note/mark-paid/audit/cross-shop `403`. |
+| backend-nest | `npm run smoke:order-tracking` | Pass | Customer tracks, uploads proof, seller sees proof, seller marks paid, customer sees updated payment status. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -408,15 +430,15 @@ Current flow:
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
 - Payments are now partially migrated for manual seller review, but provider-backed settlement is still missing.
-- Customer checkout is now in the new stack, but customer order history and customer-side payment proof flows are still incomplete.
+- Customer checkout, public tracking, and manual transfer proof upload are now in the new stack, but customer order history is still incomplete.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
 ## J. Next Recommended Phases
 
 1. Final project status verification on a fresh machine using only documented steps.
 2. Add dev seed accounts and predictable seller/shop bootstrap to reduce smoke-script setup friction.
-3. Implement customer order history and post-checkout lifecycle in NestJS/Next.js.
-4. Add customer payment proof upload and stronger payment state modeling.
+3. Implement customer order history and broader post-checkout lifecycle in NestJS/Next.js.
+4. Add stronger payment state modeling, proof moderation detail, and refund/cancel groundwork.
 5. Expand the public marketplace beyond the single-product MVP checkout flow.
 6. Implement true try-on online flow end-to-end.
 7. Add admin moderation and operational tooling.
@@ -434,6 +456,8 @@ To demo the MVP cleanly, the following should be available:
 - seller login
 - public product browse
 - customer checkout create-order
+- customer order tracking
+- customer payment proof upload
 - seller manual payment review
 - create shop
 - create product

@@ -28,6 +28,11 @@ type PaymentOrderRecord = {
   customerPhone: string;
   customerEmail: string | null;
   customerNote: string | null;
+  paymentProofUrl: string | null;
+  paymentProofOriginalName: string | null;
+  paymentProofMimeType: string | null;
+  paymentProofSize: number | null;
+  paymentProofUploadedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   shop: {
@@ -334,6 +339,15 @@ export class PaymentsService {
         productSlugSnapshot: item.productSlugSnapshot,
         productImageSnapshot: item.productImageSnapshot,
       })),
+      paymentProof: order.paymentProofUrl
+        ? {
+            url: order.paymentProofUrl,
+            originalName: order.paymentProofOriginalName,
+            mimeType: order.paymentProofMimeType,
+            size: order.paymentProofSize,
+            uploadedAt: order.paymentProofUploadedAt?.toISOString() ?? null,
+          }
+        : null,
       reviewLogs: order.paymentReviewLogs.map((log) =>
         this.toPaymentLogResponse(log),
       ),

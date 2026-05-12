@@ -420,6 +420,58 @@ while allowing:
   - fixed by normalizing frontend and Playwright API defaults to `127.0.0.1`, and by allowing both `localhost` and `127.0.0.1` in backend CORS
   - no payment business logic changes were required after runtime validation
 
+## Customer Order Tracking / Payment Proof Upload MVP
+
+- Scope:
+  - add public order tracking APIs in `backend-nest`
+  - add public customer payment proof upload backed by the existing storage service
+  - expose payment proof inside seller payment detail
+  - preserve checkout, payments, orders, and auth flows
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/prisma/migrations/20260512_add_order_payment_proof_fields/migration.sql`
+  - `backend-nest/src/modules/order-tracking/*`
+  - `backend-nest/src/modules/files/files.service.ts`
+  - `backend-nest/src/modules/checkout/*`
+  - `backend-nest/src/modules/payments/*`
+  - `backend-nest/test/order-tracking.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-order-tracking.ps1`
+  - `frontend-next/src/lib/public-api.ts`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `frontend-next/src/app/orders/*`
+  - `frontend-next/src/components/public/*`
+  - `frontend-next/src/components/payments/*`
+  - `docs/API_ORDER_TRACKING.md`
+  - `docs/API_CHECKOUT.md`
+  - `docs/API_PAYMENTS.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - customer can track by `orderCode + phone` or `orderId + phone`
+  - customer can upload payment proof without a customer account
+  - proof is stored through the shared storage service and linked on `orders`
+  - proof upload writes `PaymentReviewLog.action = UPLOAD_PROOF`
+  - seller payment detail shows proof metadata and proof link
+  - seller can still mark paid after proof upload
+  - customer tracking reflects `paymentStatus=PAID` after seller review
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:orders`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/login`: pass
+  - `GET http://localhost:8000/health`: pass
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

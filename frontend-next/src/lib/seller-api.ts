@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api";
 
 export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
-export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE";
+export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE" | "UPLOAD_PROOF";
 
 export type ShopSummary = {
   id: string;
@@ -92,6 +92,13 @@ export type SellerPaymentItem = {
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
   }>;
+  paymentProof: {
+    url: string;
+    originalName: string | null;
+    mimeType: string | null;
+    size: number | null;
+    uploadedAt: string | null;
+  } | null;
   reviewLogs: PaymentReviewLog[];
 };
 

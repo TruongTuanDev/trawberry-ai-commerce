@@ -46,6 +46,8 @@ export default function HomePage() {
                 <li>/products</li>
                 <li>/products/[id]</li>
                 <li>/checkout</li>
+                <li>/orders/track</li>
+                <li>/orders/[id]</li>
                 <li>/login</li>
                 <li>/seller/dashboard</li>
                 <li>/seller/products</li>

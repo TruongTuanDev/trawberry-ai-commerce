@@ -183,6 +183,12 @@ model Order {
   shippingZoneId     String?     @map("shipping_zone_id") @db.Uuid
   shippingCost       Decimal     @default(0) @map("shipping_cost") @db.Decimal(10, 2)
   shippingMethodName String?     @map("shipping_method_name") @db.VarChar(255)
+  paymentProofUrl    String?     @map("payment_proof_url") @db.VarChar(1000)
+  paymentProofStorageKey String? @map("payment_proof_storage_key") @db.VarChar(1024)
+  paymentProofOriginalName String? @map("payment_proof_original_name") @db.VarChar(255)
+  paymentProofMimeType String?   @map("payment_proof_mime_type") @db.VarChar(100)
+  paymentProofSize   Int?        @map("payment_proof_size")
+  paymentProofUploadedAt DateTime? @map("payment_proof_uploaded_at") @db.Timestamptz(6)
   createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
   customerCompletedAt DateTime?  @map("customer_completed_at") @db.Timestamp(6)

@@ -213,6 +213,8 @@ export class CheckoutService {
       paymentStatus: created.paymentStatus,
       totalAmount: created.totalAmount.toString(),
       paymentInstructions: created.shop.paymentInstructions,
+      trackingPath: `/orders/${created.id}`,
+      customerPhone: dto.customer.phone.trim(),
     };
   }
 

@@ -143,6 +143,20 @@ export function CheckoutPageClient({
               <Metric label="Payment status" value={order.paymentStatus} />
               <Metric label="Backend total" value={order.totalAmount} />
             </div>
+            <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-[1fr_auto]">
+              <div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">Track this order later</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  Keep the order code <span className="font-semibold text-[var(--foreground)]">{order.orderCode}</span> and the phone{" "}
+                  <span className="font-semibold text-[var(--foreground)]">{order.customerPhone}</span>. You can use them at the public tracking page and upload manual transfer proof there.
+                </p>
+              </div>
+              <div className="flex items-center">
+                <Link href={`${order.trackingPath}?phone=${encodeURIComponent(order.customerPhone)}`} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]">
+                  Open tracking
+                </Link>
+              </div>
+            </div>
             <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
               <p className="text-sm font-semibold text-[var(--foreground)]">Payment instructions</p>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{order.paymentInstructions ?? "The shop did not provide additional payment instructions."}</p>

@@ -18,4 +18,10 @@ export class CheckoutOrderResponseDto {
 
   @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
+
+  @ApiProperty()
+  trackingPath!: string;
+
+  @ApiProperty()
+  customerPhone!: string;
 }
