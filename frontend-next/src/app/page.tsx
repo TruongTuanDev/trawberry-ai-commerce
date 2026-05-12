@@ -18,8 +18,14 @@ export default function HomePage() {
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/login"
+                href="/products"
                 className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+              >
+                Browse marketplace
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--panel)] px-6 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)]"
               >
                 Open seller login
               </Link>
@@ -37,6 +43,9 @@ export default function HomePage() {
                 Included routes
               </p>
               <ul className="mt-6 space-y-3 text-sm text-[var(--foreground)]">
+                <li>/products</li>
+                <li>/products/[id]</li>
+                <li>/checkout</li>
                 <li>/login</li>
                 <li>/seller/dashboard</li>
                 <li>/seller/products</li>

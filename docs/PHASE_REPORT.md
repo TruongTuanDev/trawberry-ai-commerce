@@ -317,6 +317,57 @@ while allowing:
   - `GET http://localhost:3001/api/health`: pass
   - `GET http://localhost:3000/login`: pass
 
+## Customer Checkout / Create Order MVP
+
+- Scope:
+  - add public product browsing endpoints in `backend-nest`
+  - add `POST /api/checkout/orders`
+  - allow anonymous checkout while preserving seller order visibility
+  - add minimal public customer pages in `frontend-next`
+- Files changed:
+  - `backend-nest/src/modules/public-products/*`
+  - `backend-nest/src/modules/checkout/*`
+  - `backend-nest/src/modules/orders/*`
+  - `backend-nest/src/common/guards/optional-jwt-auth.guard.ts`
+  - `backend-nest/test/checkout.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-checkout.ps1`
+  - `frontend-next/src/lib/public-api.ts`
+  - `frontend-next/src/app/products/*`
+  - `frontend-next/src/app/checkout/page.tsx`
+  - `frontend-next/src/components/public/checkout-page-client.tsx`
+  - `frontend-next/src/components/orders/*`
+  - `docs/API_CHECKOUT.md`
+  - `docs/API_ORDERS.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - customer can browse public products in the new stack
+  - customer can create an anonymous order through `POST /api/checkout/orders`
+  - checkout defaults order `status=PENDING`
+  - checkout defaults `paymentStatus=PENDING` for manual transfer and `UNPAID` for COD
+  - backend computes `totalAmount` and rejects mismatched shop/product/inactive product/invalid quantity
+  - seller orders list/detail can see the new order without changing the seller API contract
+  - seller UI now renders `PENDING` order status safely alongside legacy `NEW`
+- Verification for this pass:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/login`: pass
+  - `GET http://localhost:8000/health`: pass
+  - `backend-nest npm run smoke:orders`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+- Runtime notes:
+  - PowerShell alias `curl` on this machine returned `NullReferenceException` from `Invoke-WebRequest`
+  - runtime endpoints were verified successfully with explicit `Invoke-WebRequest -UseBasicParsing`
+  - no business-logic fix was required after Docker came up; runtime failures from the previous pass were environment-only
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

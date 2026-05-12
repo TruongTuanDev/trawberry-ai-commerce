@@ -1,6 +1,6 @@
 import { apiRequest } from "@/lib/api";
 
-export type SellerOrderStatus = "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
+export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
 
 export type ShopSummary = {
   id: string;

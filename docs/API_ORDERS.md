@@ -7,10 +7,9 @@ Current scope is limited to seller order management:
 - list orders for one shop
 - get order detail
 - update fulfillment status
+- read new orders created by the Checkout MVP
 
 This is not yet a full payments module and does not include:
-- customer checkout
-- customer order creation in NestJS
 - payment provider integration
 - manual payment approval/rejection endpoints
 - shipment creation/tracking APIs in NestJS
@@ -48,8 +47,8 @@ Response shape:
       "orderNumber": "ORD-1001",
       "shopId": "uuid",
       "shopName": "Shop One",
-      "status": "NEW",
-      "paymentStatus": "APPROVED",
+      "status": "PENDING",
+      "paymentStatus": "PENDING",
       "totalAmount": "120.00",
       "shippingCost": "10.00",
       "shippingMethodName": "Courier",
@@ -84,6 +83,7 @@ Return one seller-visible order with customer snapshot, items, totals, shipping 
 Update seller fulfillment status.
 
 Allowed values:
+- `PENDING`
 - `NEW`
 - `ASSEMBLING`
 - `SHIPPING`
@@ -91,6 +91,7 @@ Allowed values:
 - `CANCELLED`
 
 Current transition rules:
+- `PENDING -> ASSEMBLING` requires `paymentStatus=APPROVED`
 - `NEW -> ASSEMBLING` requires `paymentStatus=APPROVED`
 - `ASSEMBLING -> SHIPPING`
 - `SHIPPING -> DELIVERED`
@@ -130,7 +131,6 @@ Current verification coverage:
 ## Gaps
 
 Still missing in the new NestJS stack:
-- checkout API
 - customer order history API
 - payment confirmation upload/review workflow
 - seller payments list API

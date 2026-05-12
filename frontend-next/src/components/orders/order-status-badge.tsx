@@ -1,4 +1,5 @@
 const toneByStatus: Record<string, string> = {
+  PENDING: "bg-yellow-50 text-yellow-700",
   NEW: "bg-amber-50 text-amber-700",
   ASSEMBLING: "bg-sky-50 text-sky-700",
   SHIPPING: "bg-violet-50 text-violet-700",

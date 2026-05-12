@@ -8,7 +8,7 @@ import { getShopOrderById, updateShopOrderStatus, type SellerOrderListItem } fro
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
-const statusOptions = ["NEW", "ASSEMBLING", "SHIPPING", "DELIVERED", "CANCELLED"] as const;
+const statusOptions = ["PENDING", "NEW", "ASSEMBLING", "SHIPPING", "DELIVERED", "CANCELLED"] as const;
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const user = useAuthStore((state) => state.user);

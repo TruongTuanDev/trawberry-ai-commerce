@@ -92,6 +92,7 @@ export function SellerOrdersPageClient() {
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           >
             <option value="">All statuses</option>
+            <option value="PENDING">Pending</option>
             <option value="NEW">New</option>
             <option value="ASSEMBLING">Assembling</option>
             <option value="SHIPPING">Shipping</option>

@@ -207,9 +207,9 @@ export class OrdersService {
     paymentStatus: string,
   ) {
     if (newStatus === 'ASSEMBLING') {
-      if (currentStatus !== 'NEW') {
+      if (currentStatus !== 'NEW' && currentStatus !== 'PENDING') {
         throw new BadRequestException(
-          'Can only transition to ASSEMBLING from NEW.',
+          'Can only transition to ASSEMBLING from PENDING or NEW.',
         );
       }
       if (paymentStatus !== 'APPROVED') {

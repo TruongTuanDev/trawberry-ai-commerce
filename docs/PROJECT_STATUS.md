@@ -27,8 +27,8 @@
 
 | Component | Tech stack | Status | Runtime verified? | Notes |
 |---|---|---|---|---|
-| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; product/images/orders connected; dashboard/settings/AI route still partly placeholder. |
-| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, images, orders, AI tasks all present. |
+| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products` + `/checkout` MVP now exists; dashboard/settings/AI route still partly placeholder. |
+| `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, public products, checkout, seller orders, images, AI tasks all present. |
 | `ai-service` | FastAPI, Pydantic, OpenAI SDK, Pillow, boto3 | Partial | Yes | Mock provider verified; OpenAI provider implemented but real OpenAI runtime not fully confirmed in this audit. |
 | `postgres` | PostgreSQL 16 | Done | Yes | Running in Docker; host `5433`, network `5432`. |
 | `redis` | Redis 7 | Done | Yes | Running in Docker and used by BullMQ. |
@@ -101,7 +101,24 @@
 - Notes:
   - seller list/detail/status update are implemented
   - auth and shop isolation are enforced with `JwtAuthGuard` + `ShopAccessGuard`
-  - NestJS does not yet own checkout or customer-side order creation
+  - seller APIs now surface orders created by the customer checkout MVP
+
+### Customer Checkout / Public Catalog
+- Status: MVP done
+- Evidence:
+  - `backend-nest/test/checkout.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-checkout.ps1`
+  - `backend-nest/src/modules/public-products`
+  - `backend-nest/src/modules/checkout`
+  - `frontend-next/src/app/products`
+  - `frontend-next/src/app/checkout`
+  - `docs/API_CHECKOUT.md`
+- Notes:
+  - public catalog endpoints expose only safe product/shop data
+  - checkout allows anonymous order creation
+  - backend computes `totalAmount` and defaults order status to `PENDING`
+  - seller order list/detail can read the new orders without changing the seller API surface
+  - Docker runtime verification passed with `smoke:checkout`, `smoke:orders`, backend/frontend health checks, and Playwright auth E2E
 
 ### Payments
 - Status: Not started / partial schema only
@@ -281,6 +298,9 @@
 | `GET` | `/api/shops/:shopId/payments` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
 | `POST` | `/api/shops/:shopId/orders/:orderId/payment/approve` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
 | `POST` | `/api/shops/:shopId/orders/:orderId/payment/reject` | payments | Not started | N/A | Legacy-only in Spring Boot, no NestJS endpoint |
+| `GET` | `/api/public/products` | public-products | Done | No | Covered by build/manual flow |
+| `GET` | `/api/public/products/:productId` | public-products | Done | No | Covered by build/manual flow |
+| `POST` | `/api/checkout/orders` | checkout | MVP done | Optional auth | Yes |
 | `POST` | `/api/files/upload-url` | files | Partial | Yes | No |
 
 ## E. Frontend Page Status
@@ -288,6 +308,9 @@
 | Route | Purpose | Status | Backend connected? | Notes |
 |---|---|---|---|---|
 | `/login` | Seller login | Done | Yes | Cookie-based login flow active; redirects into seller center after success. |
+| `/products` | Public marketplace list | MVP done | Yes | Uses public products API only. |
+| `/products/[id]` | Public product detail | MVP done | Yes | Links into checkout. |
+| `/checkout` | Customer checkout form | MVP done | Yes | Creates order through NestJS checkout API. |
 | `/seller/dashboard` | Seller overview | Partial | No | Placeholder KPIs only. |
 | `/seller/products` | Product list | Done | Yes | Search/pagination UI connected. |
 | `/seller/products/[id]` | Product detail/edit | Done | Yes | Product metadata connected; variants read-only summary. |
@@ -350,7 +373,8 @@ Current flow:
 | backend-nest | `npm run build` | Pass | Re-run in this audit. |
 | backend-nest | `npm run smoke:auth` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:products` | Exists | Not re-run in this audit. |
-| backend-nest | `npm run smoke:orders` | Pass | Seller orders runtime smoke covers list, detail, status update, and cross-shop `403`. |
+| backend-nest | `npm run smoke:orders` | Pass | Re-run in this audit; seller orders runtime smoke covers list, detail, status update, and cross-shop `403`. |
+| backend-nest | `npm run smoke:checkout` | Pass | Re-run in this audit; anonymous checkout order is visible in seller list/detail. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -376,16 +400,16 @@ Current flow:
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
 - Payments are not migrated in NestJS yet beyond `paymentStatus` fields and shop payment instructions.
-- Orders are seller-facing only in the new stack; customer checkout/order creation still appear to be legacy-owned.
+- Customer checkout is now in the new stack, but customer order history and payments are still incomplete.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
 ## J. Next Recommended Phases
 
 1. Final project status verification on a fresh machine using only documented steps.
 2. Add dev seed accounts and predictable seller/shop bootstrap to reduce smoke-script setup friction.
-3. Implement customer checkout and customer order lifecycle in NestJS.
+3. Implement customer order history and post-checkout lifecycle in NestJS/Next.js.
 4. Implement seller payment review flow and payment module boundaries.
-5. Build customer-side marketplace frontend and public catalog flows.
+5. Expand the public marketplace beyond the single-product MVP checkout flow.
 6. Implement true try-on online flow end-to-end.
 7. Add admin moderation and operational tooling.
 8. Production hardening:
@@ -400,6 +424,8 @@ Current flow:
 
 To demo the MVP cleanly, the following should be available:
 - seller login
+- public product browse
+- customer checkout create-order
 - create shop
 - create product
 - upload product image

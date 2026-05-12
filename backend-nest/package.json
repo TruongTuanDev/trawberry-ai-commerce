@@ -13,6 +13,7 @@
     "prisma:migrate:status": "prisma migrate status",
     "prisma:studio": "prisma studio",
     "smoke:auth": "powershell -ExecutionPolicy Bypass -File scripts/smoke-auth.ps1",
+    "smoke:checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-checkout.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",
     "smoke:orders": "powershell -ExecutionPolicy Bypass -File scripts/smoke-orders.ps1",
     "smoke:product-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-images.ps1",
