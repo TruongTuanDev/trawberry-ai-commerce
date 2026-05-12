@@ -187,6 +187,7 @@
   - `JwtStrategy` reads cookie first, bearer fallback second
   - frontend API client uses `credentials: "include"`
   - auth e2e covers `Set-Cookie`, cookie-backed `/api/auth/me`, logout cookie clearing, and bearer fallback
+  - Playwright smoke covers browser login, reload persistence, logout, redirect, and `localStorage` token absence
 - Main files/modules:
   - `backend-nest/src/modules/auth/auth.controller.ts`
   - `backend-nest/src/modules/auth/strategies/jwt.strategy.ts`
@@ -320,6 +321,7 @@ Current flow:
 | backend-nest | `npm run smoke:ai-service-openai` | Exists | Not run in this audit. |
 | frontend-next | `npm run lint` | Pass | Re-run in this audit. |
 | frontend-next | `npm run build` | Pass | Re-run in this audit. |
+| frontend-next | `npm run test:e2e:auth` | Pass | Playwright browser smoke for cookie auth flow. |
 | ai-service | `python -m compileall app` | Pass | Re-run in this audit. |
 | ai-service | `python -m pytest -q` | Pass | `18` tests. |
 | infra | `docker compose ... config` | Pass | Re-run in this audit. |
@@ -333,7 +335,7 @@ Current flow:
 
 - Real OpenAI runtime is not treated as fully proven in this audit.
 - Previous project notes mention an OpenAI billing hard-limit failure; if billing is still unresolved, real OpenAI smoke can fail even though code paths exist.
-- Cookie-based auth now appears complete in code and automated verification, but a final browser-only manual pass is still advisable before production.
+- Cookie-based auth now has API-level and browser-level smoke coverage, but a final human cross-browser pass is still advisable before production.
 - `ai-service` tree still contains `__pycache__` artifacts in the working tree; they are ignored/noise, not functional code.
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
 - `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.

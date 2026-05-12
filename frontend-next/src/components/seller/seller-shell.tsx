@@ -41,7 +41,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6">
+    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6" data-testid="seller-shell">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1600px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)]">
         <aside className="hidden w-72 flex-col justify-between border-r border-[var(--border)] bg-[linear-gradient(180deg,#3e1e24_0%,#2d181e_100%)] p-6 text-white lg:flex">
           <div>
@@ -80,6 +80,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={() => void handleLogout()}
               disabled={loggingOut}
+              data-testid="logout-button"
               className="mt-4 inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-[#2d181e]"
             >
               {loggingOut ? "Signing out..." : "Logout"}
@@ -103,6 +104,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={() => void handleLogout()}
                   disabled={loggingOut}
+                  data-testid="logout-button-mobile"
                   className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60 lg:hidden"
                 >
                   {loggingOut ? "Signing out..." : "Logout"}

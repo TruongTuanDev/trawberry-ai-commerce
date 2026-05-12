@@ -52,7 +52,7 @@ export function LoginForm() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="mx-auto w-full max-w-md" data-testid="login-form">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Next.js migration</p>
       <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
         Seller login
@@ -65,6 +65,7 @@ export function LoginForm() {
           <input
             id="email"
             type="email"
+            data-testid="login-email"
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
             {...form.register("email")}
           />
@@ -79,6 +80,7 @@ export function LoginForm() {
           <input
             id="password"
             type="password"
+            data-testid="login-password"
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
             {...form.register("password")}
           />
@@ -94,6 +96,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={loading}
+          data-testid="login-submit"
           className="inline-flex w-full items-center justify-center rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Signing in..." : "Sign in"}

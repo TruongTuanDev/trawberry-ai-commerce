@@ -54,7 +54,27 @@ Default URL:
 - `http://localhost:3000`
 
 ## Auth note
-Current bootstrap phase stores the access token in `localStorage`. This should move to httpOnly cookie-based auth in a later hardening pass.
+- Seller login now uses NestJS `httpOnly` cookies.
+- The frontend only keeps lightweight user/shop hydration state in `localStorage`.
+- Raw JWT auth tokens are not stored in `localStorage`.
+
+## Playwright auth smoke
+With the Docker stack or local frontend/backend already running:
+
+```bash
+npm run test:e2e:auth
+```
+
+Defaults:
+- frontend base URL: `http://localhost:3000`
+- backend API URL for test registration: `http://localhost:3001`
+
+Optional overrides:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://localhost:3000
+PLAYWRIGHT_BACKEND_URL=http://localhost:3001
+```
 
 ## Main files
 - `src/app/login/page.tsx`

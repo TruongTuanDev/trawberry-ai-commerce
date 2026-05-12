@@ -248,6 +248,38 @@ while allowing:
     - `GET /api/auth/me` after logout: `401`
   - browser-only refresh/redirect behavior was not replayed with a headless browser in this pass
 
+## Browser Auth E2E Smoke
+
+- Scope:
+  - add Playwright browser smoke coverage for cookie-based auth UX
+  - verify login, reload persistence, logout, protected-route redirect, and no raw JWT in `localStorage`
+- Files changed:
+  - `frontend-next/package.json`
+  - `frontend-next/playwright.config.ts`
+  - `frontend-next/tests/e2e/auth-cookie.spec.ts`
+  - `frontend-next/src/components/auth/login-form.tsx`
+  - `frontend-next/src/components/seller/seller-shell.tsx`
+  - `frontend-next/README.md`
+  - `docs/SECURITY.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - browser smoke now creates a seller via backend API, signs in through the real login form, reloads `/seller/dashboard`, logs out, and confirms protected-route redirect
+  - test explicitly checks that `localStorage` does not contain raw JWT-like values
+- Verification for this pass:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `docker compose ... ps`: pass
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/login`: pass
+- Notes:
+  - Playwright initially failed because browser binaries were not installed yet
+  - `npx playwright install chromium` was run successfully before the passing E2E execution
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist
