@@ -24,10 +24,10 @@ export function ProductCard({ product }: { product: PublicProduct }) {
             <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{product.price ?? "Contact shop"}</p>
           </div>
           <div className="flex gap-3">
-            <Link href={`/products/${product.id}`} className="public-button-secondary px-4 py-2 text-sm">
+            <Link href={`/products/${product.id}`} className="public-button-secondary px-4 py-2 text-sm" data-testid={`product-view-${product.id}`}>
               View
             </Link>
-            <Link href={`/checkout?productId=${product.id}&quantity=1`} className="public-button-primary px-4 py-2 text-sm">
+            <Link href={`/checkout?productId=${product.id}&quantity=1`} className="public-button-primary px-4 py-2 text-sm" data-testid={`product-checkout-${product.id}`}>
               Checkout
             </Link>
           </div>

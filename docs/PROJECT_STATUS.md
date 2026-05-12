@@ -150,6 +150,18 @@
   - `/products`, `/products/[id]`, `/checkout`, `/orders/track`, and `/orders/[id]` now have stronger loading, empty, and error states
   - public Playwright smoke now verifies the main customer routes load
 
+### Seeded Public Demo Data / Full Customer E2E
+- Status: Done
+- Evidence:
+  - `backend-nest/scripts/seed-demo.js`
+  - `backend-nest/package.json`
+  - `frontend-next/tests/e2e/public-full.spec.ts`
+  - `docs/DEMO_DATA.md`
+- Notes:
+  - demo seed is idempotent and guarded against accidental production execution
+  - public catalog can now be bootstrapped with a stable approved seller, active shop, and 3 active products
+  - Playwright full public E2E now covers browse, product detail, checkout, confirmation, tracking, and payment proof upload
+
 ### Payments
 - Status: MVP done for manual review
 - Evidence:
@@ -419,6 +431,7 @@ Current flow:
 | backend-nest | `npm run smoke:orders` | Pass | Re-run in this audit; seller orders runtime smoke covers list, detail, status update, and cross-shop `403`. |
 | backend-nest | `npm run smoke:checkout` | Pass | Re-run in this audit; anonymous checkout order is visible in seller list/detail. |
 | backend-nest | `npm run smoke:payments` | Pass | Manual payment review runtime smoke covers note/mark-paid/audit/cross-shop `403`. |
+| backend-nest | `npm run seed:demo` | Pass | Idempotent demo seed for public marketplace and E2E setup. |
 | backend-nest | `npm run smoke:order-tracking` | Pass | Customer tracks, uploads proof, seller sees proof, seller marks paid, customer sees updated payment status. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
@@ -428,6 +441,7 @@ Current flow:
 | frontend-next | `npm run build` | Pass | Re-run in this audit. |
 | frontend-next | `npm run test:e2e:auth` | Pass | Playwright browser smoke for cookie auth flow. |
 | frontend-next | `npm run test:e2e:public` | Pass | Playwright smoke for public home, products, and order tracking routes. |
+| frontend-next | `npm run test:e2e:public-full` | Pass | Playwright full customer flow with seeded demo data. |
 | ai-service | `python -m compileall app` | Pass | Re-run in this audit. |
 | ai-service | `python -m pytest -q` | Pass | `18` tests. |
 | infra | `docker compose ... config` | Pass | Re-run in this audit. |
@@ -448,13 +462,14 @@ Current flow:
 - Payments are now partially migrated for manual seller review, but provider-backed settlement is still missing.
 - Customer checkout, public tracking, and manual transfer proof upload are now in the new stack, but customer order history is still incomplete.
 - Public marketplace is now demo-ready, but richer merchandising, sorting, and customer account history are still incomplete.
+- Seeded demo data now supports stable public demos, but there is still no automatic database reset/isolation between repeated end-to-end runs.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
 ## J. Next Recommended Phases
 
 1. Final project status verification on a fresh machine using only documented steps.
-2. Add dev seed accounts and predictable seller/shop bootstrap to reduce smoke-script setup friction.
-3. Implement customer order history and broader post-checkout lifecycle in NestJS/Next.js.
+2. Implement customer order history and broader post-checkout lifecycle in NestJS/Next.js.
+3. Add isolated test-data lifecycle or teardown for repeated public E2E runs.
 4. Add stronger payment state modeling, proof moderation detail, and refund/cancel groundwork.
 5. Expand the public marketplace beyond the single-product MVP checkout flow.
 6. Implement true try-on online flow end-to-end.
@@ -472,9 +487,11 @@ Current flow:
 To demo the MVP cleanly, the following should be available:
 - seller login
 - public product browse
+- demo seed bootstrap for public product browse
 - customer checkout create-order
 - customer order tracking
 - customer payment proof upload
+- full public customer Playwright E2E
 - seller manual payment review
 - create shop
 - create product

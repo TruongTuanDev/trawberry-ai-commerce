@@ -100,6 +100,35 @@ Current coverage:
 - first product detail opens when at least one product exists
 - `/orders/track` loads
 
+## Demo seed
+Run from `backend-nest` before full customer demo or full public E2E:
+
+```bash
+npm run seed:demo
+```
+
+The seed is idempotent and refuses production by default.
+
+Seeded demo seller:
+- email: `demo-seller@trawberry.local`
+- password: `DemoSeller123!`
+
+## Playwright public full flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:public-full
+```
+
+Current coverage:
+- home page
+- products listing with seeded data
+- product detail
+- checkout create order
+- confirmation capture of `orderCode` and `orderId`
+- order tracking by phone
+- payment proof upload
+
 ## Main files
 - `src/app/login/page.tsx`
 - `src/app/seller/layout.tsx`

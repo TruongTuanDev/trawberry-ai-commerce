@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" role="img" aria-labelledby="title desc">
+  <title id="title">Studio Canvas Jacket</title>
+  <desc id="desc">Demo marketplace product image for seeded public product two.</desc>
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b6314b" />
+      <stop offset="100%" stop-color="#f1dcc7" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="960" rx="72" fill="url(#bg2)" />
+  <circle cx="760" cy="230" r="160" fill="#ffffff" fill-opacity="0.2" />
+  <rect x="110" y="160" width="320" height="460" rx="48" fill="#ffffff" fill-opacity="0.12" />
+  <text x="88" y="742" fill="#fff8f4" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="700">Canvas Jacket</text>
+  <text x="88" y="816" fill="#f8ede7" font-family="Arial, Helvetica, sans-serif" font-size="34">Demo Strawberry Store</text>
+</svg>

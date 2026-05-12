@@ -124,10 +124,10 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                 <input value={orderId} disabled className="public-input bg-[var(--panel)] text-[var(--muted)]" />
               </Field>
               <Field label="Phone">
-                <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" />
+                <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" data-testid="track-detail-phone" />
               </Field>
               <div className="flex items-end">
-                <button type="button" onClick={() => void handleLookup()} disabled={loading} className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60">
+                <button type="button" onClick={() => void handleLookup()} disabled={loading} className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="track-detail-load-order">
                   {loading ? "Loading..." : "Load order"}
                 </button>
               </div>
@@ -203,6 +203,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         accept="image/jpeg,image/png,image/webp,application/pdf"
                         onChange={(event) => setFile(event.target.files?.[0] ?? null)}
                         className="public-input"
+                        data-testid="payment-proof-input"
                       />
                     </Field>
                     <button
@@ -210,6 +211,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       onClick={() => void handleUpload()}
                       disabled={uploading || !file}
                       className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                      data-testid="payment-proof-submit"
                     >
                       {uploading ? "Uploading..." : "Upload payment proof"}
                     </button>

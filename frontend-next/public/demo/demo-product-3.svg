@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" role="img" aria-labelledby="title desc">
+  <title id="title">Satin Night Set</title>
+  <desc id="desc">Demo marketplace product image for seeded public product three.</desc>
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6d8f55" />
+      <stop offset="100%" stop-color="#efe2cb" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="960" rx="72" fill="url(#bg3)" />
+  <circle cx="710" cy="250" r="170" fill="#ffffff" fill-opacity="0.22" />
+  <circle cx="260" cy="680" r="220" fill="#ffffff" fill-opacity="0.08" />
+  <text x="88" y="734" fill="#203018" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="700">Satin Night Set</text>
+  <text x="88" y="808" fill="#31452b" font-family="Arial, Helvetica, sans-serif" font-size="34">Demo Strawberry Store</text>
+</svg>

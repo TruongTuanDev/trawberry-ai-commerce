@@ -127,6 +127,7 @@ export function CheckoutPageClient({
           ) : order ? (
             <section className="space-y-6">
               <div className="card-panel rounded-[2.25rem] px-6 py-8 sm:px-8">
+                <div data-testid="checkout-confirmation">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Order created</p>
                 <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)]">
                   Confirmation
@@ -149,10 +150,11 @@ export function CheckoutPageClient({
                     </p>
                   </div>
                   <div className="flex items-center">
-                    <Link href={`${order.trackingPath}?phone=${encodeURIComponent(order.customerPhone)}`} className="public-button-primary inline-flex px-5 py-3 text-sm">
+                    <Link href={`${order.trackingPath}?phone=${encodeURIComponent(order.customerPhone)}`} className="public-button-primary inline-flex px-5 py-3 text-sm" data-testid="confirmation-track-link">
                       Open tracking
                     </Link>
                   </div>
+                </div>
                 </div>
               </div>
             </section>
@@ -185,21 +187,21 @@ export function CheckoutPageClient({
                     </h2>
                     <div className="mt-6 grid gap-4">
                       <Field label="Full name">
-                        <input value={customer.fullName} onChange={(event) => setCustomer((current) => ({ ...current, fullName: event.target.value }))} className="public-input" />
+                        <input value={customer.fullName} onChange={(event) => setCustomer((current) => ({ ...current, fullName: event.target.value }))} className="public-input" data-testid="checkout-full-name" />
                       </Field>
                       <div className="grid gap-4 md:grid-cols-2">
                         <Field label="Phone">
-                          <input value={customer.phone} onChange={(event) => setCustomer((current) => ({ ...current, phone: event.target.value }))} className="public-input" />
+                          <input value={customer.phone} onChange={(event) => setCustomer((current) => ({ ...current, phone: event.target.value }))} className="public-input" data-testid="checkout-phone" />
                         </Field>
                         <Field label="Email">
-                          <input value={customer.email} onChange={(event) => setCustomer((current) => ({ ...current, email: event.target.value }))} className="public-input" />
+                          <input value={customer.email} onChange={(event) => setCustomer((current) => ({ ...current, email: event.target.value }))} className="public-input" data-testid="checkout-email" />
                         </Field>
                       </div>
                       <Field label="Address">
-                        <textarea value={customer.address} onChange={(event) => setCustomer((current) => ({ ...current, address: event.target.value }))} rows={4} className="public-input min-h-32" />
+                        <textarea value={customer.address} onChange={(event) => setCustomer((current) => ({ ...current, address: event.target.value }))} rows={4} className="public-input min-h-32" data-testid="checkout-address" />
                       </Field>
                       <Field label="Note">
-                        <textarea value={customer.note} onChange={(event) => setCustomer((current) => ({ ...current, note: event.target.value }))} rows={3} className="public-input min-h-24" />
+                        <textarea value={customer.note} onChange={(event) => setCustomer((current) => ({ ...current, note: event.target.value }))} rows={3} className="public-input min-h-24" data-testid="checkout-note" />
                       </Field>
                     </div>
                   </section>
@@ -242,6 +244,7 @@ export function CheckoutPageClient({
                               checked={paymentMethod === "MANUAL_TRANSFER"}
                               onChange={() => setPaymentMethod("MANUAL_TRANSFER")}
                               className="sr-only"
+                              data-testid="payment-method-manual-transfer"
                             />
                             <p className="text-sm font-semibold text-[var(--foreground)]">Manual transfer</p>
                             <p className="mt-1 text-sm text-[var(--muted)]">Upload proof later from order tracking if needed.</p>
@@ -254,6 +257,7 @@ export function CheckoutPageClient({
                               checked={paymentMethod === "CASH_ON_DELIVERY"}
                               onChange={() => setPaymentMethod("CASH_ON_DELIVERY")}
                               className="sr-only"
+                              data-testid="payment-method-cod"
                             />
                             <p className="text-sm font-semibold text-[var(--foreground)]">Cash on delivery</p>
                             <p className="mt-1 text-sm text-[var(--muted)]">Payment stays `UNPAID` until delivery collection in this MVP.</p>
@@ -266,6 +270,7 @@ export function CheckoutPageClient({
                         disabled={submitting || !product}
                         onClick={() => void handleSubmit()}
                         className="public-button-primary w-full px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                        data-testid="checkout-submit"
                       >
                         {submitting ? "Creating order..." : "Create order"}
                       </button>

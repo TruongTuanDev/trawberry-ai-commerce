@@ -12,6 +12,7 @@
     "prisma:db:push": "prisma db push",
     "prisma:migrate:status": "prisma migrate status",
     "prisma:studio": "prisma studio",
+    "seed:demo": "node scripts/seed-demo.js",
     "smoke:auth": "powershell -ExecutionPolicy Bypass -File scripts/smoke-auth.ps1",
     "smoke:checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-checkout.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",

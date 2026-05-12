@@ -502,6 +502,67 @@ while allowing:
   - `frontend-next npm run build`: pass
   - runtime verification recorded in the final verification section for this phase
 
+## Seeded Public Demo Data + Full Customer E2E
+
+- Scope:
+  - add stable idempotent demo seed data for the public marketplace
+  - add Playwright full customer coverage from browse to proof upload
+  - preserve existing auth, checkout, tracking, payment, and seller flows
+- Files changed:
+  - `backend-nest/package.json`
+  - `backend-nest/scripts/seed-demo.js`
+  - `frontend-next/package.json`
+  - `frontend-next/src/app/products/[id]/page.tsx`
+  - `frontend-next/src/components/public/public-product-detail-page-client.tsx`
+  - `frontend-next/public/demo/*`
+  - `frontend-next/tests/e2e/public-full.spec.ts`
+  - `frontend-next/src/components/public/product-card.tsx`
+  - `frontend-next/src/components/public/checkout-page-client.tsx`
+  - `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+  - `frontend-next/README.md`
+  - `docs/DEMO_DATA.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - `npm run seed:demo` now creates a stable approved seller, active shop, payment instructions, and 3 active public products
+  - demo seed is idempotent and blocked in production unless `DEMO_SEED_CONFIRM=true`
+  - seeded product images are served from local static SVG assets in `frontend-next/public/demo`
+  - `/products/[id]` now follows the same async server-wrapper pattern already used by `/checkout` and `/orders/[id]`, which fixed the production navigation error on the product detail route
+  - public full Playwright flow now covers:
+    - home
+    - products
+    - product detail
+    - checkout
+    - order confirmation
+    - tracking by phone
+    - payment proof upload
+  - public pages now expose stable test selectors for critical customer actions without changing API contracts
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `GET http://localhost:3001/api/health`: pass
+  - `GET http://localhost:3000/products`: pass
+  - `GET http://localhost:8000/health`: pass
+- Runtime notes:
+  - the first seed implementation used inline `data:` URLs for product images, but `product_images.wb_url/local_url` length limits rejected them
+  - replaced that approach with local static SVG assets under `frontend-next/public/demo`
+  - `public-full` initially failed because it clicked the first public product card, which was unstable in a mixed demo + smoke dataset
+  - the test now targets a seeded product by name and uses stricter route assertions
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist
