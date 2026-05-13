@@ -51,7 +51,7 @@ export function ProductImageGallery({
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {images.length ? (
           images.map((image) => (
-            <article key={image.id} className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)]">
+            <article key={image.id} className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)]" data-testid="product-image-card">
               <div className="aspect-[4/3] bg-[var(--panel-strong)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img

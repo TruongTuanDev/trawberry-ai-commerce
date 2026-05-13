@@ -73,7 +73,7 @@ export function ProductTable({
       </div>
       <div className="divide-y divide-[var(--border)]">
         {products.map((product) => (
-          <article key={product.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,2.2fr)_140px_150px_180px_240px] lg:px-5">
+          <article key={product.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,2.2fr)_140px_150px_180px_240px] lg:px-5" data-testid="seller-product-row">
             <div className="flex min-w-0 gap-4">
               <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel-strong)]">
                 {product.mainImage ? (

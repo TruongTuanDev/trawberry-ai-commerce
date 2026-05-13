@@ -77,6 +77,7 @@ export function ProductForm({
             id="localTitle"
             {...form.register("localTitle")}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+            data-testid="product-local-title"
           />
           {form.formState.errors.localTitle ? (
             <p className="mt-2 text-sm text-[var(--accent)]">{form.formState.errors.localTitle.message}</p>
@@ -92,6 +93,7 @@ export function ProductForm({
             rows={5}
             {...form.register("localDescription")}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+            data-testid="product-local-description"
           />
         </div>
 
@@ -104,6 +106,7 @@ export function ProductForm({
               id="seoSlug"
               {...form.register("seoSlug")}
               className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+              data-testid="product-seo-slug"
             />
           </div>
           <div>
@@ -114,6 +117,7 @@ export function ProductForm({
               id="visibility"
               {...form.register("visibility")}
               className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+              data-testid="product-visibility"
             >
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
@@ -133,6 +137,7 @@ export function ProductForm({
           type="submit"
           disabled={saving}
           className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+          data-testid="product-save"
         >
           {saving ? "Saving..." : "Save changes"}
         </button>

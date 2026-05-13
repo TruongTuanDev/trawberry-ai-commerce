@@ -56,6 +56,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - order-level delivery offer calculation
   - shipment create / refresh / cancel in mock mode
 - Seller center layout with sidebar, header, and shop switcher
+- Seller shop/product lifecycle UI with:
+  - first-shop creation from `/seller/products`
+  - product creation with initial price/stock variant
+  - product detail metadata and stock update
+  - product image upload
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages
 - Product images page with:
@@ -141,6 +146,24 @@ Current coverage:
 - approves the document
 - approves the seller
 - verifies audit timeline contains the seller approval action
+
+## Playwright seller product lifecycle flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:seller-product-lifecycle
+```
+
+Current coverage:
+- uses API setup only to create and approve a seller with KYC precondition
+- logs in through UI as that seller
+- creates the first shop from `/seller/products`
+- creates a product from UI with initial price and stock
+- updates stock from product detail UI
+- uploads a product image from UI
+- finds the product in public `/products`
+- completes customer checkout and tracking
+- verifies the seller order queue contains the new order
 
 ## Playwright public smoke
 With the Docker stack or local frontend/backend already running:

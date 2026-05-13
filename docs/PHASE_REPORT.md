@@ -1030,3 +1030,72 @@ git rm --cached frontend-next\.env.local
   - audit trail covers seller/document review actions, not every admin action
 - Commit info:
   - pending commit message: `feat: add seller onboarding and audit trail`
+
+## Seller Create Shop/Product/Image Browser E2E
+
+- Scope:
+  - add browser-level coverage for seller-created shop/product/image flow from blank seller state
+  - keep seller approval/onboarding setup deterministic through API setup
+  - verify seller-created product appears publicly, can be checked out, and appears in seller orders
+- Result:
+  - added `frontend-next/tests/e2e/seller-product-lifecycle.spec.ts`
+  - added `frontend-next` script `npm run test:e2e:seller-product-lifecycle`
+  - added first-shop creation UI on `/seller/products`
+  - added product creation UI on `/seller/products`
+  - added product creation API client functions
+  - extended product create DTO/service with optional variants so UI-created products can be public and checkout-ready
+  - added stable `data-testid` selectors for product detail, image upload/gallery, product rows, and seller order cards
+  - fixed seller product dynamic client pages to read route params through `useParams()`
+- Verification for this pass:
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, 15 suites / 79 tests
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:seller-approval`: pass
+  - `backend-nest npm run smoke:seller-onboarding`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `backend-nest npm run smoke:inventory-alerts`: pass
+  - `backend-nest npm run smoke:delivery`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:admin-seller-approval`: pass
+  - `frontend-next npm run test:e2e:seller-onboarding`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass after rerun with isolated seed; first parallel run collided on seeded product stock with `public-full`
+  - `frontend-next npm run test:e2e:full-commerce`: pass
+  - `frontend-next npm run test:e2e:seller-product-lifecycle`: pass
+- Files changed:
+  - `backend-nest/src/modules/products/dto/create-product.dto.ts`
+  - `backend-nest/src/modules/products/products.service.ts`
+  - `frontend-next/package.json`
+  - `frontend-next/src/components/products/seller-products-page-client.tsx`
+  - `frontend-next/src/components/products/product-form.tsx`
+  - `frontend-next/src/components/products/product-image-gallery.tsx`
+  - `frontend-next/src/components/products/product-table.tsx`
+  - `frontend-next/src/app/seller/products/[id]/page.tsx`
+  - `frontend-next/src/app/seller/products/[id]/images/page.tsx`
+  - `frontend-next/src/components/orders/seller-orders-page-client.tsx`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `frontend-next/tests/e2e/seller-product-lifecycle.spec.ts`
+  - `frontend-next/README.md`
+  - `docs/FULL_FLOW_AUDIT.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Remaining gaps:
+  - seller approval/KYC setup in this lifecycle test is API-driven; browser onboarding/admin approval remain covered by `test:e2e:seller-onboarding`
+  - no browser E2E for delivery settings form yet
+  - AI image generation remains out of scope and was not called
+- Commit info:
+  - pending commit message: `test: add seller product lifecycle browser e2e`

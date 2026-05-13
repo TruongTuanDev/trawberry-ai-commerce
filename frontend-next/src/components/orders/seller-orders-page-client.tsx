@@ -144,7 +144,7 @@ export function SellerOrdersPageClient() {
               <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading orders...</div>
             ) : orders.length ? (
               orders.map((order) => (
-                <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[160px_1.2fr_1.3fr_160px_160px_160px] lg:px-5">
+                <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[160px_1.2fr_1.3fr_160px_160px_160px] lg:px-5" data-testid="seller-order-card">
                   <div>
                     <Link href={`/seller/orders/${order.id}`} className="text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)]">
                       {order.orderNumber}

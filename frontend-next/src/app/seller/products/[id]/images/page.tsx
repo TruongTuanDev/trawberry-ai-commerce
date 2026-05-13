@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { AiImageGenerateModal } from "@/components/products/ai-image-generate-modal";
 import { AiTaskPanel } from "@/components/products/ai-task-panel";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
@@ -30,11 +31,9 @@ const POLLING_STATUSES = new Set<AiImageTask["status"]>(["PENDING", "PROCESSING"
 const POLLING_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 30;
 
-export default function SellerProductImagesPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function SellerProductImagesPage() {
+  const params = useParams<{ id: string }>();
+  const productId = params.id;
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [images, setImages] = useState<ProductImage[]>([]);
@@ -64,9 +63,9 @@ export default function SellerProductImagesPage({
 
       try {
         const [productResult, imagesResult, tasksResult, creditsResult] = await Promise.all([
-          getShopProductById(currentShopId, params.id),
-          getShopProductImages(currentShopId, params.id),
-          getShopAiImageTasks(currentShopId, { productId: params.id }),
+          getShopProductById(currentShopId, productId),
+          getShopProductImages(currentShopId, productId),
+          getShopAiImageTasks(currentShopId, { productId }),
           getAiCredits(currentShopId),
         ]);
 
@@ -95,7 +94,7 @@ export default function SellerProductImagesPage({
     return () => {
       mounted = false;
     };
-  }, [currentShopId, params.id]);
+  }, [currentShopId, productId]);
 
   useEffect(() => {
     if (!currentShopId || !currentTask || !POLLING_STATUSES.has(currentTask.status)) {
@@ -143,7 +142,7 @@ export default function SellerProductImagesPage({
       return;
     }
 
-    const nextImages = await getShopProductImages(currentShopId, params.id);
+    const nextImages = await getShopProductImages(currentShopId, productId);
     setImages(nextImages);
   };
 
@@ -166,7 +165,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      const uploaded = await uploadShopProductImages(currentShopId, params.id, selectedFiles);
+      const uploaded = await uploadShopProductImages(currentShopId, productId, selectedFiles);
       setImages((current) => [...current, ...uploaded].sort((left, right) => left.sortOrder - right.sortOrder));
       setSelectedFiles([]);
       setSuccessMessage(`Uploaded ${uploaded.length} image${uploaded.length > 1 ? "s" : ""}.`);
@@ -187,7 +186,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      await deleteShopProductImage(currentShopId, params.id, imageId);
+      await deleteShopProductImage(currentShopId, productId, imageId);
       setImages((current) => current.filter((image) => image.id !== imageId));
       setSuccessMessage("Image deleted.");
     } catch (err) {
@@ -210,7 +209,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      const updatedImage = await updateShopProductImage(currentShopId, params.id, imageId, payload);
+      const updatedImage = await updateShopProductImage(currentShopId, productId, imageId, payload);
       setImages((current) =>
         current
           .map((image) => {
@@ -272,7 +271,7 @@ export default function SellerProductImagesPage({
     try {
       const task = await createAiImageTask(
         currentShopId,
-        params.id,
+        productId,
         {
           mode: "generate",
           taskType,
@@ -311,7 +310,7 @@ export default function SellerProductImagesPage({
     setSuccessMessage(null);
 
     try {
-      const attachedImage = await attachGeneratedImage(currentShopId, params.id, generatedImageId);
+      const attachedImage = await attachGeneratedImage(currentShopId, productId, generatedImageId);
       setImages((current) => [...current, attachedImage].sort((left, right) => left.sortOrder - right.sortOrder));
       const refreshedTask = await getAiImageTask(currentShopId, currentTask.id);
       setCurrentTask(refreshedTask);
@@ -349,10 +348,10 @@ export default function SellerProductImagesPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="seller-product-images-page">
       <div className="flex flex-wrap items-center gap-3">
         <Link
-          href={`/seller/products/${product?.id ?? params.id}`}
+          href={`/seller/products/${product?.id ?? productId}`}
           className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)]"
         >
           Back to product
@@ -380,6 +379,7 @@ export default function SellerProductImagesPage({
               accept="image/*"
               multiple
               className="hidden"
+              data-testid="product-image-input"
               onChange={(event) => {
                 const files = Array.from(event.target.files ?? []);
                 setSelectedFiles(files);
@@ -407,6 +407,7 @@ export default function SellerProductImagesPage({
               onClick={() => void handleUpload()}
               disabled={!selectedFiles.length || uploading}
               className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+              data-testid="product-image-upload"
             >
               {uploading ? "Uploading..." : "Upload selected images"}
             </button>
@@ -424,7 +425,7 @@ export default function SellerProductImagesPage({
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <ProductImageGallery
-          productId={product?.id ?? params.id}
+          productId={product?.id ?? productId}
           images={images}
           showOpenGalleryLink={false}
           deletingImageId={deletingImageId}

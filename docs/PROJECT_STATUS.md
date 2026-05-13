@@ -548,6 +548,22 @@ Status: implemented in `backend-nest` and `frontend-next`.
   - backend: `npm run smoke:seller-onboarding`
   - frontend: `npm run test:e2e:seller-onboarding`
 
+## Seller Product Lifecycle Browser E2E Update
+
+Status: implemented in `frontend-next`.
+
+- Added `npm run test:e2e:seller-product-lifecycle`.
+- The test uses API setup only for seller registration/onboarding/KYC/admin approval, then verifies seller operations through browser UI:
+  - seller login
+  - first shop creation from `/seller/products`
+  - product creation with initial price/stock variant
+  - stock update from `/seller/products/[id]`
+  - product image upload from `/seller/products/[id]/images`
+  - public product search/detail
+  - customer checkout and order tracking
+  - seller order queue visibility
+- Backend product creation now accepts optional variants so UI-created products can be public and checkout-ready without seed data.
+
 ## I. Known Issues / Risks
 
 - Real OpenAI runtime is not treated as fully proven in this audit.

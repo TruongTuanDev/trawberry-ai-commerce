@@ -397,6 +397,37 @@ export type CreateAiImageTaskPayload = {
   inputModelImageId?: string;
 };
 
+export type CreateShopPayload = {
+  name: string;
+  slug: string;
+  contactInfo?: string;
+  paymentInstructions?: string;
+};
+
+export type CreateProductPayload = {
+  wbNmId: number;
+  wbTitle: string;
+  wbDescription?: string;
+  brand?: string;
+  categoryName?: string;
+  wbVendorCode?: string;
+  localTitle?: string;
+  localDescription?: string;
+  seoSlug?: string;
+  visibility?: string;
+  variants?: Array<{
+    chrtId: number;
+    techSize?: string;
+    wbSize?: string;
+    isActive?: boolean;
+    basePrice?: number;
+    discountPrice?: number;
+    stockQuantity?: number;
+    lowStockThreshold?: number;
+    trackInventory?: boolean;
+  }>;
+};
+
 export type UpdateProductPayload = Partial<{
   wbNmId: number;
   wbTitle: string;
@@ -421,6 +452,14 @@ export type UpdateProductPayload = Partial<{
   visibility: string;
   localTags: string[];
 }>;
+
+export async function createSellerShop(payload: CreateShopPayload, token?: string) {
+  return apiRequest<ShopSummary>("/api/shops", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
 
 export async function getSellerShops(token?: string) {
   return apiRequest<ShopSummary[]>("/api/shops", {
@@ -459,6 +498,14 @@ export async function getShopProducts(
   return apiRequest<ProductListResponse>(`/api/shops/${shopId}/products?${params.toString()}`, {
     method: "GET",
     token,
+  });
+}
+
+export async function createShopProduct(shopId: string, payload: CreateProductPayload, token?: string) {
+  return apiRequest<ProductDetail>(`/api/shops/${shopId}/products`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
   });
 }
 

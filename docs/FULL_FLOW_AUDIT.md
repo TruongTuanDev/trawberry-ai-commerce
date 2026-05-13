@@ -32,19 +32,19 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | Seller register | Seller | `POST /api/auth/register`, `/login` | PASS | `backend-nest` tests; `npm run test:e2e:auth` registers via API and logs in through UI | Register creates active seller user with seller profile pending approval. |
 | Seller approval | Admin | `/admin/sellers`, `/admin/sellers/[id]`, `/api/admin/sellers` | PASS | `npm run smoke:seller-approval`; `npm run smoke:seller-onboarding`; `npm run test:e2e:admin-seller-approval`; `npm run test:e2e:seller-onboarding` | Admin can list, review KYC, approve documents, approve sellers, reject sellers, and audit actions. Approval requires at least one approved KYC document. |
 | Seller login | Seller | `/login`, `POST /api/auth/login` | PASS | `npm run test:e2e:auth`; `npm run test:e2e:full-commerce` | `httpOnly` auth cookie verified; no raw JWT in localStorage. |
-| Seller create shop | Seller | `POST /api/shops` | PASS | Backend tests and shop module review | UI create-shop flow was not found in this MVP; demo seed creates active shop. |
+| Seller create shop | Seller | `/seller/products`, `POST /api/shops` | PASS | `npm run test:e2e:seller-product-lifecycle`; backend tests | Browser E2E creates the seller's first shop from UI after API-only seller approval setup. |
 | Seller onboarding/KYC | Seller/Admin | `/seller/onboarding`, `/admin/sellers/[id]`, onboarding/document APIs | PASS | `npm run smoke:seller-onboarding`; `npm run test:e2e:seller-onboarding`; backend Jest | Seller saves legal profile, uploads document, admin reviews document, audit log records review. |
 | Seller delivery settings | Seller | `/seller/settings`, `GET/PATCH /api/shops/:shopId/delivery/settings` | PASS | `npm run smoke:delivery`; `npm run test:e2e:full-commerce` API setup | Full E2E configures settings through API for deterministic setup. |
-| Seller create product | Seller | `/seller/products`, `POST /api/shops/:shopId/products` | PASS | Backend tests, product module review, seed/demo | Full browser flow uses seeded products, not browser product creation. |
-| Seller upload product image | Seller | `/seller/products/[id]/images`, `POST /api/shops/:shopId/products/:productId/images` | PASS | Product image tests/module review; seed includes product images | Browser full flow does not upload product image; payment proof upload is browser-tested. |
-| Seller inventory update | Seller | `/seller/products/[id]`, `PATCH /api/shops/:shopId/products/:productId/inventory` | PASS | `npm run smoke:inventory`; `npm run smoke:inventory-alerts` | Browser full flow verifies stock deduction after checkout. |
-| Public product listing | Customer | `/products`, `GET /api/public/products` | PASS | `npm run test:e2e:public`; `npm run test:e2e:public-full`; `npm run test:e2e:full-commerce` | Search and product card selection verified. |
-| Product detail | Customer | `/products/[id]`, `GET /api/public/products/:productId` | PASS | `npm run test:e2e:public-full`; `npm run test:e2e:full-commerce` | Product heading, quantity, checkout CTA verified. |
-| Customer checkout | Customer | `/checkout`, `POST /api/checkout/orders` | PASS | `npm run smoke:checkout`; `npm run test:e2e:public-full`; `npm run test:e2e:full-commerce` | Backend recalculates totals. |
+| Seller create product | Seller | `/seller/products`, `POST /api/shops/:shopId/products` | PASS | `npm run test:e2e:seller-product-lifecycle`; backend tests | Browser E2E creates a unique active product with initial price/stock variant. |
+| Seller upload product image | Seller | `/seller/products/[id]/images`, `POST /api/shops/:shopId/products/:productId/images` | PASS | `npm run test:e2e:seller-product-lifecycle`; product image tests | Browser E2E uploads a PNG product image and verifies gallery card. |
+| Seller inventory update | Seller | `/seller/products/[id]`, `PATCH /api/shops/:shopId/products/:productId/inventory` | PASS | `npm run smoke:inventory`; `npm run smoke:inventory-alerts`; `npm run test:e2e:seller-product-lifecycle` | Browser E2E updates stock before customer checkout. |
+| Public product listing | Customer | `/products`, `GET /api/public/products` | PASS | `npm run test:e2e:public`; `npm run test:e2e:public-full`; `npm run test:e2e:full-commerce`; `npm run test:e2e:seller-product-lifecycle` | Search and product card selection verified, including seller-created product. |
+| Product detail | Customer | `/products/[id]`, `GET /api/public/products/:productId` | PASS | `npm run test:e2e:public-full`; `npm run test:e2e:full-commerce`; `npm run test:e2e:seller-product-lifecycle` | Product heading, quantity, checkout CTA verified. |
+| Customer checkout | Customer | `/checkout`, `POST /api/checkout/orders` | PASS | `npm run smoke:checkout`; `npm run test:e2e:public-full`; `npm run test:e2e:full-commerce`; `npm run test:e2e:seller-product-lifecycle` | Backend recalculates totals. |
 | Stock deduction | System | Checkout transaction, public product API | PASS | `npm run smoke:inventory`; `npm run test:e2e:full-commerce` compares `availableQuantity` before/after | Atomic update protects against oversell. |
 | Customer order tracking | Customer | `/orders/track`, `/orders/[id]`, `GET /api/public/orders/track` | PASS | `npm run smoke:order-tracking`; public/full/full-commerce E2E | Phone verification required. |
 | Customer payment proof upload | Customer | `/orders/[id]`, `POST /api/public/orders/:orderId/payment-proof` | PASS | `npm run smoke:order-tracking`; public-full; public-payment-review; full-commerce | Upload is stored and visible to seller. |
-| Seller orders list/detail | Seller | `/seller/orders`, `/seller/orders/[id]`, `GET /api/shops/:shopId/orders` | PASS | `npm run test:e2e:full-commerce`; `npm run smoke:checkout` seller visibility | Full E2E searches order queue and opens detail. |
+| Seller orders list/detail | Seller | `/seller/orders`, `/seller/orders/[id]`, `GET /api/shops/:shopId/orders` | PASS | `npm run test:e2e:full-commerce`; `npm run test:e2e:seller-product-lifecycle`; `npm run smoke:checkout` seller visibility | Lifecycle E2E verifies seller sees order created for seller-created product. |
 | Seller payment queue/detail | Seller | `/seller/payments`, `/seller/payments/[orderId]`, `GET /api/shops/:shopId/payments` | PASS | `npm run smoke:payments`; `npm run test:e2e:public-payment-review`; full-commerce | Payment proof link verified. |
 | Seller mark paid | Seller | `POST /api/shops/:shopId/payments/:orderId/mark-paid` | PASS | `npm run smoke:payments`; payment-review E2E; full-commerce | Audit log created. |
 | Delivery calculate/create/refresh | Seller | `/seller/orders/[id]`, delivery endpoints | PASS | `npm run smoke:delivery`; `npm run test:e2e:full-commerce` | Verified in mock mode only. |
@@ -116,10 +116,10 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 |---|---|---|---|---|
 | `/login` | Seller login | `test:e2e:auth`, full-commerce | PASS | Cookie login verified. |
 | `/seller/dashboard` | Seller landing shell | `test:e2e:auth` | PASS | KPI content remains partly placeholder. |
-| `/seller/products` | Seller product list/inventory alerts | Frontend build; backend smoke | PARTIAL | UI present; not browser-covered in this audit. |
-| `/seller/products/[id]` | Seller product detail/inventory | Frontend build; backend smoke | PARTIAL | UI present; inventory API smoke pass. |
-| `/seller/products/[id]/images` | Seller product image gallery/upload/AI attach | Frontend build; backend tests | PARTIAL | UI present; browser image upload not included. |
-| `/seller/orders` | Seller order queue | Full-commerce E2E | PASS | Search and detail navigation verified. |
+| `/seller/products` | Seller product list/create/inventory alerts | `test:e2e:seller-product-lifecycle`; backend smoke | PASS | Browser E2E creates first shop and product from this page. |
+| `/seller/products/[id]` | Seller product detail/inventory | `test:e2e:seller-product-lifecycle`; backend smoke | PASS | Browser E2E updates stock from detail UI. |
+| `/seller/products/[id]/images` | Seller product image gallery/upload/AI attach | `test:e2e:seller-product-lifecycle`; backend tests | PASS | Browser E2E uploads product image; AI attach remains separately covered by API/module paths. |
+| `/seller/orders` | Seller order queue | Full-commerce E2E; seller-product-lifecycle E2E | PASS | Search and detail navigation verified; lifecycle test verifies seller-created product order appears. |
 | `/seller/orders/[id]` | Seller order detail, delivery, status update | Full-commerce E2E | PASS | Delivery calculate/create/refresh and status update verified. |
 | `/seller/payments` | Seller payment queue | Frontend build; payment module smoke | PARTIAL | Detail flow is browser-tested; list smoke is API-level. |
 | `/seller/payments/[orderId]` | Seller payment detail/review | Payment-review E2E; full-commerce E2E | PASS | Proof visibility and mark-paid verified. |
@@ -152,10 +152,11 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | `npm run test:e2e:public-full` | Public browse/detail/checkout/tracking/proof | No seller review | PASS |
 | `npm run test:e2e:public-payment-review` | Customer proof, seller payment detail, mark paid, customer sees paid | No delivery/status update | PASS |
 | `npm run test:e2e:full-commerce` | Public browse/detail/checkout, stock deduction, proof, seller orders, seller payment review, mark paid, delivery create/refresh, seller status update, customer sees paid/delivery/shipping | Uses API setup for delivery settings and seeded product data | PASS |
+| `npm run test:e2e:seller-product-lifecycle` | API creates/approves seller, then browser creates shop/product/image, updates stock, finds product publicly, checks out, tracks order, and verifies seller order queue | Seller approval/KYC is API setup to keep this test focused on seller operations UI | PASS |
 
 ## 6. Gaps / Risks
 
-- Browser E2E does not yet create a seller shop/product/image entirely through UI. Those pieces are API-tested and UI-present, but the current full browser flow starts from seeded demo data.
+- Browser E2E now creates a seller shop/product/image through UI. Seller registration/onboarding/admin approval is API setup in that test; those UI paths are covered by `test:e2e:seller-onboarding`.
 - Seller approval now has admin UI/API and KYC document review. Remaining production gaps are KYC retention/access policy, notifications, and wider admin audit coverage.
 - Product image upload browser coverage is still missing for seller-managed assets.
 - Delivery real providers were not verified. Default verified mode is mock; Yandex/CDEK credentials and account/billing/address edge cases remain unproven.
@@ -167,13 +168,12 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 ## 7. Recommended Next Steps
 
 1. Define KYC production retention, object access, encryption, and deletion policy.
-2. Add browser E2E for seller shop creation, seller product creation, inventory update, and product image upload.
-3. Add browser E2E for `/seller/settings` delivery settings form instead of using API setup in full-commerce.
-4. Harden order/payment/inventory with idempotency keys, concurrency-focused tests, and payment-proof validation rules.
-5. Add real Yandex mode verification only when a valid token, billing, and safe test addresses are available.
-6. Add CI/CD to run backend tests/smoke and frontend Playwright against Docker.
-7. Prepare VPS deployment with secret manager/env injection and non-demo seed strategy.
-8. Revisit real AI/OpenAI and try-on only after core commerce and deployment are stable.
+2. Add browser E2E for `/seller/settings` delivery settings form instead of using API setup in full-commerce.
+3. Harden order/payment/inventory with idempotency keys, concurrency-focused tests, and payment-proof validation rules.
+4. Add real Yandex mode verification only when a valid token, billing, and safe test addresses are available.
+5. Add CI/CD to run backend tests/smoke and frontend Playwright against Docker.
+6. Prepare VPS deployment with secret manager/env injection and non-demo seed strategy.
+7. Revisit real AI/OpenAI and try-on only after core commerce and deployment are stable.
 
 ## Verification Commands Run
 

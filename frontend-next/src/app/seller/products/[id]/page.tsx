@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { SectionCard } from "@/components/seller/section-card";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
@@ -16,11 +17,9 @@ import {
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
-export default function SellerProductDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function SellerProductDetailPage() {
+  const params = useParams<{ id: string }>();
+  const productId = params.id;
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [inventory, setInventory] = useState<ProductInventory | null>(null);
@@ -40,8 +39,8 @@ export default function SellerProductDetailPage({
 
       try {
         const [productResult, inventoryResult] = await Promise.all([
-          getShopProductById(currentShopId, params.id),
-          getShopProductInventory(currentShopId, params.id),
+          getShopProductById(currentShopId, productId),
+          getShopProductInventory(currentShopId, productId),
         ]);
         if (mounted) {
           setProduct(productResult);
@@ -64,7 +63,7 @@ export default function SellerProductDetailPage({
     return () => {
       mounted = false;
     };
-  }, [currentShopId, params.id]);
+  }, [currentShopId, productId]);
 
   const handleSave = async (payload: UpdateProductPayload) => {
     if (!currentShopId || !product) {
@@ -126,7 +125,7 @@ export default function SellerProductDetailPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="seller-product-detail-page">
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/seller/products"
@@ -252,12 +251,13 @@ function InventoryRow({
       <div className="text-sm text-[var(--foreground)]">{variant.basePrice ?? "0.00"}</div>
       <div className="text-sm text-[var(--foreground)]">{variant.discountPrice ?? "-"}</div>
       <div>
-        <input
+          <input
           type="number"
           min={0}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--foreground)]"
+          data-testid="product-stock-input"
         />
       </div>
       <div className={variant.stockStatus === "OUT_OF_STOCK" ? "text-sm font-semibold text-rose-700" : variant.stockStatus === "LOW_STOCK" ? "text-sm font-semibold text-amber-700" : "text-sm text-emerald-700"}>
@@ -272,6 +272,7 @@ function InventoryRow({
           onClick={() => void onSave(variant.id, Math.max(0, Number(value) || 0))}
           disabled={saving}
           className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+          data-testid="product-stock-save"
         >
           {saving ? "Saving..." : "Save stock"}
         </button>

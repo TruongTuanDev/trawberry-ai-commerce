@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SectionCard } from "@/components/seller/section-card";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductTable } from "@/components/products/product-table";
-import { getShopProducts, updateShopProductInventory, type ProductListItem } from "@/lib/seller-api";
+import {
+  createSellerShop,
+  createShopProduct,
+  getShopProducts,
+  updateShopProductInventory,
+  type ProductListItem,
+} from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
@@ -16,7 +22,18 @@ export function SellerProductsPageClient() {
   const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
+  const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
+  const selectShop = useSellerWorkspaceStore((state) => state.selectShop);
 
+  const [shopForm, setShopForm] = useState({ name: "", slug: "" });
+  const [productForm, setProductForm] = useState({
+    title: "",
+    description: "",
+    brand: "",
+    categoryName: "",
+    price: "100",
+    stockQuantity: "5",
+  });
   const [filters, setFilters] = useState({
     search: searchParams.get("search") ?? "",
     status: searchParams.get("status") ?? "",
@@ -34,6 +51,10 @@ export function SellerProductsPageClient() {
     loading: false,
     error: null,
   });
+  const [creatingShop, setCreatingShop] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [createMessage, setCreateMessage] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const totalPages = useMemo(() => state.meta?.totalPages ?? 0, [state.meta]);
 
@@ -150,14 +171,156 @@ export function SellerProductsPageClient() {
     }
   };
 
+  const handleCreateShop = async () => {
+    setCreatingShop(true);
+    setCreateMessage(null);
+    setCreateError(null);
+    try {
+      const created = await createSellerShop({
+        name: shopForm.name.trim(),
+        slug: shopForm.slug.trim(),
+        paymentInstructions: "Manual transfer after checkout. Seller confirms payment proof in seller center.",
+      });
+      await loadShops();
+      selectShop(created.id);
+      setCreateMessage(`${created.name} created.`);
+      setShopForm({ name: "", slug: "" });
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Unable to create shop.");
+    } finally {
+      setCreatingShop(false);
+    }
+  };
+
+  const handleCreateProduct = async () => {
+    if (!currentShopId) return;
+
+    setCreatingProduct(true);
+    setCreateMessage(null);
+    setCreateError(null);
+    try {
+      const stamp = Date.now();
+      const title = productForm.title.trim();
+      const created = await createShopProduct(currentShopId, {
+        wbNmId: Number(String(stamp).slice(-9)),
+        wbTitle: title,
+        localTitle: title,
+        wbDescription: productForm.description.trim() || undefined,
+        localDescription: productForm.description.trim() || undefined,
+        brand: productForm.brand.trim() || undefined,
+        categoryName: productForm.categoryName.trim() || "Seller Created",
+        wbVendorCode: `UI-${stamp}`,
+        seoSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+        visibility: "ACTIVE",
+        variants: [
+          {
+            chrtId: Number(String(stamp).slice(-10)),
+            techSize: "ONE",
+            wbSize: "One size",
+            basePrice: Math.max(1, Number(productForm.price) || 1),
+            stockQuantity: Math.max(0, Number(productForm.stockQuantity) || 0),
+            lowStockThreshold: 2,
+            trackInventory: true,
+          },
+        ],
+      });
+      setProductForm({
+        title: "",
+        description: "",
+        brand: "",
+        categoryName: "",
+        price: "100",
+        stockQuantity: "5",
+      });
+      router.push(`/seller/products/${created.id}`);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Unable to create product.");
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="seller-products-page">
       <SectionCard
         eyebrow="Catalog"
         title="Products"
         description="The Angular seller product list has been reworked into a responsive table with search, pagination, and shop-scoped NestJS data."
       >
         <div className="space-y-5">
+          {createMessage ? (
+            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{createMessage}</div>
+          ) : null}
+          {createError ? (
+            <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{createError}</div>
+          ) : null}
+
+          {!currentShopId ? (
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-shop-panel">
+              <p className="text-sm font-semibold text-[var(--foreground)]">Create your first shop</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+                  <span>Shop name</span>
+                  <input
+                    value={shopForm.name}
+                    onChange={(event) => setShopForm((current) => ({ ...current, name: event.target.value }))}
+                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="create-shop-name"
+                  />
+                </label>
+                <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+                  <span>Shop slug</span>
+                  <input
+                    value={shopForm.slug}
+                    onChange={(event) => setShopForm((current) => ({ ...current, slug: event.target.value }))}
+                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="create-shop-slug"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateShop()}
+                  disabled={creatingShop || !shopForm.name.trim() || !shopForm.slug.trim()}
+                  className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                  data-testid="create-shop-submit"
+                >
+                  {creatingShop ? "Creating..." : "Create shop"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-product-panel">
+              <p className="text-sm font-semibold text-[var(--foreground)]">Create product</p>
+              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                <CreateInput label="Name" value={productForm.title} onChange={(value) => setProductForm((current) => ({ ...current, title: value }))} testId="create-product-name" />
+                <CreateInput label="Brand" value={productForm.brand} onChange={(value) => setProductForm((current) => ({ ...current, brand: value }))} testId="create-product-brand" />
+                <CreateInput label="Category" value={productForm.categoryName} onChange={(value) => setProductForm((current) => ({ ...current, categoryName: value }))} testId="create-product-category" />
+                <CreateInput label="Price" type="number" value={productForm.price} onChange={(value) => setProductForm((current) => ({ ...current, price: value }))} testId="create-product-price" />
+                <CreateInput label="Initial stock" type="number" value={productForm.stockQuantity} onChange={(value) => setProductForm((current) => ({ ...current, stockQuantity: value }))} testId="create-product-stock" />
+                <label className="space-y-2 text-sm font-semibold text-[var(--foreground)] lg:col-span-3">
+                  <span>Description</span>
+                  <textarea
+                    value={productForm.description}
+                    onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))}
+                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="create-product-description"
+                  />
+                </label>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleCreateProduct()}
+                  disabled={creatingProduct || !productForm.title.trim()}
+                  className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                  data-testid="create-product-submit"
+                >
+                  {creatingProduct ? "Creating..." : "Create product"}
+                </button>
+              </div>
+            </div>
+          )}
+
           <ProductFilters value={filters} onChange={setFilters} onSubmit={applyFilters} />
 
           <div className="grid gap-4 sm:grid-cols-3">
@@ -243,5 +406,32 @@ function InventorySummaryCard({
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
       <p className={`mt-2 text-2xl font-semibold ${colorClass}`}>{value}</p>
     </div>
+  );
+}
+
+function CreateInput({
+  label,
+  value,
+  onChange,
+  testId,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  testId: string;
+  type?: string;
+}) {
+  return (
+    <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+      <span>{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+        data-testid={testId}
+      />
+    </label>
   );
 }

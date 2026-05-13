@@ -145,6 +145,21 @@ export class ProductsService {
               })),
             }
           : undefined,
+        variants: dto.variants?.length
+          ? {
+              create: dto.variants.map((variant) => ({
+                chrtId: BigInt(variant.chrtId),
+                techSize: variant.techSize,
+                wbSize: variant.wbSize,
+                isActive: variant.isActive ?? true,
+                basePrice: variant.basePrice ?? 0,
+                discountPrice: variant.discountPrice,
+                stockQuantity: variant.stockQuantity ?? 0,
+                lowStockThreshold: variant.lowStockThreshold ?? 5,
+                trackInventory: variant.trackInventory ?? true,
+              })),
+            }
+          : undefined,
       },
       include: {
         images: {

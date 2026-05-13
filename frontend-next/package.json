@@ -14,7 +14,8 @@
     "test:e2e:seller-onboarding": "playwright test seller-onboarding",
     "test:e2e:public": "playwright test public-smoke",
     "test:e2e:public-full": "playwright test public-full",
-    "test:e2e:public-payment-review": "playwright test public-payment-review"
+    "test:e2e:public-payment-review": "playwright test public-payment-review",
+    "test:e2e:seller-product-lifecycle": "playwright test seller-product-lifecycle"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
