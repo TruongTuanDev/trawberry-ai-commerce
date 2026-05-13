@@ -152,6 +152,29 @@ export class MockDeliveryProvider implements DeliveryProvider {
     });
   }
 
+  acceptShipment(
+    input: DeliveryShipmentContext,
+  ): Promise<DeliveryShipmentResult> {
+    return Promise.resolve({
+      provider: input.provider,
+      providerShipmentId: input.providerShipmentId,
+      providerOrderNumber: input.providerOrderNumber,
+      providerStatus: 'ACCEPTED',
+      internalStatus: 'ACCEPTED',
+      priceAmount: input.priceAmount,
+      priceCurrency: input.priceCurrency,
+      trackingNumber: input.trackingNumber,
+      trackingUrl: input.trackingUrl,
+      rawProviderPayload: {
+        provider: input.provider,
+        accepted: true,
+      },
+      acceptedAt: new Date(),
+      cancelledAt: null,
+      deliveredAt: null,
+    });
+  }
+
   cancelShipment(
     input: DeliveryShipmentContext & { reason?: string | null },
   ): Promise<DeliveryShipmentResult> {

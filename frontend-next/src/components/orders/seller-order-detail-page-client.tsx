@@ -7,6 +7,7 @@ import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { SectionCard } from "@/components/seller/section-card";
 import {
   calculateDeliveryOffers,
+  acceptDeliveryShipment,
   cancelDeliveryShipment,
   createDeliveryShipment,
   getDeliverySettings,
@@ -135,7 +136,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     setDeliveryOffers(deliveryResult.offers);
   };
 
-  const handleDeliveryAction = async (action: "calculate" | "create" | "refresh" | "cancel") => {
+  const handleDeliveryAction = async (action: "calculate" | "create" | "accept" | "refresh" | "cancel") => {
     if (!currentShopId || !order) return;
 
     if ((action === "calculate" || action === "create") && !pickupAddress.trim()) {
@@ -186,6 +187,13 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           "",
         );
         setDeliveryMessage("Delivery shipment created.");
+        await refreshDeliverySnapshot();
+      } else if (action === "accept") {
+        if (!delivery?.activeShipment) {
+          throw new Error("No active shipment exists to accept.");
+        }
+        await acceptDeliveryShipment(currentShopId, order.id, delivery.activeShipment.id, "");
+        setDeliveryMessage("Delivery shipment accepted.");
         await refreshDeliverySnapshot();
       } else if (action === "refresh") {
         if (!delivery?.activeShipment) {
@@ -327,12 +335,15 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </Field>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               <button type="button" onClick={() => void handleDeliveryAction("calculate")} disabled={deliveryLoading} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50">
                 {deliveryLoading ? "Working..." : "Calculate offers"}
               </button>
               <button type="button" onClick={() => void handleDeliveryAction("create")} disabled={deliveryLoading || order.paymentStatus !== "PAID"} className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60">
-                Create shipment
+                {deliveryOffers.find((offer) => offer.id === selectedOfferId)?.provider === "YANDEX" ? "Create claim" : "Create shipment"}
+              </button>
+              <button type="button" onClick={() => void handleDeliveryAction("accept")} disabled={deliveryLoading || !activeShipment || activeShipment.provider !== "YANDEX"} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50">
+                Accept claim
               </button>
               <button type="button" onClick={() => void handleDeliveryAction("refresh")} disabled={deliveryLoading || !activeShipment} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50">
                 Refresh

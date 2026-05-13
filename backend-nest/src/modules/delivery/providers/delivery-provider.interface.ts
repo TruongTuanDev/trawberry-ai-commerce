@@ -13,6 +13,9 @@ export interface DeliveryProvider {
       selectedOffer?: DeliveryOfferResult | null;
     },
   ): Promise<DeliveryShipmentResult>;
+  acceptShipment?(
+    input: DeliveryShipmentContext,
+  ): Promise<DeliveryShipmentResult>;
   refreshShipment(
     input: DeliveryShipmentContext,
   ): Promise<DeliveryShipmentResult>;

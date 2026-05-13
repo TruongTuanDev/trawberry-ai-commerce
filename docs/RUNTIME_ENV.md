@@ -131,7 +131,17 @@ YANDEX_DELIVERY_TIMEOUT_MS=30000
 
 Real modes are intentionally not part of default smoke verification:
 - `cdek` mode requires valid CDEK credentials and later-phase API implementation
-- `yandex` mode is placeholder-only in this phase
+- `yandex` mode requires a Yandex Delivery business token from the Integration tab
+
+Yandex real-mode flow:
+- `claims/create`
+- `claims/accept`
+- `claims/info`
+- `claims/tracking-links`
+- `claims/cancel-info`
+- `claims/cancel`
+
+Run `npm run smoke:delivery-yandex-real` only against a backend started with the real Yandex env. The script skips when env is missing and fails clearly for real Yandex account, billing, address, or courier availability errors.
 
 ## Smoke Integration
 Run the integration smoke from the host:

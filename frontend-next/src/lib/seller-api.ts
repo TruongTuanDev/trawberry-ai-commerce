@@ -870,6 +870,21 @@ export async function cancelDeliveryShipment(
   );
 }
 
+export async function acceptDeliveryShipment(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/accept`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
 export async function refreshDeliveryShipment(
   shopId: string,
   orderId: string,

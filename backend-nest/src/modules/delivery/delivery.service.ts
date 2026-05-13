@@ -342,6 +342,54 @@ export class DeliveryService {
     return this.toShipmentResponse(updated);
   }
 
+  async acceptShipment(shopId: string, orderId: string, shipmentId: string) {
+    const shipment = await this.findShipmentOrThrow(
+      shopId,
+      orderId,
+      shipmentId,
+    );
+    if (!this.provider.acceptShipment) {
+      throw new BadRequestException(
+        'The active delivery provider does not support shipment acceptance.',
+      );
+    }
+
+    const accepted = await this.provider.acceptShipment(
+      this.toShipmentContext(shipment),
+    );
+
+    const updated = await this.prisma.deliveryShipment.update({
+      where: { id: shipmentId },
+      data: {
+        providerStatus: accepted.providerStatus,
+        internalStatus: accepted.internalStatus,
+        priceAmount: accepted.priceAmount
+          ? new Prisma.Decimal(accepted.priceAmount)
+          : shipment.priceAmount,
+        priceCurrency: accepted.priceCurrency,
+        trackingNumber: accepted.trackingNumber,
+        trackingUrl: accepted.trackingUrl,
+        rawProviderPayload: this.toJsonInput(accepted.rawProviderPayload),
+        acceptedAt: accepted.acceptedAt ?? new Date(),
+        cancelledAt: accepted.cancelledAt,
+        deliveredAt: accepted.deliveredAt,
+      },
+    });
+
+    await this.createEvent(
+      shipmentId,
+      shopId,
+      orderId,
+      accepted.provider,
+      'SHIPMENT_ACCEPTED',
+      accepted.providerStatus,
+      'Delivery shipment accepted.',
+      accepted.rawProviderPayload,
+    );
+
+    return this.toShipmentResponse(updated);
+  }
+
   async cancelShipment(
     shopId: string,
     orderId: string,

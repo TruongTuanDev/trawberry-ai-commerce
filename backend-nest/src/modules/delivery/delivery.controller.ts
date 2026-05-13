@@ -96,6 +96,19 @@ export class DeliveryController {
     return this.deliveryService.refreshShipment(shopId, orderId, shipmentId);
   }
 
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/accept')
+  @ApiOperation({
+    summary: 'Accept a created delivery shipment or Yandex claim.',
+  })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  acceptShipment(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+  ) {
+    return this.deliveryService.acceptShipment(shopId, orderId, shipmentId);
+  }
+
   @Post('orders/:orderId/delivery/shipments/:shipmentId/cancel')
   @ApiOperation({ summary: 'Cancel a shipment in the active provider.' })
   @ApiOkResponse({ type: DeliveryShipmentResponseDto })

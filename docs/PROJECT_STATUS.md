@@ -519,7 +519,7 @@ Current flow:
 - Public marketplace is now demo-ready, but richer merchandising, sorting, and customer account history are still incomplete.
 - Inventory is now single-location and variant-local only; no warehouse or ledger model exists yet.
 - Low-stock alerts are seller-facing only in this phase; no notification channel or cron alerting exists yet.
-- Multi-carrier delivery foundation now exists, but real CDEK and Yandex API calls remain intentionally disabled in default verification.
+- Multi-carrier delivery foundation now exists. Yandex real-mode client/provider is implemented for create/accept/refresh/cancel/tracking, but real Yandex smoke is optional and only runs with real env.
 - Delivery currently supports one active shipment per order and no webhook ingestion yet.
 - Seeded demo data now supports stable public demos, but there is still no automatic database reset/isolation between repeated end-to-end runs.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
@@ -540,7 +540,7 @@ Current flow:
    - logging and observability
 9. Add CI/CD with GitHub Actions.
 10. Prepare VPS / cloud deployment pipeline.
-11. Implement real Yandex same-city claim lifecycle on top of the generic delivery foundation.
+11. Verify Yandex real mode with production-like pickup/dropoff addresses and active billing.
 12. Implement real CDEK provider calls and pickup-point selection flow.
 
 ## K. Definition of Done for MVP

@@ -39,6 +39,17 @@ Only enabled when:
 
 Current status: provider and client skeleton exist. Real calls are reserved for a later phase.
 
+Implemented real-mode methods:
+- `offers/calculate`
+- `claims/create`
+- `claims/accept`
+- `claims/info`
+- `claims/tracking-links`
+- `claims/cancel-info`
+- `claims/cancel`
+
+Get the OAuth token in Yandex Delivery business account: `dostavka.yandex.ru/account` -> Integration. The token is sent as `Authorization: Bearer <OAuth_token>` and must stay in a real local `.env` or secret manager.
+
 ### CDEK mode
 
 Only enabled when:
@@ -47,6 +58,15 @@ Only enabled when:
 - required credentials are present
 
 Current status: provider and client skeleton exist. Real calls are reserved for a later phase.
+
+## Real Smoke
+
+`npm run smoke:delivery-yandex-real` skips safely unless:
+- `DELIVERY_PROVIDER_MODE=yandex`
+- `YANDEX_DELIVERY_ENABLED=true`
+- `YANDEX_DELIVERY_TOKEN` is present
+
+When enabled, the script creates a paid same-city order, creates a Yandex claim, accepts it, refreshes claim info, and reads tracking data. It does not print the token.
 
 ## Generic Tables
 

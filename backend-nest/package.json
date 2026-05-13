@@ -17,6 +17,7 @@
     "smoke:checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-checkout.ps1",
     "smoke:delivery": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery.ps1",
     "smoke:delivery-cdek": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery.ps1",
+    "smoke:delivery-yandex-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-yandex-real.ps1",
     "smoke:inventory": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory.ps1",
     "smoke:inventory-alerts": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory-alerts.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",

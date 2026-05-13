@@ -99,3 +99,5 @@ export type DeliveryShipmentContext = {
   dropoffAddress: string;
   rawProviderPayload: Record<string, unknown> | null;
 };
+
+export type DeliveryAcceptShipmentResult = DeliveryShipmentResult;

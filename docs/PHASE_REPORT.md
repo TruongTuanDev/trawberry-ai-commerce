@@ -792,6 +792,21 @@ while allowing:
   - CDEK remains available for fallback and inter-city/pickup flows
   - default env examples use mock mode and do not call real Yandex/CDEK APIs
 
+## Yandex Delivery Real Mode
+
+- Scope:
+  - implement real Yandex Delivery client methods behind the existing provider abstraction
+  - add seller accept endpoint for Yandex claims
+  - keep mock mode as the default CI/local path
+- Result:
+  - Yandex client calls `offers/calculate`, `claims/create`, `claims/accept`, `claims/info`, `claims/tracking-links`, `claims/cancel-info`, and `claims/cancel`
+  - provider maps claim id/status/price/tracking link into generic delivery shipments
+  - seller order detail can create, accept, refresh, and cancel a Yandex claim
+  - `npm run smoke:delivery-yandex-real` skips without real env and does not print tokens
+- Notes:
+  - real Yandex calls require `DELIVERY_PROVIDER_MODE=yandex`, `YANDEX_DELIVERY_ENABLED=true`, and `YANDEX_DELIVERY_TOKEN`
+  - common real failures include invalid token, inactive billing/account, address validation, no courier, expired offer, and invalid claim status transitions
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

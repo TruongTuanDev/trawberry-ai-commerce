@@ -557,6 +557,16 @@ describe('DeliveryController (e2e)', () => {
     expect(created.provider).toBe('YANDEX');
     expect(created.providerStatus).toBe('CREATED');
 
+    const acceptResponse = await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/accept`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    expect(
+      readBody<DeliveryShipmentResponseDto>(acceptResponse).internalStatus,
+    ).toBe('ACCEPTED');
+
     const refreshResponse = await request(app.getHttpServer())
       .post(
         `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/refresh`,

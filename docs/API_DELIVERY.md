@@ -104,6 +104,10 @@ Returns:
 
 ## Refresh / Cancel
 
+`POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/accept`
+
+Accepts a created shipment. In Yandex real mode this calls `claims/accept` with the stored claim id and version.
+
 `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/refresh`
 
 `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel`
@@ -128,3 +132,21 @@ Public order tracking exposes latest delivery projection:
 ## Real Carrier Calls
 
 Real Yandex/CDEK calls are disabled in default verification. Carrier credentials must not be committed.
+
+Yandex real-mode mapping:
+- offer calculation: `offers/calculate`
+- claim creation: `claims/create`
+- claim acceptance: `claims/accept`
+- refresh: `claims/info` plus `claims/tracking-links`
+- cancellation: `claims/cancel-info` followed by `claims/cancel`
+
+Enable Yandex real mode only with:
+
+```env
+DELIVERY_PROVIDER_MODE=yandex
+YANDEX_DELIVERY_ENABLED=true
+YANDEX_DELIVERY_TOKEN=<from Yandex Delivery account Integration tab>
+YANDEX_DELIVERY_BASE_URL=https://b2b.taxi.yandex.net
+```
+
+Common real-mode failures are returned as clear API errors: invalid token, inactive billing/account, address validation failure, unavailable courier, expired offer, or claim status that cannot be accepted/cancelled.
