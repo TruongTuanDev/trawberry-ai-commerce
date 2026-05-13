@@ -13,6 +13,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 
 ## Routes
 - `/`
+- `/admin/sellers`
 - `/products`
 - `/products/[id]`
 - `/checkout`
@@ -31,6 +32,10 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/settings`
 
 ## Current features
+- Admin seller approval UI with:
+  - pending/approved/rejected filters
+  - approve action
+  - reject action with optional reason
 - Public marketplace UI with:
   - polished home page
   - responsive product grid
@@ -93,6 +98,20 @@ Optional overrides:
 PLAYWRIGHT_BASE_URL=http://localhost:3000
 PLAYWRIGHT_BACKEND_URL=http://localhost:3001
 ```
+
+## Playwright admin seller approval flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:admin-seller-approval
+```
+
+Current coverage:
+- registers a pending seller through the backend API
+- logs in as seeded demo admin
+- opens `/admin/sellers`
+- approves the pending seller
+- verifies the seller moves to the approved tab
 
 ## Playwright public smoke
 With the Docker stack or local frontend/backend already running:

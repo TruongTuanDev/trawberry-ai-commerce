@@ -910,3 +910,50 @@ git rm --cached frontend-next\.env.local
   - OpenAI real mode intentionally not called
 - Commit info:
   - pending commit message: `test: audit full seller to customer commerce flow`
+
+## Seller Approval Workflow
+
+- Scope:
+  - add production-ready seller approval workflow for the multi-seller marketplace MVP
+  - keep seller registration pending by default
+  - add admin-only seller review API and minimal admin UI
+  - preserve existing checkout/payment/inventory/delivery/auth flows
+- Result:
+  - added `backend-nest/src/modules/admin` with seller list/detail/approve/reject endpoints
+  - added `AdminOnlyGuard` on `/api/admin/sellers`
+  - added additive seller profile fields: `approved_at`, `rejected_at`, `rejection_reason`
+  - seller shop creation remains blocked unless `approvalStatus=APPROVED`
+  - seed demo now creates `demo-admin@trawberry.local` and keeps the demo seller approved
+  - added `/admin/sellers` in `frontend-next`
+  - seller shell now displays pending/rejected approval messaging
+  - added `npm run smoke:seller-approval`
+  - added `npm run test:e2e:admin-seller-approval`
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, 14 suites / 75 tests
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - full verification command set pending below this section before commit
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/src/app.module.ts`
+  - `backend-nest/src/common/guards/admin-only.guard.ts`
+  - `backend-nest/src/modules/admin/*`
+  - `backend-nest/src/modules/auth/auth.service.ts`
+  - `backend-nest/src/modules/users/*`
+  - `backend-nest/scripts/seed-demo.js`
+  - `backend-nest/scripts/smoke-seller-approval.ps1`
+  - `backend-nest/test/admin-sellers.e2e-spec.ts`
+  - `frontend-next/src/app/admin/*`
+  - `frontend-next/src/components/admin/admin-shell.tsx`
+  - `frontend-next/src/components/seller/seller-shell.tsx`
+  - `frontend-next/src/lib/admin-api.ts`
+  - `frontend-next/tests/e2e/admin-seller-approval.spec.ts`
+  - `docs/SELLER_APPROVAL.md`
+- Remaining gaps:
+  - no document upload/KYC review workflow
+  - no seller approval notification email
+  - no admin audit trail beyond timestamp/reason fields
+- Commit info:
+  - pending commit message: `feat: add seller approval workflow`

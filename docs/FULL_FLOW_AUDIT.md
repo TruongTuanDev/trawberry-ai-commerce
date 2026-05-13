@@ -17,7 +17,7 @@ Strong points:
 - Secrets are kept out of tracked files by current `git ls-files` checks; `.env` files are ignored.
 
 Still missing or partial:
-- Seller approval exists as a rule (`PENDING` on register, shop creation requires `APPROVED`) but there is no admin approval UI/API in the audited MVP. Demo seed creates an approved seller.
+- Seller approval admin API/UI has been added after the original audit; production readiness still needs broader admin operations such as document/KYC review history and notification workflows.
 - Seller create shop/product/product-image flows are API-covered and UI-present, but the new full browser flow uses seeded product setup rather than creating product data through the browser.
 - Real payment provider integration is not implemented; manual transfer review is the verified path.
 - Real Yandex/CDEK modes are skeleton/optional and were not called. Mock delivery is the verified default.
@@ -30,7 +30,7 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | Step | Actor | UI route/API endpoint | Status | Verification evidence | Notes |
 |---|---|---|---|---|---|
 | Seller register | Seller | `POST /api/auth/register`, `/login` | PASS | `backend-nest` tests; `npm run test:e2e:auth` registers via API and logs in through UI | Register creates active seller user with seller profile pending approval. |
-| Seller approval | Admin/system | Seed/demo data; seller profile rule | PARTIAL | `npm run seed:demo` creates `APPROVED` seller; `shops.service` blocks non-approved sellers | Business rule exists; no admin approval UI/API audited. |
+| Seller approval | Admin | `/admin/sellers`, `/api/admin/sellers` | PASS | `npm run smoke:seller-approval`; `npm run test:e2e:admin-seller-approval` | Admin can list, approve, and reject sellers. |
 | Seller login | Seller | `/login`, `POST /api/auth/login` | PASS | `npm run test:e2e:auth`; `npm run test:e2e:full-commerce` | `httpOnly` auth cookie verified; no raw JWT in localStorage. |
 | Seller create shop | Seller | `POST /api/shops` | PASS | Backend tests and shop module review | UI create-shop flow was not found in this MVP; demo seed creates active shop. |
 | Seller delivery settings | Seller | `/seller/settings`, `GET/PATCH /api/shops/:shopId/delivery/settings` | PASS | `npm run smoke:delivery`; `npm run test:e2e:full-commerce` API setup | Full E2E configures settings through API for deterministic setup. |

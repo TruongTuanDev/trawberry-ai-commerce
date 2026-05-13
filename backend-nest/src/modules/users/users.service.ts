@@ -38,6 +38,7 @@ export class UsersService {
             id: true,
             currentShopId: true,
             approvalStatus: true,
+            rejectionReason: true,
           },
         },
       },
@@ -57,6 +58,7 @@ export class UsersService {
       sellerProfileId: user.sellerProfile?.id ?? null,
       currentShopId: user.sellerProfile?.currentShopId ?? null,
       sellerApprovalStatus: user.sellerProfile?.approvalStatus ?? null,
+      sellerRejectionReason: user.sellerProfile?.rejectionReason ?? null,
     };
   }
 
@@ -69,6 +71,7 @@ export class UsersService {
             id: true,
             currentShopId: true,
             approvalStatus: true,
+            rejectionReason: true,
           },
         },
       },
@@ -88,6 +91,7 @@ export class UsersService {
       sellerProfileId: user.sellerProfile?.id ?? null,
       currentShopId: user.sellerProfile?.currentShopId ?? null,
       sellerApprovalStatus: user.sellerProfile?.approvalStatus ?? null,
+      sellerRejectionReason: user.sellerProfile?.rejectionReason ?? null,
     };
   }
 }

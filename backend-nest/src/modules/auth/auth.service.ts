@@ -55,7 +55,18 @@ export class AuthService {
         });
       }
 
-      return createdUser;
+      return (
+        (await tx.user.findUnique({
+          where: { id: createdUser.id },
+          include: {
+            sellerProfile: {
+              select: {
+                approvalStatus: true,
+              },
+            },
+          },
+        })) ?? createdUser
+      );
     });
 
     return this.buildAuthResponse(user);

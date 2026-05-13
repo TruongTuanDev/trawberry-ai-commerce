@@ -1,32 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CurrentUserResponseDto {
+export class AdminSellerResponseDto {
   @ApiProperty()
-  id!: string;
+  userId!: string;
 
   @ApiProperty()
   email!: string;
 
   @ApiProperty({ nullable: true })
-  fullName!: string | null;
-
-  @ApiProperty({ nullable: true })
-  phone!: string | null;
+  name!: string | null;
 
   @ApiProperty()
   role!: string;
 
   @ApiProperty()
-  status!: string;
+  sellerApprovalStatus!: string;
 
   @ApiProperty({ nullable: true })
-  sellerProfileId!: string | null;
+  sellerApprovedAt!: string | null;
 
   @ApiProperty({ nullable: true })
-  currentShopId!: string | null;
-
-  @ApiProperty({ nullable: true })
-  sellerApprovalStatus!: string | null;
+  sellerRejectedAt!: string | null;
 
   @ApiProperty({ nullable: true })
   sellerRejectionReason!: string | null;

@@ -57,6 +57,23 @@
   - `httpOnly` cookie support exists
   - Bearer fallback still exists for scripts and backward compatibility
 
+### Seller Approval Workflow
+- Status: Done for MVP admin review
+- Evidence:
+  - `backend-nest/src/modules/admin`
+  - `backend-nest/src/common/guards/admin-only.guard.ts`
+  - `backend-nest/test/admin-sellers.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-seller-approval.ps1`
+  - `frontend-next/src/app/admin/sellers/page.tsx`
+  - `frontend-next/tests/e2e/admin-seller-approval.spec.ts`
+  - `docs/SELLER_APPROVAL.md`
+- Notes:
+  - seller registration creates `PENDING` seller profiles
+  - only admins can list/approve/reject sellers
+  - pending and rejected sellers cannot create shops
+  - approved sellers can create shops
+  - demo seed now creates a demo admin and approved demo seller
+
 ### Product CRUD
 - Status: Done
 - Evidence:
@@ -213,7 +230,7 @@
 - Notes:
   - browser-level E2E now covers public product listing/detail, checkout, stock deduction assertion, order tracking, payment proof upload, seller orders list/detail, seller payment proof review, mark paid, mock delivery create/refresh, seller order status update, and customer tracking re-check
   - audited runtime passed Docker health checks, backend tests/build/smoke scripts, frontend lint/build, and all Playwright suites
-  - seller approval admin workflow, full browser seller product creation/image upload, real payment providers, real Yandex/CDEK, and real OpenAI remain outside the verified MVP path
+  - seller approval admin workflow is now implemented; full browser seller product creation/image upload, real payment providers, real Yandex/CDEK, and real OpenAI remain outside the verified MVP path
 
 ### Payments
 - Status: MVP done for manual review

@@ -25,11 +25,16 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   const logout = useAuthStore((state) => state.logout);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const [loggingOut, setLoggingOut] = useState(false);
+  const sellerBlocked =
+    user?.role === "SELLER" &&
+    user.sellerApprovalStatus &&
+    user.sellerApprovalStatus !== "APPROVED";
 
   useEffect(() => {
     if (!user) return;
+    if (sellerBlocked) return;
     void loadShops();
-  }, [loadShops, user]);
+  }, [loadShops, sellerBlocked, user]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -56,6 +61,14 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               </p>
             </div>
             <nav className="mt-8 space-y-2">
+              {user?.role === "ADMIN" ? (
+                <Link
+                  href="/admin/sellers"
+                  className="flex items-center rounded-2xl px-4 py-3 text-sm font-medium text-white/78 transition hover:bg-white/8 hover:text-white"
+                >
+                  Admin approvals
+                </Link>
+              ) : null}
               {navigation.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
@@ -117,7 +130,25 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
+          <main className="flex-1 overflow-auto p-4 sm:p-6">
+            {sellerBlocked ? (
+              <div className="mb-6 rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-5 py-4" data-testid="seller-approval-banner">
+                <p className="text-sm font-semibold text-[var(--accent-strong)]">
+                  {user?.sellerApprovalStatus === "REJECTED"
+                    ? "Your seller account was rejected."
+                    : "Your seller account is awaiting approval."}
+                </p>
+                {user?.sellerApprovalStatus === "REJECTED" && user.sellerRejectionReason ? (
+                  <p className="mt-2 text-sm text-[var(--muted)]">{user.sellerRejectionReason}</p>
+                ) : (
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Shop and selling tools become available after admin approval.
+                  </p>
+                )}
+              </div>
+            ) : null}
+            {children}
+          </main>
         </div>
       </div>
     </div>

@@ -22,6 +22,7 @@ export type CurrentUserResponse = {
   sellerProfileId: string | null;
   currentShopId: string | null;
   sellerApprovalStatus: string | null;
+  sellerRejectionReason: string | null;
 };
 
 export async function loginRequest(input: { email: string; password: string }) {

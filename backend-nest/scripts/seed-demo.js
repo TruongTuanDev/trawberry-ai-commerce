@@ -6,6 +6,8 @@ const prisma = new PrismaClient();
 
 const DEMO_SELLER_EMAIL = "demo-seller@trawberry.local";
 const DEMO_SELLER_PASSWORD = "DemoSeller123!";
+const DEMO_ADMIN_EMAIL = "demo-admin@trawberry.local";
+const DEMO_ADMIN_PASSWORD = "DemoAdmin123!";
 const DEMO_SHOP_SLUG = "demo-marketplace-shop";
 const DEMO_SHOP_NAME = "Demo Strawberry Store";
 const DEMO_PAYMENT_INSTRUCTIONS =
@@ -67,6 +69,27 @@ async function main() {
   assertSeedAllowed();
 
   const passwordHash = await bcrypt.hash(DEMO_SELLER_PASSWORD, 10);
+  const adminPasswordHash = await bcrypt.hash(DEMO_ADMIN_PASSWORD, 10);
+
+  await prisma.user.upsert({
+    where: { email: DEMO_ADMIN_EMAIL },
+    update: {
+      passwordHash: adminPasswordHash,
+      fullName: "Demo Admin",
+      phone: "+79990000009",
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+    create: {
+      id: randomUUID(),
+      email: DEMO_ADMIN_EMAIL,
+      passwordHash: adminPasswordHash,
+      fullName: "Demo Admin",
+      phone: "+79990000009",
+      role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
 
   const user = await prisma.user.upsert({
     where: { email: DEMO_SELLER_EMAIL },
@@ -95,6 +118,9 @@ async function main() {
       approvalStatus: "APPROVED",
       reviewedAt: new Date(),
       reviewNote: "Demo seed approved seller profile.",
+      approvedAt: new Date(),
+      rejectedAt: null,
+      rejectionReason: null,
     },
     create: {
       id: randomUUID(),
@@ -102,6 +128,9 @@ async function main() {
       approvalStatus: "APPROVED",
       reviewedAt: new Date(),
       reviewNote: "Demo seed approved seller profile.",
+      approvedAt: new Date(),
+      rejectedAt: null,
+      rejectionReason: null,
     },
     select: { id: true },
   });
@@ -229,6 +258,8 @@ async function main() {
     JSON.stringify({
       sellerEmail: DEMO_SELLER_EMAIL,
       sellerPassword: DEMO_SELLER_PASSWORD,
+      adminEmail: DEMO_ADMIN_EMAIL,
+      adminPassword: DEMO_ADMIN_PASSWORD,
       shopSlug: DEMO_SHOP_SLUG,
       shopId: shop.id,
       publicProductCount,

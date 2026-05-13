@@ -31,6 +31,9 @@ model SellerProfile {
   approvalStatus String    @default("PENDING") @map("approval_status") @db.VarChar(50)
   reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz(6)
   reviewNote     String?   @map("review_note")
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  rejectedAt     DateTime? @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?  @map("rejection_reason") @db.VarChar(500)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   currentShopId  String?   @map("current_shop_id") @db.Uuid

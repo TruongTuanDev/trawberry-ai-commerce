@@ -25,6 +25,11 @@ npm run seed:demo
   - password: `DemoSeller123!`
   - role: `SELLER`
   - approval status: `APPROVED`
+- admin account:
+  - email: `demo-admin@trawberry.local`
+  - password: `DemoAdmin123!`
+  - role: `ADMIN`
+  - intended for `/admin/sellers` seller approval demos and E2E
 - shop:
   - slug: `demo-marketplace-shop`
   - status: `ACTIVE`

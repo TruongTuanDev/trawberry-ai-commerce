@@ -12,6 +12,11 @@ This document outlines the security measures implemented across the `backend-nes
 - **Client Storage**: The frontend no longer stores raw auth JWTs in `localStorage`. `localStorage` is only used for lightweight UI hydration data such as the current user snapshot and selected seller shop.
 - **Browser E2E Coverage**: `frontend-next/tests/e2e/auth-cookie.spec.ts` verifies browser login, session persistence after reload, logout, protected-route redirect, and absence of raw JWT auth tokens in `localStorage`.
 
+## Authorization
+- **Admin Seller Approval**: Seller review endpoints under `/api/admin/sellers` require both `JwtAuthGuard` and `AdminOnlyGuard`. Non-admin users receive `403`.
+- **Seller Approval Gate**: Newly registered sellers start with `approvalStatus=PENDING`. The shop creation API rejects `PENDING` and `REJECTED` sellers, so UI hiding is not the security boundary.
+- **Browser Admin Coverage**: `frontend-next/tests/e2e/admin-seller-approval.spec.ts` verifies the minimal admin approval UI path.
+
 ## AI Service
 - The `ai-service` enforces a strict model selection hierarchy.
 - The `image_generation_service.py` legacy file and `app/providers` legacy folder have been completely removed to minimize attack surfaces and avoid dead code exposure.
