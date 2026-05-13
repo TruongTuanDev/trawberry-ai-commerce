@@ -486,7 +486,7 @@ Current flow:
 | backend-nest | `npm run smoke:order-tracking` | Pass | Customer tracks, uploads proof, seller sees proof, seller marks paid, customer sees updated payment status. |
 | backend-nest | `npm run smoke:inventory` | Pass | Seller stock update + checkout deduction + insufficient stock flow pass. |
 | backend-nest | `npm run smoke:inventory-alerts` | Pass | Seller low-stock filters and quick-update flow pass. |
-| backend-nest | `npm run smoke:delivery` | Pass | Seller configures delivery settings, creates mock CDEK shipment, refreshes shipment, and customer tracking sees delivery info. |
+| backend-nest | `npm run smoke:delivery` | Pass | Seller configures delivery settings, calculates a same-city Yandex recommended offer, creates a mock Yandex shipment, refreshes shipment, and customer tracking sees delivery info. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -540,8 +540,8 @@ Current flow:
    - logging and observability
 9. Add CI/CD with GitHub Actions.
 10. Prepare VPS / cloud deployment pipeline.
-11. Implement real CDEK provider calls and pickup-point selection flow.
-12. Add Yandex express real-mode integration on top of the generic delivery foundation.
+11. Implement real Yandex same-city claim lifecycle on top of the generic delivery foundation.
+12. Implement real CDEK provider calls and pickup-point selection flow.
 
 ## K. Definition of Done for MVP
 

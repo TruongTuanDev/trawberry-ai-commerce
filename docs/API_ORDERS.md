@@ -146,3 +146,12 @@ Still missing in the new NestJS stack:
 - multi-shipment orchestration
 
 Those flows still belong to the migration backlog and should not be treated as complete.
+## Delivery Integration
+
+Orders are not coupled directly to a carrier. Delivery state is stored in the generic delivery tables:
+
+- `delivery_offers`
+- `delivery_shipments`
+- `delivery_events`
+
+Seller delivery endpoints enforce that the order belongs to the shop and that shipment creation only happens after `paymentStatus=PAID`. Current selection strategy is Yandex-first for same-city orders and CDEK-first for inter-city orders, with mock mode as the default verification path.

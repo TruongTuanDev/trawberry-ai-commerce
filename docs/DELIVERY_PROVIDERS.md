@@ -2,115 +2,65 @@
 
 ## Strategy
 
-- `CDEK` is the primary carrier for nationwide Russia e-commerce shipments.
-- `Yandex` is the secondary carrier for intra-city express delivery.
-- `Boxberry` and `Russian Post` remain future extensions.
+- `YANDEX` is preferred for same-city / intra-city express orders.
+- `CDEK` is preferred for inter-city delivery, pickup points, and fallback.
+- If Yandex cannot return an offer for a same-city order, CDEK remains the fallback carrier.
+- If both carriers are unavailable, the API should fail clearly or a later manual-delivery path can be attached.
+- `Boxberry` and `Russian Post` are future providers behind the same abstraction.
 
-This phase introduces a generic delivery foundation so seller and customer flows do not hardcode one carrier into orders.
+The delivery module is intentionally generic so orders do not hardcode one carrier.
 
 ## Modes
 
 ### Mock mode
 
-Use mock mode for local development, CI, and default smoke verification.
+Default for local development, tests, CI, and smoke checks:
 
-- `DELIVERY_PROVIDER_MODE=mock`
-- no real carrier credentials required
-- returns deterministic offers and shipment lifecycle transitions
+```env
+DELIVERY_PROVIDER_MODE=mock
+DELIVERY_DEFAULT_PROVIDER=yandex
+DELIVERY_SAME_CITY_PREFERRED_PROVIDER=yandex
+DELIVERY_INTER_CITY_PREFERRED_PROVIDER=cdek
+DELIVERY_FALLBACK_PROVIDER=cdek
+```
 
-Mock mode currently simulates:
-- `CDEK_PICKUP`
-- `CDEK_COURIER`
-- `YANDEX_EXPRESS` when enabled in shop settings
+Mock mode does not call Yandex or CDEK.
 
-### CDEK mode
-
-Use real CDEK mode only when all required env values are present.
-
-- `DELIVERY_PROVIDER_MODE=cdek`
-- `CDEK_DELIVERY_ENABLED=true`
-
-Current implementation status:
-- provider/client skeleton exists
-- config validation exists
-- real offer and shipment API calls are intentionally deferred
+Mock offer behavior:
+- same city: `YANDEX_EXPRESS` recommended, `CDEK_COURIER` fallback
+- inter-city: `CDEK_COURIER` recommended, `CDEK_PICKUP` optional
 
 ### Yandex mode
 
-Yandex is prepared as a placeholder provider for a later phase.
-
+Only enabled when:
 - `DELIVERY_PROVIDER_MODE=yandex`
 - `YANDEX_DELIVERY_ENABLED=true`
+- required credentials are present
 
-Current implementation status:
-- provider/client placeholder exists
-- config validation exists
-- real shipment lifecycle is intentionally deferred
+Current status: provider and client skeleton exist. Real calls are reserved for a later phase.
 
-## Generic Domain Models
+### CDEK mode
 
-### `shop_delivery_settings`
+Only enabled when:
+- `DELIVERY_PROVIDER_MODE=cdek`
+- `CDEK_DELIVERY_ENABLED=true`
+- required credentials are present
 
-Per-shop operational defaults:
-- pickup address and contact
-- enabled carriers
-- default carrier
-- default package weight and dimensions
+Current status: provider and client skeleton exist. Real calls are reserved for a later phase.
 
-### `delivery_offers`
+## Generic Tables
 
-Carrier quote snapshots for one order:
-- provider
-- offer type
-- price and currency
-- ETA range
-- optional pickup point id
-- raw provider payload
-
-### `delivery_shipments`
-
-Created shipment records:
-- provider shipment identifiers
-- internal and provider statuses
-- tracking number and URL
-- pickup and dropoff addresses
-- timestamps such as accepted, cancelled, delivered
-
-### `delivery_events`
-
-Shipment event history:
-- provider
-- event type
-- provider status
-- message
-- raw provider payload
-
-## Provider Abstraction
-
-The NestJS delivery module uses a single provider contract:
-
-- `calculateOffers`
-- `createShipment`
-- `refreshShipment`
-- `cancelShipment`
-
-Current provider implementations:
-- `MockDeliveryProvider`
-- `CdekDeliveryProvider`
-- `YandexDeliveryProvider`
-
-## Customer-Side Surface
-
-Public order tracking now exposes:
-- delivery provider
-- delivery status
-- tracking number
-- tracking URL
-
-This keeps the customer tracking view stable even when the active carrier changes behind the scenes.
+- `shop_delivery_settings`: pickup address/contact, enabled carriers, carrier priority, fallback carrier, default package dimensions.
+- `delivery_offers`: provider quote snapshots, ETA, price, pickup point, `isRecommended`, and raw payload.
+- `delivery_shipments`: created shipment/claim, provider ids, status, tracking number/link, pickup/dropoff addresses.
+- `delivery_events`: shipment event history.
 
 ## Credential Safety
 
-- Never commit `CDEK_ACCOUNT`, `CDEK_SECURE_PASSWORD`, `YANDEX_DELIVERY_TOKEN`, or `YANDEX_DELIVERY_CLIENT_ID`.
-- Keep real values only in local runtime env files or secret managers.
-- `.env.example` files document shape only and must not contain production credentials.
+Never commit:
+- `YANDEX_DELIVERY_TOKEN`
+- `YANDEX_DELIVERY_CLIENT_ID`
+- `CDEK_ACCOUNT`
+- `CDEK_SECURE_PASSWORD`
+
+Only `.env.example` files should be tracked.

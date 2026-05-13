@@ -51,14 +51,17 @@ $settings = Invoke-RestMethod -Method Patch -Uri "$baseUrl/api/shops/$($shop.id)
   pickupAddress = 'Tverskaya 1'
   pickupCity = 'Moscow'
   pickupPostalCode = '101000'
-  pickupPhone = '+74950000000'
+  pickupContactPhone = '+74950000000'
   pickupContactName = 'Delivery Ops'
   enabledCarriers = @('CDEK', 'YANDEX')
-  defaultCarrier = 'CDEK'
-  defaultWeight = 1.2
-  defaultLength = 30
-  defaultWidth = 20
-  defaultHeight = 10
+  defaultCarrier = 'YANDEX'
+  sameCityPreferredCarrier = 'YANDEX'
+  interCityPreferredCarrier = 'CDEK'
+  fallbackCarrier = 'CDEK'
+  defaultWeightGram = 1200
+  defaultLengthCm = 30
+  defaultWidthCm = 20
+  defaultHeightCm = 10
 } | ConvertTo-Json)
 
 $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products" -Headers $headers -ContentType 'application/json' -Body (@{
@@ -109,7 +112,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     phone = $customerPhone
     email = "smoke-delivery-customer-$timestamp@example.com"
     address = 'Lenina 10, Moscow'
-    note = 'CDEK-first mock delivery smoke'
+    note = 'Yandex-first same-city mock delivery smoke'
   }
   paymentMethod = 'MANUAL_TRANSFER'
 } | ConvertTo-Json -Depth 6)
@@ -119,9 +122,13 @@ $paid = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/paym
 } | ConvertTo-Json)
 
 $offers = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/orders/$($checkout.orderId)/delivery/offers" -Headers $headers -ContentType 'application/json' -Body (@{} | ConvertTo-Json)
+$recommendedOffer = @($offers.offers) | Where-Object { $_.isRecommended -eq $true } | Select-Object -First 1
+if (-not $recommendedOffer -or $recommendedOffer.provider -ne 'YANDEX') {
+  throw "Expected Yandex recommended offer for same-city order."
+}
 $shipment = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/orders/$($checkout.orderId)/delivery/shipments" -Headers $headers -ContentType 'application/json' -Body (@{
-  provider = 'CDEK'
-  selectedOfferId = $offers.offers[0].id
+  provider = $recommendedOffer.provider
+  selectedOfferId = $recommendedOffer.id
 } | ConvertTo-Json)
 $refreshed = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/orders/$($checkout.orderId)/delivery/shipments/$($shipment.id)/refresh" -Headers $headers
 $detail = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/orders/$($checkout.orderId)/delivery" -Headers $headers
@@ -135,6 +142,7 @@ $tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($che
   paidStatus = $paid.paymentStatus
   settingsCarrierCount = @($settings.enabledCarriers).Count
   offerCount = @($offers.offers).Count
+  recommendedProvider = $recommendedOffer.provider
   shipmentProvider = $shipment.provider
   shipmentStatus = $shipment.internalStatus
   refreshedStatus = $refreshed.internalStatus

@@ -11,44 +11,89 @@ import type { DeliveryProvider } from './delivery-provider.interface';
 export class MockDeliveryProvider implements DeliveryProvider {
   calculateOffers(input: DeliveryOrderContext): Promise<DeliveryOfferResult[]> {
     const offers: DeliveryOfferResult[] = [];
-    const roundedWeight = Math.max(1, Math.ceil(input.packageInfo.weightKg));
+    const roundedKg = Math.max(
+      1,
+      Math.ceil(input.packageInfo.weightGram / 1000),
+    );
+    const addOffer = (offer: DeliveryOfferResult) => {
+      if (input.enabledCarriers.includes(offer.provider)) {
+        offers.push(offer);
+      }
+    };
 
-    if (input.enabledCarriers.includes('CDEK')) {
-      offers.push({
-        provider: 'CDEK',
-        offerType: 'CDEK_PICKUP',
-        priceAmount: String(320 + roundedWeight * 25),
-        priceCurrency: input.currency,
-        estimatedMinDays: 2,
-        estimatedMaxDays: 4,
-        pickupPointId: 'mock-cdek-pickup-001',
-        rawProviderPayload: { mode: 'pickup', provider: 'cdek' },
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
-      });
-      offers.push({
-        provider: 'CDEK',
-        offerType: 'CDEK_COURIER',
-        priceAmount: String(430 + roundedWeight * 30),
-        priceCurrency: input.currency,
-        estimatedMinDays: 1,
-        estimatedMaxDays: 3,
-        pickupPointId: null,
-        rawProviderPayload: { mode: 'courier', provider: 'cdek' },
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
-      });
-    }
-
-    if (input.enabledCarriers.includes('YANDEX')) {
-      offers.push({
+    if (input.isSameCity) {
+      addOffer({
         provider: 'YANDEX',
         offerType: 'YANDEX_EXPRESS',
-        priceAmount: String(550 + roundedWeight * 35),
+        priceAmount: String(550 + roundedKg * 35),
         priceCurrency: input.currency,
+        estimatedMinMinutes: 45,
+        estimatedMaxMinutes: 120,
         estimatedMinDays: 0,
-        estimatedMaxDays: 1,
+        estimatedMaxDays: 0,
         pickupPointId: null,
-        rawProviderPayload: { mode: 'express', provider: 'yandex' },
+        isRecommended: input.sameCityPreferredCarrier === 'YANDEX',
+        rawProviderPayload: {
+          mode: 'express',
+          provider: 'yandex',
+          sameCity: true,
+        },
         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      });
+      addOffer({
+        provider: 'CDEK',
+        offerType: 'CDEK_COURIER',
+        priceAmount: String(430 + roundedKg * 30),
+        priceCurrency: input.currency,
+        estimatedMinMinutes: null,
+        estimatedMaxMinutes: null,
+        estimatedMinDays: 1,
+        estimatedMaxDays: 2,
+        pickupPointId: null,
+        isRecommended: input.sameCityPreferredCarrier === 'CDEK',
+        rawProviderPayload: {
+          mode: 'courier',
+          provider: 'cdek',
+          fallback: true,
+        },
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      });
+    } else {
+      addOffer({
+        provider: 'CDEK',
+        offerType: 'CDEK_COURIER',
+        priceAmount: String(430 + roundedKg * 30),
+        priceCurrency: input.currency,
+        estimatedMinMinutes: null,
+        estimatedMaxMinutes: null,
+        estimatedMinDays: 2,
+        estimatedMaxDays: 5,
+        pickupPointId: null,
+        isRecommended: true,
+        rawProviderPayload: {
+          mode: 'courier',
+          provider: 'cdek',
+          interCity: true,
+        },
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      });
+      addOffer({
+        provider: 'CDEK',
+        offerType: 'CDEK_PICKUP',
+        priceAmount: String(320 + roundedKg * 25),
+        priceCurrency: input.currency,
+        estimatedMinMinutes: null,
+        estimatedMaxMinutes: null,
+        estimatedMinDays: 2,
+        estimatedMaxDays: 6,
+        pickupPointId: 'mock-cdek-pickup-001',
+        isRecommended: false,
+        rawProviderPayload: {
+          mode: 'pickup',
+          provider: 'cdek',
+          optional: true,
+        },
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       });
     }
 

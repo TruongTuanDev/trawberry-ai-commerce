@@ -123,3 +123,20 @@ Coverage currently includes:
   - seller payment detail sees proof
   - seller marks paid
   - customer tracks again and sees `paymentStatus=PAID`
+## Delivery Projection
+
+Customer tracking includes the latest delivery shipment when one exists:
+
+```json
+{
+  "delivery": {
+    "provider": "YANDEX",
+    "status": "IN_TRANSIT",
+    "providerShipmentId": "mock-yandex-shipment-id",
+    "trackingNumber": "MOCK-YANDEX-ORD-1",
+    "trackingUrl": "https://mock-delivery.local/yandex/track/order-id"
+  }
+}
+```
+
+Mock mode never calls real Yandex or CDEK. Same-city mock shipments are expected to use the recommended Yandex offer; inter-city shipments are expected to use CDEK.

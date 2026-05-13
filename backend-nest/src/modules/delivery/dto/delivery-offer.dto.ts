@@ -17,6 +17,12 @@ export class DeliveryOfferDto {
   priceCurrency!: string;
 
   @ApiProperty({ nullable: true })
+  estimatedMinMinutes!: number | null;
+
+  @ApiProperty({ nullable: true })
+  estimatedMaxMinutes!: number | null;
+
+  @ApiProperty({ nullable: true })
   estimatedMinDays!: number | null;
 
   @ApiProperty({ nullable: true })
@@ -24,6 +30,9 @@ export class DeliveryOfferDto {
 
   @ApiProperty({ nullable: true })
   pickupPointId!: string | null;
+
+  @ApiProperty()
+  isRecommended!: boolean;
 
   @ApiProperty({ nullable: true })
   expiresAt!: string | null;

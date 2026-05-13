@@ -15,17 +15,25 @@ export type SellerOrderDeliverySummary = {
 
 export type DeliverySettings = {
   shopId: string;
+  pickupCountry: string;
   pickupAddress: string;
   pickupCity: string;
   pickupPostalCode: string | null;
-  pickupPhone: string;
+  pickupLatitude: string | null;
+  pickupLongitude: string | null;
+  pickupContactPhone: string;
   pickupContactName: string;
+  pickupWorkingHours: string | null;
+  pickupComment: string | null;
   enabledCarriers: string[];
   defaultCarrier: DeliveryProviderName | string;
-  defaultWeight: string;
-  defaultLength: string;
-  defaultWidth: string;
-  defaultHeight: string;
+  sameCityPreferredCarrier: DeliveryProviderName | string;
+  interCityPreferredCarrier: DeliveryProviderName | string;
+  fallbackCarrier: DeliveryProviderName | string;
+  defaultWeightGram: number;
+  defaultLengthCm: number;
+  defaultWidthCm: number;
+  defaultHeightCm: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,9 +44,12 @@ export type DeliveryOffer = {
   offerType: string;
   priceAmount: string;
   priceCurrency: string;
+  estimatedMinMinutes: number | null;
+  estimatedMaxMinutes: number | null;
   estimatedMinDays: number | null;
   estimatedMaxDays: number | null;
   pickupPointId: string | null;
+  isRecommended: boolean;
   expiresAt: string | null;
 };
 
@@ -765,14 +776,22 @@ export async function updateDeliverySettings(
     pickupAddress: string;
     pickupCity: string;
     pickupPostalCode?: string;
-    pickupPhone: string;
+    pickupContactPhone: string;
     pickupContactName: string;
+    pickupCountry?: string;
+    pickupLatitude?: number;
+    pickupLongitude?: number;
+    pickupWorkingHours?: string;
+    pickupComment?: string;
     enabledCarriers: Array<"CDEK" | "YANDEX">;
     defaultCarrier: "CDEK" | "YANDEX";
-    defaultWeight: number;
-    defaultLength: number;
-    defaultWidth: number;
-    defaultHeight: number;
+    sameCityPreferredCarrier: "CDEK" | "YANDEX";
+    interCityPreferredCarrier: "CDEK" | "YANDEX";
+    fallbackCarrier: "CDEK" | "YANDEX";
+    defaultWeightGram: number;
+    defaultLengthCm: number;
+    defaultWidthCm: number;
+    defaultHeightCm: number;
   },
   token?: string,
 ) {
@@ -790,7 +809,7 @@ export async function calculateDeliveryOffers(
     carriers?: Array<"CDEK" | "YANDEX">;
     pickupAddress?: string;
     packageInfo?: {
-      weightKg: number;
+      weightGram: number;
       lengthCm: number;
       widthCm: number;
       heightCm: number;
@@ -816,7 +835,7 @@ export async function createDeliveryShipment(
     pickupAddress?: string;
     selectedOfferId?: string;
     packageInfo?: {
-      weightKg: number;
+      weightGram: number;
       lengthCm: number;
       widthCm: number;
       heightCm: number;

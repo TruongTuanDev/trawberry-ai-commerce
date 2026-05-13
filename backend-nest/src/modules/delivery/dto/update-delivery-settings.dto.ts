@@ -7,10 +7,16 @@ import {
   IsString,
   Min,
   IsNumber,
+  IsInt,
 } from 'class-validator';
 import { DELIVERY_CARRIERS } from '../delivery.constants';
 
 export class UpdateDeliverySettingsDto {
+  @ApiPropertyOptional({ default: 'RU' })
+  @IsOptional()
+  @IsString()
+  pickupCountry?: string;
+
   @ApiProperty()
   @IsString()
   pickupAddress!: string;
@@ -26,11 +32,33 @@ export class UpdateDeliverySettingsDto {
 
   @ApiProperty()
   @IsString()
-  pickupPhone!: string;
+  pickupContactPhone!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  pickupLatitude?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  pickupLongitude?: number;
 
   @ApiProperty()
   @IsString()
   pickupContactName!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  pickupWorkingHours?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  pickupComment?: string;
 
   @ApiProperty({ type: [String], enum: DELIVERY_CARRIERS })
   @IsArray()
@@ -42,26 +70,38 @@ export class UpdateDeliverySettingsDto {
   defaultCarrier!: 'CDEK' | 'YANDEX';
 
   @ApiProperty()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0.1)
-  defaultWeight!: number;
+  @IsIn(DELIVERY_CARRIERS)
+  sameCityPreferredCarrier!: 'CDEK' | 'YANDEX';
+
+  @ApiProperty()
+  @IsIn(DELIVERY_CARRIERS)
+  interCityPreferredCarrier!: 'CDEK' | 'YANDEX';
+
+  @ApiProperty()
+  @IsIn(DELIVERY_CARRIERS)
+  fallbackCarrier!: 'CDEK' | 'YANDEX';
 
   @ApiProperty()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
-  defaultLength!: number;
+  defaultWeightGram!: number;
 
   @ApiProperty()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
-  defaultWidth!: number;
+  defaultLengthCm!: number;
 
   @ApiProperty()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
-  defaultHeight!: number;
+  defaultWidthCm!: number;
+
+  @ApiProperty()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  defaultHeightCm!: number;
 }

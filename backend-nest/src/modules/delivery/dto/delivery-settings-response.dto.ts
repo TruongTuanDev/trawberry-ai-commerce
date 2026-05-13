@@ -5,6 +5,9 @@ export class DeliverySettingsResponseDto {
   shopId!: string;
 
   @ApiProperty()
+  pickupCountry!: string;
+
+  @ApiProperty()
   pickupAddress!: string;
 
   @ApiProperty()
@@ -14,7 +17,13 @@ export class DeliverySettingsResponseDto {
   pickupPostalCode!: string | null;
 
   @ApiProperty()
-  pickupPhone!: string;
+  pickupContactPhone!: string;
+
+  @ApiProperty({ nullable: true })
+  pickupLatitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  pickupLongitude!: string | null;
 
   @ApiProperty()
   pickupContactName!: string;
@@ -26,16 +35,25 @@ export class DeliverySettingsResponseDto {
   defaultCarrier!: string;
 
   @ApiProperty()
-  defaultWeight!: string;
+  sameCityPreferredCarrier!: string;
 
   @ApiProperty()
-  defaultLength!: string;
+  interCityPreferredCarrier!: string;
 
   @ApiProperty()
-  defaultWidth!: string;
+  fallbackCarrier!: string;
 
   @ApiProperty()
-  defaultHeight!: string;
+  defaultWeightGram!: number;
+
+  @ApiProperty()
+  defaultLengthCm!: number;
+
+  @ApiProperty()
+  defaultWidthCm!: number;
+
+  @ApiProperty()
+  defaultHeightCm!: number;
 
   @ApiProperty()
   createdAt!: string;

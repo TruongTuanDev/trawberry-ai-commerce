@@ -20,9 +20,12 @@ export class CdekDeliveryProvider implements DeliveryProvider {
         offerType: 'CDEK_REAL_PENDING',
         priceAmount: '0',
         priceCurrency: input.currency,
+        estimatedMinMinutes: null,
+        estimatedMaxMinutes: null,
         estimatedMinDays: null,
         estimatedMaxDays: null,
         pickupPointId: null,
+        isRecommended: input.interCityPreferredCarrier === 'CDEK',
         rawProviderPayload: {
           note: 'CDEK real integration skeleton. Implement real API call in a later phase.',
         },

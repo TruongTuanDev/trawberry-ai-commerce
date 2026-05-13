@@ -99,14 +99,20 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 ## Delivery Provider Notes
 - Verified default is `DELIVERY_PROVIDER_MODE=mock`
 - Mock mode does not call CDEK or Yandex
-- `DELIVERY_DEFAULT_PROVIDER=cdek` keeps the product roadmap aligned with Russia-wide e-commerce shipping
+- `DELIVERY_DEFAULT_PROVIDER=yandex` keeps same-city express as the default recommendation path
+- `DELIVERY_SAME_CITY_PREFERRED_PROVIDER=yandex`
+- `DELIVERY_INTER_CITY_PREFERRED_PROVIDER=cdek`
+- `DELIVERY_FALLBACK_PROVIDER=cdek`
 - Real carrier credentials must stay only in local secret env files
 
 Carrier env shape:
 
 ```env
 DELIVERY_PROVIDER_MODE=mock
-DELIVERY_DEFAULT_PROVIDER=cdek
+DELIVERY_DEFAULT_PROVIDER=yandex
+DELIVERY_SAME_CITY_PREFERRED_PROVIDER=yandex
+DELIVERY_INTER_CITY_PREFERRED_PROVIDER=cdek
+DELIVERY_FALLBACK_PROVIDER=cdek
 
 CDEK_DELIVERY_ENABLED=false
 CDEK_API_BASE_URL=

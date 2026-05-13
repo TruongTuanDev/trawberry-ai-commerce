@@ -37,7 +37,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
-  const [weightKg, setWeightKg] = useState("1");
+  const [weightGram, setWeightGram] = useState("1000");
   const [lengthCm, setLengthCm] = useState("30");
   const [widthCm, setWidthCm] = useState("20");
   const [heightCm, setHeightCm] = useState("10");
@@ -73,10 +73,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           const settings = await getDeliverySettings(currentShopId, "");
           if (!mounted) return;
           setPickupAddress((current) => current || settings.pickupAddress);
-          setWeightKg(settings.defaultWeight);
-          setLengthCm(settings.defaultLength);
-          setWidthCm(settings.defaultWidth);
-          setHeightCm(settings.defaultHeight);
+          setWeightGram(String(settings.defaultWeightGram));
+          setLengthCm(String(settings.defaultLengthCm));
+          setWidthCm(String(settings.defaultWidthCm));
+          setHeightCm(String(settings.defaultHeightCm));
         } catch {
           // Settings may not exist yet for the current shop.
         }
@@ -118,7 +118,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   };
 
   const buildPackageInfo = () => ({
-    weightKg: Number(weightKg || "0"),
+    weightGram: Number(weightGram || "0"),
     lengthCm: Number(lengthCm || "0"),
     widthCm: Number(widthCm || "0"),
     heightCm: Number(heightCm || "0"),
@@ -296,15 +296,15 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         </SectionCard>
       </div>
 
-      <SectionCard eyebrow="Delivery" title="Multi-carrier shipment" description="CDEK is the default nationwide carrier. Yandex appears as a secondary express option when enabled in seller delivery settings.">
+      <SectionCard eyebrow="Delivery" title="Multi-carrier shipment" description="Yandex is recommended for same-city express. CDEK stays available for fallback, pickup, and inter-city delivery.">
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Pickup address">
                 <input value={pickupAddress} onChange={(event) => setPickupAddress(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
               </Field>
-              <Field label="Weight (kg)">
-                <input value={weightKg} onChange={(event) => setWeightKg(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <Field label="Weight (g)">
+                <input value={weightGram} onChange={(event) => setWeightGram(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
               </Field>
               <Field label="Length (cm)">
                 <input value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
@@ -320,7 +320,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   <option value="">Use default carrier</option>
                   {deliveryOffers.map((offer) => (
                     <option key={offer.id} value={offer.id}>
-                      {offer.offerType} · {offer.priceAmount} {offer.priceCurrency}
+                      {offer.isRecommended ? "Recommended · " : ""}{offer.offerType} · {offer.priceAmount} {offer.priceCurrency}
                     </option>
                   ))}
                 </select>
@@ -366,6 +366,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       <div>
                         <p className="text-sm font-semibold text-[var(--foreground)]">{offer.offerType}</p>
                         <p className="mt-1 text-xs text-[var(--muted)]">Provider: {offer.provider}</p>
+                        {offer.isRecommended ? <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Recommended</span> : null}
                       </div>
                       <div className="text-right text-sm text-[var(--foreground)]">
                         <p>{offer.priceAmount} {offer.priceCurrency}</p>

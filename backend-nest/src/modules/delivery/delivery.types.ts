@@ -2,24 +2,32 @@ export type DeliveryCarrierCode = 'CDEK' | 'YANDEX';
 export type DeliveryProviderMode = 'mock' | 'cdek' | 'yandex';
 
 export type DeliveryPackageInput = {
-  weightKg: number;
+  weightGram: number;
   lengthCm: number;
   widthCm: number;
   heightCm: number;
 };
 
 export type DeliverySettingsInput = {
+  pickupCountry: string;
   pickupAddress: string;
   pickupCity: string;
   pickupPostalCode?: string | null;
-  pickupPhone: string;
+  pickupLatitude?: number | null;
+  pickupLongitude?: number | null;
+  pickupContactPhone: string;
   pickupContactName: string;
+  pickupWorkingHours?: string | null;
+  pickupComment?: string | null;
   enabledCarriers: DeliveryCarrierCode[];
   defaultCarrier: DeliveryCarrierCode;
-  defaultWeight: number;
-  defaultLength: number;
-  defaultWidth: number;
-  defaultHeight: number;
+  sameCityPreferredCarrier: DeliveryCarrierCode;
+  interCityPreferredCarrier: DeliveryCarrierCode;
+  fallbackCarrier: DeliveryCarrierCode;
+  defaultWeightGram: number;
+  defaultLengthCm: number;
+  defaultWidthCm: number;
+  defaultHeightCm: number;
 };
 
 export type DeliveryOrderContext = {
@@ -29,13 +37,18 @@ export type DeliveryOrderContext = {
   customerName: string;
   customerPhone: string;
   customerAddress: string;
+  customerCity: string | null;
   pickupAddress: string;
   pickupCity: string;
   pickupPostalCode?: string | null;
-  pickupPhone: string;
+  pickupContactPhone: string;
   pickupContactName: string;
   enabledCarriers: DeliveryCarrierCode[];
   defaultCarrier: DeliveryCarrierCode;
+  sameCityPreferredCarrier: DeliveryCarrierCode;
+  interCityPreferredCarrier: DeliveryCarrierCode;
+  fallbackCarrier: DeliveryCarrierCode;
+  isSameCity: boolean;
   packageInfo: DeliveryPackageInput;
   currency: string;
 };
@@ -45,9 +58,12 @@ export type DeliveryOfferResult = {
   offerType: string;
   priceAmount: string;
   priceCurrency: string;
+  estimatedMinMinutes: number | null;
+  estimatedMaxMinutes: number | null;
   estimatedMinDays: number | null;
   estimatedMaxDays: number | null;
   pickupPointId: string | null;
+  isRecommended: boolean;
   rawProviderPayload: Record<string, unknown> | null;
   expiresAt: Date | null;
 };

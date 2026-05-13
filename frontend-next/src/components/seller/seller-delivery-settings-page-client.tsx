@@ -17,15 +17,18 @@ export function SellerDeliverySettingsPageClient() {
     pickupAddress: "",
     pickupCity: "",
     pickupPostalCode: "",
-    pickupPhone: "",
+    pickupContactPhone: "",
     pickupContactName: "",
     enabledCdek: true,
-    enabledYandex: false,
-    defaultCarrier: "CDEK" as "CDEK" | "YANDEX",
-    defaultWeight: "1",
-    defaultLength: "30",
-    defaultWidth: "20",
-    defaultHeight: "10",
+    enabledYandex: true,
+    defaultCarrier: "YANDEX" as "CDEK" | "YANDEX",
+    sameCityPreferredCarrier: "YANDEX" as "CDEK" | "YANDEX",
+    interCityPreferredCarrier: "CDEK" as "CDEK" | "YANDEX",
+    fallbackCarrier: "CDEK" as "CDEK" | "YANDEX",
+    defaultWeightGram: "1000",
+    defaultLengthCm: "30",
+    defaultWidthCm: "20",
+    defaultHeightCm: "10",
   });
 
   useEffect(() => {
@@ -44,15 +47,18 @@ export function SellerDeliverySettingsPageClient() {
           pickupAddress: settings.pickupAddress,
           pickupCity: settings.pickupCity,
           pickupPostalCode: settings.pickupPostalCode ?? "",
-          pickupPhone: settings.pickupPhone,
+          pickupContactPhone: settings.pickupContactPhone,
           pickupContactName: settings.pickupContactName,
           enabledCdek: settings.enabledCarriers.includes("CDEK"),
           enabledYandex: settings.enabledCarriers.includes("YANDEX"),
           defaultCarrier: settings.defaultCarrier as "CDEK" | "YANDEX",
-          defaultWeight: settings.defaultWeight,
-          defaultLength: settings.defaultLength,
-          defaultWidth: settings.defaultWidth,
-          defaultHeight: settings.defaultHeight,
+          sameCityPreferredCarrier: settings.sameCityPreferredCarrier as "CDEK" | "YANDEX",
+          interCityPreferredCarrier: settings.interCityPreferredCarrier as "CDEK" | "YANDEX",
+          fallbackCarrier: settings.fallbackCarrier as "CDEK" | "YANDEX",
+          defaultWeightGram: String(settings.defaultWeightGram),
+          defaultLengthCm: String(settings.defaultLengthCm),
+          defaultWidthCm: String(settings.defaultWidthCm),
+          defaultHeightCm: String(settings.defaultHeightCm),
         });
       } catch {
         if (!mounted) return;
@@ -93,14 +99,17 @@ export function SellerDeliverySettingsPageClient() {
           pickupAddress: form.pickupAddress,
           pickupCity: form.pickupCity,
           pickupPostalCode: form.pickupPostalCode || undefined,
-          pickupPhone: form.pickupPhone,
+          pickupContactPhone: form.pickupContactPhone,
           pickupContactName: form.pickupContactName,
           enabledCarriers,
           defaultCarrier: form.defaultCarrier,
-          defaultWeight: Number(form.defaultWeight || "0"),
-          defaultLength: Number(form.defaultLength || "0"),
-          defaultWidth: Number(form.defaultWidth || "0"),
-          defaultHeight: Number(form.defaultHeight || "0"),
+          sameCityPreferredCarrier: form.sameCityPreferredCarrier,
+          interCityPreferredCarrier: form.interCityPreferredCarrier,
+          fallbackCarrier: form.fallbackCarrier,
+          defaultWeightGram: Number(form.defaultWeightGram || "0"),
+          defaultLengthCm: Number(form.defaultLengthCm || "0"),
+          defaultWidthCm: Number(form.defaultWidthCm || "0"),
+          defaultHeightCm: Number(form.defaultHeightCm || "0"),
         },
         "",
       );
@@ -108,6 +117,9 @@ export function SellerDeliverySettingsPageClient() {
       setForm((current) => ({
         ...current,
         defaultCarrier: saved.defaultCarrier as "CDEK" | "YANDEX",
+        sameCityPreferredCarrier: saved.sameCityPreferredCarrier as "CDEK" | "YANDEX",
+        interCityPreferredCarrier: saved.interCityPreferredCarrier as "CDEK" | "YANDEX",
+        fallbackCarrier: saved.fallbackCarrier as "CDEK" | "YANDEX",
       }));
       setSuccessMessage("Delivery settings saved.");
     } catch (err) {
@@ -138,7 +150,7 @@ export function SellerDeliverySettingsPageClient() {
               <input value={form.pickupPostalCode} onChange={(event) => setForm((current) => ({ ...current, pickupPostalCode: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
             </Field>
             <Field label="Pickup phone">
-              <input value={form.pickupPhone} onChange={(event) => setForm((current) => ({ ...current, pickupPhone: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.pickupContactPhone} onChange={(event) => setForm((current) => ({ ...current, pickupContactPhone: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
             </Field>
             <Field label="Pickup contact">
               <input value={form.pickupContactName} onChange={(event) => setForm((current) => ({ ...current, pickupContactName: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
@@ -149,17 +161,35 @@ export function SellerDeliverySettingsPageClient() {
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
-            <Field label="Default weight (kg)">
-              <input value={form.defaultWeight} onChange={(event) => setForm((current) => ({ ...current, defaultWeight: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+            <Field label="Same-city priority">
+              <select value={form.sameCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, sameCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+                <option value="YANDEX">Yandex</option>
+                <option value="CDEK">CDEK</option>
+              </select>
+            </Field>
+            <Field label="Inter-city priority">
+              <select value={form.interCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, interCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+                <option value="CDEK">CDEK</option>
+                <option value="YANDEX">Yandex</option>
+              </select>
+            </Field>
+            <Field label="Fallback carrier">
+              <select value={form.fallbackCarrier} onChange={(event) => setForm((current) => ({ ...current, fallbackCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+                <option value="CDEK">CDEK</option>
+                <option value="YANDEX">Yandex</option>
+              </select>
+            </Field>
+            <Field label="Default weight (g)">
+              <input value={form.defaultWeightGram} onChange={(event) => setForm((current) => ({ ...current, defaultWeightGram: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
             </Field>
             <Field label="Length (cm)">
-              <input value={form.defaultLength} onChange={(event) => setForm((current) => ({ ...current, defaultLength: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultLengthCm} onChange={(event) => setForm((current) => ({ ...current, defaultLengthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
             </Field>
             <Field label="Width (cm)">
-              <input value={form.defaultWidth} onChange={(event) => setForm((current) => ({ ...current, defaultWidth: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultWidthCm} onChange={(event) => setForm((current) => ({ ...current, defaultWidthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
             </Field>
             <Field label="Height (cm)">
-              <input value={form.defaultHeight} onChange={(event) => setForm((current) => ({ ...current, defaultHeight: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultHeightCm} onChange={(event) => setForm((current) => ({ ...current, defaultHeightCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
             </Field>
           </div>
 

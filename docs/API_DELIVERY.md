@@ -2,145 +2,113 @@
 
 ## Scope
 
-This document describes the generic multi-carrier delivery foundation implemented in `backend-nest`.
+`backend-nest/src/modules/delivery` provides the multi-carrier foundation for seller delivery operations.
 
-Current scope includes:
-- seller shop delivery settings
-- delivery offer calculation
-- shipment creation
-- shipment refresh
-- shipment cancellation
-- customer tracking visibility for provider and tracking data
-
-Current scope does not include:
-- real carrier calls in default test mode
-- pickup-point selection UI
-- webhook ingestion from carriers
-- multi-shipment per order
-- warehouse or multi-location fulfillment
-
-## Provider Model
-
-Supported provider codes in this phase:
-- `CDEK`
+Supported providers:
 - `YANDEX`
+- `CDEK`
 
-Runtime selection:
-- `DELIVERY_PROVIDER_MODE=mock`
-- `DELIVERY_PROVIDER_MODE=cdek`
-- `DELIVERY_PROVIDER_MODE=yandex`
+Default strategy:
+- same-city order: Yandex first, CDEK fallback
+- inter-city order: CDEK first
+- tests and smoke scripts use mock mode by default
 
-Default verified mode for smoke/tests:
-- `mock`
+## Settings
 
-## Seller Endpoints
+`GET /api/shops/:shopId/delivery/settings`
 
-All endpoints below require:
-- authentication
-- `JwtAuthGuard`
-- `ShopAccessGuard`
-- the order must belong to the shop
-
-### `GET /api/shops/:shopId/delivery/settings`
-
-Return current shop delivery settings.
-
-### `PATCH /api/shops/:shopId/delivery/settings`
-
-Create or update shop delivery settings.
-
-Request body:
+`PATCH /api/shops/:shopId/delivery/settings`
 
 ```json
 {
-  "pickupAddress": "ул. Ленина, 10",
+  "pickupCountry": "RU",
   "pickupCity": "Moscow",
+  "pickupAddress": "Tverskaya 1",
   "pickupPostalCode": "101000",
-  "pickupPhone": "+79990000001",
-  "pickupContactName": "Demo Seller",
-  "enabledCarriers": ["CDEK", "YANDEX"],
-  "defaultCarrier": "CDEK",
-  "defaultWeight": 0.7,
-  "defaultLength": 20,
-  "defaultWidth": 15,
-  "defaultHeight": 8
+  "pickupContactName": "Delivery Ops",
+  "pickupContactPhone": "+74950000000",
+  "pickupWorkingHours": "10:00-19:00",
+  "pickupComment": "Call before arrival",
+  "enabledCarriers": ["YANDEX", "CDEK"],
+  "defaultCarrier": "YANDEX",
+  "sameCityPreferredCarrier": "YANDEX",
+  "interCityPreferredCarrier": "CDEK",
+  "fallbackCarrier": "CDEK",
+  "defaultWeightGram": 1200,
+  "defaultLengthCm": 30,
+  "defaultWidthCm": 20,
+  "defaultHeightCm": 10
 }
 ```
 
 Validation:
-- pickup address, phone, and contact are required
-- at least one carrier must be enabled
-- default carrier must belong to enabled carriers
-- dimensions and weight must be positive
+- pickup city, address, contact name, and contact phone are required
+- enabled carriers must not be empty
+- default, preferred, and fallback carriers must be enabled
+- package defaults must be positive
 
-### `POST /api/shops/:shopId/orders/:orderId/delivery/offers`
+## Offers
 
-Calculate delivery offers for an order.
-
-Request body:
+`POST /api/shops/:shopId/orders/:orderId/delivery/offers`
 
 ```json
 {
-  "carriers": ["CDEK", "YANDEX"],
-  "package": {
-    "weightKg": 0.7,
-    "lengthCm": 20,
-    "widthCm": 15,
-    "heightCm": 8
+  "carriers": ["YANDEX", "CDEK"],
+  "packageInfo": {
+    "weightGram": 1200,
+    "lengthCm": 30,
+    "widthCm": 20,
+    "heightCm": 10
   }
 }
 ```
 
-Behavior:
-- validates shop delivery settings
-- validates customer phone/address on the order
-- fills missing package values from shop settings defaults
-- stores fresh rows in `delivery_offers`
+Response includes `isRecommended` on each offer.
 
-### `POST /api/shops/:shopId/orders/:orderId/delivery/shipments`
+Mock examples:
+- Moscow pickup + Moscow customer: `YANDEX_EXPRESS` recommended, `CDEK_COURIER` fallback
+- Moscow pickup + Kazan customer: `CDEK_COURIER` recommended, `CDEK_PICKUP` optional
 
-Create one shipment for a paid order.
+## Shipments
 
-Request body:
+`POST /api/shops/:shopId/orders/:orderId/delivery/shipments`
 
 ```json
 {
   "selectedOfferId": "uuid",
-  "provider": "CDEK",
-  "offerType": "CDEK_PICKUP",
-  "package": {
-    "weightKg": 0.7,
-    "lengthCm": 20,
-    "widthCm": 15,
-    "heightCm": 8
+  "provider": "YANDEX",
+  "packageInfo": {
+    "weightGram": 1200,
+    "lengthCm": 30,
+    "widthCm": 20,
+    "heightCm": 10
   }
 }
 ```
 
-Validation:
+Rules:
+- order must belong to the shop
 - order `paymentStatus` must be `PAID`
-- shop delivery settings must exist
-- order must have customer address and phone
-- only one active shipment per order is allowed
+- one active shipment per order
+- order must have customer phone and address
+- shop delivery settings must be configured
 
-### `GET /api/shops/:shopId/orders/:orderId/delivery`
+## Delivery Detail
 
-Return delivery detail for the order.
+`GET /api/shops/:shopId/orders/:orderId/delivery`
 
-Includes:
+Returns:
+- active shipment
 - stored offers
-- latest shipment
 - shipment events
 
-### `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/refresh`
+## Refresh / Cancel
 
-Refresh shipment status from the active provider.
+`POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/refresh`
 
-### `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel`
+`POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel`
 
-Cancel a shipment.
-
-Request body:
+Cancel body:
 
 ```json
 {
@@ -148,36 +116,15 @@ Request body:
 }
 ```
 
-## Mock Mode Behavior
+## Customer Tracking
 
-Mock mode is the verified default.
-
-Offer calculation can return:
-- `CDEK_PICKUP`
-- `CDEK_COURIER`
-- `YANDEX_EXPRESS` if enabled in shop settings
-
-Shipment creation returns:
+Public order tracking exposes latest delivery projection:
+- provider
+- status
 - provider shipment id
 - tracking number
 - tracking URL
-- initial internal status such as `CREATED`
 
-Refresh returns a later status such as `IN_TRANSIT`.
+## Real Carrier Calls
 
-Cancel returns a terminal status such as `CANCELLED`.
-
-## Customer Tracking Projection
-
-Customer order tracking reads the latest shipment and exposes:
-- `provider`
-- `status`
-- `providerShipmentId`
-- `trackingNumber`
-- `trackingUrl`
-
-## Runtime Verification
-
-Coverage currently includes:
-- `backend-nest/test/delivery.e2e-spec.ts`
-- `backend-nest/scripts/smoke-delivery.ps1`
+Real Yandex/CDEK calls are disabled in default verification. Carrier credentials must not be committed.

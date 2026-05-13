@@ -45,17 +45,25 @@ type StoredShop = {
 type StoredDeliverySetting = {
   id: string;
   shopId: string;
+  pickupCountry: string;
   pickupAddress: string;
   pickupCity: string;
   pickupPostalCode: string | null;
-  pickupPhone: string;
+  pickupLatitude: DecimalLike | null;
+  pickupLongitude: DecimalLike | null;
+  pickupContactPhone: string;
   pickupContactName: string;
+  pickupWorkingHours: string | null;
+  pickupComment: string | null;
   enabledCarriers: Prisma.JsonValue;
   defaultCarrier: string;
-  defaultWeight: DecimalLike;
-  defaultLength: DecimalLike;
-  defaultWidth: DecimalLike;
-  defaultHeight: DecimalLike;
+  sameCityPreferredCarrier: string;
+  interCityPreferredCarrier: string;
+  fallbackCarrier: string;
+  defaultWeightGram: number;
+  defaultLengthCm: number;
+  defaultWidthCm: number;
+  defaultHeightCm: number;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -68,9 +76,12 @@ type StoredDeliveryOffer = {
   offerType: string;
   priceAmount: DecimalLike;
   priceCurrency: string;
+  estimatedMinMinutes: number | null;
+  estimatedMaxMinutes: number | null;
   estimatedMinDays: number | null;
   estimatedMaxDays: number | null;
   pickupPointId: string | null;
+  isRecommended: boolean;
   expiresAt: Date | null;
   createdAt: Date;
 };
@@ -353,9 +364,12 @@ describe('DeliveryController (e2e)', () => {
         offerType: data.offerType,
         priceAmount: data.priceAmount,
         priceCurrency: data.priceCurrency,
+        estimatedMinMinutes: data.estimatedMinMinutes ?? null,
+        estimatedMaxMinutes: data.estimatedMaxMinutes ?? null,
         estimatedMinDays: data.estimatedMinDays ?? null,
         estimatedMaxDays: data.estimatedMaxDays ?? null,
         pickupPointId: data.pickupPointId ?? null,
+        isRecommended: data.isRecommended ?? false,
         expiresAt: data.expiresAt ?? null,
         createdAt: new Date(),
       };
@@ -468,11 +482,13 @@ describe('DeliveryController (e2e)', () => {
 
     const body = readBody<DeliverySettingsResponseDto>(response);
     expect(body.pickupCity).toBe('Moscow');
-    expect(body.defaultCarrier).toBe('CDEK');
+    expect(body.defaultCarrier).toBe('YANDEX');
+    expect(body.sameCityPreferredCarrier).toBe('YANDEX');
+    expect(body.interCityPreferredCarrier).toBe('CDEK');
     expect(body.enabledCarriers).toEqual(['CDEK', 'YANDEX']);
   });
 
-  it('calculates mock offers after settings are configured', async () => {
+  it('calculates same-city mock offers with Yandex recommended', async () => {
     await setSettings(app);
     const token = await loginAndGetToken(app, 'seller1@example.com');
     const response = await request(app.getHttpServer())
@@ -482,13 +498,49 @@ describe('DeliveryController (e2e)', () => {
       .expect(201);
 
     const body = readBody<DeliveryOffersResponseDto>(response);
-    expect(body.offers).toHaveLength(3);
+    expect(body.offers).toHaveLength(2);
+    expect(body.offers.find((offer) => offer.isRecommended)?.provider).toBe(
+      'YANDEX',
+    );
+    expect(
+      body.offers.some((offer) => offer.offerType === 'CDEK_COURIER'),
+    ).toBe(true);
+  });
+
+  it('calculates inter-city mock offers with CDEK recommended', async () => {
+    await setSettings(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-other-shop/delivery/offers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(404);
+
+    expect(response.status).toBe(404);
+
+    orders.push({
+      id: 'order-intercity',
+      shopId: 'shop-1',
+      customerId: 'customer-4',
+      orderNumber: 'ORD-DEL-1003',
+      paymentStatus: 'PAID',
+      shippingAddress: 'Baumana 1, Kazan',
+      customerName: 'Dan',
+      customerPhone: '+79990000004',
+    });
+
+    const interCityResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-intercity/delivery/offers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(201);
+    const body = readBody<DeliveryOffersResponseDto>(interCityResponse);
+    expect(body.offers.find((offer) => offer.isRecommended)?.provider).toBe(
+      'CDEK',
+    );
     expect(body.offers.some((offer) => offer.offerType === 'CDEK_PICKUP')).toBe(
       true,
     );
-    expect(
-      body.offers.some((offer) => offer.offerType === 'YANDEX_EXPRESS'),
-    ).toBe(true);
   });
 
   it('creates, refreshes, and cancels a mock shipment', async () => {
@@ -499,10 +551,10 @@ describe('DeliveryController (e2e)', () => {
     const createResponse = await request(app.getHttpServer())
       .post('/api/shops/shop-1/orders/order-paid/delivery/shipments')
       .set('Authorization', `Bearer ${token}`)
-      .send({ provider: 'CDEK' })
+      .send({ provider: 'YANDEX' })
       .expect(201);
     const created = readBody<DeliveryShipmentResponseDto>(createResponse);
-    expect(created.provider).toBe('CDEK');
+    expect(created.provider).toBe('YANDEX');
     expect(created.providerStatus).toBe('CREATED');
 
     const refreshResponse = await request(app.getHttpServer())
@@ -539,7 +591,7 @@ describe('DeliveryController (e2e)', () => {
       .expect(200);
 
     const body = readBody<DeliveryDetailResponseDto>(response);
-    expect(body.activeShipment?.provider).toBe('CDEK');
+    expect(body.activeShipment?.provider).toBe('YANDEX');
     expect(body.offers.length).toBeGreaterThan(0);
     expect(body.events[0].eventType).toBe('SHIPMENT_CREATED');
   });
@@ -606,7 +658,7 @@ describe('DeliveryController (e2e)', () => {
     await request(testApp.getHttpServer())
       .post('/api/shops/shop-1/orders/order-paid/delivery/shipments')
       .set('Authorization', `Bearer ${token}`)
-      .send({ provider: 'CDEK' })
+      .send({ provider: 'YANDEX' })
       .expect(201);
   }
 });
@@ -625,14 +677,17 @@ function validSettingsPayload() {
     pickupAddress: 'Tverskaya 1',
     pickupCity: 'Moscow',
     pickupPostalCode: '101000',
-    pickupPhone: '+74950000000',
+    pickupContactPhone: '+74950000000',
     pickupContactName: 'Seller Ops',
     enabledCarriers: ['CDEK', 'YANDEX'],
-    defaultCarrier: 'CDEK',
-    defaultWeight: 1.2,
-    defaultLength: 30,
-    defaultWidth: 20,
-    defaultHeight: 10,
+    defaultCarrier: 'YANDEX',
+    sameCityPreferredCarrier: 'YANDEX',
+    interCityPreferredCarrier: 'CDEK',
+    fallbackCarrier: 'CDEK',
+    defaultWeightGram: 1200,
+    defaultLengthCm: 30,
+    defaultWidthCm: 20,
+    defaultHeightCm: 10,
   };
 }
 
@@ -640,17 +695,31 @@ function normalizeSettingData(
   input: Record<string, unknown>,
 ): Omit<StoredDeliverySetting, 'id' | 'shopId' | 'createdAt' | 'updatedAt'> {
   return {
+    pickupCountry: toScalarString(input.pickupCountry) ?? 'RU',
     pickupAddress: String(input.pickupAddress),
     pickupCity: String(input.pickupCity),
     pickupPostalCode: toScalarString(input.pickupPostalCode),
-    pickupPhone: String(input.pickupPhone),
+    pickupLatitude: input.pickupLatitude
+      ? decimalLike(input.pickupLatitude)
+      : null,
+    pickupLongitude: input.pickupLongitude
+      ? decimalLike(input.pickupLongitude)
+      : null,
+    pickupContactPhone: String(input.pickupContactPhone),
     pickupContactName: String(input.pickupContactName),
+    pickupWorkingHours: toScalarString(input.pickupWorkingHours),
+    pickupComment: toScalarString(input.pickupComment),
     enabledCarriers: (input.enabledCarriers as Prisma.JsonValue) ?? ['CDEK'],
     defaultCarrier: String(input.defaultCarrier),
-    defaultWeight: decimalLike(input.defaultWeight),
-    defaultLength: decimalLike(input.defaultLength),
-    defaultWidth: decimalLike(input.defaultWidth),
-    defaultHeight: decimalLike(input.defaultHeight),
+    sameCityPreferredCarrier:
+      toScalarString(input.sameCityPreferredCarrier) ?? 'YANDEX',
+    interCityPreferredCarrier:
+      toScalarString(input.interCityPreferredCarrier) ?? 'CDEK',
+    fallbackCarrier: toScalarString(input.fallbackCarrier) ?? 'CDEK',
+    defaultWeightGram: Number(input.defaultWeightGram ?? 1000),
+    defaultLengthCm: Number(input.defaultLengthCm ?? 30),
+    defaultWidthCm: Number(input.defaultWidthCm ?? 20),
+    defaultHeightCm: Number(input.defaultHeightCm ?? 10),
   };
 }
 

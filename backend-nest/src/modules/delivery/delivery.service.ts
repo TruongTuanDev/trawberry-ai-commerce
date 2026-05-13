@@ -36,17 +36,25 @@ type OrderRecord = {
     id: string;
     deliverySettings: {
       id: string;
+      pickupCountry: string;
       pickupAddress: string;
       pickupCity: string;
       pickupPostalCode: string | null;
-      pickupPhone: string;
+      pickupLatitude: Prisma.Decimal | null;
+      pickupLongitude: Prisma.Decimal | null;
+      pickupContactPhone: string;
       pickupContactName: string;
+      pickupWorkingHours: string | null;
+      pickupComment: string | null;
       enabledCarriers: Prisma.JsonValue;
       defaultCarrier: string;
-      defaultWeight: Prisma.Decimal;
-      defaultLength: Prisma.Decimal;
-      defaultWidth: Prisma.Decimal;
-      defaultHeight: Prisma.Decimal;
+      sameCityPreferredCarrier: string;
+      interCityPreferredCarrier: string;
+      fallbackCarrier: string;
+      defaultWeightGram: number;
+      defaultLengthCm: number;
+      defaultWidthCm: number;
+      defaultHeightCm: number;
       createdAt: Date;
       updatedAt: Date;
     } | null;
@@ -59,7 +67,10 @@ type OrderRecord = {
     priceCurrency: string;
     estimatedMinDays: number | null;
     estimatedMaxDays: number | null;
+    estimatedMinMinutes?: number | null;
+    estimatedMaxMinutes?: number | null;
     pickupPointId: string | null;
+    isRecommended?: boolean;
     expiresAt: Date | null;
     createdAt: Date;
   }>;
@@ -129,6 +140,17 @@ export class DeliveryService {
         'defaultCarrier must be one of enabledCarriers.',
       );
     }
+    for (const field of [
+      ['sameCityPreferredCarrier', dto.sameCityPreferredCarrier],
+      ['interCityPreferredCarrier', dto.interCityPreferredCarrier],
+      ['fallbackCarrier', dto.fallbackCarrier],
+    ] as const) {
+      if (!dto.enabledCarriers.includes(field[1])) {
+        throw new BadRequestException(
+          `${field[0]} must be one of enabledCarriers.`,
+        );
+      }
+    }
 
     const setting = await this.prisma.shopDeliverySetting.upsert({
       where: { shopId },
@@ -176,9 +198,12 @@ export class DeliveryService {
             offerType: offer.offerType,
             priceAmount: new Prisma.Decimal(offer.priceAmount),
             priceCurrency: offer.priceCurrency,
+            estimatedMinMinutes: offer.estimatedMinMinutes,
+            estimatedMaxMinutes: offer.estimatedMaxMinutes,
             estimatedMinDays: offer.estimatedMinDays,
             estimatedMaxDays: offer.estimatedMaxDays,
             pickupPointId: offer.pickupPointId,
+            isRecommended: offer.isRecommended,
             rawProviderPayload: this.toJsonInput(offer.rawProviderPayload),
             expiresAt: offer.expiresAt,
           },
@@ -222,9 +247,12 @@ export class DeliveryService {
             offerType: selectedOffer.offerType,
             priceAmount: selectedOffer.priceAmount.toString(),
             priceCurrency: selectedOffer.priceCurrency,
+            estimatedMinMinutes: selectedOffer.estimatedMinMinutes ?? null,
+            estimatedMaxMinutes: selectedOffer.estimatedMaxMinutes ?? null,
             estimatedMinDays: selectedOffer.estimatedMinDays,
             estimatedMaxDays: selectedOffer.estimatedMaxDays,
             pickupPointId: selectedOffer.pickupPointId,
+            isRecommended: selectedOffer.isRecommended ?? false,
             rawProviderPayload: null,
             expiresAt: selectedOffer.expiresAt,
           }
@@ -449,7 +477,7 @@ export class DeliveryService {
     order: OrderRecord,
     pickupAddressOverride?: string,
     packageInfoOverride?: {
-      weightKg: number;
+      weightGram: number;
       lengthCm: number;
       widthCm: number;
       heightCm: number;
@@ -461,12 +489,23 @@ export class DeliveryService {
         'Shop delivery settings must be configured before calculating offers or creating shipments.',
       );
     }
+    if (
+      !settings.pickupAddress.trim() ||
+      !settings.pickupCity.trim() ||
+      !settings.pickupContactPhone.trim() ||
+      !settings.pickupContactName.trim()
+    ) {
+      throw new BadRequestException(
+        'Shop delivery settings must include pickup address, city, contact name, and contact phone.',
+      );
+    }
 
     if (!order.customerPhone.trim() || !order.shippingAddress.trim()) {
       throw new BadRequestException(
         'Order must contain customer phone and shipping address.',
       );
     }
+    const customerCity = this.inferCustomerCity(order.shippingAddress);
 
     return {
       shopId: order.shopId,
@@ -475,26 +514,28 @@ export class DeliveryService {
       customerName: order.customerName,
       customerPhone: order.customerPhone,
       customerAddress: order.shippingAddress,
+      customerCity,
       pickupAddress: pickupAddressOverride?.trim() || settings.pickupAddress,
       pickupCity: settings.pickupCity,
       pickupPostalCode: settings.pickupPostalCode,
-      pickupPhone: settings.pickupPhone,
+      pickupContactPhone: settings.pickupContactPhone,
       pickupContactName: settings.pickupContactName,
       enabledCarriers: this.readCarrierList(settings.enabledCarriers),
       defaultCarrier: settings.defaultCarrier as DeliveryCarrierCode,
+      sameCityPreferredCarrier:
+        settings.sameCityPreferredCarrier as DeliveryCarrierCode,
+      interCityPreferredCarrier:
+        settings.interCityPreferredCarrier as DeliveryCarrierCode,
+      fallbackCarrier: settings.fallbackCarrier as DeliveryCarrierCode,
+      isSameCity:
+        this.normalizeCity(settings.pickupCity) ===
+        this.normalizeCity(customerCity),
       packageInfo: {
-        weightKg:
-          packageInfoOverride?.weightKg ??
-          Number(settings.defaultWeight.toString()),
-        lengthCm:
-          packageInfoOverride?.lengthCm ??
-          Number(settings.defaultLength.toString()),
-        widthCm:
-          packageInfoOverride?.widthCm ??
-          Number(settings.defaultWidth.toString()),
-        heightCm:
-          packageInfoOverride?.heightCm ??
-          Number(settings.defaultHeight.toString()),
+        weightGram:
+          packageInfoOverride?.weightGram ?? settings.defaultWeightGram,
+        lengthCm: packageInfoOverride?.lengthCm ?? settings.defaultLengthCm,
+        widthCm: packageInfoOverride?.widthCm ?? settings.defaultWidthCm,
+        heightCm: packageInfoOverride?.heightCm ?? settings.defaultHeightCm,
       },
       currency: this.configService.get<string>(
         'CDEK_DEFAULT_CURRENCY',
@@ -589,49 +630,73 @@ export class DeliveryService {
     dto: UpdateDeliverySettingsDto,
   ): DeliverySettingsInput {
     return {
+      pickupCountry: dto.pickupCountry?.trim() || 'RU',
       pickupAddress: dto.pickupAddress.trim(),
       pickupCity: dto.pickupCity.trim(),
       pickupPostalCode: dto.pickupPostalCode?.trim() || null,
-      pickupPhone: dto.pickupPhone.trim(),
+      pickupLatitude: dto.pickupLatitude ?? null,
+      pickupLongitude: dto.pickupLongitude ?? null,
+      pickupContactPhone: dto.pickupContactPhone.trim(),
       pickupContactName: dto.pickupContactName.trim(),
+      pickupWorkingHours: dto.pickupWorkingHours?.trim() || null,
+      pickupComment: dto.pickupComment?.trim() || null,
       enabledCarriers: dto.enabledCarriers,
       defaultCarrier: dto.defaultCarrier,
-      defaultWeight: dto.defaultWeight,
-      defaultLength: dto.defaultLength,
-      defaultWidth: dto.defaultWidth,
-      defaultHeight: dto.defaultHeight,
+      sameCityPreferredCarrier: dto.sameCityPreferredCarrier,
+      interCityPreferredCarrier: dto.interCityPreferredCarrier,
+      fallbackCarrier: dto.fallbackCarrier,
+      defaultWeightGram: dto.defaultWeightGram,
+      defaultLengthCm: dto.defaultLengthCm,
+      defaultWidthCm: dto.defaultWidthCm,
+      defaultHeightCm: dto.defaultHeightCm,
     };
   }
 
   private toSettingsResponse(setting: {
     shopId: string;
+    pickupCountry: string;
     pickupAddress: string;
     pickupCity: string;
     pickupPostalCode: string | null;
-    pickupPhone: string;
+    pickupLatitude: Prisma.Decimal | null;
+    pickupLongitude: Prisma.Decimal | null;
+    pickupContactPhone: string;
     pickupContactName: string;
+    pickupWorkingHours: string | null;
+    pickupComment: string | null;
     enabledCarriers: Prisma.JsonValue;
     defaultCarrier: string;
-    defaultWeight: Prisma.Decimal;
-    defaultLength: Prisma.Decimal;
-    defaultWidth: Prisma.Decimal;
-    defaultHeight: Prisma.Decimal;
+    sameCityPreferredCarrier: string;
+    interCityPreferredCarrier: string;
+    fallbackCarrier: string;
+    defaultWeightGram: number;
+    defaultLengthCm: number;
+    defaultWidthCm: number;
+    defaultHeightCm: number;
     createdAt: Date;
     updatedAt: Date;
   }) {
     return {
       shopId: setting.shopId,
+      pickupCountry: setting.pickupCountry,
       pickupAddress: setting.pickupAddress,
       pickupCity: setting.pickupCity,
       pickupPostalCode: setting.pickupPostalCode,
-      pickupPhone: setting.pickupPhone,
+      pickupLatitude: setting.pickupLatitude?.toString() ?? null,
+      pickupLongitude: setting.pickupLongitude?.toString() ?? null,
+      pickupContactPhone: setting.pickupContactPhone,
       pickupContactName: setting.pickupContactName,
+      pickupWorkingHours: setting.pickupWorkingHours,
+      pickupComment: setting.pickupComment,
       enabledCarriers: this.readCarrierList(setting.enabledCarriers),
       defaultCarrier: setting.defaultCarrier,
-      defaultWeight: setting.defaultWeight.toString(),
-      defaultLength: setting.defaultLength.toString(),
-      defaultWidth: setting.defaultWidth.toString(),
-      defaultHeight: setting.defaultHeight.toString(),
+      sameCityPreferredCarrier: setting.sameCityPreferredCarrier,
+      interCityPreferredCarrier: setting.interCityPreferredCarrier,
+      fallbackCarrier: setting.fallbackCarrier,
+      defaultWeightGram: setting.defaultWeightGram,
+      defaultLengthCm: setting.defaultLengthCm,
+      defaultWidthCm: setting.defaultWidthCm,
+      defaultHeightCm: setting.defaultHeightCm,
       createdAt: setting.createdAt.toISOString(),
       updatedAt: setting.updatedAt.toISOString(),
     };
@@ -643,9 +708,12 @@ export class DeliveryService {
     offerType: string;
     priceAmount: Prisma.Decimal;
     priceCurrency: string;
+    estimatedMinMinutes?: number | null;
+    estimatedMaxMinutes?: number | null;
     estimatedMinDays: number | null;
     estimatedMaxDays: number | null;
     pickupPointId: string | null;
+    isRecommended?: boolean;
     expiresAt: Date | null;
   }) {
     return {
@@ -654,9 +722,12 @@ export class DeliveryService {
       offerType: offer.offerType,
       priceAmount: offer.priceAmount.toString(),
       priceCurrency: offer.priceCurrency,
+      estimatedMinMinutes: offer.estimatedMinMinutes ?? null,
+      estimatedMaxMinutes: offer.estimatedMaxMinutes ?? null,
       estimatedMinDays: offer.estimatedMinDays,
       estimatedMaxDays: offer.estimatedMaxDays,
       pickupPointId: offer.pickupPointId,
+      isRecommended: offer.isRecommended ?? false,
       expiresAt: offer.expiresAt?.toISOString() ?? null,
     };
   }
@@ -708,6 +779,24 @@ export class DeliveryService {
     return value.filter(
       (item): item is DeliveryCarrierCode =>
         item === 'CDEK' || item === 'YANDEX',
+    );
+  }
+
+  private inferCustomerCity(address: string) {
+    const parts = address
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return parts.length > 1 ? parts[parts.length - 1] : null;
+  }
+
+  private normalizeCity(city: string | null) {
+    return (
+      city
+        ?.trim()
+        .toLocaleLowerCase('ru-RU')
+        .replace(/^г\.?\s+/u, '')
+        .replace(/\s+/g, ' ') ?? ''
     );
   }
 

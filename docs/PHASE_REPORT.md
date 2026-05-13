@@ -722,13 +722,13 @@ while allowing:
   - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
   - `curl.exe --ipv4 http://localhost:8000/health`: pass
 
-## Multi-Carrier Delivery Foundation / CDEK-first MVP
+## Multi-Carrier Delivery Foundation / Yandex-first MVP
 
 - Scope:
   - replace the earlier single-provider delivery direction with a generic multi-carrier foundation
   - introduce seller delivery settings, generic delivery offers, shipments, and events
   - keep mock mode as the default verified runtime for CI and local smoke coverage
-  - prepare CDEK as the first real carrier target and Yandex as the second provider path
+  - prioritize Yandex for same-city express and CDEK for fallback, pickup, and inter-city delivery
 - Files changed:
   - `backend-nest/prisma/schema.prisma`
   - `backend-nest/prisma/migrations/20260513_add_yandex_delivery_tables/migration.sql`
@@ -760,8 +760,8 @@ while allowing:
   - shops can store pickup address, pickup contact, enabled carriers, and default package dimensions
   - sellers can calculate offers, create shipments, refresh shipments, and cancel shipments in mock mode
   - customer order tracking now shows delivery provider, status, tracking number, and tracking URL from the latest shipment
-  - `CDEK` has a real-mode skeleton and is positioned as the primary Russia-wide e-commerce carrier
-  - `Yandex` has a placeholder provider/client path reserved for express delivery in a later phase
+  - `Yandex` has a real-mode skeleton and is positioned as the same-city express carrier
+  - `CDEK` has a real-mode skeleton and is positioned as the fallback, pickup-point, and inter-city carrier
 - Verification for this pass:
   - `backend-nest npm run prisma:generate`: pass
   - `backend-nest npm run prisma:db:push`: pass
@@ -776,8 +776,21 @@ while allowing:
   - `backend-nest npm run smoke:inventory-alerts`: pass
   - `backend-nest npm run smoke:delivery`: pass
 - Runtime notes:
-  - the old Yandex-only delivery DTO set was removed to avoid leaving two conflicting API shapes in the same module
+  - same-city mock offers recommend `YANDEX_EXPRESS`; inter-city mock offers recommend `CDEK_COURIER`
   - default verification continues to avoid real carrier calls; mock mode remains the required safe baseline for CI and local demo stability
+
+## Multi-Carrier Delivery Foundation / Yandex-first Update
+
+- Scope:
+  - align the generic delivery foundation with the current business priority: intra-city delivery first
+  - add carrier priority fields to `shop_delivery_settings`
+  - add `isRecommended` and minute ETA fields to `delivery_offers`
+  - update mock selection to recommend Yandex for same-city and CDEK for inter-city
+- Result:
+  - sellers can configure `defaultCarrier`, `sameCityPreferredCarrier`, `interCityPreferredCarrier`, and `fallbackCarrier`
+  - `npm run smoke:delivery` verifies Yandex recommended for Moscow same-city orders
+  - CDEK remains available for fallback and inter-city/pickup flows
+  - default env examples use mock mode and do not call real Yandex/CDEK APIs
 
 ## Suggested Commit Message
 ```text
