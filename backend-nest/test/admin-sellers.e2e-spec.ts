@@ -32,9 +32,26 @@ type StoredUser = {
   sellerProfile?: StoredSellerProfile | null;
 };
 
+type StoredSellerDocument = {
+  id: string;
+  userId: string;
+  documentType: string;
+  url: string;
+  storageKey: string | null;
+  originalName: string | null;
+  mimeType: string | null;
+  size: number | null;
+  status: string;
+  rejectionReason: string | null;
+  uploadedAt: Date;
+  reviewedAt: Date | null;
+  reviewedByUserId: string | null;
+};
+
 describe('Admin seller approval workflow (e2e)', () => {
   let app: INestApplication<App>;
   let users: StoredUser[];
+  let documents: StoredSellerDocument[];
   const adminId = '11111111-1111-4111-8111-111111111111';
   const sellerId = '22222222-2222-4222-8222-222222222222';
   const rejectedSellerId = '33333333-3333-4333-8333-333333333333';
@@ -49,6 +66,16 @@ describe('Admin seller approval workflow (e2e)', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+    },
+    sellerDocument: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+    },
+    adminAuditLog: {
+      create: jest.fn(),
+      findMany: jest.fn(),
     },
     shop: {
       findUnique: jest.fn(),
@@ -71,6 +98,7 @@ describe('Admin seller approval workflow (e2e)', () => {
         sellerProfile: null,
       },
     ];
+    documents = [];
 
     prismaMock.user.findUnique.mockImplementation(
       ({
@@ -180,6 +208,50 @@ describe('Admin seller approval workflow (e2e)', () => {
       },
     );
 
+    prismaMock.sellerDocument.count.mockImplementation(
+      ({ where }: { where: { userId: string; status?: string } }) =>
+        Promise.resolve(
+          documents.filter(
+            (document) =>
+              document.userId === where.userId &&
+              (!where.status || document.status === where.status),
+          ).length,
+        ),
+    );
+    prismaMock.sellerDocument.findMany.mockImplementation(
+      ({ where }: { where: { userId: string } }) =>
+        Promise.resolve(
+          documents.filter((document) => document.userId === where.userId),
+        ),
+    );
+    prismaMock.sellerDocument.findFirst.mockImplementation(
+      ({ where }: { where: { userId: string; id: string } }) =>
+        Promise.resolve(
+          documents.find(
+            (document) =>
+              document.userId === where.userId && document.id === where.id,
+          ) ?? null,
+        ),
+    );
+    prismaMock.sellerDocument.update.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { id: string };
+        data: Partial<StoredSellerDocument>;
+      }) => {
+        const index = documents.findIndex(
+          (document) => document.id === where.id,
+        );
+        if (index < 0) throw new Error('Document not found.');
+        documents[index] = { ...documents[index], ...data };
+        return Promise.resolve(documents[index]);
+      },
+    );
+    prismaMock.adminAuditLog.create.mockResolvedValue({});
+    prismaMock.adminAuditLog.findMany.mockResolvedValue([]);
+
     prismaMock.shop.findUnique.mockResolvedValue(null);
     prismaMock.shop.create.mockImplementation(
       ({
@@ -261,6 +333,22 @@ describe('Admin seller approval workflow (e2e)', () => {
       .set('Authorization', `Bearer ${sellerLogin.accessToken}`)
       .send({ name: 'Pending Shop', slug: 'pending-shop' })
       .expect(403);
+
+    documents.push({
+      id: '55555555-5555-4555-8555-555555555555',
+      userId: seller.userId,
+      documentType: 'INN',
+      url: 'http://localhost/uploads/inn.pdf',
+      storageKey: 'seller-documents/inn.pdf',
+      originalName: 'inn.pdf',
+      mimeType: 'application/pdf',
+      size: 12,
+      status: 'APPROVED',
+      rejectionReason: null,
+      uploadedAt: new Date(),
+      reviewedAt: new Date(),
+      reviewedByUserId: adminId,
+    });
 
     const adminLogin = await login('admin@example.com');
     const pendingList = await request(app.getHttpServer())

@@ -534,6 +534,20 @@ Current flow:
 | runtime | `GET http://localhost:3000/login` | Pass | Re-run in this audit. |
 | runtime | `GET http://localhost:9001` | Pass | Re-run in this audit. |
 
+## Seller Onboarding + KYC + Audit Trail Update
+
+Status: implemented in `backend-nest` and `frontend-next`.
+
+- New sellers still register as `PENDING`.
+- Pending/rejected sellers can submit legal onboarding profile data and upload KYC documents.
+- Admins can view seller onboarding detail at `/admin/sellers/[id]`.
+- Admins can approve/reject individual documents.
+- Admin seller approval now requires at least one approved KYC document.
+- Seller approve/reject and document approve/reject actions write `admin_audit_logs`.
+- New scripts:
+  - backend: `npm run smoke:seller-onboarding`
+  - frontend: `npm run test:e2e:seller-onboarding`
+
 ## I. Known Issues / Risks
 
 - Real OpenAI runtime is not treated as fully proven in this audit.
@@ -551,6 +565,8 @@ Current flow:
 - Delivery currently supports one active shipment per order and no webhook ingestion yet.
 - Seeded demo data now supports stable public demos, but there is still no automatic database reset/isolation between repeated end-to-end runs.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
+- KYC document storage is MVP local/S3 abstraction only; production still needs retention policy, access policy, encryption review, and operational deletion workflow.
+- Admin audit trail is append-only MVP coverage for seller/document review actions; it does not yet cover every admin operation in the marketplace.
 
 ## J. Next Recommended Phases
 
@@ -560,7 +576,7 @@ Current flow:
 4. Add stronger payment state modeling, proof moderation detail, and refund/cancel groundwork.
 5. Expand the public marketplace beyond the single-product MVP checkout flow.
 6. Implement true try-on online flow end-to-end.
-7. Add admin moderation and operational tooling.
+7. Expand admin moderation and operational tooling beyond seller KYC approval.
 8. Production hardening:
    - auth/cookie/session review
    - secret management

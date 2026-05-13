@@ -29,7 +29,7 @@ npm run seed:demo
   - email: `demo-admin@trawberry.local`
   - password: `DemoAdmin123!`
   - role: `ADMIN`
-  - intended for `/admin/sellers` seller approval demos and E2E
+  - intended for `/admin/sellers` and `/admin/sellers/[id]` approval/onboarding demos and E2E
 - shop:
   - slug: `demo-marketplace-shop`
   - status: `ACTIVE`

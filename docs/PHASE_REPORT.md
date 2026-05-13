@@ -957,3 +957,76 @@ git rm --cached frontend-next\.env.local
   - no admin audit trail beyond timestamp/reason fields
 - Commit info:
   - pending commit message: `feat: add seller approval workflow`
+
+## Seller Onboarding + KYC Documents + Admin Audit Trail
+
+- Scope:
+  - add seller legal onboarding profile and KYC document upload workflow
+  - add admin document review and seller onboarding detail UI
+  - add admin audit logs for seller/document approve and reject actions
+  - preserve seller approval, checkout, payment, inventory, delivery, auth, and public flows
+- Result:
+  - added `seller_profiles` legal/contact/bank fields
+  - added `seller_documents` for KYC uploads and review status
+  - added `admin_audit_logs` for admin review actions
+  - added `/api/seller/onboarding/profile` and `/api/seller/onboarding/documents`
+  - extended `/api/admin/sellers` with onboarding, document review, and audit-log endpoints
+  - seller approval now requires at least one approved KYC document
+  - added `/seller/onboarding`
+  - added `/admin/sellers/[id]`
+  - updated `/admin/sellers` with detail review links
+  - added `npm run smoke:seller-onboarding`
+  - added `npm run test:e2e:seller-onboarding`
+- Verification for this pass:
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, 15 suites / 79 tests
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:seller-approval`: pass
+  - `backend-nest npm run smoke:seller-onboarding`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `backend-nest npm run smoke:inventory-alerts`: pass
+  - `backend-nest npm run smoke:delivery`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:admin-seller-approval`: pass
+  - `frontend-next npm run test:e2e:seller-onboarding`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass
+  - `frontend-next npm run test:e2e:full-commerce`: pass
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/src/modules/seller-onboarding/*`
+  - `backend-nest/src/modules/admin/*`
+  - `backend-nest/src/modules/files/files.service.ts`
+  - `backend-nest/scripts/smoke-seller-approval.ps1`
+  - `backend-nest/scripts/smoke-seller-onboarding.ps1`
+  - `backend-nest/test/admin-sellers.e2e-spec.ts`
+  - `backend-nest/test/seller-onboarding.e2e-spec.ts`
+  - `frontend-next/src/app/seller/onboarding/page.tsx`
+  - `frontend-next/src/app/admin/sellers/[id]/page.tsx`
+  - `frontend-next/src/components/admin/admin-seller-detail-client.tsx`
+  - `frontend-next/src/lib/admin-api.ts`
+  - `frontend-next/src/lib/seller-onboarding-api.ts`
+  - `frontend-next/tests/e2e/admin-seller-approval.spec.ts`
+  - `frontend-next/tests/e2e/seller-onboarding.spec.ts`
+  - `docs/SELLER_ONBOARDING.md`
+- Remaining gaps:
+  - KYC retention/access/encryption policy remains production work
+  - document reject UI path has backend coverage but not browser E2E
+  - no seller approval notification email
+  - audit trail covers seller/document review actions, not every admin action
+- Commit info:
+  - pending commit message: `feat: add seller onboarding and audit trail`

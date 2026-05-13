@@ -26,25 +26,25 @@ import { RejectSellerDto } from './dto/reject-seller.dto';
 @ApiTags('admin sellers')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AdminOnlyGuard)
-@Controller('api/admin/sellers')
+@Controller()
 export class AdminSellersController {
   constructor(private readonly adminSellersService: AdminSellersService) {}
 
-  @Get()
+  @Get('api/admin/sellers')
   @ApiOperation({ summary: 'List seller accounts for admin review.' })
   @ApiOkResponse({ type: AdminSellerResponseDto, isArray: true })
   listSellers(@Query() query: ListAdminSellersQueryDto) {
     return this.adminSellersService.listSellers(query.status);
   }
 
-  @Get(':userId')
+  @Get('api/admin/sellers/:userId')
   @ApiOperation({ summary: 'Get one seller review record.' })
   @ApiOkResponse({ type: AdminSellerResponseDto })
   getSeller(@Param('userId', new ParseUUIDPipe()) userId: string) {
     return this.adminSellersService.getSeller(userId);
   }
 
-  @Post(':userId/approve')
+  @Post('api/admin/sellers/:userId/approve')
   @ApiOperation({ summary: 'Approve a seller account.' })
   @ApiOkResponse({ type: AdminSellerResponseDto })
   approveSeller(
@@ -54,7 +54,7 @@ export class AdminSellersController {
     return this.adminSellersService.approveSeller(userId, admin.userId);
   }
 
-  @Post(':userId/reject')
+  @Post('api/admin/sellers/:userId/reject')
   @ApiOperation({ summary: 'Reject a seller account.' })
   @ApiOkResponse({ type: AdminSellerResponseDto })
   rejectSeller(
@@ -67,5 +67,53 @@ export class AdminSellersController {
       admin.userId,
       dto.reason,
     );
+  }
+
+  @Get('api/admin/sellers/:userId/onboarding')
+  @ApiOperation({ summary: 'Get seller onboarding profile for admin review.' })
+  getOnboarding(@Param('userId', new ParseUUIDPipe()) userId: string) {
+    return this.adminSellersService.getOnboarding(userId);
+  }
+
+  @Get('api/admin/sellers/:userId/documents')
+  @ApiOperation({ summary: 'List seller KYC documents for admin review.' })
+  listDocuments(@Param('userId', new ParseUUIDPipe()) userId: string) {
+    return this.adminSellersService.listDocuments(userId);
+  }
+
+  @Post('api/admin/sellers/:userId/documents/:documentId/approve')
+  @ApiOperation({ summary: 'Approve one seller KYC document.' })
+  approveDocument(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param('documentId', new ParseUUIDPipe()) documentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.adminSellersService.approveDocument(
+      userId,
+      documentId,
+      admin.userId,
+    );
+  }
+
+  @Post('api/admin/sellers/:userId/documents/:documentId/reject')
+  @ApiOperation({ summary: 'Reject one seller KYC document.' })
+  rejectDocument(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Param('documentId', new ParseUUIDPipe()) documentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: RejectSellerDto,
+  ) {
+    return this.adminSellersService.rejectDocument(
+      userId,
+      documentId,
+      admin.userId,
+      dto.reason,
+    );
+  }
+
+  @Get('api/admin/audit-logs')
+  @ApiOperation({ summary: 'List admin audit logs.' })
+  listAuditLogs(@Query('targetUserId') targetUserId?: string) {
+    return this.adminSellersService.listAuditLogs(targetUserId);
   }
 }

@@ -24,6 +24,7 @@
     "smoke:payments": "powershell -ExecutionPolicy Bypass -File scripts/smoke-payments.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",
     "smoke:seller-approval": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-approval.ps1",
+    "smoke:seller-onboarding": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-onboarding.ps1",
     "smoke:orders": "powershell -ExecutionPolicy Bypass -File scripts/smoke-orders.ps1",
     "smoke:product-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-images.ps1",
     "smoke:ai-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-images.ps1",

@@ -17,6 +17,9 @@ model User {
   status       String         @default("ACTIVE") @db.VarChar(50)
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   sellerProfile SellerProfile?
+  reviewedSellerDocuments SellerDocument[] @relation("SellerDocumentReviewer")
+  adminAuditActions AdminAuditLog[] @relation("AdminAuditActor")
+  adminAuditTargets AdminAuditLog[] @relation("AdminAuditTarget")
   aiGenerationTasks AiGenerationTask[]
   aiUsageLogs     AiUsageLog[]
   customerOrders  Order[]      @relation("CustomerOrders")
@@ -34,14 +37,68 @@ model SellerProfile {
   approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
   rejectedAt     DateTime? @map("rejected_at") @db.Timestamptz(6)
   rejectionReason String?  @map("rejection_reason") @db.VarChar(500)
+  legalType      String?   @map("legal_type") @db.VarChar(50)
+  legalName      String?   @map("legal_name") @db.VarChar(255)
+  inn            String?   @db.VarChar(20)
+  ogrn           String?   @db.VarChar(20)
+  kpp            String?   @db.VarChar(20)
+  legalAddress   String?   @map("legal_address")
+  contactName    String?   @map("contact_name") @db.VarChar(255)
+  contactPhone   String?   @map("contact_phone") @db.VarChar(50)
+  contactEmail   String?   @map("contact_email") @db.VarChar(255)
+  bankName       String?   @map("bank_name") @db.VarChar(255)
+  bankAccount    String?   @map("bank_account") @db.VarChar(255)
+  bik            String?   @db.VarChar(50)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   currentShopId  String?   @map("current_shop_id") @db.Uuid
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   shops          Shop[]    @relation("SellerProfileShops")
   currentShop    Shop?     @relation("CurrentShopSelection", fields: [currentShopId], references: [id])
+  documents      SellerDocument[]
 
   @@map("seller_profiles")
+}
+
+model SellerDocument {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  documentType     String    @map("document_type") @db.VarChar(50)
+  url              String    @db.VarChar(1000)
+  storageKey       String?   @map("storage_key") @db.VarChar(1024)
+  originalName     String?   @map("original_name") @db.VarChar(255)
+  mimeType         String?   @map("mime_type") @db.VarChar(100)
+  size             Int?
+  status           String    @default("PENDING") @db.VarChar(50)
+  rejectionReason  String?   @map("rejection_reason") @db.VarChar(500)
+  uploadedAt       DateTime  @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  reviewedAt       DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  reviewedByUserId String?   @map("reviewed_by_user_id") @db.Uuid
+  sellerProfile    SellerProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  reviewedBy       User?     @relation("SellerDocumentReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, uploadedAt])
+  @@index([status, uploadedAt])
+  @@map("seller_documents")
+}
+
+model AdminAuditLog {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  actorUserId  String   @map("actor_user_id") @db.Uuid
+  targetUserId String?  @map("target_user_id") @db.Uuid
+  action       String   @db.VarChar(100)
+  entityType   String   @map("entity_type") @db.VarChar(100)
+  entityId     String?  @map("entity_id") @db.VarChar(100)
+  oldValueJson Json?    @map("old_value_json")
+  newValueJson Json?    @map("new_value_json")
+  reason       String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  actor        User     @relation("AdminAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  target       User?    @relation("AdminAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("admin_audit_logs")
 }
 
 model Shop {

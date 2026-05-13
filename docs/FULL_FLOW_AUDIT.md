@@ -17,7 +17,7 @@ Strong points:
 - Secrets are kept out of tracked files by current `git ls-files` checks; `.env` files are ignored.
 
 Still missing or partial:
-- Seller approval admin API/UI has been added after the original audit; production readiness still needs broader admin operations such as document/KYC review history and notification workflows.
+- Seller approval admin API/UI and KYC onboarding are now implemented; production readiness still needs notification workflows, retention policy, and broader admin audit coverage.
 - Seller create shop/product/product-image flows are API-covered and UI-present, but the new full browser flow uses seeded product setup rather than creating product data through the browser.
 - Real payment provider integration is not implemented; manual transfer review is the verified path.
 - Real Yandex/CDEK modes are skeleton/optional and were not called. Mock delivery is the verified default.
@@ -30,9 +30,10 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | Step | Actor | UI route/API endpoint | Status | Verification evidence | Notes |
 |---|---|---|---|---|---|
 | Seller register | Seller | `POST /api/auth/register`, `/login` | PASS | `backend-nest` tests; `npm run test:e2e:auth` registers via API and logs in through UI | Register creates active seller user with seller profile pending approval. |
-| Seller approval | Admin | `/admin/sellers`, `/api/admin/sellers` | PASS | `npm run smoke:seller-approval`; `npm run test:e2e:admin-seller-approval` | Admin can list, approve, and reject sellers. |
+| Seller approval | Admin | `/admin/sellers`, `/admin/sellers/[id]`, `/api/admin/sellers` | PASS | `npm run smoke:seller-approval`; `npm run smoke:seller-onboarding`; `npm run test:e2e:admin-seller-approval`; `npm run test:e2e:seller-onboarding` | Admin can list, review KYC, approve documents, approve sellers, reject sellers, and audit actions. Approval requires at least one approved KYC document. |
 | Seller login | Seller | `/login`, `POST /api/auth/login` | PASS | `npm run test:e2e:auth`; `npm run test:e2e:full-commerce` | `httpOnly` auth cookie verified; no raw JWT in localStorage. |
 | Seller create shop | Seller | `POST /api/shops` | PASS | Backend tests and shop module review | UI create-shop flow was not found in this MVP; demo seed creates active shop. |
+| Seller onboarding/KYC | Seller/Admin | `/seller/onboarding`, `/admin/sellers/[id]`, onboarding/document APIs | PASS | `npm run smoke:seller-onboarding`; `npm run test:e2e:seller-onboarding`; backend Jest | Seller saves legal profile, uploads document, admin reviews document, audit log records review. |
 | Seller delivery settings | Seller | `/seller/settings`, `GET/PATCH /api/shops/:shopId/delivery/settings` | PASS | `npm run smoke:delivery`; `npm run test:e2e:full-commerce` API setup | Full E2E configures settings through API for deterministic setup. |
 | Seller create product | Seller | `/seller/products`, `POST /api/shops/:shopId/products` | PASS | Backend tests, product module review, seed/demo | Full browser flow uses seeded products, not browser product creation. |
 | Seller upload product image | Seller | `/seller/products/[id]/images`, `POST /api/shops/:shopId/products/:productId/images` | PASS | Product image tests/module review; seed includes product images | Browser full flow does not upload product image; payment proof upload is browser-tested. |
@@ -98,6 +99,16 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | POST | `/api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/accept` | Delivery | Yes + shop access | Backend tests | PASS |
 | POST | `/api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel` | Delivery | Yes + shop access | Backend tests; smoke coverage | PASS |
 | POST | `/api/files/upload-url` | Files | Yes | Backend module review | PARTIAL |
+| GET | `/api/seller/onboarding/profile` | Seller onboarding | Seller | Backend Jest; `test:e2e:seller-onboarding` | PASS |
+| PUT | `/api/seller/onboarding/profile` | Seller onboarding | Seller | Backend Jest; `smoke:seller-onboarding`; `test:e2e:seller-onboarding` | PASS |
+| GET | `/api/seller/onboarding/documents` | Seller onboarding | Seller | Backend Jest; `smoke:seller-onboarding` | PASS |
+| POST | `/api/seller/onboarding/documents` | Seller onboarding | Seller | Backend Jest; `smoke:seller-onboarding`; `test:e2e:seller-onboarding` | PASS |
+| DELETE | `/api/seller/onboarding/documents/:documentId` | Seller onboarding | Seller | Backend Jest | PASS |
+| GET | `/api/admin/sellers/:userId/onboarding` | Admin onboarding | Admin | Backend Jest; `smoke:seller-onboarding`; `test:e2e:seller-onboarding` | PASS |
+| GET | `/api/admin/sellers/:userId/documents` | Admin onboarding | Admin | Backend Jest; frontend admin detail | PASS |
+| POST | `/api/admin/sellers/:userId/documents/:documentId/approve` | Admin onboarding | Admin | Backend Jest; `smoke:seller-onboarding`; `test:e2e:seller-onboarding` | PASS |
+| POST | `/api/admin/sellers/:userId/documents/:documentId/reject` | Admin onboarding | Admin | Backend Jest | PASS |
+| GET | `/api/admin/audit-logs?targetUserId=...` | Admin audit logs | Admin | Backend Jest; `smoke:seller-onboarding`; `test:e2e:seller-onboarding` | PASS |
 
 ## 4. Frontend Coverage Table
 
@@ -112,6 +123,9 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | `/seller/orders/[id]` | Seller order detail, delivery, status update | Full-commerce E2E | PASS | Delivery calculate/create/refresh and status update verified. |
 | `/seller/payments` | Seller payment queue | Frontend build; payment module smoke | PARTIAL | Detail flow is browser-tested; list smoke is API-level. |
 | `/seller/payments/[orderId]` | Seller payment detail/review | Payment-review E2E; full-commerce E2E | PASS | Proof visibility and mark-paid verified. |
+| `/seller/onboarding` | Seller onboarding/KYC | `test:e2e:seller-onboarding` | PASS | Legal profile and document upload verified. |
+| `/admin/sellers` | Admin seller queue | `test:e2e:admin-seller-approval` | PASS | Seller queue, filters, and review entry point verified. |
+| `/admin/sellers/[id]` | Admin seller onboarding detail | `test:e2e:seller-onboarding` | PASS | Profile, documents, approve actions, and audit timeline verified. |
 | `/products` | Public catalog | Public/full/full-commerce E2E | PASS | Search and card navigation verified. |
 | `/products/[id]` | Public product detail | Public-full/full-commerce E2E | PASS | Quantity and checkout CTA verified. |
 | `/checkout` | Customer checkout | Public-full/full-commerce E2E | PASS | Manual-transfer order creation verified. |
@@ -129,7 +143,11 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | `npm run smoke:inventory` | Inventory read/update, checkout stock deduction, insufficient stock, cross-shop guard | Browser UI not included | PASS |
 | `npm run smoke:inventory-alerts` | Low/out/in-stock filters and stock status changes | Browser UI not included | PASS |
 | `npm run smoke:delivery` | Delivery settings, Yandex-first mock offers, paid order shipment create/refresh, customer tracking delivery projection | Real Yandex/CDEK not included | PASS |
+| `npm run smoke:seller-approval` | Seller registration pending, pending create-shop blocked, KYC document precondition, admin approve/reject, non-admin blocked | Browser UI only covered separately | PASS |
+| `npm run smoke:seller-onboarding` | Seller profile save, document upload, admin onboarding view, document approve, seller approve, audit log, approved seller creates shop | Uses storage abstraction; no real external KYC provider | PASS |
 | `npm run test:e2e:auth` | Browser login, cookie persistence, logout, protected redirect, no JWT localStorage | Does not create shop/product | PASS |
+| `npm run test:e2e:admin-seller-approval` | Browser admin queue approval path | Uses API setup for KYC document precondition | PASS |
+| `npm run test:e2e:seller-onboarding` | Browser seller onboarding submit/upload plus admin document/seller approval and audit view | Does not test document reject UI path in browser | PASS |
 | `npm run test:e2e:public` | Public routes load and basic navigation | No checkout/payment | PASS |
 | `npm run test:e2e:public-full` | Public browse/detail/checkout/tracking/proof | No seller review | PASS |
 | `npm run test:e2e:public-payment-review` | Customer proof, seller payment detail, mark paid, customer sees paid | No delivery/status update | PASS |
@@ -138,7 +156,7 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 ## 6. Gaps / Risks
 
 - Browser E2E does not yet create a seller shop/product/image entirely through UI. Those pieces are API-tested and UI-present, but the current full browser flow starts from seeded demo data.
-- Seller approval is not a complete admin workflow. Seller registration creates pending approval, and shop creation requires approved seller status, but audit found no admin approval UI/API in scope.
+- Seller approval now has admin UI/API and KYC document review. Remaining production gaps are KYC retention/access policy, notifications, and wider admin audit coverage.
 - Product image upload browser coverage is still missing for seller-managed assets.
 - Delivery real providers were not verified. Default verified mode is mock; Yandex/CDEK credentials and account/billing/address edge cases remain unproven.
 - Payment is manual-review only. There is no real payment provider, capture, reconciliation, refund, or webhook path.
@@ -148,7 +166,7 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 
 ## 7. Recommended Next Steps
 
-1. Add admin seller approval API/UI, or explicitly document approval as an operations-only/manual database step for the MVP.
+1. Define KYC production retention, object access, encryption, and deletion policy.
 2. Add browser E2E for seller shop creation, seller product creation, inventory update, and product image upload.
 3. Add browser E2E for `/seller/settings` delivery settings form instead of using API setup in full-commerce.
 4. Harden order/payment/inventory with idempotency keys, concurrency-focused tests, and payment-proof validation rules.

@@ -12,6 +12,7 @@ Rules:
 - `APPROVED` sellers can create shops and sell
 - only `ADMIN` users can list, approve, or reject sellers
 - non-admin users receive `403` on admin seller endpoints
+- seller approval now requires at least one `APPROVED` KYC document
 
 ## Data Model
 
@@ -22,6 +23,10 @@ Seller approval lives on `seller_profiles`:
 - `rejected_at`
 - `rejection_reason`
 - existing compatibility fields: `reviewed_at`, `review_note`
+
+KYC review adds:
+- `seller_documents`
+- `admin_audit_logs`
 
 ## Admin API
 
@@ -35,6 +40,11 @@ All admin endpoints require:
 | `GET` | `/api/admin/sellers/:userId` | Get one seller review record |
 | `POST` | `/api/admin/sellers/:userId/approve` | Approve seller |
 | `POST` | `/api/admin/sellers/:userId/reject` | Reject seller |
+| `GET` | `/api/admin/sellers/:userId/onboarding` | View seller onboarding profile |
+| `GET` | `/api/admin/sellers/:userId/documents` | View seller KYC documents |
+| `POST` | `/api/admin/sellers/:userId/documents/:documentId/approve` | Approve one KYC document |
+| `POST` | `/api/admin/sellers/:userId/documents/:documentId/reject` | Reject one KYC document |
+| `GET` | `/api/admin/audit-logs?targetUserId=...` | View admin audit trail |
 
 Reject body:
 
@@ -65,13 +75,16 @@ Response shape:
 
 Admin UI:
 - `/admin/sellers`
+- `/admin/sellers/[id]`
 - tabs for `PENDING`, `APPROVED`, and `REJECTED`
 - approve button
 - reject modal with optional reason
+- seller onboarding detail, document review, and audit timeline
 
 Seller UX:
 - pending sellers see: `Your seller account is awaiting approval.`
 - rejected sellers see rejection status and reason when available
+- `/seller/onboarding` lets sellers submit legal profile and KYC documents
 - shop creation remains blocked server-side unless seller is approved
 
 ## Demo Seed
@@ -87,13 +100,17 @@ The demo seller is approved; the demo admin can review new sellers in `/admin/se
 Backend:
 - `npm test -- --runInBand`
 - `npm run smoke:seller-approval`
+- `npm run smoke:seller-onboarding`
 
 Frontend:
 - `npm run test:e2e:admin-seller-approval`
+- `npm run test:e2e:seller-onboarding`
 
 The seller approval smoke covers:
 - seller register -> `PENDING`
 - pending seller cannot create shop
+- seller submits onboarding profile and KYC document
+- admin approves a KYC document
 - admin lists pending sellers
 - admin approves seller
 - approved seller can create shop

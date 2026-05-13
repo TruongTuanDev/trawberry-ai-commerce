@@ -78,6 +78,31 @@ if ($pendingShopStatus -ne 403) {
   throw "Expected pending seller shop creation to fail with 403, got $pendingShopStatus"
 }
 
+Invoke-Json -Method "PUT" -Path "/api/seller/onboarding/profile" -Token $sellerLogin.accessToken -Body @{
+  legalType = "IP"
+  legalName = "Approval Smoke Seller IP"
+  inn = "123456789012"
+  ogrn = "1234567890123"
+  legalAddress = "Moscow, Smoke Street 1"
+  contactName = "Approval Smoke Seller"
+  contactPhone = "+79990000001"
+  contactEmail = $sellerEmail
+} | Out-Null
+
+$documentPath = Join-Path $env:TEMP "approval-kyc-$stamp.pdf"
+"%PDF-1.4`n% smoke seller approval document`n" | Set-Content -LiteralPath $documentPath -Encoding ASCII
+$uploadOutput = & curl.exe --ipv4 -s -X POST "$baseUrl/api/seller/onboarding/documents" `
+  -H "Authorization: Bearer $($sellerLogin.accessToken)" `
+  -F "documentType=INN" `
+  -F "file=@$documentPath;type=application/pdf"
+if ($LASTEXITCODE -ne 0) {
+  throw "curl document upload failed with exit code $LASTEXITCODE"
+}
+$uploadedDocument = $uploadOutput | ConvertFrom-Json
+if (-not $uploadedDocument.id) {
+  throw "Expected uploaded seller document id."
+}
+
 $adminLogin = Invoke-Json -Method "POST" -Path "/api/auth/login" -Body @{
   email = "demo-admin@trawberry.local"
   password = "DemoAdmin123!"
@@ -88,6 +113,8 @@ $foundPending = @($pendingSellers | Where-Object { $_.userId -eq $seller.userId 
 if ($foundPending.Count -ne 1) {
   throw "Expected admin pending list to include smoke seller."
 }
+
+Invoke-Json -Method "POST" -Path "/api/admin/sellers/$($seller.userId)/documents/$($uploadedDocument.id)/approve" -Token $adminLogin.accessToken | Out-Null
 
 $approved = Invoke-Json -Method "POST" -Path "/api/admin/sellers/$($seller.userId)/approve" -Token $adminLogin.accessToken
 if ($approved.sellerApprovalStatus -ne "APPROVED") {

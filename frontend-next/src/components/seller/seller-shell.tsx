@@ -15,6 +15,7 @@ const navigation = [
   { href: "/seller/ai-images", label: "AI Images" },
   { href: "/seller/orders", label: "Orders" },
   { href: "/seller/payments", label: "Payments" },
+  { href: "/seller/onboarding", label: "Onboarding" },
   { href: "/seller/settings", label: "Settings" },
 ];
 
@@ -142,9 +143,15 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                   <p className="mt-2 text-sm text-[var(--muted)]">{user.sellerRejectionReason}</p>
                 ) : (
                   <p className="mt-2 text-sm text-[var(--muted)]">
-                    Shop and selling tools become available after admin approval.
+                    Complete onboarding and upload verification documents so an admin can review the account.
                   </p>
                 )}
+                <Link
+                  href="/seller/onboarding"
+                  className="mt-3 inline-flex rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+                >
+                  Open onboarding
+                </Link>
               </div>
             ) : null}
             {children}

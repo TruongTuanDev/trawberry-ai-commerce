@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   approveAdminSeller,
   listAdminSellers,
@@ -136,7 +137,7 @@ export default function AdminSellersPage() {
         {error ? <div className="mt-4 rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
 
         <div className="mt-5 overflow-hidden rounded-[1.25rem] border border-[var(--border)]">
-          <div className="hidden grid-cols-[1.3fr_1fr_160px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)] lg:grid">
+          <div className="hidden grid-cols-[1.3fr_1fr_160px_300px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)] lg:grid">
             <div>Seller</div>
             <div>Status</div>
             <div>Reviewed</div>
@@ -149,7 +150,7 @@ export default function AdminSellersPage() {
               sellers.map((seller) => (
                 <article
                   key={seller.userId}
-                  className="grid gap-4 px-5 py-4 lg:grid-cols-[1.3fr_1fr_160px_220px] lg:items-center"
+                  className="grid gap-4 px-5 py-4 lg:grid-cols-[1.3fr_1fr_160px_300px] lg:items-center"
                   data-testid="admin-seller-row"
                 >
                   <div>
@@ -170,6 +171,13 @@ export default function AdminSellersPage() {
                       : "Not reviewed"}
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/admin/sellers/${seller.userId}`}
+                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
+                      data-testid={`view-seller-${seller.userId}`}
+                    >
+                      Review
+                    </Link>
                     <button
                       type="button"
                       onClick={() => void approve(seller)}

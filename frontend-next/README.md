@@ -14,6 +14,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 ## Routes
 - `/`
 - `/admin/sellers`
+- `/admin/sellers/[id]`
 - `/products`
 - `/products/[id]`
 - `/checkout`
@@ -29,13 +30,22 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/orders/[id]`
 - `/seller/payments`
 - `/seller/payments/[orderId]`
+- `/seller/onboarding`
 - `/seller/settings`
 
 ## Current features
 - Admin seller approval UI with:
   - pending/approved/rejected filters
+  - seller onboarding detail
+  - KYC document review
+  - audit timeline
   - approve action
   - reject action with optional reason
+- Seller onboarding UI with:
+  - legal profile form
+  - KYC document upload
+  - document status list
+  - pending/rejected CTA in seller shell
 - Public marketplace UI with:
   - polished home page
   - responsive product grid
@@ -108,10 +118,29 @@ npm run test:e2e:admin-seller-approval
 
 Current coverage:
 - registers a pending seller through the backend API
+- submits a minimal KYC document precondition through the backend API
 - logs in as seeded demo admin
 - opens `/admin/sellers`
 - approves the pending seller
 - verifies the seller moves to the approved tab
+
+## Playwright seller onboarding flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:seller-onboarding
+```
+
+Current coverage:
+- registers a pending seller
+- logs in as seller and opens `/seller/onboarding`
+- saves legal profile
+- uploads a KYC document
+- logs in as seeded demo admin
+- opens `/admin/sellers/[id]`
+- approves the document
+- approves the seller
+- verifies audit timeline contains the seller approval action
 
 ## Playwright public smoke
 With the Docker stack or local frontend/backend already running:

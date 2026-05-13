@@ -14,6 +14,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { OrderTrackingModule } from './modules/order-tracking/order-tracking.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SellerOnboardingModule } from './modules/seller-onboarding/seller-onboarding.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -39,6 +40,7 @@ import { HealthController } from './health.controller';
     PaymentsModule,
     DeliveryModule,
     AdminModule,
+    SellerOnboardingModule,
     PublicProductsModule,
     CheckoutModule,
     OrderTrackingModule,
