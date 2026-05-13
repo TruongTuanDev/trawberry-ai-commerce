@@ -3,6 +3,81 @@ import { apiRequest } from "@/lib/api";
 export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
 export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE" | "UPLOAD_PROOF";
 export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "NOT_TRACKED";
+export type DeliveryProviderName = "CDEK" | "YANDEX";
+
+export type SellerOrderDeliverySummary = {
+  provider: DeliveryProviderName | string;
+  status: string;
+  providerShipmentId: string | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+};
+
+export type DeliverySettings = {
+  shopId: string;
+  pickupAddress: string;
+  pickupCity: string;
+  pickupPostalCode: string | null;
+  pickupPhone: string;
+  pickupContactName: string;
+  enabledCarriers: string[];
+  defaultCarrier: DeliveryProviderName | string;
+  defaultWeight: string;
+  defaultLength: string;
+  defaultWidth: string;
+  defaultHeight: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DeliveryOffer = {
+  id: string;
+  provider: DeliveryProviderName | string;
+  offerType: string;
+  priceAmount: string;
+  priceCurrency: string;
+  estimatedMinDays: number | null;
+  estimatedMaxDays: number | null;
+  pickupPointId: string | null;
+  expiresAt: string | null;
+};
+
+export type DeliveryEvent = {
+  id: string;
+  provider: string;
+  eventType: string;
+  providerStatus: string | null;
+  message: string | null;
+  createdAt: string;
+};
+
+export type DeliveryShipment = {
+  id: string;
+  provider: DeliveryProviderName | string;
+  providerShipmentId: string | null;
+  providerOrderNumber: string | null;
+  providerStatus: string;
+  internalStatus: string;
+  priceAmount: string | null;
+  priceCurrency: string;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  pickupAddress: string;
+  dropoffAddress: string;
+  createdAt: string;
+  updatedAt: string;
+  acceptedAt: string | null;
+  cancelledAt: string | null;
+  deliveredAt: string | null;
+};
+
+export type DeliveryDetail = {
+  orderId: string;
+  shopId: string;
+  activeShipment: DeliveryShipment | null;
+  offers: DeliveryOffer[];
+  events: DeliveryEvent[];
+};
 
 export type ShopSummary = {
   id: string;
@@ -34,6 +109,7 @@ export type SellerOrderListItem = {
   createdAt: string;
   updatedAt: string;
   customerCompletedAt: string | null;
+  delivery: SellerOrderDeliverySummary | null;
   items: Array<{
     id: string;
     variantId: string | null;
@@ -674,4 +750,132 @@ export async function updateShopOrderStatus(
     token,
     body: JSON.stringify({ status }),
   });
+}
+
+export async function getDeliverySettings(shopId: string, token?: string) {
+  return apiRequest<DeliverySettings>(`/api/shops/${shopId}/delivery/settings`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function updateDeliverySettings(
+  shopId: string,
+  payload: {
+    pickupAddress: string;
+    pickupCity: string;
+    pickupPostalCode?: string;
+    pickupPhone: string;
+    pickupContactName: string;
+    enabledCarriers: Array<"CDEK" | "YANDEX">;
+    defaultCarrier: "CDEK" | "YANDEX";
+    defaultWeight: number;
+    defaultLength: number;
+    defaultWidth: number;
+    defaultHeight: number;
+  },
+  token?: string,
+) {
+  return apiRequest<DeliverySettings>(`/api/shops/${shopId}/delivery/settings`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function calculateDeliveryOffers(
+  shopId: string,
+  orderId: string,
+  payload: {
+    carriers?: Array<"CDEK" | "YANDEX">;
+    pickupAddress?: string;
+    packageInfo?: {
+      weightKg: number;
+      lengthCm: number;
+      widthCm: number;
+      heightCm: number;
+    };
+  },
+  token?: string,
+) {
+  return apiRequest<{ offers: DeliveryOffer[] }>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/offers`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function createDeliveryShipment(
+  shopId: string,
+  orderId: string,
+  payload: {
+    provider?: "CDEK" | "YANDEX";
+    pickupAddress?: string;
+    selectedOfferId?: string;
+    packageInfo?: {
+      weightKg: number;
+      lengthCm: number;
+      widthCm: number;
+      heightCm: number;
+    };
+  },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function cancelDeliveryShipment(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload?: { reason?: string },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/cancel`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+}
+
+export async function refreshDeliveryShipment(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/refresh`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export async function getOrderDelivery(
+  shopId: string,
+  orderId: string,
+  token?: string,
+) {
+  return apiRequest<DeliveryDetail>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }

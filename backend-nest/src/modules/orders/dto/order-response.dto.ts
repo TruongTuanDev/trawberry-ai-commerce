@@ -34,6 +34,23 @@ class OrderCustomerResponseDto {
   email!: string | null;
 }
 
+class OrderDeliveryResponseDto {
+  @ApiProperty()
+  provider!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty({ nullable: true })
+  providerShipmentId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  trackingNumber!: string | null;
+
+  @ApiProperty({ nullable: true })
+  trackingUrl!: string | null;
+}
+
 export class OrderResponseDto {
   @ApiProperty()
   id!: string;
@@ -82,4 +99,7 @@ export class OrderResponseDto {
 
   @ApiProperty({ type: OrderItemResponseDto, isArray: true })
   items!: OrderItemResponseDto[];
+
+  @ApiProperty({ type: OrderDeliveryResponseDto, nullable: true })
+  delivery!: OrderDeliveryResponseDto | null;
 }

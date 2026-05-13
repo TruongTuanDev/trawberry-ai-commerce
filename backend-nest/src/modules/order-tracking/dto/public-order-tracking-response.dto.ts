@@ -74,6 +74,23 @@ class PublicOrderReviewLogDto {
   createdAt!: string;
 }
 
+class PublicOrderDeliveryDto {
+  @ApiProperty()
+  provider!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty({ nullable: true })
+  providerShipmentId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  trackingNumber!: string | null;
+
+  @ApiProperty({ nullable: true })
+  trackingUrl!: string | null;
+}
+
 export class PublicOrderTrackingResponseDto {
   @ApiProperty()
   orderId!: string;
@@ -116,4 +133,7 @@ export class PublicOrderTrackingResponseDto {
 
   @ApiProperty({ type: PublicOrderReviewLogDto, isArray: true })
   paymentLogs!: PublicOrderReviewLogDto[];
+
+  @ApiProperty({ type: PublicOrderDeliveryDto, nullable: true })
+  delivery!: PublicOrderDeliveryDto | null;
 }

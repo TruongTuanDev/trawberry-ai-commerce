@@ -96,6 +96,37 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 - `backend-nest` and `ai-service` must share the same `AI_SERVICE_INTERNAL_TOKEN`
 - Current compose wiring already does this through `infra/.env`
 
+## Delivery Provider Notes
+- Verified default is `DELIVERY_PROVIDER_MODE=mock`
+- Mock mode does not call CDEK or Yandex
+- `DELIVERY_DEFAULT_PROVIDER=cdek` keeps the product roadmap aligned with Russia-wide e-commerce shipping
+- Real carrier credentials must stay only in local secret env files
+
+Carrier env shape:
+
+```env
+DELIVERY_PROVIDER_MODE=mock
+DELIVERY_DEFAULT_PROVIDER=cdek
+
+CDEK_DELIVERY_ENABLED=false
+CDEK_API_BASE_URL=
+CDEK_ACCOUNT=
+CDEK_SECURE_PASSWORD=
+CDEK_TIMEOUT_MS=30000
+CDEK_DEFAULT_CURRENCY=RUB
+CDEK_DEFAULT_TARIFF_CODE=
+
+YANDEX_DELIVERY_ENABLED=false
+YANDEX_DELIVERY_BASE_URL=https://b2b.taxi.yandex.net
+YANDEX_DELIVERY_TOKEN=
+YANDEX_DELIVERY_CLIENT_ID=
+YANDEX_DELIVERY_TIMEOUT_MS=30000
+```
+
+Real modes are intentionally not part of default smoke verification:
+- `cdek` mode requires valid CDEK credentials and later-phase API implementation
+- `yandex` mode is placeholder-only in this phase
+
 ## Smoke Integration
 Run the integration smoke from the host:
 

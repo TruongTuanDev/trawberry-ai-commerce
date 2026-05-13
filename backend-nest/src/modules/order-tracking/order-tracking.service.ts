@@ -43,6 +43,13 @@ type TrackableOrderRecord = {
     id: string;
     paymentInstructions: string | null;
   };
+  deliveryShipments?: Array<{
+    provider: string;
+    internalStatus: string;
+    providerShipmentId: string | null;
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+  }>;
   items: Array<{
     id: string;
     quantity: number;
@@ -223,6 +230,7 @@ export class OrderTrackingService {
   }
 
   private toTrackingResponse(order: TrackableOrderRecord) {
+    const latestShipment = order.deliveryShipments?.[0] ?? null;
     return {
       orderId: order.id,
       orderCode: order.orderNumber,
@@ -266,6 +274,15 @@ export class OrderTrackingService {
         reviewerName: log.reviewer.fullName,
         createdAt: log.createdAt.toISOString(),
       })),
+      delivery: latestShipment
+        ? {
+            provider: latestShipment.provider,
+            status: latestShipment.internalStatus,
+            providerShipmentId: latestShipment.providerShipmentId,
+            trackingNumber: latestShipment.trackingNumber,
+            trackingUrl: latestShipment.trackingUrl,
+          }
+        : null,
     };
   }
 
@@ -275,6 +292,17 @@ export class OrderTrackingService {
         select: {
           id: true,
           paymentInstructions: true,
+        },
+      },
+      deliveryShipments: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          provider: true,
+          internalStatus: true,
+          providerShipmentId: true,
+          trackingNumber: true,
+          trackingUrl: true,
         },
       },
       items: {

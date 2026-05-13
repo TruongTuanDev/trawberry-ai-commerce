@@ -722,6 +722,63 @@ while allowing:
   - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
   - `curl.exe --ipv4 http://localhost:8000/health`: pass
 
+## Multi-Carrier Delivery Foundation / CDEK-first MVP
+
+- Scope:
+  - replace the earlier single-provider delivery direction with a generic multi-carrier foundation
+  - introduce seller delivery settings, generic delivery offers, shipments, and events
+  - keep mock mode as the default verified runtime for CI and local smoke coverage
+  - prepare CDEK as the first real carrier target and Yandex as the second provider path
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/prisma/migrations/20260513_add_yandex_delivery_tables/migration.sql`
+  - `backend-nest/src/modules/delivery/*`
+  - `backend-nest/src/modules/orders/*`
+  - `backend-nest/src/modules/order-tracking/*`
+  - `backend-nest/test/delivery.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-delivery.ps1`
+  - `backend-nest/package.json`
+  - `backend-nest/.env.example`
+  - `infra/.env.example`
+  - `infra/docker-compose.yml`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `frontend-next/src/lib/public-api.ts`
+  - `frontend-next/src/app/seller/settings/page.tsx`
+  - `frontend-next/src/components/seller/seller-delivery-settings-page-client.tsx`
+  - `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`
+  - `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+  - `docs/DELIVERY_PROVIDERS.md`
+  - `docs/API_DELIVERY.md`
+  - `docs/API_DELIVERY_CDEK.md`
+  - `docs/API_ORDERS.md`
+  - `docs/API_ORDER_TRACKING.md`
+  - `docs/RUNTIME_ENV.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - a generic delivery module now exists in `backend-nest` with a provider abstraction instead of carrier-specific controller design
+  - shops can store pickup address, pickup contact, enabled carriers, and default package dimensions
+  - sellers can calculate offers, create shipments, refresh shipments, and cancel shipments in mock mode
+  - customer order tracking now shows delivery provider, status, tracking number, and tracking URL from the latest shipment
+  - `CDEK` has a real-mode skeleton and is positioned as the primary Russia-wide e-commerce carrier
+  - `Yandex` has a placeholder provider/client path reserved for express delivery in a later phase
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `backend-nest npm run smoke:inventory-alerts`: pass
+  - `backend-nest npm run smoke:delivery`: pass
+- Runtime notes:
+  - the old Yandex-only delivery DTO set was removed to avoid leaving two conflicting API shapes in the same module
+  - default verification continues to avoid real carrier calls; mock mode remains the required safe baseline for CI and local demo stability
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

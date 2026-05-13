@@ -397,6 +397,13 @@
 | `GET` | `/api/public/orders/track` | order-tracking | MVP done | No | Yes |
 | `GET` | `/api/public/orders/:orderId/track` | order-tracking | MVP done | No | Yes |
 | `POST` | `/api/public/orders/:orderId/payment-proof` | order-tracking | MVP done | No | Yes |
+| `GET` | `/api/shops/:shopId/delivery/settings` | delivery | MVP done | Yes | Yes |
+| `PATCH` | `/api/shops/:shopId/delivery/settings` | delivery | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/orders/:orderId/delivery/offers` | delivery | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/orders/:orderId/delivery/shipments` | delivery | MVP done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/orders/:orderId/delivery` | delivery | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/refresh` | delivery | MVP done | Yes | Yes |
+| `POST` | `/api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel` | delivery | MVP done | Yes | Yes |
 | `POST` | `/api/files/upload-url` | files | Partial | Yes | No |
 
 ## E. Frontend Page Status
@@ -418,7 +425,7 @@
 | `/seller/orders/[id]` | Seller order detail | Done | Yes | Connected to NestJS orders API. |
 | `/seller/payments` | Seller payment review list | MVP done | Yes | Pending queue, filters, and links into detail. |
 | `/seller/payments/[orderId]` | Seller payment review detail | MVP done | Yes | Mark paid, reject, add note, audit log view. |
-| `/seller/settings` | Seller settings area | Partial | No | Placeholder content only. |
+| `/seller/settings` | Seller delivery settings area | MVP done | Yes | Pickup address, carriers, and default package dimensions are connected. |
 
 ## F. AI Pipeline Status
 
@@ -479,6 +486,7 @@ Current flow:
 | backend-nest | `npm run smoke:order-tracking` | Pass | Customer tracks, uploads proof, seller sees proof, seller marks paid, customer sees updated payment status. |
 | backend-nest | `npm run smoke:inventory` | Pass | Seller stock update + checkout deduction + insufficient stock flow pass. |
 | backend-nest | `npm run smoke:inventory-alerts` | Pass | Seller low-stock filters and quick-update flow pass. |
+| backend-nest | `npm run smoke:delivery` | Pass | Seller configures delivery settings, creates mock CDEK shipment, refreshes shipment, and customer tracking sees delivery info. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -505,12 +513,14 @@ Current flow:
 - Cookie-based auth now has API-level and browser-level smoke coverage, but a final human cross-browser pass is still advisable before production.
 - `ai-service` tree still contains `__pycache__` artifacts in the working tree; they are ignored/noise, not functional code.
 - `backend-nest` AI service client still defaults to `http://localhost:8010` if env is missing; runtime envs override this, but the fallback is stale versus current `8000` standard.
-- `seller/dashboard`, `seller/settings`, and `/seller/ai-images` are still placeholder-level UI.
+- `seller/dashboard` and `/seller/ai-images` are still placeholder-level UI.
 - Payments are now partially migrated for manual seller review, but provider-backed settlement is still missing.
 - Customer checkout, public tracking, and manual transfer proof upload are now in the new stack, but customer order history is still incomplete.
 - Public marketplace is now demo-ready, but richer merchandising, sorting, and customer account history are still incomplete.
 - Inventory is now single-location and variant-local only; no warehouse or ledger model exists yet.
 - Low-stock alerts are seller-facing only in this phase; no notification channel or cron alerting exists yet.
+- Multi-carrier delivery foundation now exists, but real CDEK and Yandex API calls remain intentionally disabled in default verification.
+- Delivery currently supports one active shipment per order and no webhook ingestion yet.
 - Seeded demo data now supports stable public demos, but there is still no automatic database reset/isolation between repeated end-to-end runs.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 
@@ -530,6 +540,8 @@ Current flow:
    - logging and observability
 9. Add CI/CD with GitHub Actions.
 10. Prepare VPS / cloud deployment pipeline.
+11. Implement real CDEK provider calls and pickup-point selection flow.
+12. Add Yandex express real-mode integration on top of the generic delivery foundation.
 
 ## K. Definition of Done for MVP
 
@@ -542,6 +554,7 @@ To demo the MVP cleanly, the following should be available:
 - customer payment proof upload
 - full public customer Playwright E2E
 - seller manual payment review
+- seller delivery settings and mock shipment creation
 - create shop
 - create product
 - upload product image

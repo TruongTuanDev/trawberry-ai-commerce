@@ -9,6 +9,7 @@ Current scope includes:
 - public payment proof upload for manual transfer
 - seller payment detail visibility of uploaded proof
 - basic audit logging through `payment_review_logs`
+- latest delivery shipment visibility through the generic delivery foundation
 
 Current scope does not include:
 - customer account-based order history
@@ -51,6 +52,14 @@ Returned fields:
 - `items`
 - `paymentProof`
 - `paymentLogs`
+- `delivery`
+
+Delivery projection currently includes:
+- `provider`
+- `status`
+- `providerShipmentId`
+- `trackingNumber`
+- `trackingUrl`
 
 ## Payment Proof Upload
 

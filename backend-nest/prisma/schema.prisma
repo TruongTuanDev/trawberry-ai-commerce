@@ -64,6 +64,10 @@ model Shop {
   aiUsageLogs          AiUsageLog[]
   orders               Order[]
   paymentReviewLogs    PaymentReviewLog[]
+  deliverySettings     ShopDeliverySetting?
+  deliveryOffers       DeliveryOffer[]
+  deliveryShipments    DeliveryShipment[]
+  deliveryEvents       DeliveryEvent[]
 
   @@map("shops")
 }
@@ -198,10 +202,107 @@ model Order {
   shop               Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
   items              OrderItem[]
   paymentReviewLogs  PaymentReviewLog[]
+  deliveryOffers     DeliveryOffer[]
+  deliveryShipments  DeliveryShipment[]
+  deliveryEvents     DeliveryEvent[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
   @@map("orders")
+}
+
+model ShopDeliverySetting {
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId             String   @unique @map("shop_id") @db.Uuid
+  pickupAddress      String   @map("pickup_address")
+  pickupCity         String   @map("pickup_city") @db.VarChar(255)
+  pickupPostalCode   String?  @map("pickup_postal_code") @db.VarChar(50)
+  pickupPhone        String   @map("pickup_phone") @db.VarChar(50)
+  pickupContactName  String   @map("pickup_contact_name") @db.VarChar(255)
+  enabledCarriers    Json     @map("enabled_carriers")
+  defaultCarrier     String   @map("default_carrier") @db.VarChar(50)
+  defaultWeight      Decimal  @map("default_weight") @db.Decimal(10, 3)
+  defaultLength      Decimal  @map("default_length") @db.Decimal(10, 3)
+  defaultWidth       Decimal  @map("default_width") @db.Decimal(10, 3)
+  defaultHeight      Decimal  @map("default_height") @db.Decimal(10, 3)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_delivery_settings")
+}
+
+model DeliveryOffer {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId             String    @map("shop_id") @db.Uuid
+  orderId            String    @map("order_id") @db.Uuid
+  provider           String    @db.VarChar(50)
+  offerType          String    @map("offer_type") @db.VarChar(100)
+  priceAmount        Decimal   @map("price_amount") @db.Decimal(10, 2)
+  priceCurrency      String    @map("price_currency") @db.VarChar(10)
+  estimatedMinDays   Int?      @map("estimated_min_days")
+  estimatedMaxDays   Int?      @map("estimated_max_days")
+  pickupPointId      String?   @map("pickup_point_id") @db.VarChar(255)
+  rawProviderPayload Json?     @map("raw_provider_payload")
+  expiresAt          DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  shop               Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("delivery_offers")
+}
+
+model DeliveryShipment {
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId              String    @map("shop_id") @db.Uuid
+  orderId             String    @map("order_id") @db.Uuid
+  provider            String    @db.VarChar(50)
+  providerShipmentId  String?   @map("provider_shipment_id") @db.VarChar(255)
+  providerOrderNumber String?   @map("provider_order_number") @db.VarChar(255)
+  providerStatus      String    @map("provider_status") @db.VarChar(100)
+  internalStatus      String    @map("internal_status") @db.VarChar(100)
+  priceAmount         Decimal?  @map("price_amount") @db.Decimal(10, 2)
+  priceCurrency       String    @map("price_currency") @db.VarChar(10)
+  trackingNumber      String?   @map("tracking_number") @db.VarChar(255)
+  trackingUrl         String?   @map("tracking_url") @db.VarChar(1000)
+  pickupAddress       String    @map("pickup_address")
+  dropoffAddress      String    @map("dropoff_address")
+  rawProviderPayload  Json?     @map("raw_provider_payload")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  acceptedAt          DateTime? @map("accepted_at") @db.Timestamptz(6)
+  cancelledAt         DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  deliveredAt         DateTime? @map("delivered_at") @db.Timestamptz(6)
+  shop                Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  events              DeliveryEvent[]
+
+  @@index([shopId, createdAt])
+  @@index([orderId, createdAt])
+  @@index([providerShipmentId])
+  @@map("delivery_shipments")
+}
+
+model DeliveryEvent {
+  id                 String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  deliveryShipmentId String           @map("delivery_shipment_id") @db.Uuid
+  shopId             String           @map("shop_id") @db.Uuid
+  orderId            String           @map("order_id") @db.Uuid
+  provider           String           @db.VarChar(50)
+  eventType          String           @map("event_type") @db.VarChar(100)
+  providerStatus     String?          @map("provider_status") @db.VarChar(100)
+  message            String?
+  rawPayload         Json?            @map("raw_payload")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  deliveryShipment   DeliveryShipment @relation(fields: [deliveryShipmentId], references: [id], onDelete: Cascade)
+  shop               Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order              Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryShipmentId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("delivery_events")
 }
 
 model PaymentReviewLog {

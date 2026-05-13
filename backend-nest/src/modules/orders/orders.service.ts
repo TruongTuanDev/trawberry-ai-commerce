@@ -25,6 +25,17 @@ export class OrdersService {
           shop: {
             select: { id: true, name: true },
           },
+          deliveryShipments: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              provider: true,
+              internalStatus: true,
+              providerShipmentId: true,
+              trackingNumber: true,
+              trackingUrl: true,
+            },
+          },
           items: {
             orderBy: { productTitleSnapshot: 'asc' },
           },
@@ -58,6 +69,17 @@ export class OrdersService {
       include: {
         shop: {
           select: { id: true, name: true },
+        },
+        deliveryShipments: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            provider: true,
+            internalStatus: true,
+            providerShipmentId: true,
+            trackingNumber: true,
+            trackingUrl: true,
+          },
         },
         items: {
           orderBy: { productTitleSnapshot: 'asc' },
@@ -146,6 +168,17 @@ export class OrdersService {
         include: {
           shop: {
             select: { id: true, name: true },
+          },
+          deliveryShipments: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+            select: {
+              provider: true,
+              internalStatus: true,
+              providerShipmentId: true,
+              trackingNumber: true,
+              trackingUrl: true,
+            },
           },
           items: {
             orderBy: { productTitleSnapshot: 'asc' },
@@ -270,6 +303,13 @@ export class OrdersService {
     updatedAt: Date;
     customerCompletedAt: Date | null;
     shop: { id: string; name: string };
+    deliveryShipments?: Array<{
+      provider: string;
+      internalStatus: string;
+      providerShipmentId: string | null;
+      trackingNumber: string | null;
+      trackingUrl: string | null;
+    }>;
     items: Array<{
       id: string;
       variantId: string | null;
@@ -280,6 +320,7 @@ export class OrdersService {
       productImageSnapshot: string | null;
     }>;
   }) {
+    const latestShipment = order.deliveryShipments?.[0] ?? null;
     return {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -300,6 +341,15 @@ export class OrdersService {
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       customerCompletedAt: order.customerCompletedAt?.toISOString() ?? null,
+      delivery: latestShipment
+        ? {
+            provider: latestShipment.provider,
+            status: latestShipment.internalStatus,
+            providerShipmentId: latestShipment.providerShipmentId,
+            trackingNumber: latestShipment.trackingNumber,
+            trackingUrl: latestShipment.trackingUrl,
+          }
+        : null,
       items: order.items.map((item) => ({
         id: item.id,
         variantId: item.variantId,

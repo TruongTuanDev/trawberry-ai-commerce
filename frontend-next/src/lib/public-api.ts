@@ -102,6 +102,13 @@ export type PublicTrackedOrder = {
     reviewerName: string | null;
     createdAt: string;
   }>;
+  delivery: {
+    provider: string;
+    status: string;
+    providerShipmentId: string | null;
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+  } | null;
 };
 
 export async function getPublicProducts(query?: { search?: string; page?: number; size?: number }) {

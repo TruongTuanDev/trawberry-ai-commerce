@@ -33,6 +33,10 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - responsive product grid
   - product gallery and checkout CTA
   - order tracking and payment proof upload UI
+- Seller delivery operations with:
+  - delivery settings form
+  - order-level delivery offer calculation
+  - shipment create / refresh / cancel in mock mode
 - Seller center layout with sidebar, header, and shop switcher
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages
@@ -148,6 +152,14 @@ Current coverage:
 Seeded seller credentials used by this flow:
 - email: `demo-seller@trawberry.local`
 - password: `DemoSeller123!`
+
+## Seller delivery demo
+With Docker runtime healthy and backend smoke data available, seller pages can now exercise the mock delivery flow:
+
+- `/seller/settings`
+- `/seller/orders/[id]`
+
+The current verified delivery mode is backend-driven mock mode. The frontend does not call CDEK or Yandex directly.
 
 ## Main files
 - `src/app/login/page.tsx`

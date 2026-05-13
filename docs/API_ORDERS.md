@@ -8,10 +8,12 @@ Current scope is limited to seller order management:
 - get order detail
 - update fulfillment status
 - read new orders created by the Checkout MVP
+- read latest delivery shipment summary created by the delivery foundation
 
 This is not yet a full payments module and does not include:
 - payment provider integration
-- shipment creation/tracking APIs in NestJS
+- carrier webhook processing
+- advanced fulfillment automation
 
 ## Auth and Access
 
@@ -75,7 +77,14 @@ Response shape:
 
 ### `GET /api/shops/:shopId/orders/:orderId`
 
-Return one seller-visible order with customer snapshot, items, totals, shipping address, and payment status.
+Return one seller-visible order with customer snapshot, items, totals, shipping address, payment status, and the latest delivery shipment summary when present.
+
+Delivery summary fields currently projected in the order detail:
+- `provider`
+- `status`
+- `providerShipmentId`
+- `trackingNumber`
+- `trackingUrl`
 
 ### `PATCH /api/shops/:shopId/orders/:orderId/status`
 
@@ -133,6 +142,7 @@ Still missing in the new NestJS stack:
 - customer order history API
 - payment confirmation upload/review workflow
 - payment provider integration
-- shipment lifecycle APIs
+- carrier webhooks and automated delivery events
+- multi-shipment orchestration
 
 Those flows still belong to the migration backlog and should not be treated as complete.

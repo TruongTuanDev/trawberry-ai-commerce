@@ -219,6 +219,44 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                 </section>
 
                 <section className="card-panel rounded-[2rem] px-6 py-8">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Delivery</p>
+                  {order.delivery ? (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Metric label="Provider">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">{order.delivery.provider}</p>
+                        </Metric>
+                        <Metric label="Status">
+                          <p className="text-sm font-semibold text-[var(--foreground)]" data-testid="tracked-delivery-status">
+                            {order.delivery.status}
+                          </p>
+                        </Metric>
+                      </div>
+                      <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+                        <p className="text-sm font-semibold text-[var(--foreground)]">Claim reference</p>
+                        <p className="mt-2 text-sm text-[var(--muted)]">{order.delivery.providerShipmentId ?? "Awaiting provider shipment id."}</p>
+                        <p className="mt-3 text-sm text-[var(--muted)]">Tracking number: {order.delivery.trackingNumber ?? "Not assigned yet."}</p>
+                        {order.delivery.trackingUrl ? (
+                          <a
+                            href={order.delivery.trackingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="public-button-secondary mt-4 inline-flex px-4 py-2 text-sm"
+                            data-testid="tracked-delivery-link"
+                          >
+                            Open delivery tracking
+                          </a>
+                        ) : (
+                          <p className="mt-3 text-sm text-[var(--muted)]">Tracking link will appear after the seller accepts the delivery claim.</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-[var(--muted)]">Delivery has not been created for this order yet.</p>
+                  )}
+                </section>
+
+                <section className="card-panel rounded-[2rem] px-6 py-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Payment log</p>
                   <div className="mt-4 space-y-4">
                     {order.paymentLogs.length ? (

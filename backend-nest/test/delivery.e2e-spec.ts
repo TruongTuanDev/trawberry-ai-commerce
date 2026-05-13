@@ -1,0 +1,671 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/common/prisma/prisma.service';
+import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
+import { DeliveryDetailResponseDto } from '../src/modules/delivery/dto/delivery-detail-response.dto';
+import { DeliveryOffersResponseDto } from '../src/modules/delivery/dto/delivery-offers-response.dto';
+import { DeliverySettingsResponseDto } from '../src/modules/delivery/dto/delivery-settings-response.dto';
+import { DeliveryShipmentResponseDto } from '../src/modules/delivery/dto/delivery-shipment-response.dto';
+import { readBody } from './test-helpers';
+
+type DecimalLike = { toString(): string };
+
+type StoredUser = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  fullName: string | null;
+  phone: string | null;
+  role: string;
+  status: string;
+  createdAt: Date;
+  sellerProfile?: {
+    id: string;
+    userId: string;
+    approvalStatus: string;
+    currentShopId: string | null;
+  } | null;
+};
+
+type StoredShop = {
+  id: string;
+  sellerProfileId: string;
+  name: string;
+  slug: string;
+  status: string;
+  sellerProfile: { userId: string };
+};
+
+type StoredDeliverySetting = {
+  id: string;
+  shopId: string;
+  pickupAddress: string;
+  pickupCity: string;
+  pickupPostalCode: string | null;
+  pickupPhone: string;
+  pickupContactName: string;
+  enabledCarriers: Prisma.JsonValue;
+  defaultCarrier: string;
+  defaultWeight: DecimalLike;
+  defaultLength: DecimalLike;
+  defaultWidth: DecimalLike;
+  defaultHeight: DecimalLike;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type StoredDeliveryOffer = {
+  id: string;
+  shopId: string;
+  orderId: string;
+  provider: string;
+  offerType: string;
+  priceAmount: DecimalLike;
+  priceCurrency: string;
+  estimatedMinDays: number | null;
+  estimatedMaxDays: number | null;
+  pickupPointId: string | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+};
+
+type StoredDeliveryEvent = {
+  id: string;
+  deliveryShipmentId: string;
+  shopId: string;
+  orderId: string;
+  provider: string;
+  eventType: string;
+  providerStatus: string | null;
+  message: string | null;
+  createdAt: Date;
+};
+
+type StoredDeliveryShipment = {
+  id: string;
+  shopId: string;
+  orderId: string;
+  provider: string;
+  providerShipmentId: string | null;
+  providerOrderNumber: string | null;
+  providerStatus: string;
+  internalStatus: string;
+  priceAmount: DecimalLike | null;
+  priceCurrency: string;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  pickupAddress: string;
+  dropoffAddress: string;
+  rawProviderPayload: Prisma.JsonValue | null;
+  createdAt: Date;
+  updatedAt: Date;
+  acceptedAt: Date | null;
+  cancelledAt: Date | null;
+  deliveredAt: Date | null;
+};
+
+type StoredOrder = {
+  id: string;
+  shopId: string;
+  customerId: string;
+  orderNumber: string;
+  paymentStatus: string;
+  shippingAddress: string;
+  customerName: string;
+  customerPhone: string;
+};
+
+describe('DeliveryController (e2e)', () => {
+  let app: INestApplication<App>;
+  let users: StoredUser[];
+  let shops: StoredShop[];
+  let settings: StoredDeliverySetting[];
+  let orders: StoredOrder[];
+  let offers: StoredDeliveryOffer[];
+  let shipments: StoredDeliveryShipment[];
+  let events: StoredDeliveryEvent[];
+
+  const prismaMock = {
+    user: { findUnique: jest.fn() },
+    shop: { findUnique: jest.fn() },
+    order: { findFirst: jest.fn() },
+    shopDeliverySetting: { findUnique: jest.fn(), upsert: jest.fn() },
+    deliveryOffer: { deleteMany: jest.fn(), create: jest.fn() },
+    deliveryShipment: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+    },
+    deliveryEvent: { create: jest.fn() },
+    $transaction: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    users = [
+      {
+        id: 'seller-user-1',
+        email: 'seller1@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        fullName: 'Seller One',
+        phone: null,
+        role: 'SELLER',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: {
+          id: 'sp-1',
+          userId: 'seller-user-1',
+          approvalStatus: 'APPROVED',
+          currentShopId: 'shop-1',
+        },
+      },
+      {
+        id: 'seller-user-2',
+        email: 'seller2@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        fullName: 'Seller Two',
+        phone: null,
+        role: 'SELLER',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: {
+          id: 'sp-2',
+          userId: 'seller-user-2',
+          approvalStatus: 'APPROVED',
+          currentShopId: 'shop-2',
+        },
+      },
+    ];
+
+    shops = [
+      {
+        id: 'shop-1',
+        sellerProfileId: 'sp-1',
+        name: 'Shop One',
+        slug: 'shop-one',
+        status: 'ACTIVE',
+        sellerProfile: { userId: 'seller-user-1' },
+      },
+      {
+        id: 'shop-2',
+        sellerProfileId: 'sp-2',
+        name: 'Shop Two',
+        slug: 'shop-two',
+        status: 'ACTIVE',
+        sellerProfile: { userId: 'seller-user-2' },
+      },
+    ];
+
+    settings = [];
+    offers = [];
+    shipments = [];
+    events = [];
+    orders = [
+      {
+        id: 'order-paid',
+        shopId: 'shop-1',
+        customerId: 'customer-1',
+        orderNumber: 'ORD-DEL-1001',
+        paymentStatus: 'PAID',
+        shippingAddress: 'Lenina 10, Moscow',
+        customerName: 'Alice',
+        customerPhone: '+79990000001',
+      },
+      {
+        id: 'order-unpaid',
+        shopId: 'shop-1',
+        customerId: 'customer-2',
+        orderNumber: 'ORD-DEL-1002',
+        paymentStatus: 'PENDING',
+        shippingAddress: 'Nevsky 5, Moscow',
+        customerName: 'Bob',
+        customerPhone: '+79990000002',
+      },
+      {
+        id: 'order-other-shop',
+        shopId: 'shop-2',
+        customerId: 'customer-3',
+        orderNumber: 'ORD-DEL-2001',
+        paymentStatus: 'PAID',
+        shippingAddress: 'Arbat 7, Kazan',
+        customerName: 'Carol',
+        customerPhone: '+79990000003',
+      },
+    ];
+
+    prismaMock.user.findUnique.mockImplementation(({ where, include }) => {
+      const found = users.find((user) =>
+        where.email
+          ? user.email === where.email.toLowerCase()
+          : user.id === where.id,
+      );
+      if (!found) return Promise.resolve(null);
+      if (include?.sellerProfile) {
+        return Promise.resolve({
+          ...found,
+          sellerProfile: found.sellerProfile ?? null,
+        });
+      }
+      return Promise.resolve(found);
+    });
+
+    prismaMock.shop.findUnique.mockImplementation(({ where, select }) => {
+      const shop = shops.find((entry) => entry.id === where.id) ?? null;
+      if (!shop) return Promise.resolve(null);
+      if (select?.sellerProfile) {
+        return Promise.resolve({
+          id: shop.id,
+          sellerProfile: shop.sellerProfile,
+        });
+      }
+      return Promise.resolve(shop);
+    });
+
+    prismaMock.shopDeliverySetting.findUnique.mockImplementation(
+      ({ where }) => {
+        return Promise.resolve(
+          settings.find((entry) => entry.shopId === where.shopId) ?? null,
+        );
+      },
+    );
+
+    prismaMock.shopDeliverySetting.upsert.mockImplementation(
+      ({ where, update, create }) => {
+        const existingIndex = settings.findIndex(
+          (entry) => entry.shopId === where.shopId,
+        );
+        const now = new Date();
+        if (existingIndex >= 0) {
+          settings[existingIndex] = {
+            ...settings[existingIndex],
+            ...normalizeSettingData(update),
+            updatedAt: now,
+          };
+          return Promise.resolve(settings[existingIndex]);
+        }
+
+        const next: StoredDeliverySetting = {
+          id: create.id,
+          shopId: create.shopId,
+          ...normalizeSettingData(create),
+          createdAt: now,
+          updatedAt: now,
+        };
+        settings.push(next);
+        return Promise.resolve(next);
+      },
+    );
+
+    prismaMock.order.findFirst.mockImplementation(({ where }) => {
+      const order = orders.find((entry) => {
+        if (where.id && entry.id !== where.id) return false;
+        if (where.shopId && entry.shopId !== where.shopId) return false;
+        if (where.orderNumber && entry.orderNumber !== where.orderNumber)
+          return false;
+        return true;
+      });
+      if (!order) return Promise.resolve(null);
+
+      const shop = shops.find((entry) => entry.id === order.shopId);
+      if (!shop) return Promise.resolve(null);
+      const shopSetting =
+        settings.find((entry) => entry.shopId === order.shopId) ?? null;
+      const orderOffers = offers
+        .filter((entry) => entry.orderId === order.id)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const orderShipments = shipments
+        .filter((entry) => entry.orderId === order.id)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map((shipment) => ({
+          ...shipment,
+          events: events
+            .filter((event) => event.deliveryShipmentId === shipment.id)
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+        }));
+
+      return Promise.resolve({
+        ...order,
+        shop: {
+          id: shop.id,
+          deliverySettings: shopSetting,
+        },
+        deliveryOffers: orderOffers,
+        deliveryShipments: orderShipments,
+      });
+    });
+
+    prismaMock.deliveryOffer.deleteMany.mockImplementation(({ where }) => {
+      offers = offers.filter((entry) => entry.orderId !== where.orderId);
+      return Promise.resolve({ count: 1 });
+    });
+
+    prismaMock.deliveryOffer.create.mockImplementation(({ data }) => {
+      const next: StoredDeliveryOffer = {
+        id: data.id,
+        shopId: data.shopId,
+        orderId: data.orderId,
+        provider: data.provider,
+        offerType: data.offerType,
+        priceAmount: data.priceAmount,
+        priceCurrency: data.priceCurrency,
+        estimatedMinDays: data.estimatedMinDays ?? null,
+        estimatedMaxDays: data.estimatedMaxDays ?? null,
+        pickupPointId: data.pickupPointId ?? null,
+        expiresAt: data.expiresAt ?? null,
+        createdAt: new Date(),
+      };
+      offers.push(next);
+      return Promise.resolve(next);
+    });
+
+    prismaMock.deliveryShipment.create.mockImplementation(({ data }) => {
+      const next: StoredDeliveryShipment = {
+        id: data.id,
+        shopId: data.shopId,
+        orderId: data.orderId,
+        provider: data.provider,
+        providerShipmentId: data.providerShipmentId ?? null,
+        providerOrderNumber: data.providerOrderNumber ?? null,
+        providerStatus: data.providerStatus,
+        internalStatus: data.internalStatus,
+        priceAmount: data.priceAmount ?? null,
+        priceCurrency: data.priceCurrency,
+        trackingNumber: data.trackingNumber ?? null,
+        trackingUrl: data.trackingUrl ?? null,
+        pickupAddress: data.pickupAddress,
+        dropoffAddress: data.dropoffAddress,
+        rawProviderPayload: data.rawProviderPayload ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        acceptedAt: data.acceptedAt ?? null,
+        cancelledAt: data.cancelledAt ?? null,
+        deliveredAt: data.deliveredAt ?? null,
+      };
+      shipments.push(next);
+      return Promise.resolve(next);
+    });
+
+    prismaMock.deliveryShipment.findFirst.mockImplementation(({ where }) => {
+      return Promise.resolve(
+        shipments.find(
+          (entry) =>
+            entry.id === where.id &&
+            entry.shopId === where.shopId &&
+            entry.orderId === where.orderId,
+        ) ?? null,
+      );
+    });
+
+    prismaMock.deliveryShipment.update.mockImplementation(({ where, data }) => {
+      const index = shipments.findIndex((entry) => entry.id === where.id);
+      if (index === -1) {
+        throw new Error('Shipment not found');
+      }
+      shipments[index] = {
+        ...shipments[index],
+        ...data,
+        updatedAt: new Date(),
+      };
+      return Promise.resolve(shipments[index]);
+    });
+
+    prismaMock.deliveryEvent.create.mockImplementation(({ data }) => {
+      const event: StoredDeliveryEvent = {
+        id: data.id,
+        deliveryShipmentId: data.deliveryShipmentId,
+        shopId: data.shopId,
+        orderId: data.orderId,
+        provider: data.provider,
+        eventType: data.eventType,
+        providerStatus: data.providerStatus ?? null,
+        message: data.message ?? null,
+        createdAt: new Date(),
+      };
+      events.push(event);
+      return Promise.resolve(event);
+    });
+
+    prismaMock.$transaction.mockImplementation(
+      (callback: (tx: typeof prismaMock) => unknown) =>
+        Promise.resolve(callback(prismaMock)),
+    );
+
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(PrismaService)
+      .useValue(prismaMock)
+      .compile();
+
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
+    await app.init();
+  });
+
+  afterEach(async () => {
+    await app.close();
+    jest.clearAllMocks();
+  });
+
+  it('updates delivery settings for a shop', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .patch('/api/shops/shop-1/delivery/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send(validSettingsPayload())
+      .expect(200);
+
+    const body = readBody<DeliverySettingsResponseDto>(response);
+    expect(body.pickupCity).toBe('Moscow');
+    expect(body.defaultCarrier).toBe('CDEK');
+    expect(body.enabledCarriers).toEqual(['CDEK', 'YANDEX']);
+  });
+
+  it('calculates mock offers after settings are configured', async () => {
+    await setSettings(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/offers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(201);
+
+    const body = readBody<DeliveryOffersResponseDto>(response);
+    expect(body.offers).toHaveLength(3);
+    expect(body.offers.some((offer) => offer.offerType === 'CDEK_PICKUP')).toBe(
+      true,
+    );
+    expect(
+      body.offers.some((offer) => offer.offerType === 'YANDEX_EXPRESS'),
+    ).toBe(true);
+  });
+
+  it('creates, refreshes, and cancels a mock shipment', async () => {
+    await setSettings(app);
+    await calculateOffers(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/shipments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'CDEK' })
+      .expect(201);
+    const created = readBody<DeliveryShipmentResponseDto>(createResponse);
+    expect(created.provider).toBe('CDEK');
+    expect(created.providerStatus).toBe('CREATED');
+
+    const refreshResponse = await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/refresh`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    expect(
+      readBody<DeliveryShipmentResponseDto>(refreshResponse).internalStatus,
+    ).toBe('IN_TRANSIT');
+
+    const cancelResponse = await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/cancel`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({ reason: 'Customer changed mind.' })
+      .expect(201);
+    expect(
+      readBody<DeliveryShipmentResponseDto>(cancelResponse).internalStatus,
+    ).toBe('CANCELLED');
+  });
+
+  it('returns delivery detail with offers and active shipment', async () => {
+    await setSettings(app);
+    await calculateOffers(app);
+    await createShipment(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/orders/order-paid/delivery')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = readBody<DeliveryDetailResponseDto>(response);
+    expect(body.activeShipment?.provider).toBe('CDEK');
+    expect(body.offers.length).toBeGreaterThan(0);
+    expect(body.events[0].eventType).toBe('SHIPMENT_CREATED');
+  });
+
+  it('rejects shipment creation when order is unpaid', async () => {
+    await setSettings(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-unpaid/delivery/shipments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'CDEK' })
+      .expect(400);
+  });
+
+  it('rejects shipment creation when settings are missing', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/shipments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'CDEK' })
+      .expect(400);
+  });
+
+  it('rejects duplicate active shipment for the same order', async () => {
+    await setSettings(app);
+    await calculateOffers(app);
+    await createShipment(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/shipments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'CDEK' })
+      .expect(400);
+  });
+
+  it('forbids cross-shop delivery access', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .get('/api/shops/shop-2/delivery/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
+  async function setSettings(testApp: INestApplication<App>) {
+    const token = await loginAndGetToken(testApp, 'seller1@example.com');
+    await request(testApp.getHttpServer())
+      .patch('/api/shops/shop-1/delivery/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send(validSettingsPayload())
+      .expect(200);
+  }
+
+  async function calculateOffers(testApp: INestApplication<App>) {
+    const token = await loginAndGetToken(testApp, 'seller1@example.com');
+    await request(testApp.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/offers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+      .expect(201);
+  }
+
+  async function createShipment(testApp: INestApplication<App>) {
+    const token = await loginAndGetToken(testApp, 'seller1@example.com');
+    await request(testApp.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/shipments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'CDEK' })
+      .expect(201);
+  }
+});
+
+async function loginAndGetToken(app: INestApplication<App>, email: string) {
+  const response = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ email, password: 'password123' })
+    .expect(200);
+
+  return readBody<AuthResponseDto>(response).accessToken;
+}
+
+function validSettingsPayload() {
+  return {
+    pickupAddress: 'Tverskaya 1',
+    pickupCity: 'Moscow',
+    pickupPostalCode: '101000',
+    pickupPhone: '+74950000000',
+    pickupContactName: 'Seller Ops',
+    enabledCarriers: ['CDEK', 'YANDEX'],
+    defaultCarrier: 'CDEK',
+    defaultWeight: 1.2,
+    defaultLength: 30,
+    defaultWidth: 20,
+    defaultHeight: 10,
+  };
+}
+
+function normalizeSettingData(
+  input: Record<string, unknown>,
+): Omit<StoredDeliverySetting, 'id' | 'shopId' | 'createdAt' | 'updatedAt'> {
+  return {
+    pickupAddress: String(input.pickupAddress),
+    pickupCity: String(input.pickupCity),
+    pickupPostalCode: toScalarString(input.pickupPostalCode),
+    pickupPhone: String(input.pickupPhone),
+    pickupContactName: String(input.pickupContactName),
+    enabledCarriers: (input.enabledCarriers as Prisma.JsonValue) ?? ['CDEK'],
+    defaultCarrier: String(input.defaultCarrier),
+    defaultWeight: decimalLike(input.defaultWeight),
+    defaultLength: decimalLike(input.defaultLength),
+    defaultWidth: decimalLike(input.defaultWidth),
+    defaultHeight: decimalLike(input.defaultHeight),
+  };
+}
+
+function decimalLike(value: unknown): DecimalLike {
+  return {
+    toString: () => toScalarString(value) ?? '',
+  };
+}
+
+function toScalarString(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'bigint') {
+    return String(value);
+  }
+  return null;
+}
