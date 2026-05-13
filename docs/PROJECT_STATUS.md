@@ -204,6 +204,17 @@
   - browser-level E2E now covers customer proof upload, seller review, seller mark paid, and customer re-check of `paymentStatus=PAID`
   - seller phase uses the seeded demo seller account and navigates directly to `/seller/payments/[orderId]` for stability
 
+### Full Seller-to-Customer Commerce Audit
+- Status: MVP pass / production readiness partial
+- Evidence:
+  - `docs/FULL_FLOW_AUDIT.md`
+  - `frontend-next/tests/e2e/full-commerce-flow.spec.ts`
+  - `frontend-next/package.json` script `test:e2e:full-commerce`
+- Notes:
+  - browser-level E2E now covers public product listing/detail, checkout, stock deduction assertion, order tracking, payment proof upload, seller orders list/detail, seller payment proof review, mark paid, mock delivery create/refresh, seller order status update, and customer tracking re-check
+  - audited runtime passed Docker health checks, backend tests/build/smoke scripts, frontend lint/build, and all Playwright suites
+  - seller approval admin workflow, full browser seller product creation/image upload, real payment providers, real Yandex/CDEK, and real OpenAI remain outside the verified MVP path
+
 ### Payments
 - Status: MVP done for manual review
 - Evidence:

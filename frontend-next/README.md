@@ -25,6 +25,9 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/products/[id]/images`
 - `/seller/ai-images`
 - `/seller/orders`
+- `/seller/orders/[id]`
+- `/seller/payments`
+- `/seller/payments/[orderId]`
 - `/seller/settings`
 
 ## Current features
@@ -152,6 +155,26 @@ Current coverage:
 Seeded seller credentials used by this flow:
 - email: `demo-seller@trawberry.local`
 - password: `DemoSeller123!`
+
+## Playwright full commerce flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:full-commerce
+```
+
+Current coverage:
+- public product listing and product detail
+- customer checkout and order tracking
+- stock deduction assertion through the public product API
+- customer payment proof upload
+- seller orders list and detail
+- seller payment detail, proof visibility, and mark-paid action
+- seller mock delivery offer calculation, shipment creation, and refresh
+- seller fulfillment status update to `ASSEMBLING` and `SHIPPING`
+- customer tracking re-check for `PAID`, delivery `IN_TRANSIT`, tracking link, and `SHIPPING`
+
+This flow uses seeded demo products and API setup for delivery settings to keep the browser path deterministic.
 
 ## Seller delivery demo
 With Docker runtime healthy and backend smoke data available, seller pages can now exercise the mock delivery flow:

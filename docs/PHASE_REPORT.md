@@ -854,3 +854,59 @@ git rm --cached ai-service\.env
 git rm --cached frontend-next\.env
 git rm --cached frontend-next\.env.local
 ```
+
+## Full Seller-to-Customer Commerce Flow Audit
+
+- Scope:
+  - audit docs, backend modules, frontend routes, Docker runtime, smoke scripts, and browser E2E coverage for the complete marketplace MVP
+  - verify seller/customer flow from public product browse through checkout, proof upload, seller payment review, delivery mock shipment, seller fulfillment status, and customer tracking update
+  - keep `strawberry-frontend` and `strawberry-backend` untouched
+- Result:
+  - `docs/FULL_FLOW_AUDIT.md` added with executive summary, full flow table, API coverage table, frontend route coverage, existing smoke/E2E coverage, gaps/risks, and next steps
+  - added `frontend-next/tests/e2e/full-commerce-flow.spec.ts`
+  - added `frontend-next` script `npm run test:e2e:full-commerce`
+  - full MVP flow is demo-ready with seeded demo data, manual payment review, and mock delivery
+  - production readiness remains partial because admin seller approval UI/API, full seller create-product browser path, real payment providers, real Yandex/CDEK, and real OpenAI verification are not complete
+- Verification for this pass:
+  - `docker version`: pass
+  - `docker compose version`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass, output suppressed to avoid secret exposure
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass, all core services healthy
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, 13 suites / 73 tests
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `backend-nest npm run smoke:inventory-alerts`: pass
+  - `backend-nest npm run smoke:delivery`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass
+  - `frontend-next npm run test:e2e:full-commerce`: pass
+- Files changed:
+  - `docs/FULL_FLOW_AUDIT.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+  - `frontend-next/README.md`
+  - `frontend-next/package.json`
+  - `frontend-next/tests/e2e/full-commerce-flow.spec.ts`
+- Remaining gaps:
+  - no browser E2E for seller shop/product/image creation from blank state
+  - seller approval lacks admin workflow
+  - delivery real Yandex/CDEK mode not verified
+  - payment provider integration not implemented
+  - OpenAI real mode intentionally not called
+- Commit info:
+  - pending commit message: `test: audit full seller to customer commerce flow`
