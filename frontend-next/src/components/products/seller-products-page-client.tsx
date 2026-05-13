@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SectionCard } from "@/components/seller/section-card";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductTable } from "@/components/products/product-table";
-import { getShopProducts } from "@/lib/seller-api";
+import { getShopProducts, updateShopProductInventory, type ProductListItem } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
@@ -20,6 +20,7 @@ export function SellerProductsPageClient() {
   const [filters, setFilters] = useState({
     search: searchParams.get("search") ?? "",
     status: searchParams.get("status") ?? "",
+    stockStatus: searchParams.get("stockStatus") ?? "",
   });
   const [page, setPage] = useState(Number(searchParams.get("page") ?? "1"));
   const [state, setState] = useState<{
@@ -40,6 +41,7 @@ export function SellerProductsPageClient() {
     setFilters({
       search: searchParams.get("search") ?? "",
       status: searchParams.get("status") ?? "",
+      stockStatus: searchParams.get("stockStatus") ?? "",
     });
     setPage(Number(searchParams.get("page") ?? "1"));
   }, [searchParams]);
@@ -60,6 +62,7 @@ export function SellerProductsPageClient() {
             size: PAGE_SIZE,
             search: filters.search || undefined,
             status: filters.status || undefined,
+            stockStatus: (filters.stockStatus || undefined) as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
           },
           "",
         );
@@ -80,12 +83,19 @@ export function SellerProductsPageClient() {
     };
 
     void run();
-  }, [currentShopId, filters.search, filters.status, page, user]);
+  }, [currentShopId, filters.search, filters.status, filters.stockStatus, page, user]);
+
+  const stockCounts = useMemo(() => ({
+    tracked: state.items.filter((item) => item.trackInventory).length,
+    lowStock: state.items.filter((item) => item.stockStatus === "LOW_STOCK").length,
+    outOfStock: state.items.filter((item) => item.stockStatus === "OUT_OF_STOCK").length,
+  }), [state.items]);
 
   const applyFilters = () => {
     const params = new URLSearchParams();
     if (filters.search) params.set("search", filters.search);
     if (filters.status) params.set("status", filters.status);
+    if (filters.stockStatus) params.set("stockStatus", filters.stockStatus);
     params.set("page", "1");
     router.replace(`/seller/products?${params.toString()}`);
   };
@@ -94,8 +104,50 @@ export function SellerProductsPageClient() {
     const params = new URLSearchParams();
     if (filters.search) params.set("search", filters.search);
     if (filters.status) params.set("status", filters.status);
+    if (filters.stockStatus) params.set("stockStatus", filters.stockStatus);
     params.set("page", String(nextPage));
     router.replace(`/seller/products?${params.toString()}`);
+  };
+
+  const handleQuickUpdate = async (product: ProductListItem, stockQuantity: number) => {
+    if (!currentShopId) {
+      return;
+    }
+
+    setState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      await updateShopProductInventory(currentShopId, product.id, {
+        variantId: product.primaryVariantId ?? undefined,
+        stockQuantity,
+      });
+
+      const response = await getShopProducts(
+        currentShopId,
+        {
+          page,
+          size: PAGE_SIZE,
+          search: filters.search || undefined,
+          status: filters.status || undefined,
+          stockStatus: (filters.stockStatus || undefined) as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
+        },
+        "",
+      );
+
+      setState({
+        items: response.items,
+        meta: response.meta,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error instanceof Error ? error.message : "Unable to update stock.",
+      }));
+      throw error;
+    }
   };
 
   return (
@@ -107,6 +159,12 @@ export function SellerProductsPageClient() {
       >
         <div className="space-y-5">
           <ProductFilters value={filters} onChange={setFilters} onSubmit={applyFilters} />
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <InventorySummaryCard label="Tracked products" value={String(stockCounts.tracked)} tone="neutral" />
+            <InventorySummaryCard label="Low stock on this page" value={String(stockCounts.lowStock)} tone={stockCounts.lowStock > 0 ? "warn" : "ok"} />
+            <InventorySummaryCard label="Out of stock on this page" value={String(stockCounts.outOfStock)} tone={stockCounts.outOfStock > 0 ? "danger" : "ok"} />
+          </div>
 
           {state.error ? (
             <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -124,6 +182,7 @@ export function SellerProductsPageClient() {
                 <ProductTable
                   products={state.items}
                   onEdit={(productId) => router.push(`/seller/products/${productId}`)}
+                  onQuickUpdate={handleQuickUpdate}
                 />
               )}
               <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -157,6 +216,32 @@ export function SellerProductsPageClient() {
           )}
         </div>
       </SectionCard>
+    </div>
+  );
+}
+
+function InventorySummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "neutral" | "ok" | "warn" | "danger";
+}) {
+  const colorClass =
+    tone === "ok"
+      ? "text-emerald-700"
+      : tone === "warn"
+        ? "text-amber-700"
+        : tone === "danger"
+          ? "text-rose-700"
+          : "text-[var(--foreground)]";
+
+  return (
+    <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
+      <p className={`mt-2 text-2xl font-semibold ${colorClass}`}>{value}</p>
     </div>
   );
 }

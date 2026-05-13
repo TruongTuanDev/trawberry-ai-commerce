@@ -17,13 +17,31 @@ Current scope does not include:
 
 ## Inventory Model
 
-This MVP reuses the existing `product_variants` fields:
+This MVP reuses and extends the existing `product_variants` fields:
 - `stockQuantity`
 - `reservedStock`
+- `lowStockThreshold`
+- `trackInventory`
 
 Current semantics:
 - `stockQuantity` = sellable stock still available for checkout
 - `reservedStock` = units already allocated to placed orders and not yet released by lifecycle transitions
+- `lowStockThreshold` = seller warning threshold for low-stock alerts
+- `trackInventory` = whether the variant participates in stock enforcement and low-stock alerts
+
+### Stock status rules
+
+Variant-level:
+- `OUT_OF_STOCK`: `trackInventory=true` and `stockQuantity <= 0`
+- `LOW_STOCK`: `trackInventory=true` and `stockQuantity > 0` and `stockQuantity <= lowStockThreshold`
+- `IN_STOCK`: `trackInventory=true` and `stockQuantity > lowStockThreshold`
+- `NOT_TRACKED`: `trackInventory=false`
+
+Product-level seller list:
+- if all variants are untracked: `NOT_TRACKED`
+- if tracked stock is `0`: `OUT_OF_STOCK`
+- if tracked stock is above `0` but at or below aggregate threshold: `LOW_STOCK`
+- otherwise: `IN_STOCK`
 
 Checkout behavior:
 - successful checkout decrements `stockQuantity`
@@ -52,16 +70,22 @@ Example response:
   "shopId": "uuid",
   "totalStockQuantity": 5,
   "totalReservedStock": 2,
+  "totalLowStockThreshold": 5,
+  "trackInventory": true,
+  "stockStatus": "LOW_STOCK",
   "totalAvailableQuantity": 5,
   "inStock": true,
   "variants": [
     {
-      "variantId": "uuid",
-      "size": "M",
-      "color": "Black",
-      "price": "99.00",
+      "id": "uuid",
+      "chrtId": "9200001",
+      "techSize": "M",
+      "wbSize": "M",
       "stockQuantity": 5,
       "reservedStock": 2,
+      "lowStockThreshold": 5,
+      "trackInventory": true,
+      "stockStatus": "LOW_STOCK",
       "availableQuantity": 5,
       "inStock": true
     }
@@ -87,6 +111,21 @@ Rules:
 - product must belong to the target shop
 - variant must belong to the product when `variantId` is provided
 - cross-shop access is rejected with `403`
+
+## Seller Product List Alerts
+
+### `GET /api/shops/:shopId/products`
+
+New query param:
+- `stockStatus=IN_STOCK|LOW_STOCK|OUT_OF_STOCK`
+
+New response fields:
+- `stockQuantity`
+- `lowStockThreshold`
+- `trackInventory`
+- `stockStatus`
+- `variantCount`
+- `primaryVariantId`
 
 ## Public Product Availability
 
@@ -123,6 +162,7 @@ Coverage includes:
   - checkout fails when stock is insufficient
 - `backend-nest/test/product.e2e-spec.ts`
   - seller inventory read/update
+  - seller product list stock-status filters
   - cross-shop inventory access `403`
 - `backend-nest/scripts/smoke-inventory.ps1`
   - create product with stock `2`
@@ -130,6 +170,10 @@ Coverage includes:
   - checkout `2` fails
   - seller updates stock to `5`
   - checkout `2` succeeds and stock becomes `3`
+- `backend-nest/scripts/smoke-inventory-alerts.ps1`
+  - create out-of-stock, low-stock, and in-stock products
+  - verify stock-status filters
+  - quick update stock and verify status moves to `IN_STOCK`
 
 Run:
 

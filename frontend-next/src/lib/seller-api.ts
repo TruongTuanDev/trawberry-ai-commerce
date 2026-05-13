@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api";
 
 export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
 export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE" | "UPLOAD_PROOF";
+export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "NOT_TRACKED";
 
 export type ShopSummary = {
   id: string;
@@ -126,6 +127,12 @@ export type ProductListItem = {
   wbVendorCode: string | null;
   mainImage: string | null;
   inStock: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  trackInventory: boolean;
+  stockStatus: StockStatus;
+  variantCount: number;
+  primaryVariantId: string | null;
 };
 
 export type ProductListResponse = {
@@ -179,6 +186,9 @@ export type ProductDetail = {
     discountPrice: string | null;
     stockQuantity: number;
     reservedStock: number;
+    lowStockThreshold: number;
+    trackInventory: boolean;
+    stockStatus: StockStatus;
     inStock: boolean;
   }>;
 };
@@ -189,6 +199,9 @@ export type ProductInventory = {
   title: string;
   totalStockQuantity: number;
   totalReservedStock: number;
+  totalLowStockThreshold: number;
+  trackInventory: boolean;
+  stockStatus: StockStatus;
   totalAvailableQuantity: number;
   inStock: boolean;
   variants: Array<{
@@ -198,6 +211,9 @@ export type ProductInventory = {
     wbSize: string | null;
     stockQuantity: number;
     reservedStock: number;
+    lowStockThreshold: number;
+    trackInventory: boolean;
+    stockStatus: StockStatus;
     availableQuantity: number;
     inStock: boolean;
   }>;
@@ -333,6 +349,7 @@ export async function getShopProducts(
     size: number;
     search?: string;
     status?: string;
+    stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
   },
   token?: string,
 ) {
@@ -347,6 +364,9 @@ export async function getShopProducts(
 
   if (query.status) {
     params.set("status", query.status);
+  }
+  if (query.stockStatus) {
+    params.set("stockStatus", query.stockStatus);
   }
 
   return apiRequest<ProductListResponse>(`/api/shops/${shopId}/products?${params.toString()}`, {

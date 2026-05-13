@@ -6,6 +6,8 @@ test("seeded public customer flow completes checkout, tracking, and proof upload
   await page.goto("/");
   await page.getByRole("link", { name: "Explore products" }).click();
   await page.waitForURL("**/products");
+  await page.getByLabel("Search catalog").fill("Linen Bloom Dress");
+  await page.getByRole("button", { name: "Search" }).click();
 
   const seededCard = page.getByTestId("product-card").filter({ hasText: "Linen Bloom Dress" });
   await expect(seededCard).toHaveCount(1);

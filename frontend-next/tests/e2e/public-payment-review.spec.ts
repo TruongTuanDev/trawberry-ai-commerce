@@ -13,6 +13,8 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
   const phone = `+7999${Date.now().toString().slice(-7)}`;
 
   await customerPage.goto("/products");
+  await customerPage.getByLabel("Search catalog").fill("Linen Bloom Dress");
+  await customerPage.getByRole("button", { name: "Search" }).click();
   const seededCard = customerPage.getByTestId("product-card").filter({ hasText: "Linen Bloom Dress" });
   await expect(seededCard).toHaveCount(1);
   await seededCard.getByRole("link", { name: "View" }).click();

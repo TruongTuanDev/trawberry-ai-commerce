@@ -3,6 +3,7 @@
 type ProductFiltersValue = {
   search: string;
   status: string;
+  stockStatus: string;
 };
 
 export function ProductFilters({
@@ -15,7 +16,7 @@ export function ProductFilters({
   onSubmit: () => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4 md:grid-cols-[minmax(0,1fr)_200px_auto]">
+    <div className="grid gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4 md:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
       <input
         value={value.search}
         onChange={(event) => onChange({ ...value, search: event.target.value })}
@@ -37,6 +38,16 @@ export function ProductFilters({
         <option value="INACTIVE">Inactive</option>
         <option value="DRAFT">Draft</option>
         <option value="ARCHIVED">Archived</option>
+      </select>
+      <select
+        value={value.stockStatus}
+        onChange={(event) => onChange({ ...value, stockStatus: event.target.value })}
+        className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)]"
+      >
+        <option value="">All stock states</option>
+        <option value="IN_STOCK">In stock</option>
+        <option value="LOW_STOCK">Low stock</option>
+        <option value="OUT_OF_STOCK">Out of stock</option>
       </select>
       <button
         type="button"

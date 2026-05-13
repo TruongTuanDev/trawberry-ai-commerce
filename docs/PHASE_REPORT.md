@@ -671,6 +671,57 @@ while allowing:
   - inventory reuses existing `product_variants.stockQuantity` and `reservedStock` rather than adding a new schema field
   - public availability uses current sellable stock directly, while reservation counts remain visible to sellers for operational context
 
+## Low Stock Alerts / Seller Inventory UX
+
+- Scope:
+  - add seller low-stock and out-of-stock status metadata to product list responses
+  - add stock-status filters and quick stock update in the seller product list
+  - improve seller product detail inventory visibility
+  - preserve checkout, public marketplace, payments, and auth flows
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/prisma/migrations/20260513_add_product_variant_inventory_flags/migration.sql`
+  - `backend-nest/src/modules/products/*`
+  - `backend-nest/test/product.e2e-spec.ts`
+  - `backend-nest/test/checkout.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-inventory-alerts.ps1`
+  - `backend-nest/package.json`
+  - `frontend-next/src/components/products/*`
+  - `frontend-next/src/app/seller/products/[id]/page.tsx`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `docs/API_INVENTORY.md`
+  - `docs/API_PRODUCTS.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - seller product list now shows `IN_STOCK`, `LOW_STOCK`, `OUT_OF_STOCK`, and `NOT_TRACKED` states
+  - seller can filter products by `IN_STOCK`, `LOW_STOCK`, and `OUT_OF_STOCK`
+  - seller can quick-update stock from the list for single-variant products
+  - product detail inventory view now shows threshold-aware status more clearly
+  - backend product list and inventory responses now expose threshold/tracking metadata required by the UX
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `backend-nest npm run smoke:inventory-alerts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

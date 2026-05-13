@@ -62,6 +62,17 @@ class ProductVariantDto {
   reservedStock!: number;
 
   @ApiProperty()
+  lowStockThreshold!: number;
+
+  @ApiProperty()
+  trackInventory!: boolean;
+
+  @ApiProperty({
+    enum: ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK', 'NOT_TRACKED'],
+  })
+  stockStatus!: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_TRACKED';
+
+  @ApiProperty()
   inStock!: boolean;
 }
 

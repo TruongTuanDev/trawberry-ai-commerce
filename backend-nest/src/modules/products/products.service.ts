@@ -11,6 +11,8 @@ import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductInventoryDto } from './dto/update-product-inventory.dto';
 
+type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_TRACKED';
+
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,22 +58,31 @@ export class ProductsService {
             }),
     };
 
-    const [items, total] = await Promise.all([
-      this.prisma.product.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        skip: (query.page - 1) * query.size,
-        take: query.size,
-        include: {
-          images: {
-            orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
-          },
-          category: true,
-          variants: true,
+    const products = await this.prisma.product.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        images: {
+          orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
         },
-      }),
-      this.prisma.product.count({ where }),
-    ]);
+        category: true,
+        variants: true,
+      },
+    });
+
+    const filteredItems = query.stockStatus
+      ? products.filter(
+          (product) =>
+            this.getProductInventorySummary(product.variants).stockStatus ===
+            query.stockStatus,
+        )
+      : products;
+
+    const total = filteredItems.length;
+    const items = filteredItems.slice(
+      (query.page - 1) * query.size,
+      (query.page - 1) * query.size + query.size,
+    );
 
     return {
       items: items.map((product) => this.mapProductSummary(product)),
@@ -366,13 +377,16 @@ export class ProductsService {
     wbVendorCode: string | null;
     images: Array<{ wbUrl: string; localUrl: string | null }>;
     category: { name: string } | null;
-    variants: Array<{ stockQuantity: number; reservedStock: number }>;
+    variants: Array<{
+      id: string;
+      stockQuantity: number;
+      reservedStock: number;
+      lowStockThreshold: number;
+      trackInventory: boolean;
+    }>;
   }) {
     const mainImage = product.images[0];
-    const availableQuantity = product.variants.reduce(
-      (sum, variant) => sum + Math.max(0, variant.stockQuantity),
-      0,
-    );
+    const inventory = this.getProductInventorySummary(product.variants);
 
     return {
       id: product.id,
@@ -387,7 +401,13 @@ export class ProductsService {
       categoryName: product.category?.name ?? product.categoryName,
       wbVendorCode: product.wbVendorCode,
       mainImage: mainImage?.localUrl ?? mainImage?.wbUrl ?? null,
-      inStock: availableQuantity > 0,
+      inStock: inventory.inStock,
+      stockQuantity: inventory.totalAvailableQuantity,
+      lowStockThreshold: inventory.totalLowStockThreshold,
+      trackInventory: inventory.trackInventory,
+      stockStatus: inventory.stockStatus,
+      variantCount: product.variants.length,
+      primaryVariantId: product.variants[0]?.id ?? null,
     };
   }
 
@@ -423,6 +443,8 @@ export class ProductsService {
       discountPrice: Prisma.Decimal | null;
       stockQuantity: number;
       reservedStock: number;
+      lowStockThreshold: number;
+      trackInventory: boolean;
     }>;
   }) {
     return {
@@ -455,17 +477,24 @@ export class ProductsService {
         isMain: image.isMain ?? false,
         sortOrder: image.sortOrder,
       })),
-      variants: product.variants.map((variant) => ({
-        id: variant.id,
-        chrtId: variant.chrtId.toString(),
-        techSize: variant.techSize,
-        wbSize: variant.wbSize,
-        basePrice: variant.basePrice?.toString() ?? null,
-        discountPrice: variant.discountPrice?.toString() ?? null,
-        stockQuantity: variant.stockQuantity,
-        reservedStock: variant.reservedStock,
-        inStock: variant.stockQuantity > 0,
-      })),
+      variants: product.variants.map((variant) => {
+        const status = this.getVariantStockStatus(variant);
+
+        return {
+          id: variant.id,
+          chrtId: variant.chrtId.toString(),
+          techSize: variant.techSize,
+          wbSize: variant.wbSize,
+          basePrice: variant.basePrice?.toString() ?? null,
+          discountPrice: variant.discountPrice?.toString() ?? null,
+          stockQuantity: variant.stockQuantity,
+          reservedStock: variant.reservedStock,
+          lowStockThreshold: variant.lowStockThreshold,
+          trackInventory: variant.trackInventory,
+          stockStatus: status,
+          inStock: status !== 'OUT_OF_STOCK',
+        };
+      }),
     };
   }
 
@@ -481,12 +510,15 @@ export class ProductsService {
       wbSize: string | null;
       stockQuantity: number;
       reservedStock: number;
+      lowStockThreshold: number;
+      trackInventory: boolean;
     }>;
   }) {
     const variants = product.variants
       .slice()
       .sort((left, right) => Number(left.chrtId - right.chrtId))
       .map((variant) => {
+        const stockStatus = this.getVariantStockStatus(variant);
         const availableQuantity = Math.max(0, variant.stockQuantity);
 
         return {
@@ -496,29 +528,101 @@ export class ProductsService {
           wbSize: variant.wbSize,
           stockQuantity: variant.stockQuantity,
           reservedStock: variant.reservedStock,
+          lowStockThreshold: variant.lowStockThreshold,
+          trackInventory: variant.trackInventory,
+          stockStatus,
           availableQuantity,
-          inStock: availableQuantity > 0,
+          inStock: stockStatus !== 'OUT_OF_STOCK',
         };
       });
+
+    const inventory = this.getProductInventorySummary(product.variants);
 
     return {
       productId: product.id,
       shopId: product.shopId,
       title: product.localTitle ?? product.wbTitle,
-      totalStockQuantity: variants.reduce(
-        (sum, variant) => sum + variant.stockQuantity,
-        0,
-      ),
-      totalReservedStock: variants.reduce(
-        (sum, variant) => sum + variant.reservedStock,
-        0,
-      ),
-      totalAvailableQuantity: variants.reduce(
-        (sum, variant) => sum + variant.availableQuantity,
-        0,
-      ),
-      inStock: variants.some((variant) => variant.inStock),
+      totalStockQuantity: inventory.totalStockQuantity,
+      totalReservedStock: inventory.totalReservedStock,
+      totalLowStockThreshold: inventory.totalLowStockThreshold,
+      trackInventory: inventory.trackInventory,
+      stockStatus: inventory.stockStatus,
+      totalAvailableQuantity: inventory.totalAvailableQuantity,
+      inStock: inventory.inStock,
       variants,
     };
+  }
+
+  private getProductInventorySummary(
+    variants: Array<{
+      stockQuantity: number;
+      reservedStock: number;
+      lowStockThreshold?: number;
+      trackInventory?: boolean;
+    }>,
+  ) {
+    const trackedVariants = variants.filter(
+      (variant) => variant.trackInventory !== false,
+    );
+    const hasTrackedVariants = trackedVariants.length > 0;
+    const hasUntrackedVariants = variants.some(
+      (variant) => variant.trackInventory === false,
+    );
+    const totalStockQuantity = trackedVariants.reduce(
+      (sum, variant) => sum + Math.max(0, variant.stockQuantity),
+      0,
+    );
+    const totalReservedStock = trackedVariants.reduce(
+      (sum, variant) => sum + Math.max(0, variant.reservedStock),
+      0,
+    );
+    const totalLowStockThreshold = trackedVariants.reduce(
+      (sum, variant) => sum + Math.max(0, variant.lowStockThreshold ?? 5),
+      0,
+    );
+    const totalAvailableQuantity = totalStockQuantity;
+
+    let stockStatus: StockStatus;
+    if (!hasTrackedVariants && hasUntrackedVariants) {
+      stockStatus = 'NOT_TRACKED';
+    } else if (hasUntrackedVariants) {
+      stockStatus = 'IN_STOCK';
+    } else if (totalAvailableQuantity <= 0) {
+      stockStatus = 'OUT_OF_STOCK';
+    } else if (totalAvailableQuantity <= totalLowStockThreshold) {
+      stockStatus = 'LOW_STOCK';
+    } else {
+      stockStatus = 'IN_STOCK';
+    }
+
+    return {
+      totalStockQuantity,
+      totalReservedStock,
+      totalLowStockThreshold,
+      totalAvailableQuantity,
+      trackInventory: hasTrackedVariants,
+      inStock: stockStatus !== 'OUT_OF_STOCK',
+      stockStatus,
+    };
+  }
+
+  private getVariantStockStatus(variant: {
+    stockQuantity: number;
+    lowStockThreshold?: number;
+    trackInventory?: boolean;
+  }): StockStatus {
+    if (variant.trackInventory === false) {
+      return 'NOT_TRACKED';
+    }
+
+    if (variant.stockQuantity <= 0) {
+      return 'OUT_OF_STOCK';
+    }
+
+    if (variant.stockQuantity <= (variant.lowStockThreshold ?? 5)) {
+      return 'LOW_STOCK';
+    }
+
+    return 'IN_STOCK';
   }
 }

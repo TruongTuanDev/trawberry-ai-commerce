@@ -157,7 +157,7 @@ export default function SellerProductDetailPage({
                 <div>Base price</div>
                 <div>Discount</div>
                 <div>Stock</div>
-                <div>Available</div>
+                <div>Status</div>
                 <div>Action</div>
               </div>
               <div className="divide-y divide-[var(--border)]">
@@ -167,7 +167,10 @@ export default function SellerProductDetailPage({
                   wbSize: variant.wbSize,
                   stockQuantity: variant.stockQuantity,
                   reservedStock: variant.reservedStock,
-                  availableQuantity: Math.max(0, variant.stockQuantity - variant.reservedStock),
+                  lowStockThreshold: variant.lowStockThreshold,
+                  trackInventory: variant.trackInventory,
+                  stockStatus: variant.stockStatus,
+                  availableQuantity: Math.max(0, variant.stockQuantity),
                   inStock: variant.inStock,
                 }))).map((variant) => (
                   <InventoryRow
@@ -190,7 +193,7 @@ export default function SellerProductDetailPage({
                 <InventoryMetric
                   label="Available"
                   value={inventory.inStock ? String(inventory.totalAvailableQuantity) : "0"}
-                  tone={inventory.totalAvailableQuantity <= 5 ? "warn" : "ok"}
+                  tone={inventory.stockStatus === "OUT_OF_STOCK" || inventory.stockStatus === "LOW_STOCK" ? "warn" : "ok"}
                 />
               </div>
             ) : null}
@@ -231,6 +234,9 @@ function InventoryRow({
     discountPrice: string | null;
     stockQuantity: number;
     reservedStock: number;
+    lowStockThreshold: number;
+    trackInventory: boolean;
+    stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "NOT_TRACKED";
     availableQuantity: number;
     inStock: boolean;
   };
@@ -248,20 +254,22 @@ function InventoryRow({
       <div>
         <input
           type="number"
-          min={variant.reservedStock}
+          min={0}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--foreground)]"
         />
       </div>
-      <div className={variant.availableQuantity <= 5 ? "text-sm font-semibold text-amber-700" : "text-sm text-emerald-700"}>
-        {variant.availableQuantity} available
-        <div className="text-xs text-[var(--muted)]">{variant.reservedStock} reserved</div>
+      <div className={variant.stockStatus === "OUT_OF_STOCK" ? "text-sm font-semibold text-rose-700" : variant.stockStatus === "LOW_STOCK" ? "text-sm font-semibold text-amber-700" : "text-sm text-emerald-700"}>
+        {variant.trackInventory ? `${variant.availableQuantity} available` : "Not tracked"}
+        <div className="text-xs text-[var(--muted)]">
+          {variant.trackInventory ? `${variant.reservedStock} reserved · threshold ${variant.lowStockThreshold}` : "Inventory tracking disabled"}
+        </div>
       </div>
       <div className="flex items-center justify-start">
         <button
           type="button"
-          onClick={() => void onSave(variant.id, Math.max(variant.reservedStock, Number(value) || 0))}
+          onClick={() => void onSave(variant.id, Math.max(0, Number(value) || 0))}
           disabled={saving}
           className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
         >

@@ -20,6 +20,17 @@ class ProductInventoryVariantResponseDto {
   reservedStock!: number;
 
   @ApiProperty()
+  lowStockThreshold!: number;
+
+  @ApiProperty()
+  trackInventory!: boolean;
+
+  @ApiProperty({
+    enum: ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK', 'NOT_TRACKED'],
+  })
+  stockStatus!: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_TRACKED';
+
+  @ApiProperty()
   availableQuantity!: number;
 
   @ApiProperty()
@@ -41,6 +52,17 @@ export class ProductInventoryResponseDto {
 
   @ApiProperty()
   totalReservedStock!: number;
+
+  @ApiProperty()
+  totalLowStockThreshold!: number;
+
+  @ApiProperty()
+  trackInventory!: boolean;
+
+  @ApiProperty({
+    enum: ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK', 'NOT_TRACKED'],
+  })
+  stockStatus!: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_TRACKED';
 
   @ApiProperty()
   totalAvailableQuantity!: number;

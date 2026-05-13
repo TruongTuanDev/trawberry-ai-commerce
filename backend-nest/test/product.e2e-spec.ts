@@ -102,6 +102,8 @@ type StoredProduct = {
     discountPrice: { toString(): string } | null;
     stockQuantity: number;
     reservedStock: number;
+    lowStockThreshold: number;
+    trackInventory: boolean;
   }>;
 };
 
@@ -308,6 +310,8 @@ describe('ProductsController (e2e)', () => {
             discountPrice: decimal('89.99'),
             stockQuantity: 5,
             reservedStock: 0,
+            lowStockThreshold: 5,
+            trackInventory: true,
           },
         ],
       },
@@ -361,6 +365,8 @@ describe('ProductsController (e2e)', () => {
             discountPrice: null,
             stockQuantity: 0,
             reservedStock: 0,
+            lowStockThreshold: 5,
+            trackInventory: true,
           },
         ],
       },
@@ -412,8 +418,10 @@ describe('ProductsController (e2e)', () => {
             wbSize: '44',
             basePrice: decimal('79.99'),
             discountPrice: null,
-            stockQuantity: 1,
+            stockQuantity: 10,
             reservedStock: 0,
+            lowStockThreshold: 5,
+            trackInventory: true,
           },
         ],
       },
@@ -673,6 +681,72 @@ describe('ProductsController (e2e)', () => {
     expect(body.meta.size).toBe(1);
   });
 
+  it('filters products by stock status', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const sellerTwoToken = await loginAndGetToken(app, 'seller2@example.com');
+
+    products.push({
+      ...products[0],
+      id: 'prod-4',
+      wbNmId: 1004n,
+      wbTitle: 'WB Delta',
+      localTitle: 'Delta Local',
+      seoSlug: 'delta-local',
+      wbVendorCode: 'A-4',
+      variants: [
+        {
+          id: 'var-4',
+          chrtId: 2004n,
+          techSize: '45',
+          wbSize: '45',
+          basePrice: decimal('88.00'),
+          discountPrice: null,
+          stockQuantity: 2,
+          reservedStock: 0,
+          lowStockThreshold: 5,
+          trackInventory: true,
+        },
+      ],
+    });
+
+    const outOfStockResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products?stockStatus=OUT_OF_STOCK')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const outOfStockBody =
+      readBody<PaginatedProductsResponseDto>(outOfStockResponse);
+
+    expect(outOfStockBody.items).toHaveLength(1);
+    expect(outOfStockBody.items[0].id).toBe('prod-2');
+    expect(outOfStockBody.items[0].stockStatus).toBe('OUT_OF_STOCK');
+
+    const lowStockResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products?stockStatus=LOW_STOCK')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const lowStockBody =
+      readBody<PaginatedProductsResponseDto>(lowStockResponse);
+
+    expect(lowStockBody.items).toHaveLength(2);
+    expect(lowStockBody.items.map((item) => item.id).sort()).toEqual([
+      'prod-1',
+      'prod-4',
+    ]);
+    expect(
+      lowStockBody.items.every((item) => item.stockStatus === 'LOW_STOCK'),
+    ).toBe(true);
+
+    const inStockResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-2/products?stockStatus=IN_STOCK')
+      .set('Authorization', `Bearer ${sellerTwoToken}`)
+      .expect(200);
+    const inStockBody = readBody<PaginatedProductsResponseDto>(inStockResponse);
+
+    expect(inStockBody.items).toHaveLength(1);
+    expect(inStockBody.items[0].id).toBe('prod-3');
+    expect(inStockBody.items[0].stockStatus).toBe('IN_STOCK');
+  });
+
   it('returns product detail for an accessible shop', async () => {
     const token = await loginAndGetToken(app, 'seller1@example.com');
 
@@ -685,6 +759,7 @@ describe('ProductsController (e2e)', () => {
     expect(body.id).toBe('prod-1');
     expect(body.shop.id).toBe('shop-1');
     expect(body.title).toBe('Alpha Local');
+    expect(body.variants[0].stockStatus).toBe('LOW_STOCK');
   });
 
   it('creates, updates, and deletes a product in the seller shop', async () => {
@@ -759,6 +834,8 @@ describe('ProductsController (e2e)', () => {
     expect(inventoryBody.productId).toBe('prod-1');
     expect(inventoryBody.totalAvailableQuantity).toBe(5);
     expect(inventoryBody.variants[0].stockQuantity).toBe(5);
+    expect(inventoryBody.stockStatus).toBe('LOW_STOCK');
+    expect(inventoryBody.variants[0].lowStockThreshold).toBe(5);
 
     const updateResponse = await request(app.getHttpServer())
       .patch('/api/shops/shop-1/products/prod-1/inventory')
@@ -771,6 +848,7 @@ describe('ProductsController (e2e)', () => {
 
     expect(updateBody.variants[0].stockQuantity).toBe(8);
     expect(updateBody.totalAvailableQuantity).toBe(8);
+    expect(updateBody.stockStatus).toBe('IN_STOCK');
     expect(products[0].variants[0].stockQuantity).toBe(8);
   });
 
@@ -870,8 +948,51 @@ function filterProducts(
       }
     }
 
+    if (where.stockStatus) {
+      const stockStatus = summarizeStock(product).stockStatus;
+      if (stockStatus !== where.stockStatus) {
+        return false;
+      }
+    }
+
     return true;
   });
+}
+
+function summarizeStock(product: StoredProduct) {
+  const trackedVariants = product.variants.filter(
+    (variant) => variant.trackInventory !== false,
+  );
+  const hasTrackedVariants = trackedVariants.length > 0;
+  const hasUntrackedVariants = product.variants.some(
+    (variant) => variant.trackInventory === false,
+  );
+  const totalStockQuantity = trackedVariants.reduce(
+    (sum, variant) => sum + Math.max(0, variant.stockQuantity),
+    0,
+  );
+  const totalLowStockThreshold = trackedVariants.reduce(
+    (sum, variant) => sum + Math.max(0, variant.lowStockThreshold),
+    0,
+  );
+
+  if (!hasTrackedVariants && hasUntrackedVariants) {
+    return { stockStatus: 'NOT_TRACKED' };
+  }
+
+  if (hasUntrackedVariants) {
+    return { stockStatus: 'IN_STOCK' };
+  }
+
+  if (totalStockQuantity <= 0) {
+    return { stockStatus: 'OUT_OF_STOCK' };
+  }
+
+  if (totalStockQuantity <= totalLowStockThreshold) {
+    return { stockStatus: 'LOW_STOCK' };
+  }
+
+  return { stockStatus: 'IN_STOCK' };
 }
 
 function matchesSearchCondition(

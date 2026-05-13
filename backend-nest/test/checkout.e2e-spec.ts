@@ -53,6 +53,8 @@ type StoredVariant = {
   discountPrice: DecimalLike | null;
   stockQuantity: number;
   reservedStock: number;
+  lowStockThreshold: number;
+  trackInventory: boolean;
   createdAt: Date;
 };
 
@@ -216,6 +218,8 @@ describe('CheckoutController (e2e)', () => {
             discountPrice: decimal('99.00'),
             stockQuantity: 10,
             reservedStock: 1,
+            lowStockThreshold: 5,
+            trackInventory: true,
             createdAt: new Date(),
           },
         ],
@@ -242,6 +246,8 @@ describe('CheckoutController (e2e)', () => {
             discountPrice: null,
             stockQuantity: 5,
             reservedStock: 0,
+            lowStockThreshold: 5,
+            trackInventory: true,
             createdAt: new Date(),
           },
         ],

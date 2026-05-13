@@ -138,6 +138,20 @@
   - checkout rejects insufficient stock and deducts stock on success
   - stock restore for cancelled orders remains in the seller order lifecycle
 
+### Low Stock Alerts / Seller Inventory UX
+- Status: MVP done
+- Evidence:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/src/modules/products/dto/list-shop-products-query.dto.ts`
+  - `backend-nest/test/product.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-inventory-alerts.ps1`
+  - `frontend-next/src/components/products/product-table.tsx`
+  - `frontend-next/src/components/products/seller-products-page-client.tsx`
+- Notes:
+  - seller products list now shows stock badges and low-stock/out-of-stock filters
+  - seller can quick-update single-variant stock directly from the list
+  - product detail inventory view is clearer about threshold and status
+
 ### Customer Order Tracking / Payment Proof
 - Status: MVP done
 - Evidence:
@@ -396,8 +410,8 @@
 | `/orders/track` | Public order tracking lookup | MVP done | Yes | Uses `orderCode + phone`. |
 | `/orders/[id]` | Public order tracking detail | MVP done | Yes | Shows order state and uploads payment proof. |
 | `/seller/dashboard` | Seller overview | Partial | No | Placeholder KPIs only. |
-| `/seller/products` | Product list | Done | Yes | Search/pagination UI connected. |
-| `/seller/products/[id]` | Product detail/edit | Done | Yes | Product metadata connected; variants read-only summary. |
+| `/seller/products` | Product list | Done | Yes | Search/pagination UI connected, with stock badges, low-stock filters, and single-variant quick stock update. |
+| `/seller/products/[id]` | Product detail/edit | Done | Yes | Product metadata connected; variant inventory status and stock update are visible. |
 | `/seller/products/[id]/images` | Product gallery + AI generate | Done | Yes | Upload, gallery, set main, delete, AI task create/poll/attach connected. |
 | `/seller/ai-images` | Future AI center / try-on area | Partial | No | Placeholder route only. |
 | `/seller/orders` | Seller order list | Done | Yes | Connected to NestJS orders API. |
@@ -464,6 +478,7 @@ Current flow:
 | backend-nest | `npm run seed:demo` | Pass | Idempotent demo seed for public marketplace and E2E setup. |
 | backend-nest | `npm run smoke:order-tracking` | Pass | Customer tracks, uploads proof, seller sees proof, seller marks paid, customer sees updated payment status. |
 | backend-nest | `npm run smoke:inventory` | Pass | Seller stock update + checkout deduction + insufficient stock flow pass. |
+| backend-nest | `npm run smoke:inventory-alerts` | Pass | Seller low-stock filters and quick-update flow pass. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -495,6 +510,7 @@ Current flow:
 - Customer checkout, public tracking, and manual transfer proof upload are now in the new stack, but customer order history is still incomplete.
 - Public marketplace is now demo-ready, but richer merchandising, sorting, and customer account history are still incomplete.
 - Inventory is now single-location and variant-local only; no warehouse or ledger model exists yet.
+- Low-stock alerts are seller-facing only in this phase; no notification channel or cron alerting exists yet.
 - Seeded demo data now supports stable public demos, but there is still no automatic database reset/isolation between repeated end-to-end runs.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 

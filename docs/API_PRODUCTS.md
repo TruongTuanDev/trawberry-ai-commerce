@@ -92,9 +92,11 @@ List products for a shop.
 - `status`
 - `visibility`
 - `inStock`
+- `stockStatus`
 - `categoryId`
 
 `status` is treated as an alias of `visibility`.
+`stockStatus` supports `IN_STOCK`, `LOW_STOCK`, and `OUT_OF_STOCK`.
 
 ### Response
 ```json
@@ -113,7 +115,13 @@ List products for a shop.
       "categoryName": "Sneakers",
       "wbVendorCode": "SKU-1",
       "mainImage": "https://example.com/image.jpg",
-      "inStock": true
+      "inStock": true,
+      "stockQuantity": 2,
+      "lowStockThreshold": 5,
+      "trackInventory": true,
+      "stockStatus": "LOW_STOCK",
+      "variantCount": 1,
+      "primaryVariantId": "uuid"
     }
   ],
   "meta": {
@@ -162,6 +170,13 @@ Get one product inside the seller shop.
 ### Response
 Returns shop, category, images, and variants in one payload.
 
+Variant inventory fields now include:
+- `stockQuantity`
+- `reservedStock`
+- `lowStockThreshold`
+- `trackInventory`
+- `stockStatus`
+
 ## Inventory Endpoints
 
 Seller inventory is now exposed separately from the main product metadata update flow.
@@ -171,6 +186,9 @@ Seller inventory is now exposed separately from the main product metadata update
 Returns product-level and variant-level inventory summary:
 - `totalStockQuantity`
 - `totalReservedStock`
+- `totalLowStockThreshold`
+- `trackInventory`
+- `stockStatus`
 - `totalAvailableQuantity`
 - `inStock`
 - `variants[]`
@@ -266,6 +284,7 @@ Test file:
 
 Covered scenarios:
 - list with pagination and status filter
+- list with stock-status filter
 - detail for accessible shop
 - create product
 - update product
