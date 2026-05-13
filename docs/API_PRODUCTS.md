@@ -162,6 +162,48 @@ Get one product inside the seller shop.
 ### Response
 Returns shop, category, images, and variants in one payload.
 
+## Inventory Endpoints
+
+Seller inventory is now exposed separately from the main product metadata update flow.
+
+### `GET /api/shops/:shopId/products/:productId/inventory`
+
+Returns product-level and variant-level inventory summary:
+- `totalStockQuantity`
+- `totalReservedStock`
+- `totalAvailableQuantity`
+- `inStock`
+- `variants[]`
+
+### `PATCH /api/shops/:shopId/products/:productId/inventory`
+
+Updates `stockQuantity` for a variant.
+
+Request body:
+
+```json
+{
+  "variantId": "uuid",
+  "stockQuantity": 5
+}
+```
+
+Notes:
+- `variantId` is optional when the product has a single active variant
+- this endpoint is intended for quick seller stock corrections without editing the rest of the product payload
+- cross-shop access is rejected with `403`
+
+## Public Product Availability
+
+Public product responses now include:
+- `inStock`
+- `availableQuantity`
+
+This is used by the customer marketplace UI to:
+- show stock badges
+- disable checkout for out-of-stock products
+- clamp quantity selection to the current available amount
+
 ## PATCH `/api/shops/:shopId/products/:productId`
 
 Update one product inside the seller shop.
@@ -228,6 +270,7 @@ Covered scenarios:
 - create product
 - update product
 - delete product
+- inventory detail and stock update
 - forbid access to another seller's shop
 
 Run:

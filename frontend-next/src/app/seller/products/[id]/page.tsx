@@ -5,7 +5,15 @@ import Link from "next/link";
 import { SectionCard } from "@/components/seller/section-card";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
-import { getShopProductById, updateShopProduct, type ProductDetail, type UpdateProductPayload } from "@/lib/seller-api";
+import {
+  getShopProductById,
+  getShopProductInventory,
+  updateShopProduct,
+  updateShopProductInventory,
+  type ProductDetail,
+  type ProductInventory,
+  type UpdateProductPayload,
+} from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export default function SellerProductDetailPage({
@@ -15,8 +23,10 @@ export default function SellerProductDetailPage({
 }) {
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [inventory, setInventory] = useState<ProductInventory | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [inventorySavingId, setInventorySavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,9 +39,13 @@ export default function SellerProductDetailPage({
       }
 
       try {
-        const result = await getShopProductById(currentShopId, params.id);
+        const [productResult, inventoryResult] = await Promise.all([
+          getShopProductById(currentShopId, params.id),
+          getShopProductInventory(currentShopId, params.id),
+        ]);
         if (mounted) {
-          setProduct(result);
+          setProduct(productResult);
+          setInventory(inventoryResult);
           setError(null);
         }
       } catch (err) {
@@ -67,6 +81,29 @@ export default function SellerProductDetailPage({
       throw err;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleInventorySave = async (variantId: string, stockQuantity: number) => {
+    if (!currentShopId || !product) {
+      return;
+    }
+
+    setInventorySavingId(variantId);
+    try {
+      const updatedInventory = await updateShopProductInventory(currentShopId, product.id, {
+        variantId,
+        stockQuantity,
+      });
+      const refreshedProduct = await getShopProductById(currentShopId, product.id);
+      setInventory(updatedInventory);
+      setProduct(refreshedProduct);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update inventory.");
+      throw err;
+    } finally {
+      setInventorySavingId(null);
     }
   };
 
@@ -111,30 +148,52 @@ export default function SellerProductDetailPage({
           <SectionCard
             eyebrow="Variants"
             title="Variant overview"
-            description="Angular used inline controls for price and inventory. This first Next.js pass keeps a read-only variant summary while metadata editing is migrated."
+            description="Inventory is managed per variant in this MVP. Stock updates are absolute values and checkout deducts inventory immediately."
           >
             <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-              <div className="hidden grid-cols-[140px_140px_160px_160px_120px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
+              <div className="hidden grid-cols-[120px_120px_120px_120px_120px_160px_140px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
                 <div>Tech size</div>
                 <div>WB size</div>
                 <div>Base price</div>
                 <div>Discount</div>
                 <div>Stock</div>
+                <div>Available</div>
+                <div>Action</div>
               </div>
               <div className="divide-y divide-[var(--border)]">
-                {product.variants.map((variant) => (
-                  <article key={variant.id} className="grid gap-3 px-4 py-4 md:grid-cols-[140px_140px_160px_160px_120px] md:px-5">
-                    <div className="text-sm text-[var(--foreground)]">{variant.techSize ?? "N/A"}</div>
-                    <div className="text-sm text-[var(--muted)]">{variant.wbSize ?? "N/A"}</div>
-                    <div className="text-sm text-[var(--foreground)]">{variant.basePrice ?? "0.00"}</div>
-                    <div className="text-sm text-[var(--foreground)]">{variant.discountPrice ?? "-"}</div>
-                    <div className={variant.inStock ? "text-sm text-emerald-700" : "text-sm text-[var(--accent)]"}>
-                      {variant.stockQuantity}
-                    </div>
-                  </article>
+                {(inventory?.variants ?? product.variants.map((variant) => ({
+                  id: variant.id,
+                  techSize: variant.techSize,
+                  wbSize: variant.wbSize,
+                  stockQuantity: variant.stockQuantity,
+                  reservedStock: variant.reservedStock,
+                  availableQuantity: Math.max(0, variant.stockQuantity - variant.reservedStock),
+                  inStock: variant.inStock,
+                }))).map((variant) => (
+                  <InventoryRow
+                    key={`${variant.id}-${variant.stockQuantity}-${variant.reservedStock}`}
+                    variant={{
+                      ...variant,
+                      basePrice: product.variants.find((entry) => entry.id === variant.id)?.basePrice ?? null,
+                      discountPrice: product.variants.find((entry) => entry.id === variant.id)?.discountPrice ?? null,
+                    }}
+                    saving={inventorySavingId === variant.id}
+                    onSave={handleInventorySave}
+                  />
                 ))}
               </div>
             </div>
+            {inventory ? (
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <InventoryMetric label="Total stock" value={String(inventory.totalStockQuantity)} />
+                <InventoryMetric label="Reserved" value={String(inventory.totalReservedStock)} />
+                <InventoryMetric
+                  label="Available"
+                  value={inventory.inStock ? String(inventory.totalAvailableQuantity) : "0"}
+                  tone={inventory.totalAvailableQuantity <= 5 ? "warn" : "ok"}
+                />
+              </div>
+            ) : null}
           </SectionCard>
         </div>
 
@@ -155,6 +214,84 @@ export default function SellerProductDetailPage({
           <ProductImageGallery productId={product.id} images={product.images} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function InventoryRow({
+  variant,
+  saving,
+  onSave,
+}: {
+  variant: {
+    id: string;
+    techSize: string | null;
+    wbSize: string | null;
+    basePrice: string | null;
+    discountPrice: string | null;
+    stockQuantity: number;
+    reservedStock: number;
+    availableQuantity: number;
+    inStock: boolean;
+  };
+  saving: boolean;
+  onSave: (variantId: string, stockQuantity: number) => Promise<void>;
+}) {
+  const [value, setValue] = useState(String(variant.stockQuantity));
+
+  return (
+    <article className="grid gap-3 px-4 py-4 md:grid-cols-[120px_120px_120px_120px_120px_160px_140px] md:px-5">
+      <div className="text-sm text-[var(--foreground)]">{variant.techSize ?? "N/A"}</div>
+      <div className="text-sm text-[var(--muted)]">{variant.wbSize ?? "N/A"}</div>
+      <div className="text-sm text-[var(--foreground)]">{variant.basePrice ?? "0.00"}</div>
+      <div className="text-sm text-[var(--foreground)]">{variant.discountPrice ?? "-"}</div>
+      <div>
+        <input
+          type="number"
+          min={variant.reservedStock}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--foreground)]"
+        />
+      </div>
+      <div className={variant.availableQuantity <= 5 ? "text-sm font-semibold text-amber-700" : "text-sm text-emerald-700"}>
+        {variant.availableQuantity} available
+        <div className="text-xs text-[var(--muted)]">{variant.reservedStock} reserved</div>
+      </div>
+      <div className="flex items-center justify-start">
+        <button
+          type="button"
+          onClick={() => void onSave(variant.id, Math.max(variant.reservedStock, Number(value) || 0))}
+          disabled={saving}
+          className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Save stock"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function InventoryMetric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "ok" | "warn";
+}) {
+  const toneClass =
+    tone === "ok"
+      ? "text-emerald-700"
+      : tone === "warn"
+        ? "text-amber-700"
+        : "text-[var(--foreground)]";
+
+  return (
+    <div className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
+      <p className={`mt-2 text-lg font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }

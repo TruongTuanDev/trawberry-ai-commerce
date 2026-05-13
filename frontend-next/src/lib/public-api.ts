@@ -9,6 +9,8 @@ export type PublicProduct = {
   seoSlug: string | null;
   categoryName: string | null;
   price: string | null;
+  inStock: boolean;
+  availableQuantity: number;
   images: Array<{
     id: string;
     url: string;

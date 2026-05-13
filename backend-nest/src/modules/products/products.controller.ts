@@ -25,7 +25,9 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { PaginatedProductsResponseDto } from './dto/paginated-products-response.dto';
 import { ProductDetailResponseDto } from './dto/product-detail-response.dto';
+import { ProductInventoryResponseDto } from './dto/product-inventory-response.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductInventoryDto } from './dto/update-product-inventory.dto';
 import { ProductsService } from './products.service';
 
 @ApiTags('products')
@@ -74,6 +76,32 @@ export class ProductsController {
     @Body() dto: UpdateProductDto,
   ) {
     return this.productsService.update(shopId, productId, dto);
+  }
+
+  @Get(':productId/inventory')
+  @ApiOperation({
+    summary: 'Get inventory summary for a product in a seller shop.',
+  })
+  @ApiOkResponse({ type: ProductInventoryResponseDto })
+  getInventory(
+    @Param('shopId') shopId: string,
+    @Param('productId') productId: string,
+  ) {
+    return this.productsService.getInventory(shopId, productId);
+  }
+
+  @Patch(':productId/inventory')
+  @ApiOperation({
+    summary:
+      'Update stock quantity for a product variant in a seller shop inventory view.',
+  })
+  @ApiOkResponse({ type: ProductInventoryResponseDto })
+  updateInventory(
+    @Param('shopId') shopId: string,
+    @Param('productId') productId: string,
+    @Body() dto: UpdateProductInventoryDto,
+  ) {
+    return this.productsService.updateInventory(shopId, productId, dto);
   }
 
   @Delete(':productId')

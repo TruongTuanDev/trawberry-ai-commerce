@@ -183,6 +183,26 @@ export type ProductDetail = {
   }>;
 };
 
+export type ProductInventory = {
+  productId: string;
+  shopId: string;
+  title: string;
+  totalStockQuantity: number;
+  totalReservedStock: number;
+  totalAvailableQuantity: number;
+  inStock: boolean;
+  variants: Array<{
+    id: string;
+    chrtId: string;
+    techSize: string | null;
+    wbSize: string | null;
+    stockQuantity: number;
+    reservedStock: number;
+    availableQuantity: number;
+    inStock: boolean;
+  }>;
+};
+
 export type ProductImage = {
   id: string;
   shopId: string;
@@ -353,6 +373,40 @@ export async function updateShopProduct(
     token,
     body: JSON.stringify(payload),
   });
+}
+
+export async function getShopProductInventory(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductInventory>(
+    `/api/shops/${shopId}/products/${productId}/inventory`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function updateShopProductInventory(
+  shopId: string,
+  productId: string,
+  payload: {
+    variantId?: string;
+    stockQuantity: number;
+    note?: string;
+  },
+  token?: string,
+) {
+  return apiRequest<ProductInventory>(
+    `/api/shops/${shopId}/products/${productId}/inventory`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function getShopProductImages(shopId: string, productId: string, token?: string) {

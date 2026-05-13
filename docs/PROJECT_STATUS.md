@@ -115,10 +115,28 @@
   - `docs/API_CHECKOUT.md`
 - Notes:
   - public catalog endpoints expose only safe product/shop data
+  - public catalog now exposes availability via `inStock` and `availableQuantity`
   - checkout allows anonymous order creation
   - backend computes `totalAmount` and defaults order status to `PENDING`
+  - checkout now enforces stock and deducts inventory atomically during order creation
   - seller order list/detail can read the new orders without changing the seller API surface
   - Docker runtime verification passed with `smoke:checkout`, `smoke:orders`, backend/frontend health checks, and Playwright auth E2E
+
+### Inventory / Stock Management
+- Status: MVP done
+- Evidence:
+  - `backend-nest/src/modules/products/products.controller.ts`
+  - `backend-nest/src/modules/products/products.service.ts`
+  - `backend-nest/test/product.e2e-spec.ts`
+  - `backend-nest/test/checkout.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-inventory.ps1`
+  - `frontend-next/src/app/seller/products/[id]/page.tsx`
+  - `docs/API_INVENTORY.md`
+- Notes:
+  - seller can view and update product inventory from the new stack
+  - public marketplace pages now reflect `inStock` and available quantity
+  - checkout rejects insufficient stock and deducts stock on success
+  - stock restore for cancelled orders remains in the seller order lifecycle
 
 ### Customer Order Tracking / Payment Proof
 - Status: MVP done
@@ -338,6 +356,8 @@
 | `GET` | `/api/shops/:shopId/products/:productId` | products | Done | Yes | Yes |
 | `PATCH` | `/api/shops/:shopId/products/:productId` | products | Done | Yes | Yes |
 | `DELETE` | `/api/shops/:shopId/products/:productId` | products | Done | Yes | Yes |
+| `GET` | `/api/shops/:shopId/products/:productId/inventory` | products | MVP done | Yes | Yes |
+| `PATCH` | `/api/shops/:shopId/products/:productId/inventory` | products | MVP done | Yes | Yes |
 | `GET` | `/api/shops/:shopId/products/:productId/images` | product-images | Done | Yes | Yes |
 | `POST` | `/api/shops/:shopId/products/:productId/images` | product-images | Done | Yes | Yes |
 | `PATCH` | `/api/shops/:shopId/products/:productId/images/:imageId` | product-images | Done | Yes | Yes |
@@ -443,6 +463,7 @@ Current flow:
 | backend-nest | `npm run smoke:payments` | Pass | Manual payment review runtime smoke covers note/mark-paid/audit/cross-shop `403`. |
 | backend-nest | `npm run seed:demo` | Pass | Idempotent demo seed for public marketplace and E2E setup. |
 | backend-nest | `npm run smoke:order-tracking` | Pass | Customer tracks, uploads proof, seller sees proof, seller marks paid, customer sees updated payment status. |
+| backend-nest | `npm run smoke:inventory` | Pass | Seller stock update + checkout deduction + insufficient stock flow pass. |
 | backend-nest | `npm run smoke:product-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-images` | Exists | Not re-run in this audit. |
 | backend-nest | `npm run smoke:ai-service-integration` | Pass | Re-run in this audit against Docker runtime. |
@@ -473,6 +494,7 @@ Current flow:
 - Payments are now partially migrated for manual seller review, but provider-backed settlement is still missing.
 - Customer checkout, public tracking, and manual transfer proof upload are now in the new stack, but customer order history is still incomplete.
 - Public marketplace is now demo-ready, but richer merchandising, sorting, and customer account history are still incomplete.
+- Inventory is now single-location and variant-local only; no warehouse or ledger model exists yet.
 - Seeded demo data now supports stable public demos, but there is still no automatic database reset/isolation between repeated end-to-end runs.
 - Local/demo credentials in Docker/env examples are for development only and must not be used in production.
 

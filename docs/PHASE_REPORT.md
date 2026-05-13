@@ -612,6 +612,65 @@ while allowing:
   - the new flow required a frontend container rebuild before Playwright could see newly added `data-testid` hooks on tracking and seller payment detail pages
   - no backend API or status transition changes were required for this phase
 
+## Inventory / Stock Management MVP
+
+- Scope:
+  - add seller inventory read/update endpoints in `backend-nest`
+  - expose public product availability for marketplace pages
+  - enforce inventory checks inside checkout and deduct stock on success
+  - keep existing checkout, order tracking, payments, and auth flows passing
+- Files changed:
+  - `backend-nest/src/modules/products/products.controller.ts`
+  - `backend-nest/src/modules/products/products.service.ts`
+  - `backend-nest/src/modules/products/dto/product-inventory-response.dto.ts`
+  - `backend-nest/src/modules/products/dto/update-product-inventory.dto.ts`
+  - `backend-nest/src/modules/public-products/*`
+  - `backend-nest/src/modules/checkout/checkout.service.ts`
+  - `backend-nest/test/product.e2e-spec.ts`
+  - `backend-nest/test/checkout.e2e-spec.ts`
+  - `backend-nest/scripts/smoke-inventory.ps1`
+  - `frontend-next/src/app/seller/products/[id]/page.tsx`
+  - `frontend-next/src/components/public/product-card.tsx`
+  - `frontend-next/src/components/public/public-product-detail-page-client.tsx`
+  - `frontend-next/src/components/public/checkout-page-client.tsx`
+  - `frontend-next/src/lib/public-api.ts`
+  - `frontend-next/src/lib/seller-api.ts`
+  - `docs/API_INVENTORY.md`
+  - `docs/API_PRODUCTS.md`
+  - `docs/API_CHECKOUT.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Result:
+  - seller can read and update stock per product from the new stack
+  - public product listing/detail now show availability and disable checkout when out of stock
+  - checkout validates stock, deducts available quantity immediately, and keeps reservation bookkeeping in the same transaction
+  - insufficient stock returns a clear `400` instead of overselling
+  - existing cancellation and delivered flows continue to release or restore inventory through the seller order lifecycle
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:auth`: pass
+  - `frontend-next npm run test:e2e:public`: pass
+  - `frontend-next npm run test:e2e:public-full`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+- Runtime notes:
+  - inventory reuses existing `product_variants.stockQuantity` and `reservedStock` rather than adding a new schema field
+  - public availability uses current sellable stock directly, while reservation counts remain visible to sellers for operational context
+
 ## Suggested Commit Message
 ```text
 chore: finalize docker compose runtime review and commit checklist

@@ -111,10 +111,7 @@ export class CheckoutService {
         );
       }
 
-      const availableStock = Math.max(
-        0,
-        variant.stockQuantity - variant.reservedStock,
-      );
+      const availableStock = Math.max(0, variant.stockQuantity);
       if (availableStock < item.quantity) {
         throw new BadRequestException(
           `Product ${item.productId} does not have enough stock.`,
@@ -149,12 +146,27 @@ export class CheckoutService {
 
     const created = await this.prisma.$transaction(async (tx) => {
       for (const item of normalizedItems) {
-        await tx.productVariant.update({
-          where: { id: item.variant.id },
+        const updatedVariant = await tx.productVariant.updateMany({
+          where: {
+            id: item.variant.id,
+            stockQuantity: item.variant.stockQuantity,
+            reservedStock: item.variant.reservedStock,
+          },
           data: {
-            reservedStock: item.variant.reservedStock + item.input.quantity,
+            stockQuantity: {
+              decrement: item.input.quantity,
+            },
+            reservedStock: {
+              increment: item.input.quantity,
+            },
           },
         });
+
+        if (updatedVariant.count !== 1) {
+          throw new BadRequestException(
+            `Product ${item.input.productId} stock changed during checkout. Please refresh and try again.`,
+          );
+        }
       }
 
       return tx.order.create({

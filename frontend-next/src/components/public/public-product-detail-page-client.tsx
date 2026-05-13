@@ -15,6 +15,8 @@ export function PublicProductDetailPageClient({
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const maxQuantity = Math.max(1, product?.availableQuantity ?? 1);
+  const safeQuantity = Math.min(Math.max(1, quantity), maxQuantity);
 
   useEffect(() => {
     let mounted = true;
@@ -48,8 +50,8 @@ export function PublicProductDetailPageClient({
       return null;
     }
 
-    return (Number(product.price) * quantity).toFixed(2);
-  }, [product?.price, quantity]);
+    return (Number(product.price) * safeQuantity).toFixed(2);
+  }, [product?.price, safeQuantity]);
 
   return (
     <PublicShell>
@@ -94,6 +96,7 @@ export function PublicProductDetailPageClient({
                     <Metric label="Estimated total" value={estimatedTotal ?? "Calculated at checkout"} />
                     <Metric label="Brand" value={product.brand ?? "Unbranded"} />
                     <Metric label="Category" value={product.categoryName ?? "General"} />
+                    <Metric label="Availability" value={product.inStock ? `In stock (${product.availableQuantity})` : "Out of stock"} />
                   </div>
 
                   <div className="public-muted-card rounded-[1.5rem] p-5">
@@ -110,6 +113,7 @@ export function PublicProductDetailPageClient({
                       <button
                         type="button"
                         onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                        disabled={!product.inStock}
                         className="public-button-secondary h-11 w-11 text-lg"
                         aria-label="Decrease quantity"
                       >
@@ -119,14 +123,28 @@ export function PublicProductDetailPageClient({
                         id="quantity"
                         type="number"
                         min={1}
-                        value={quantity}
-                        onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                        max={maxQuantity}
+                        value={safeQuantity}
+                        onChange={(event) =>
+                          setQuantity(
+                            Math.min(
+                              Math.max(1, Number(event.target.value) || 1),
+                              maxQuantity,
+                            ),
+                          )
+                        }
                         className="public-input max-w-28 text-center"
                         data-testid="product-quantity-input"
+                        disabled={!product.inStock}
                       />
                       <button
                         type="button"
-                        onClick={() => setQuantity((current) => current + 1)}
+                        onClick={() =>
+                          setQuantity((current) =>
+                            Math.min(current + 1, maxQuantity),
+                          )
+                        }
+                        disabled={!product.inStock}
                         className="public-button-secondary h-11 w-11 text-lg"
                         aria-label="Increase quantity"
                       >
@@ -134,13 +152,19 @@ export function PublicProductDetailPageClient({
                       </button>
                     </div>
                     <div className="mt-5 flex flex-wrap gap-3">
-                      <Link
-                        href={`/checkout?productId=${product.id}&quantity=${quantity}`}
-                        className="public-button-primary inline-flex items-center justify-center px-5 py-3 text-sm"
-                        data-testid="continue-to-checkout"
-                      >
-                        Continue to checkout
-                      </Link>
+                      {product.inStock ? (
+                        <Link
+                          href={`/checkout?productId=${product.id}&quantity=${safeQuantity}`}
+                          className="public-button-primary inline-flex items-center justify-center px-5 py-3 text-sm"
+                          data-testid="continue-to-checkout"
+                        >
+                          Continue to checkout
+                        </Link>
+                      ) : (
+                        <span className="inline-flex items-center justify-center rounded-full bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-500">
+                          Out of stock
+                        </span>
+                      )}
                       <Link href="/products" className="public-button-secondary inline-flex items-center justify-center px-5 py-3 text-sm">
                         Continue browsing
                       </Link>

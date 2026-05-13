@@ -7,6 +7,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
 import { ProductDetailResponseDto } from '../src/modules/products/dto/product-detail-response.dto';
+import { ProductInventoryResponseDto } from '../src/modules/products/dto/product-inventory-response.dto';
 import { PaginatedProductsResponseDto } from '../src/modules/products/dto/paginated-products-response.dto';
 import { readBody } from './test-helpers';
 
@@ -173,6 +174,9 @@ describe('ProductsController (e2e)', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+    },
+    productVariant: {
+      update: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -598,6 +602,33 @@ describe('ProductsController (e2e)', () => {
       },
     );
 
+    prismaMock.productVariant.update.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { id: string };
+        data: { stockQuantity?: number };
+      }) => {
+        for (const product of products) {
+          const variant = product.variants.find(
+            (entry) => entry.id === where.id,
+          );
+          if (!variant) {
+            continue;
+          }
+
+          if (data.stockQuantity !== undefined) {
+            variant.stockQuantity = data.stockQuantity;
+          }
+
+          return Promise.resolve(variant);
+        }
+
+        throw new Error('Variant not found');
+      },
+    );
+
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
         Promise.resolve(callback(prismaMock)),
@@ -711,6 +742,43 @@ describe('ProductsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .get('/api/shops/shop-2/products')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
+  it('returns inventory summary and allows seller stock update', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const inventoryResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products/prod-1/inventory')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const inventoryBody =
+      readBody<ProductInventoryResponseDto>(inventoryResponse);
+
+    expect(inventoryBody.productId).toBe('prod-1');
+    expect(inventoryBody.totalAvailableQuantity).toBe(5);
+    expect(inventoryBody.variants[0].stockQuantity).toBe(5);
+
+    const updateResponse = await request(app.getHttpServer())
+      .patch('/api/shops/shop-1/products/prod-1/inventory')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        stockQuantity: 8,
+      })
+      .expect(200);
+    const updateBody = readBody<ProductInventoryResponseDto>(updateResponse);
+
+    expect(updateBody.variants[0].stockQuantity).toBe(8);
+    expect(updateBody.totalAvailableQuantity).toBe(8);
+    expect(products[0].variants[0].stockQuantity).toBe(8);
+  });
+
+  it('forbids cross-shop inventory access', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .get('/api/shops/shop-2/products/prod-3/inventory')
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
   });

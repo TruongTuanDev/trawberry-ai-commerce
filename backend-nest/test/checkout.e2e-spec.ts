@@ -142,7 +142,7 @@ describe('CheckoutController (e2e)', () => {
       findMany: jest.fn(),
     },
     productVariant: {
-      update: jest.fn(),
+      updateMany: jest.fn(),
     },
     order: {
       create: jest.fn(),
@@ -353,13 +353,16 @@ describe('CheckoutController (e2e)', () => {
         ),
     );
 
-    prismaMock.productVariant.update.mockImplementation(
+    prismaMock.productVariant.updateMany.mockImplementation(
       ({
         where,
         data,
       }: {
-        where: { id: string };
-        data: { reservedStock?: number };
+        where: { id: string; stockQuantity?: number; reservedStock?: number };
+        data: {
+          stockQuantity?: { decrement: number };
+          reservedStock?: { increment: number };
+        };
       }) => {
         const variant = products
           .flatMap((product) => product.variants)
@@ -367,10 +370,28 @@ describe('CheckoutController (e2e)', () => {
         if (!variant) {
           throw new Error('Variant not found');
         }
-        if (data.reservedStock !== undefined) {
-          variant.reservedStock = data.reservedStock;
+
+        if (
+          where.stockQuantity !== undefined &&
+          variant.stockQuantity !== where.stockQuantity
+        ) {
+          return { count: 0 };
         }
-        return variant;
+
+        if (
+          where.reservedStock !== undefined &&
+          variant.reservedStock !== where.reservedStock
+        ) {
+          return { count: 0 };
+        }
+
+        if (data.stockQuantity?.decrement !== undefined) {
+          variant.stockQuantity -= data.stockQuantity.decrement;
+        }
+        if (data.reservedStock?.increment !== undefined) {
+          variant.reservedStock += data.reservedStock.increment;
+        }
+        return { count: 1 };
       },
     );
 
@@ -542,6 +563,8 @@ describe('CheckoutController (e2e)', () => {
     expect(createBody.paymentInstructions).toBe(
       'Transfer to bank account 123.',
     );
+    expect(products[0].variants[0].stockQuantity).toBe(8);
+    expect(products[0].variants[0].reservedStock).toBe(3);
 
     const token = await loginAndGetToken(app);
     const listResponse = await request(app.getHttpServer())
@@ -623,6 +646,25 @@ describe('CheckoutController (e2e)', () => {
           fullName: '',
           phone: '',
           address: '',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(400);
+  });
+
+  it('fails when requested quantity exceeds available stock', async () => {
+    products[0].variants[0].stockQuantity = 1;
+    products[0].variants[0].reservedStock = 1;
+
+    await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [{ productId: 'product-1', quantity: 2 }],
+        customer: {
+          fullName: 'Alice Checkout',
+          phone: '0123456789',
+          address: '123 Main St',
         },
         paymentMethod: 'MANUAL_TRANSFER',
       })

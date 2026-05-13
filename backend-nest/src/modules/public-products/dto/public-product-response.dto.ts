@@ -50,6 +50,12 @@ export class PublicProductResponseDto {
   @ApiProperty({ nullable: true })
   price!: string | null;
 
+  @ApiProperty()
+  inStock!: boolean;
+
+  @ApiProperty()
+  availableQuantity!: number;
+
   @ApiProperty({ type: PublicProductImageDto, isArray: true })
   images!: PublicProductImageDto[];
 

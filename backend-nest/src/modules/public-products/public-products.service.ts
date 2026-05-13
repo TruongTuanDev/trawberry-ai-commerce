@@ -143,6 +143,7 @@ export class PublicProductsService {
 
   private mapProduct(product: PublicProductRecord) {
     const price = this.resolvePrice(product.variants);
+    const availableQuantity = this.resolveAvailableQuantity(product.variants);
 
     return {
       id: product.id,
@@ -153,6 +154,8 @@ export class PublicProductsService {
       seoSlug: product.seoSlug,
       categoryName: product.categoryName,
       price: price?.toString() ?? null,
+      inStock: availableQuantity > 0,
+      availableQuantity,
       images: product.images.map((image) => ({
         id: image.id,
         url: image.localUrl ?? image.wbUrl,
@@ -168,5 +171,12 @@ export class PublicProductsService {
       .filter((value): value is Prisma.Decimal => value !== null);
 
     return pricedVariants[0] ?? null;
+  }
+
+  private resolveAvailableQuantity(variants: ProductVariant[]) {
+    return variants.reduce(
+      (sum, variant) => sum + Math.max(0, variant.stockQuantity),
+      0,
+    );
   }
 }

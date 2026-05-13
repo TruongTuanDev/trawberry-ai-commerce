@@ -30,6 +30,8 @@ Returned fields are public-safe:
 - `price`
 - `images`
 - `shop`
+- `inStock`
+- `availableQuantity`
 
 Only active products with at least one active variant are returned.
 
@@ -89,7 +91,10 @@ Order creation behavior:
 - `totalAmount` is calculated only on the backend
 - order items snapshot current product title, slug, image, and price
 - duplicate `productId` lines are normalized and summed before stock validation
+- checkout validates current stock before writing the order
+- variant stock is deducted immediately by decreasing `stockQuantity`
 - variant stock is reserved by increasing `reservedStock`
+- deduction and reservation are executed atomically inside the checkout transaction to prevent oversell
 
 Response:
 
@@ -120,6 +125,7 @@ Coverage currently includes:
   - product not in shop
   - invalid quantity
   - missing customer fields
+  - insufficient stock
   - seller orders list/detail can read the newly created order
 - `backend-nest/scripts/smoke-checkout.ps1`
   - register seller
@@ -136,3 +142,4 @@ Coverage currently includes:
 - Payment flow is still manual and informational only.
 - Checkout currently chooses the first active priced variant for a product.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
+- Inventory is tracked at the variant layer, but the current customer checkout MVP still selects the first active priced variant for each product.

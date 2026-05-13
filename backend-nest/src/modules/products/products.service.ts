@@ -9,6 +9,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductInventoryDto } from './dto/update-product-inventory.dto';
 
 @Injectable()
 export class ProductsService {
@@ -211,6 +212,45 @@ export class ProductsService {
     return this.mapProductDetail(product);
   }
 
+  async getInventory(shopId: string, productId: string) {
+    const product = await this.findShopProductOrThrow(shopId, productId);
+    return this.mapInventory(product);
+  }
+
+  async updateInventory(
+    shopId: string,
+    productId: string,
+    dto: UpdateProductInventoryDto,
+  ) {
+    const product = await this.findShopProductOrThrow(shopId, productId);
+    const variants = [...product.variants].sort(
+      (left, right) => Number(left.createdAt) - Number(right.createdAt),
+    );
+    const targetVariant =
+      (dto.variantId
+        ? variants.find((variant) => variant.id === dto.variantId)
+        : variants[0]) ?? null;
+
+    if (!targetVariant) {
+      throw new BadRequestException(
+        `Product ${productId} does not have any variants to update inventory for.`,
+      );
+    }
+
+    await this.prisma.productVariant.update({
+      where: { id: targetVariant.id },
+      data: {
+        stockQuantity: dto.stockQuantity,
+      },
+    });
+
+    const refreshedProduct = await this.findShopProductOrThrow(
+      shopId,
+      productId,
+    );
+    return this.mapInventory(refreshedProduct);
+  }
+
   async remove(shopId: string, productId: string) {
     await this.findShopProductOrThrow(shopId, productId);
     await this.prisma.product.delete({
@@ -326,9 +366,13 @@ export class ProductsService {
     wbVendorCode: string | null;
     images: Array<{ wbUrl: string; localUrl: string | null }>;
     category: { name: string } | null;
-    variants: Array<{ stockQuantity: number }>;
+    variants: Array<{ stockQuantity: number; reservedStock: number }>;
   }) {
     const mainImage = product.images[0];
+    const availableQuantity = product.variants.reduce(
+      (sum, variant) => sum + Math.max(0, variant.stockQuantity),
+      0,
+    );
 
     return {
       id: product.id,
@@ -343,7 +387,7 @@ export class ProductsService {
       categoryName: product.category?.name ?? product.categoryName,
       wbVendorCode: product.wbVendorCode,
       mainImage: mainImage?.localUrl ?? mainImage?.wbUrl ?? null,
-      inStock: product.variants.some((variant) => variant.stockQuantity > 0),
+      inStock: availableQuantity > 0,
     };
   }
 
@@ -422,6 +466,59 @@ export class ProductsService {
         reservedStock: variant.reservedStock,
         inStock: variant.stockQuantity > 0,
       })),
+    };
+  }
+
+  private mapInventory(product: {
+    id: string;
+    shopId: string;
+    wbTitle: string;
+    localTitle: string | null;
+    variants: Array<{
+      id: string;
+      chrtId: bigint;
+      techSize: string | null;
+      wbSize: string | null;
+      stockQuantity: number;
+      reservedStock: number;
+    }>;
+  }) {
+    const variants = product.variants
+      .slice()
+      .sort((left, right) => Number(left.chrtId - right.chrtId))
+      .map((variant) => {
+        const availableQuantity = Math.max(0, variant.stockQuantity);
+
+        return {
+          id: variant.id,
+          chrtId: variant.chrtId.toString(),
+          techSize: variant.techSize,
+          wbSize: variant.wbSize,
+          stockQuantity: variant.stockQuantity,
+          reservedStock: variant.reservedStock,
+          availableQuantity,
+          inStock: availableQuantity > 0,
+        };
+      });
+
+    return {
+      productId: product.id,
+      shopId: product.shopId,
+      title: product.localTitle ?? product.wbTitle,
+      totalStockQuantity: variants.reduce(
+        (sum, variant) => sum + variant.stockQuantity,
+        0,
+      ),
+      totalReservedStock: variants.reduce(
+        (sum, variant) => sum + variant.reservedStock,
+        0,
+      ),
+      totalAvailableQuantity: variants.reduce(
+        (sum, variant) => sum + variant.availableQuantity,
+        0,
+      ),
+      inStock: variants.some((variant) => variant.inStock),
+      variants,
     };
   }
 }

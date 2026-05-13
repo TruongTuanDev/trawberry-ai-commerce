@@ -36,6 +36,8 @@ export function CheckoutPageClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CheckoutOrderResponse | null>(null);
+  const maxQuantity = Math.max(1, product?.availableQuantity ?? 1);
+  const safeQuantity = Math.min(Math.max(1, quantity), maxQuantity);
 
   useEffect(() => {
     let mounted = true;
@@ -73,8 +75,8 @@ export function CheckoutPageClient({
 
   const previewTotal = useMemo(() => {
     if (!product?.price) return null;
-    return (Number(product.price) * quantity).toFixed(2);
-  }, [product?.price, quantity]);
+    return (Number(product.price) * safeQuantity).toFixed(2);
+  }, [product?.price, safeQuantity]);
 
   const handleSubmit = async () => {
     if (!product) {
@@ -87,13 +89,18 @@ export function CheckoutPageClient({
       return;
     }
 
+    if (!product.inStock || product.availableQuantity < safeQuantity) {
+      setError("The requested quantity is no longer available. Refresh stock and try again.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
       const created = await createCheckoutOrder({
         shopId: product.shop.id,
-        items: [{ productId: product.id, quantity }],
+        items: [{ productId: product.id, quantity: safeQuantity }],
         customer: {
           fullName: customer.fullName.trim(),
           phone: customer.phone.trim(),
@@ -222,13 +229,26 @@ export function CheckoutPageClient({
                       <div className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
                         <Metric label="Unit price" value={product?.price ?? "Unavailable"} />
                         <Metric label="Estimated total" value={previewTotal ?? "Calculated by backend"} />
+                        <Metric
+                          label="Availability"
+                          value={product?.inStock ? `${product.availableQuantity} available` : "Out of stock"}
+                        />
                         <Field label="Quantity">
                           <input
                             type="number"
                             min={1}
-                            value={quantity}
-                            onChange={(event) => setQuantity(Math.max(1, Number(event.target.value) || 1))}
+                            max={maxQuantity}
+                            value={safeQuantity}
+                            onChange={(event) =>
+                              setQuantity(
+                                Math.min(
+                                  Math.max(1, Number(event.target.value) || 1),
+                                  maxQuantity,
+                                ),
+                              )
+                            }
                             className="public-input"
+                            disabled={!product?.inStock}
                           />
                         </Field>
                       </div>
@@ -267,12 +287,12 @@ export function CheckoutPageClient({
 
                       <button
                         type="button"
-                        disabled={submitting || !product}
+                        disabled={submitting || !product || !product.inStock}
                         onClick={() => void handleSubmit()}
                         className="public-button-primary w-full px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                         data-testid="checkout-submit"
                       >
-                        {submitting ? "Creating order..." : "Create order"}
+                        {submitting ? "Creating order..." : product?.inStock ? "Create order" : "Out of stock"}
                       </button>
                       <p className="text-xs leading-6 text-[var(--muted)]">
                         Estimated totals are for customer guidance only. The backend always recalculates the trusted order total from product price and quantity.
