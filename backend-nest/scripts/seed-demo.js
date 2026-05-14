@@ -8,6 +8,8 @@ const DEMO_SELLER_EMAIL = "demo-seller@trawberry.local";
 const DEMO_SELLER_PASSWORD = "DemoSeller123!";
 const DEMO_ADMIN_EMAIL = "demo-admin@trawberry.local";
 const DEMO_ADMIN_PASSWORD = "DemoAdmin123!";
+const DEMO_CUSTOMER_EMAIL = "demo-customer@trawberry.local";
+const DEMO_CUSTOMER_PASSWORD = "DemoCustomer123!";
 const DEMO_SHOP_SLUG = "demo-marketplace-shop";
 const DEMO_SHOP_NAME = "Demo Strawberry Store";
 const DEMO_PAYMENT_INSTRUCTIONS =
@@ -70,6 +72,7 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(DEMO_SELLER_PASSWORD, 10);
   const adminPasswordHash = await bcrypt.hash(DEMO_ADMIN_PASSWORD, 10);
+  const customerPasswordHash = await bcrypt.hash(DEMO_CUSTOMER_PASSWORD, 10);
 
   await prisma.user.upsert({
     where: { email: DEMO_ADMIN_EMAIL },
@@ -87,6 +90,26 @@ async function main() {
       fullName: "Demo Admin",
       phone: "+79990000009",
       role: "ADMIN",
+      status: "ACTIVE",
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: DEMO_CUSTOMER_EMAIL },
+    update: {
+      passwordHash: customerPasswordHash,
+      fullName: "Demo Customer",
+      phone: "+79990000001",
+      role: "CUSTOMER",
+      status: "ACTIVE",
+    },
+    create: {
+      id: randomUUID(),
+      email: DEMO_CUSTOMER_EMAIL,
+      passwordHash: customerPasswordHash,
+      fullName: "Demo Customer",
+      phone: "+79990000001",
+      role: "CUSTOMER",
       status: "ACTIVE",
     },
   });
@@ -260,6 +283,8 @@ async function main() {
       sellerPassword: DEMO_SELLER_PASSWORD,
       adminEmail: DEMO_ADMIN_EMAIL,
       adminPassword: DEMO_ADMIN_PASSWORD,
+      customerEmail: DEMO_CUSTOMER_EMAIL,
+      customerPassword: DEMO_CUSTOMER_PASSWORD,
       shopSlug: DEMO_SHOP_SLUG,
       shopId: shop.id,
       publicProductCount,

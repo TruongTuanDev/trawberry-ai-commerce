@@ -138,78 +138,78 @@ export function SellerDeliverySettingsPageClient() {
       {loading ? (
         <p className="text-sm text-[var(--muted)]">Loading...</p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6" data-testid="seller-delivery-settings-page">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Pickup address">
-              <input value={form.pickupAddress} onChange={(event) => setForm((current) => ({ ...current, pickupAddress: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.pickupAddress} onChange={(event) => setForm((current) => ({ ...current, pickupAddress: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-address" />
             </Field>
             <Field label="Pickup city">
-              <input value={form.pickupCity} onChange={(event) => setForm((current) => ({ ...current, pickupCity: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.pickupCity} onChange={(event) => setForm((current) => ({ ...current, pickupCity: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-city" />
             </Field>
             <Field label="Postal code">
-              <input value={form.pickupPostalCode} onChange={(event) => setForm((current) => ({ ...current, pickupPostalCode: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.pickupPostalCode} onChange={(event) => setForm((current) => ({ ...current, pickupPostalCode: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-postal-code" />
             </Field>
             <Field label="Pickup phone">
-              <input value={form.pickupContactPhone} onChange={(event) => setForm((current) => ({ ...current, pickupContactPhone: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.pickupContactPhone} onChange={(event) => setForm((current) => ({ ...current, pickupContactPhone: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-contact-phone" />
             </Field>
             <Field label="Pickup contact">
-              <input value={form.pickupContactName} onChange={(event) => setForm((current) => ({ ...current, pickupContactName: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.pickupContactName} onChange={(event) => setForm((current) => ({ ...current, pickupContactName: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-contact-name" />
             </Field>
             <Field label="Default carrier">
-              <select value={form.defaultCarrier} onChange={(event) => setForm((current) => ({ ...current, defaultCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+              <select value={form.defaultCarrier} onChange={(event) => setForm((current) => ({ ...current, defaultCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-carrier">
                 <option value="CDEK">CDEK</option>
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
             <Field label="Same-city priority">
-              <select value={form.sameCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, sameCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+              <select value={form.sameCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, sameCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-same-city-carrier">
                 <option value="YANDEX">Yandex</option>
                 <option value="CDEK">CDEK</option>
               </select>
             </Field>
             <Field label="Inter-city priority">
-              <select value={form.interCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, interCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+              <select value={form.interCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, interCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-inter-city-carrier">
                 <option value="CDEK">CDEK</option>
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
             <Field label="Fallback carrier">
-              <select value={form.fallbackCarrier} onChange={(event) => setForm((current) => ({ ...current, fallbackCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+              <select value={form.fallbackCarrier} onChange={(event) => setForm((current) => ({ ...current, fallbackCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-fallback-carrier">
                 <option value="CDEK">CDEK</option>
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
             <Field label="Default weight (g)">
-              <input value={form.defaultWeightGram} onChange={(event) => setForm((current) => ({ ...current, defaultWeightGram: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultWeightGram} onChange={(event) => setForm((current) => ({ ...current, defaultWeightGram: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-weight-gram" />
             </Field>
             <Field label="Length (cm)">
-              <input value={form.defaultLengthCm} onChange={(event) => setForm((current) => ({ ...current, defaultLengthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultLengthCm} onChange={(event) => setForm((current) => ({ ...current, defaultLengthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-length-cm" />
             </Field>
             <Field label="Width (cm)">
-              <input value={form.defaultWidthCm} onChange={(event) => setForm((current) => ({ ...current, defaultWidthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultWidthCm} onChange={(event) => setForm((current) => ({ ...current, defaultWidthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-width-cm" />
             </Field>
             <Field label="Height (cm)">
-              <input value={form.defaultHeightCm} onChange={(event) => setForm((current) => ({ ...current, defaultHeightCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+              <input value={form.defaultHeightCm} onChange={(event) => setForm((current) => ({ ...current, defaultHeightCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-height-cm" />
             </Field>
           </div>
 
           <div className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-2">
             <label className="flex items-center gap-3 text-sm font-medium text-[var(--foreground)]">
-              <input type="checkbox" checked={form.enabledCdek} onChange={(event) => setForm((current) => ({ ...current, enabledCdek: event.target.checked }))} />
+              <input type="checkbox" checked={form.enabledCdek} onChange={(event) => setForm((current) => ({ ...current, enabledCdek: event.target.checked }))} data-testid="delivery-enabled-cdek" />
               Enable CDEK nationwide offers
             </label>
             <label className="flex items-center gap-3 text-sm font-medium text-[var(--foreground)]">
-              <input type="checkbox" checked={form.enabledYandex} onChange={(event) => setForm((current) => ({ ...current, enabledYandex: event.target.checked }))} />
+              <input type="checkbox" checked={form.enabledYandex} onChange={(event) => setForm((current) => ({ ...current, enabledYandex: event.target.checked }))} data-testid="delivery-enabled-yandex" />
               Enable Yandex express mock offers
             </label>
           </div>
 
-          <button type="button" onClick={() => void handleSave()} disabled={saving} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="button" onClick={() => void handleSave()} disabled={saving} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="delivery-settings-save">
             {saving ? "Saving..." : "Save delivery settings"}
           </button>
 
           {error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
-          {successMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{successMessage}</div> : null}
+          {successMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700" data-testid="delivery-settings-success">{successMessage}</div> : null}
         </div>
       )}
     </SectionCard>

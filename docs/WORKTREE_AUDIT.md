@@ -6,7 +6,7 @@
 
 ## Latest Commit
 
-- `356cd1c9f3431cf6bd06fe2786bc3a7665e2b362`
+- `629f9d79cddb15d2ba94f71a368b20337671ff00`
 
 ## Untracked Files Found
 
@@ -119,3 +119,57 @@ These are source/docs/test changes, not artifacts. They were not removed and sho
 ```powershell
 git stash push -m "wip: delivery changes before next phase" -- backend-nest/scripts/seed-demo.js docs/API_DELIVERY.md frontend-next/src/components/orders/seller-order-detail-page-client.tsx frontend-next/src/components/public/order-track-detail-page-client.tsx frontend-next/src/components/seller/seller-delivery-settings-page-client.tsx frontend-next/tests/e2e/full-commerce-flow.spec.ts frontend-next/tests/e2e/seller-delivery-settings.spec.ts frontend-next/tests/e2e/three-role-demo-workflow.spec.ts
 ```
+
+## Delivery / Demo Workflow Review
+
+Reviewed after cleanup commit `629f9d79cddb15d2ba94f71a368b20337671ff00`.
+
+### Source Changes Reviewed
+
+- `backend-nest/scripts/seed-demo.js`
+  - Valid demo workflow change. Seeds `demo-customer@trawberry.local` alongside admin and seller demo accounts for browser demo playback.
+  - No secrets or artifacts found.
+- `docs/API_DELIVERY.md`
+  - Valid delivery documentation update for seller settings, delivery offer selection, shipment creation, and customer tracking UI coverage.
+- `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`
+  - Valid delivery UI/testability change. Adds stable test hooks, selects the recommended offer after calculation, and keeps existing shipment pickup data stable once delivery is active.
+- `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+  - Valid customer tracking test hook for delivery provider/status assertions.
+- `frontend-next/src/components/seller/seller-delivery-settings-page-client.tsx`
+  - Valid seller delivery settings test hooks for browser E2E coverage.
+- `frontend-next/tests/e2e/full-commerce-flow.spec.ts`
+  - Valid locator hardening using the delivery action message test ID.
+- `frontend-next/tests/e2e/seller-delivery-settings.spec.ts`
+  - Valid browser E2E for delivery settings and mock Yandex/CDEK flow.
+- `frontend-next/tests/e2e/three-role-demo-workflow.spec.ts`
+  - Valid video-oriented browser E2E for admin, seller, and customer demo workflow. The admin step now opens the demo seller detail page directly by API-discovered `userId` so the test does not depend on approved seller list ordering.
+- `frontend-next/package.json`
+  - Valid script additions for `test:e2e:seller-delivery-settings` and `test:e2e:three-role-demo`.
+
+### Verification Result
+
+- Backend:
+  - `npm run lint`: pass
+  - `npm test -- --runInBand`: pass, 16 suites / 84 tests
+  - `npm run build`: pass
+  - `npm run smoke:delivery`: pass
+  - `npm run smoke:checkout`: pass
+  - `npm run smoke:wb-import-checkout`: pass
+  - `npm run seed:demo`: pass
+- Frontend:
+  - `npm run lint`: pass
+  - `npm run build`: pass
+  - `npm run test:e2e:full-commerce`: pass
+  - `npm run test:e2e:seller-delivery-settings`: pass
+  - `npm run test:e2e:three-role-demo`: pass
+- Docker/runtime:
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass, services healthy
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+
+### Commit Decision
+
+- Delivery/demo source, test, and docs changes are valid as one release-test scope.
+- No `.env`, `data.xlsx`, Excel private files, or Playwright artifacts should be staged.
+- Recommended commit message: `test: finalize delivery and demo workflow coverage`

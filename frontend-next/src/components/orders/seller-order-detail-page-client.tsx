@@ -73,7 +73,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         try {
           const settings = await getDeliverySettings(currentShopId, "");
           if (!mounted) return;
-          setPickupAddress((current) => current || settings.pickupAddress);
+          setPickupAddress((current) => (deliveryResult?.activeShipment ? current : settings.pickupAddress || current));
           setWeightGram(String(settings.defaultWeightGram));
           setLengthCm(String(settings.defaultLengthCm));
           setWidthCm(String(settings.defaultWidthCm));
@@ -170,7 +170,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           "",
         );
         setDeliveryOffers(result.offers);
-        setSelectedOfferId(result.offers[0]?.id ?? "");
+        setSelectedOfferId(result.offers.find((offer) => offer.isRecommended)?.id ?? result.offers[0]?.id ?? "");
         setDeliveryMessage(`Loaded ${result.offers.length} delivery offer(s).`);
       } else if (action === "create") {
         await createDeliveryShipment(
@@ -305,26 +305,27 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       </div>
 
       <SectionCard eyebrow="Delivery" title="Multi-carrier shipment" description="Yandex is recommended for same-city express. CDEK stays available for fallback, pickup, and inter-city delivery.">
+        <div data-testid="seller-order-delivery-section">
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Pickup address">
-                <input value={pickupAddress} onChange={(event) => setPickupAddress(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+                <input value={pickupAddress} onChange={(event) => setPickupAddress(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-order-pickup-address" />
               </Field>
               <Field label="Weight (g)">
-                <input value={weightGram} onChange={(event) => setWeightGram(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+                <input value={weightGram} onChange={(event) => setWeightGram(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-order-weight-gram" />
               </Field>
               <Field label="Length (cm)">
-                <input value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+                <input value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-order-length-cm" />
               </Field>
               <Field label="Width (cm)">
-                <input value={widthCm} onChange={(event) => setWidthCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+                <input value={widthCm} onChange={(event) => setWidthCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-order-width-cm" />
               </Field>
               <Field label="Height (cm)">
-                <input value={heightCm} onChange={(event) => setHeightCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" />
+                <input value={heightCm} onChange={(event) => setHeightCm(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-order-height-cm" />
               </Field>
               <Field label="Selected offer">
-                <select value={selectedOfferId} onChange={(event) => setSelectedOfferId(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]">
+                <select value={selectedOfferId} onChange={(event) => setSelectedOfferId(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-offer-select">
                   <option value="">Use default carrier</option>
                   {deliveryOffers.map((offer) => (
                     <option key={offer.id} value={offer.id}>
@@ -336,16 +337,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <button type="button" onClick={() => void handleDeliveryAction("calculate")} disabled={deliveryLoading} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => void handleDeliveryAction("calculate")} disabled={deliveryLoading} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50" data-testid="delivery-calculate-offers">
                 {deliveryLoading ? "Working..." : "Calculate offers"}
               </button>
-              <button type="button" onClick={() => void handleDeliveryAction("create")} disabled={deliveryLoading || order.paymentStatus !== "PAID"} className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => void handleDeliveryAction("create")} disabled={deliveryLoading || order.paymentStatus !== "PAID"} className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="delivery-create-shipment">
                 {deliveryOffers.find((offer) => offer.id === selectedOfferId)?.provider === "YANDEX" ? "Create claim" : "Create shipment"}
               </button>
               <button type="button" onClick={() => void handleDeliveryAction("accept")} disabled={deliveryLoading || !activeShipment || activeShipment.provider !== "YANDEX"} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50">
                 Accept claim
               </button>
-              <button type="button" onClick={() => void handleDeliveryAction("refresh")} disabled={deliveryLoading || !activeShipment} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => void handleDeliveryAction("refresh")} disabled={deliveryLoading || !activeShipment} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50" data-testid="delivery-refresh-shipment">
                 Refresh
               </button>
               <button type="button" onClick={() => void handleDeliveryAction("cancel")} disabled={deliveryLoading || !activeShipment} className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60">
@@ -353,14 +354,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </button>
             </div>
 
-            {deliveryMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{deliveryMessage}</div> : null}
+            {deliveryMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700" data-testid="delivery-action-message">{deliveryMessage}</div> : null}
           </div>
 
           <div className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
             <p className="text-sm font-semibold text-[var(--foreground)]">Current shipment</p>
             <div className="grid gap-4 md:grid-cols-2">
-              <Metric label="Provider" value={activeShipment?.provider ?? order.delivery?.provider ?? "Not created"} />
-              <Metric label="Status" value={activeShipment?.internalStatus ?? order.delivery?.status ?? "Not created"} />
+              <Metric label="Provider" value={activeShipment?.provider ?? order.delivery?.provider ?? "Not created"} testId="seller-delivery-provider" />
+              <Metric label="Status" value={activeShipment?.internalStatus ?? order.delivery?.status ?? "Not created"} testId="seller-delivery-status" />
               <Metric label="Shipment id" value={activeShipment?.providerShipmentId ?? order.delivery?.providerShipmentId ?? "Not assigned"} />
               <Metric label="Tracking" value={activeShipment?.trackingNumber ?? order.delivery?.trackingNumber ?? "Not assigned"} />
             </div>
@@ -372,7 +373,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             <div className="space-y-3">
               {deliveryOffers.length ? (
                 deliveryOffers.map((offer) => (
-                  <article key={offer.id} className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                  <article key={offer.id} className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4" data-testid="delivery-offer-row">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-[var(--foreground)]">{offer.offerType}</p>
@@ -411,6 +412,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             ) : null}
           </div>
         </div>
+        </div>
       </SectionCard>
 
       <SectionCard eyebrow="Items" title="Ordered products" description="Snapshot data is taken from the legacy order records so seller support sees exactly what the customer bought.">
@@ -437,11 +439,11 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
     <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{value}</p>
+      <p className="mt-2 text-sm font-semibold text-[var(--foreground)]" data-testid={testId}>{value}</p>
     </div>
   );
 }

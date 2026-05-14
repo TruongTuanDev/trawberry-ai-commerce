@@ -224,7 +224,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                     <div className="mt-4 space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
                         <Metric label="Provider">
-                          <p className="text-sm font-semibold text-[var(--foreground)]">{order.delivery.provider}</p>
+                          <p className="text-sm font-semibold text-[var(--foreground)]" data-testid="tracked-delivery-provider">{order.delivery.provider}</p>
                         </Metric>
                         <Metric label="Status">
                           <p className="text-sm font-semibold text-[var(--foreground)]" data-testid="tracked-delivery-status">

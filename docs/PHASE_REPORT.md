@@ -1162,6 +1162,54 @@ git rm --cached frontend-next\.env.local
 - Commit info:
   - pending commit message: `test: add seller delivery settings browser e2e`
 
+## Delivery / Demo Workflow Finalization
+
+- Scope:
+  - review the remaining delivery/demo source and browser E2E changes after worktree artifact cleanup
+  - keep legacy `strawberry-frontend` and `strawberry-backend` untouched
+  - commit only source/docs/tests after verification, with no local env, Excel, or Playwright artifacts
+- Result:
+  - `seed-demo.js` now includes a demo customer account for the three-role workflow
+  - delivery settings/order/tracking pages have stable test hooks for browser E2E assertions
+  - seller order delivery flow selects the recommended offer after calculation and avoids overwriting active shipment pickup data
+  - `seller-delivery-settings.spec.ts` covers mock delivery settings, offer recommendation, shipment creation, and public tracking projection
+  - `three-role-demo-workflow.spec.ts` covers admin, seller, and customer demo playback with video enabled
+  - `test:e2e:seller-delivery-settings` and `test:e2e:three-role-demo` are declared in `frontend-next/package.json`
+- Verification for this pass:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, 16 suites / 84 tests
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:delivery`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:wb-import-checkout`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:full-commerce`: pass
+  - `frontend-next npm run test:e2e:seller-delivery-settings`: pass
+  - `frontend-next npm run test:e2e:three-role-demo`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass, services healthy
+  - `curl.exe --ipv4 http://localhost:3001/api/health`: pass
+  - `curl.exe --ipv4 -I http://localhost:3000/products`: pass
+  - `curl.exe --ipv4 http://localhost:8000/health`: pass
+- Files changed:
+  - `backend-nest/scripts/seed-demo.js`
+  - `docs/API_DELIVERY.md`
+  - `docs/WORKTREE_AUDIT.md`
+  - `docs/PHASE_REPORT.md`
+  - `frontend-next/package.json`
+  - `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`
+  - `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+  - `frontend-next/src/components/seller/seller-delivery-settings-page-client.tsx`
+  - `frontend-next/tests/e2e/full-commerce-flow.spec.ts`
+  - `frontend-next/tests/e2e/seller-delivery-settings.spec.ts`
+  - `frontend-next/tests/e2e/three-role-demo-workflow.spec.ts`
+- Remaining gaps:
+  - real Yandex/CDEK provider calls remain intentionally unverified
+  - demo workflow video artifacts are generated locally by Playwright and remain ignored, not committed
+- Commit info:
+  - pending commit message: `test: finalize delivery and demo workflow coverage`
+
 ## Wildberries Excel Product Import
 
 - Scope:

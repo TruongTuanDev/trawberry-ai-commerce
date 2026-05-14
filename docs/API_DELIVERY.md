@@ -129,6 +129,15 @@ Public order tracking exposes latest delivery projection:
 - tracking number
 - tracking URL
 
+## Browser UI Coverage
+
+The Next.js seller UI exposes the delivery MVP at:
+- `/seller/settings` for pickup address, pickup city, pickup contact, enabled carriers, carrier priorities, and default package dimensions
+- `/seller/orders/[id]` for offer calculation, recommended offer selection, shipment creation, shipment refresh, and tracking link visibility
+- `/orders/[id]` for customer-facing delivery provider, delivery status, and tracking link
+
+`npm run test:e2e:seller-delivery-settings` verifies these paths in mock mode. The test uses API setup for seller approval, shop/product creation, and paid order creation, then performs delivery settings and shipment operations through browser UI.
+
 ## Real Carrier Calls
 
 Real Yandex/CDEK calls are disabled in default verification. Carrier credentials must not be committed.

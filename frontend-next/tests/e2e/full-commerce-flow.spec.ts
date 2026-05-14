@@ -149,12 +149,12 @@ test("full seller-to-customer commerce flow covers payment, delivery, and fulfil
 
   await sellerPage.goto(`/seller/orders/${orderId}`);
   await sellerPage.getByRole("button", { name: "Calculate offers" }).click();
-  await expect(sellerPage.getByText(/Loaded \d+ delivery offer/)).toBeVisible();
+  await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/Loaded \d+ delivery offer/);
   await sellerPage.getByRole("button", { name: /Create claim|Create shipment/ }).click();
-  await expect(sellerPage.getByText("Delivery shipment created.")).toBeVisible();
+  await expect(sellerPage.getByTestId("delivery-action-message")).toHaveText("Delivery shipment created.");
   await expect(sellerPage.getByTestId("seller-delivery-tracking-link")).toBeVisible();
   await sellerPage.getByRole("button", { name: "Refresh" }).click();
-  await expect(sellerPage.getByText("Delivery shipment refreshed.")).toBeVisible();
+  await expect(sellerPage.getByTestId("delivery-action-message")).toHaveText("Delivery shipment refreshed.");
 
   const statusSelect = sellerPage.locator("select").nth(1);
   await statusSelect.selectOption("ASSEMBLING");
