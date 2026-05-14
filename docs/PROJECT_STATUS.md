@@ -230,7 +230,7 @@
 - Notes:
   - browser-level E2E now covers public product listing/detail, checkout, stock deduction assertion, order tracking, payment proof upload, seller orders list/detail, seller payment proof review, mark paid, mock delivery create/refresh, seller order status update, and customer tracking re-check
   - audited runtime passed Docker health checks, backend tests/build/smoke scripts, frontend lint/build, and all Playwright suites
-  - seller approval admin workflow is now implemented; full browser seller product creation/image upload, real payment providers, real Yandex/CDEK, and real OpenAI remain outside the verified MVP path
+  - seller approval admin workflow, full browser seller product creation/image upload, and browser delivery settings coverage are now implemented; real payment providers, real Yandex/CDEK, and real OpenAI remain outside the verified MVP path
 
 ### Payments
 - Status: MVP done for manual review
@@ -453,7 +453,7 @@
 | `/seller/orders/[id]` | Seller order detail | Done | Yes | Connected to NestJS orders API. |
 | `/seller/payments` | Seller payment review list | MVP done | Yes | Pending queue, filters, and links into detail. |
 | `/seller/payments/[orderId]` | Seller payment review detail | MVP done | Yes | Mark paid, reject, add note, audit log view. |
-| `/seller/settings` | Seller delivery settings area | MVP done | Yes | Pickup address, carriers, and default package dimensions are connected. |
+| `/seller/settings` | Seller delivery settings area | MVP done | Yes | Pickup address, carriers, carrier priority, and default package dimensions are connected and browser-E2E verified. |
 
 ## F. AI Pipeline Status
 
@@ -525,6 +525,9 @@ Current flow:
 | frontend-next | `npm run test:e2e:public` | Pass | Playwright smoke for public home, products, and order tracking routes. |
 | frontend-next | `npm run test:e2e:public-full` | Pass | Playwright full customer flow with seeded demo data. |
 | frontend-next | `npm run test:e2e:public-payment-review` | Pass | Browser E2E for customer proof upload -> seller mark paid -> customer sees `PAID`. |
+| frontend-next | `npm run test:e2e:full-commerce` | Pass | Browser E2E for public checkout, stock deduction, seller payment review, delivery, fulfillment, and customer tracking. |
+| frontend-next | `npm run test:e2e:seller-product-lifecycle` | Pass | Browser E2E for seller first-shop creation, product creation, stock update, image upload, public checkout, tracking, and seller order visibility. |
+| frontend-next | `npm run test:e2e:seller-delivery-settings` | Pass | Browser E2E for delivery settings save/reload, same-city Yandex recommendation, mock shipment create/refresh, and customer delivery tracking projection. |
 | ai-service | `python -m compileall app` | Pass | Re-run in this audit. |
 | ai-service | `python -m pytest -q` | Pass | `18` tests. |
 | infra | `docker compose ... config` | Pass | Re-run in this audit. |
@@ -564,6 +567,21 @@ Status: implemented in `frontend-next`.
   - seller order queue visibility
 - Backend product creation now accepts optional variants so UI-created products can be public and checkout-ready without seed data.
 
+## Seller Delivery Settings Browser E2E Update
+
+Status: implemented in `frontend-next`.
+
+- Added `npm run test:e2e:seller-delivery-settings`.
+- The test uses API setup for seller approval, shop/product creation, and paid same-city order setup, then verifies delivery operations through browser UI:
+  - seller login
+  - `/seller/settings` delivery settings save
+  - persisted pickup address, contact, enabled carriers, carrier priorities, and package defaults after reload
+  - `/seller/orders/[id]` delivery offer calculation
+  - same-city Yandex recommended offer selection
+  - mock shipment create and refresh from UI
+  - customer `/orders/[id]` tracking shows provider, delivery status, and tracking link
+- Seller order detail now selects the recommended delivery offer after calculation, so same-city Yandex-first settings drive the shipment creation path.
+
 ## I. Known Issues / Risks
 
 - Real OpenAI runtime is not treated as fully proven in this audit.
@@ -585,6 +603,16 @@ Status: implemented in `frontend-next`.
 - Admin audit trail is append-only MVP coverage for seller/document review actions; it does not yet cover every admin operation in the marketplace.
 
 ## J. Next Recommended Phases
+
+## Wildberries Excel Import Phase
+
+- Added seller-scoped WB Excel import preview/confirm/status endpoints in `backend-nest`.
+- Added additive Prisma fields for product/variant external metadata and `product_import_sessions`.
+- Added parser support for sheet `Товары`, header row `3`, data row `6`, SKU grouping, variants, image URL split, warnings, and blocking errors.
+- Added `/seller/import/wildberries` in `frontend-next` with upload options, preview summary/table, confirm action, and result summary.
+- Added sanitized fixture `backend-nest/test/fixtures/wb-products-sample.xlsx`.
+- Added `npm run smoke:wb-import`.
+- Legacy apps remain untouched.
 
 1. Final project status verification on a fresh machine using only documented steps.
 2. Implement customer order history and broader post-checkout lifecycle in NestJS/Next.js.

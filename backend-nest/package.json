@@ -20,6 +20,7 @@
     "smoke:delivery-yandex-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-yandex-real.ps1",
     "smoke:inventory": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory.ps1",
     "smoke:inventory-alerts": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory-alerts.ps1",
+    "smoke:wb-import": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",
     "smoke:payments": "powershell -ExecutionPolicy Bypass -File scripts/smoke-payments.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",
@@ -42,6 +43,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.914.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -51,7 +53,6 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.2",
     "@prisma/client": "^6.16.2",
-    "@aws-sdk/client-s3": "^3.914.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.6",
     "class-transformer": "^0.5.1",
@@ -63,7 +64,8 @@
     "prisma": "^6.16.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -74,6 +76,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+    "@types/multer": "^2.1.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",

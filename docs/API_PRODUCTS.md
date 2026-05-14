@@ -1,5 +1,17 @@
 # API Products
 
+## Wildberries Excel Import
+
+Seller WB import endpoints live under shop scope:
+
+- `POST /api/shops/:shopId/imports/wildberries/preview`
+- `POST /api/shops/:shopId/imports/wildberries/confirm`
+- `GET /api/shops/:shopId/imports/wildberries/:importId`
+
+The preview endpoint accepts multipart `.xlsx` uploads from the Wildberries export sheet `Товары`. Header row is `3`, product rows start at `6`, and rows sharing `Артикул продавца` are grouped into one product with multiple variants.
+
+Confirm import upserts products by `shopId + sellerSku`, variants by barcode or size tuple, and remote images by URL. Only approved sellers can import into shops they own. See `docs/WILDBERRIES_EXCEL_IMPORT.md` for the full mapping and smoke flow.
+
 ## Scope
 This document describes the migrated seller product module implemented in `backend-nest`, based on the current Spring Boot catalog/product implementation in `strawberry-backend`.
 

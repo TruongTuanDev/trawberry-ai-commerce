@@ -1095,7 +1095,65 @@ git rm --cached frontend-next\.env.local
   - `docs/PHASE_REPORT.md`
 - Remaining gaps:
   - seller approval/KYC setup in this lifecycle test is API-driven; browser onboarding/admin approval remain covered by `test:e2e:seller-onboarding`
-  - no browser E2E for delivery settings form yet
+  - delivery settings browser E2E is covered by the subsequent `Seller Delivery Settings Browser E2E` phase
   - AI image generation remains out of scope and was not called
 - Commit info:
   - pending commit message: `test: add seller product lifecycle browser e2e`
+
+## Seller Delivery Settings Browser E2E
+
+- Scope:
+  - add browser-level coverage for seller delivery settings and mock shipment operations
+  - keep seller approval/onboarding/shop/product/paid-order setup deterministic through API setup
+  - verify same-city Yandex-first recommendation and customer tracking delivery projection without calling real Yandex/CDEK
+- Result:
+  - added `frontend-next/tests/e2e/seller-delivery-settings.spec.ts`
+  - added `frontend-next` script `npm run test:e2e:seller-delivery-settings`
+  - added stable `data-testid` selectors for `/seller/settings`, seller order delivery actions, and customer tracking delivery fields
+  - seller settings UI saves pickup address/city/postal/contact, enabled `YANDEX` and `CDEK`, carrier priority, and package defaults
+  - seller order detail now selects the recommended offer after calculation, so same-city Yandex-first settings create a Yandex mock shipment
+  - customer tracking shows delivery provider, `IN_TRANSIT` status, and tracking link after seller refresh
+- Verification for this pass:
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build`: pass
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:seller-delivery-settings`: pass
+- Files changed:
+  - `frontend-next/package.json`
+  - `frontend-next/tests/e2e/seller-delivery-settings.spec.ts`
+  - `frontend-next/src/components/seller/seller-delivery-settings-page-client.tsx`
+  - `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`
+  - `frontend-next/src/components/public/order-track-detail-page-client.tsx`
+  - `frontend-next/README.md`
+  - `docs/API_DELIVERY.md`
+  - `docs/FULL_FLOW_AUDIT.md`
+  - `docs/PROJECT_STATUS.md`
+  - `docs/PHASE_REPORT.md`
+- Remaining gaps:
+  - seller approval/KYC setup remains API-driven in this focused delivery test; browser onboarding/admin approval remain covered by `test:e2e:seller-onboarding`
+  - real Yandex/CDEK provider calls remain intentionally unverified in this phase
+  - broader delivery edge cases such as cancellation, failed provider states, and webhook ingestion remain future production hardening
+- Commit info:
+  - pending commit message: `test: add seller delivery settings browser e2e`
+
+## Wildberries Excel Product Import
+
+- Scope:
+  - approved sellers import Wildberries `.xlsx` exports into their own shop
+  - preview parses sheet `Товары`, header row `3`, data row `6`
+  - rows are grouped by `Артикул продавца` into products with variants
+  - photos are split by `;` and stored as remote URLs for MVP
+- Result:
+  - added `backend-nest/src/modules/wb-imports`
+  - added import session persistence in `product_import_sessions`
+  - added additive product and variant external metadata fields
+  - added `/seller/import/wildberries`
+  - added `npm run smoke:wb-import`
+  - added sanitized fixture `backend-nest/test/fixtures/wb-products-sample.xlsx`
+- Remaining gaps:
+  - `DOWNLOAD_TO_STORAGE` is not implemented in MVP; remote URL mode is used
+  - no real WB API calls are made
+  - broader admin import audit UI is future work

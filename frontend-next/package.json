@@ -15,6 +15,8 @@
     "test:e2e:public": "playwright test public-smoke",
     "test:e2e:public-full": "playwright test public-full",
     "test:e2e:public-payment-review": "playwright test public-payment-review",
+    "test:e2e:seller-delivery-settings": "playwright test seller-delivery-settings",
+    "test:e2e:wb-import": "playwright test wb-import",
     "test:e2e:seller-product-lifecycle": "playwright test seller-product-lifecycle"
   },
   "dependencies": {

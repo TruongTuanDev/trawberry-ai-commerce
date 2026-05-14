@@ -19,6 +19,7 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `shops`
 - `products`
 - `product-images`
+- `wb-imports`
 - `files`
 - `ai-images`
 
@@ -46,6 +47,9 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `GET /api/shops/:shopId/ai-images/tasks/:taskId`
 - `POST /api/shops/:shopId/ai-images/tasks/:taskId/retry`
 - `POST /api/shops/:shopId/products/:productId/images/:imageId/attach`
+- `POST /api/shops/:shopId/imports/wildberries/preview`
+- `POST /api/shops/:shopId/imports/wildberries/confirm`
+- `GET /api/shops/:shopId/imports/wildberries/:importId`
 
 ## Local run
 
@@ -101,6 +105,12 @@ npm run start:dev
 - Persists metadata into legacy `product_images`
 - Stores files locally by default under `uploads/products/:shopId/:productId`
 - Keeps legacy Spring Boot repo untouched
+
+## Wildberries Excel import
+- Seller endpoint for WB `.xlsx` exports from sheet `Товары`.
+- Preview groups rows by seller SKU into products and variants.
+- Confirm import upserts products, variants, and remote image URLs.
+- Smoke: `npm run smoke:wb-import`.
 
 ## AI image tasks
 - NestJS only creates tasks, checks credits, and enqueues BullMQ jobs.

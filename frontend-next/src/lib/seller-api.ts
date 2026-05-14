@@ -306,6 +306,64 @@ export type ProductInventory = {
   }>;
 };
 
+export type WbImportIssue = {
+  level: "WARNING" | "ERROR";
+  code: string;
+  message: string;
+  row?: number;
+  sellerSku?: string | null;
+};
+
+export type WbImportPreviewProduct = {
+  sellerSku: string | null;
+  externalProductId: string | null;
+  name: string;
+  brand: string | null;
+  categoryName: string | null;
+  variantsCount: number;
+  imagesCount: number;
+  priceStatus: "OK" | "MISSING";
+  warnings: WbImportIssue[];
+  errors: WbImportIssue[];
+};
+
+export type WbImportPreview = {
+  importId: string;
+  totalRows: number;
+  totalProducts: number;
+  totalVariants: number;
+  totalImages: number;
+  warnings: WbImportIssue[];
+  errors: WbImportIssue[];
+  products: WbImportPreviewProduct[];
+};
+
+export type WbImportConfirmResult = {
+  importId: string;
+  status: string;
+  createdProducts: number;
+  updatedProducts: number;
+  createdVariants: number;
+  updatedVariants: number;
+  addedImages: number;
+  skippedImages: number;
+};
+
+export type WbImportStatus = {
+  importId: string;
+  status: string;
+  originalFileName: string;
+  totalRows: number;
+  totalProducts: number;
+  totalVariants: number;
+  totalImages: number;
+  warnings: WbImportIssue[];
+  errors: WbImportIssue[];
+  result: WbImportConfirmResult | null;
+  createdAt: string;
+  completedAt: string | null;
+};
+
 export type ProductImage = {
   id: string;
   shopId: string;
@@ -561,6 +619,48 @@ export async function updateShopProductInventory(
       body: JSON.stringify(payload),
     },
   );
+}
+
+export async function previewWildberriesImport(
+  shopId: string,
+  input: {
+    file: File;
+    defaultStockQuantity?: number;
+    publishMode?: "DRAFT" | "ACTIVE";
+    imageMode?: "REMOTE_URL" | "DOWNLOAD_TO_STORAGE";
+    priceFallback?: number;
+  },
+  token?: string,
+) {
+  const formData = new FormData();
+  formData.append("file", input.file);
+  formData.append("defaultStockQuantity", String(input.defaultStockQuantity ?? 0));
+  formData.append("publishMode", input.publishMode ?? "DRAFT");
+  formData.append("imageMode", input.imageMode ?? "REMOTE_URL");
+  if (input.priceFallback !== undefined) {
+    formData.append("priceFallback", String(input.priceFallback));
+  }
+
+  return apiRequest<WbImportPreview>(`/api/shops/${shopId}/imports/wildberries/preview`, {
+    method: "POST",
+    token,
+    body: formData,
+  });
+}
+
+export async function confirmWildberriesImport(shopId: string, importId: string, token?: string) {
+  return apiRequest<WbImportConfirmResult>(`/api/shops/${shopId}/imports/wildberries/confirm`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ importId }),
+  });
+}
+
+export async function getWildberriesImportStatus(shopId: string, importId: string, token?: string) {
+  return apiRequest<WbImportStatus>(`/api/shops/${shopId}/imports/wildberries/${importId}`, {
+    method: "GET",
+    token,
+  });
 }
 
 export async function getShopProductImages(shopId: string, productId: string, token?: string) {

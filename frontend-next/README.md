@@ -25,6 +25,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/products`
 - `/seller/products/[id]`
 - `/seller/products/[id]/images`
+- `/seller/import/wildberries`
 - `/seller/ai-images`
 - `/seller/orders`
 - `/seller/orders/[id]`
@@ -61,6 +62,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - product creation with initial price/stock variant
   - product detail metadata and stock update
   - product image upload
+- Seller Wildberries import UI with:
+  - `.xlsx` upload
+  - stock, publish, and fallback-price options
+  - preview counts, warnings, and errors
+  - confirm import and result summary
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages
 - Product images page with:
@@ -165,6 +171,24 @@ Current coverage:
 - completes customer checkout and tracking
 - verifies the seller order queue contains the new order
 
+## Playwright seller delivery settings flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:seller-delivery-settings
+```
+
+Current coverage:
+- uses API setup only to create/approve a seller, create one shop/product, create a same-city paid order, and avoid cross-test data collisions
+- logs in through UI as the seller
+- opens `/seller/settings`
+- saves pickup address, pickup city, contact details, enabled `YANDEX` and `CDEK`, Yandex same-city priority, CDEK inter-city/fallback priority, and package defaults
+- reloads the settings page and verifies persisted values
+- opens `/seller/orders/[id]`
+- calculates delivery offers from UI and verifies the recommended same-city offer is Yandex
+- creates and refreshes a mock shipment from UI
+- verifies customer `/orders/[id]` tracking shows provider, status, and tracking link
+
 ## Playwright public smoke
 With the Docker stack or local frontend/backend already running:
 
@@ -261,6 +285,7 @@ The current verified delivery mode is backend-driven mock mode. The frontend doe
 - `src/app/seller/products/page.tsx`
 - `src/app/seller/products/[id]/page.tsx`
 - `src/app/seller/products/[id]/images/page.tsx`
+- `src/app/seller/import/wildberries/page.tsx`
 - `src/lib/api.ts`
 - `src/lib/seller-api.ts`
 

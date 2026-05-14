@@ -15,6 +15,7 @@ import { OrderTrackingModule } from './modules/order-tracking/order-tracking.mod
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SellerOnboardingModule } from './modules/seller-onboarding/seller-onboarding.module';
+import { WildberriesImportsModule } from './modules/wb-imports/wildberries-imports.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -41,6 +42,7 @@ import { HealthController } from './health.controller';
     DeliveryModule,
     AdminModule,
     SellerOnboardingModule,
+    WildberriesImportsModule,
     PublicProductsModule,
     CheckoutModule,
     OrderTrackingModule,

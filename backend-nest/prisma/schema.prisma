@@ -8,74 +8,75 @@ datasource db {
 }
 
 model User {
-  id           String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  email        String         @unique @db.VarChar(255)
-  passwordHash String         @map("password_hash") @db.VarChar(255)
-  fullName     String?        @map("full_name") @db.VarChar(255)
-  phone        String?        @db.VarChar(255)
-  role         String         @db.VarChar(50)
-  status       String         @default("ACTIVE") @db.VarChar(50)
-  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  sellerProfile SellerProfile?
-  reviewedSellerDocuments SellerDocument[] @relation("SellerDocumentReviewer")
-  adminAuditActions AdminAuditLog[] @relation("AdminAuditActor")
-  adminAuditTargets AdminAuditLog[] @relation("AdminAuditTarget")
-  aiGenerationTasks AiGenerationTask[]
-  aiUsageLogs     AiUsageLog[]
-  customerOrders  Order[]      @relation("CustomerOrders")
-  paymentReviewLogs PaymentReviewLog[] @relation("PaymentReviewerLogs")
+  id                      String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email                   String                 @unique @db.VarChar(255)
+  passwordHash            String                 @map("password_hash") @db.VarChar(255)
+  fullName                String?                @map("full_name") @db.VarChar(255)
+  phone                   String?                @db.VarChar(255)
+  role                    String                 @db.VarChar(50)
+  status                  String                 @default("ACTIVE") @db.VarChar(50)
+  createdAt               DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  sellerProfile           SellerProfile?
+  reviewedSellerDocuments SellerDocument[]       @relation("SellerDocumentReviewer")
+  adminAuditActions       AdminAuditLog[]        @relation("AdminAuditActor")
+  adminAuditTargets       AdminAuditLog[]        @relation("AdminAuditTarget")
+  aiGenerationTasks       AiGenerationTask[]
+  aiUsageLogs             AiUsageLog[]
+  customerOrders          Order[]                @relation("CustomerOrders")
+  paymentReviewLogs       PaymentReviewLog[]     @relation("PaymentReviewerLogs")
+  productImportSessions   ProductImportSession[]
 
   @@map("users")
 }
 
 model SellerProfile {
-  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId         String    @unique @map("user_id") @db.Uuid
-  approvalStatus String    @default("PENDING") @map("approval_status") @db.VarChar(50)
-  reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz(6)
-  reviewNote     String?   @map("review_note")
-  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
-  rejectedAt     DateTime? @map("rejected_at") @db.Timestamptz(6)
-  rejectionReason String?  @map("rejection_reason") @db.VarChar(500)
-  legalType      String?   @map("legal_type") @db.VarChar(50)
-  legalName      String?   @map("legal_name") @db.VarChar(255)
-  inn            String?   @db.VarChar(20)
-  ogrn           String?   @db.VarChar(20)
-  kpp            String?   @db.VarChar(20)
-  legalAddress   String?   @map("legal_address")
-  contactName    String?   @map("contact_name") @db.VarChar(255)
-  contactPhone   String?   @map("contact_phone") @db.VarChar(50)
-  contactEmail   String?   @map("contact_email") @db.VarChar(255)
-  bankName       String?   @map("bank_name") @db.VarChar(255)
-  bankAccount    String?   @map("bank_account") @db.VarChar(255)
-  bik            String?   @db.VarChar(50)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  currentShopId  String?   @map("current_shop_id") @db.Uuid
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shops          Shop[]    @relation("SellerProfileShops")
-  currentShop    Shop?     @relation("CurrentShopSelection", fields: [currentShopId], references: [id])
-  documents      SellerDocument[]
+  id              String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId          String           @unique @map("user_id") @db.Uuid
+  approvalStatus  String           @default("PENDING") @map("approval_status") @db.VarChar(50)
+  reviewedAt      DateTime?        @map("reviewed_at") @db.Timestamptz(6)
+  reviewNote      String?          @map("review_note")
+  approvedAt      DateTime?        @map("approved_at") @db.Timestamptz(6)
+  rejectedAt      DateTime?        @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?          @map("rejection_reason") @db.VarChar(500)
+  legalType       String?          @map("legal_type") @db.VarChar(50)
+  legalName       String?          @map("legal_name") @db.VarChar(255)
+  inn             String?          @db.VarChar(20)
+  ogrn            String?          @db.VarChar(20)
+  kpp             String?          @db.VarChar(20)
+  legalAddress    String?          @map("legal_address")
+  contactName     String?          @map("contact_name") @db.VarChar(255)
+  contactPhone    String?          @map("contact_phone") @db.VarChar(50)
+  contactEmail    String?          @map("contact_email") @db.VarChar(255)
+  bankName        String?          @map("bank_name") @db.VarChar(255)
+  bankAccount     String?          @map("bank_account") @db.VarChar(255)
+  bik             String?          @db.VarChar(50)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  currentShopId   String?          @map("current_shop_id") @db.Uuid
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shops           Shop[]           @relation("SellerProfileShops")
+  currentShop     Shop?            @relation("CurrentShopSelection", fields: [currentShopId], references: [id])
+  documents       SellerDocument[]
 
   @@map("seller_profiles")
 }
 
 model SellerDocument {
-  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId           String    @map("user_id") @db.Uuid
-  documentType     String    @map("document_type") @db.VarChar(50)
-  url              String    @db.VarChar(1000)
-  storageKey       String?   @map("storage_key") @db.VarChar(1024)
-  originalName     String?   @map("original_name") @db.VarChar(255)
-  mimeType         String?   @map("mime_type") @db.VarChar(100)
+  id               String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId           String        @map("user_id") @db.Uuid
+  documentType     String        @map("document_type") @db.VarChar(50)
+  url              String        @db.VarChar(1000)
+  storageKey       String?       @map("storage_key") @db.VarChar(1024)
+  originalName     String?       @map("original_name") @db.VarChar(255)
+  mimeType         String?       @map("mime_type") @db.VarChar(100)
   size             Int?
-  status           String    @default("PENDING") @db.VarChar(50)
-  rejectionReason  String?   @map("rejection_reason") @db.VarChar(500)
-  uploadedAt       DateTime  @default(now()) @map("uploaded_at") @db.Timestamptz(6)
-  reviewedAt       DateTime? @map("reviewed_at") @db.Timestamptz(6)
-  reviewedByUserId String?   @map("reviewed_by_user_id") @db.Uuid
+  status           String        @default("PENDING") @db.VarChar(50)
+  rejectionReason  String?       @map("rejection_reason") @db.VarChar(500)
+  uploadedAt       DateTime      @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  reviewedAt       DateTime?     @map("reviewed_at") @db.Timestamptz(6)
+  reviewedByUserId String?       @map("reviewed_by_user_id") @db.Uuid
   sellerProfile    SellerProfile @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  reviewedBy       User?     @relation("SellerDocumentReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedBy       User?         @relation("SellerDocumentReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, uploadedAt])
   @@index([status, uploadedAt])
@@ -102,32 +103,33 @@ model AdminAuditLog {
 }
 
 model Shop {
-  id                   String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  sellerProfileId      String          @map("seller_profile_id") @db.Uuid
-  name                 String          @db.VarChar(255)
-  slug                 String          @unique @db.VarChar(255)
-  logoUrl              String?         @map("logo_url") @db.VarChar(1024)
-  contactInfo          String?         @map("contact_info")
-  bankName             String?         @map("bank_name") @db.VarChar(255)
-  accountNumber        String?         @map("account_number") @db.VarChar(255)
-  accountHolderName    String?         @map("account_holder_name") @db.VarChar(255)
-  bik                  String?         @db.VarChar(50)
-  correspondentAccount String?         @map("correspondent_account") @db.VarChar(255)
-  paymentInstructions  String?         @map("payment_instructions")
-  status               String          @default("DRAFT") @db.VarChar(50)
-  sellerProfile        SellerProfile   @relation("SellerProfileShops", fields: [sellerProfileId], references: [id], onDelete: Cascade)
-  currentForProfiles   SellerProfile[] @relation("CurrentShopSelection")
-  products             Product[]
-  aiGenerationTasks    AiGenerationTask[]
-  aiGeneratedImages    AiGeneratedImage[]
-  aiCredits            SellerAiCredit?
-  aiUsageLogs          AiUsageLog[]
-  orders               Order[]
-  paymentReviewLogs    PaymentReviewLog[]
-  deliverySettings     ShopDeliverySetting?
-  deliveryOffers       DeliveryOffer[]
-  deliveryShipments    DeliveryShipment[]
-  deliveryEvents       DeliveryEvent[]
+  id                    String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sellerProfileId       String                 @map("seller_profile_id") @db.Uuid
+  name                  String                 @db.VarChar(255)
+  slug                  String                 @unique @db.VarChar(255)
+  logoUrl               String?                @map("logo_url") @db.VarChar(1024)
+  contactInfo           String?                @map("contact_info")
+  bankName              String?                @map("bank_name") @db.VarChar(255)
+  accountNumber         String?                @map("account_number") @db.VarChar(255)
+  accountHolderName     String?                @map("account_holder_name") @db.VarChar(255)
+  bik                   String?                @db.VarChar(50)
+  correspondentAccount  String?                @map("correspondent_account") @db.VarChar(255)
+  paymentInstructions   String?                @map("payment_instructions")
+  status                String                 @default("DRAFT") @db.VarChar(50)
+  sellerProfile         SellerProfile          @relation("SellerProfileShops", fields: [sellerProfileId], references: [id], onDelete: Cascade)
+  currentForProfiles    SellerProfile[]        @relation("CurrentShopSelection")
+  products              Product[]
+  aiGenerationTasks     AiGenerationTask[]
+  aiGeneratedImages     AiGeneratedImage[]
+  aiCredits             SellerAiCredit?
+  aiUsageLogs           AiUsageLog[]
+  orders                Order[]
+  paymentReviewLogs     PaymentReviewLog[]
+  deliverySettings      ShopDeliverySetting?
+  deliveryOffers        DeliveryOffer[]
+  deliveryShipments     DeliveryShipment[]
+  deliveryEvents        DeliveryEvent[]
+  productImportSessions ProductImportSession[]
 
   @@map("shops")
 }
@@ -143,128 +145,168 @@ model Category {
 }
 
 model Product {
-  id               String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId           String         @map("shop_id") @db.Uuid
-  wbNmId           BigInt         @map("wb_nm_id")
-  wbImtId          BigInt?        @map("wb_imt_id")
-  wbNmUuid         String?        @map("wb_nm_uuid") @db.VarChar(255)
-  brand            String?        @db.VarChar(255)
-  wbTitle          String         @map("wb_title") @db.VarChar(500)
-  wbDescription    String?        @map("wb_description")
-  categoryName     String?        @map("category_name") @db.VarChar(255)
-  wbVendorCode     String?        @map("wb_vendor_code") @db.VarChar(255)
-  wbVideoUrl       String?        @map("wb_video_url")
-  wbCreatedAt      DateTime?      @map("wb_created_at") @db.Timestamp(6)
-  wbUpdatedAt      DateTime?      @map("wb_updated_at") @db.Timestamp(6)
-  wbNeedKiz        Boolean?       @default(false) @map("wb_need_kiz")
-  subjectId        BigInt?        @map("subject_id")
-  categoryId       BigInt?        @map("category_id")
-  wholesaleEnabled Boolean?       @default(false) @map("wholesale_enabled")
-  wholesaleQuantum Int?           @map("wholesale_quantum")
-  length           Int?
-  width            Int?
-  height           Int?
-  weightBrutto     Int?           @map("weight_brutto")
-  dimensionsValid  Boolean?       @default(false) @map("dimensions_valid")
-  localTitle       String?        @map("local_title") @db.VarChar(500)
-  localDescription String?        @map("local_description")
-  seoSlug          String?        @map("seo_slug") @db.VarChar(500)
-  visibility       String?        @default("ACTIVE") @db.VarChar(50)
-  localTags        Json?          @map("local_tags")
-  averageRating    Decimal?       @default(0) @map("average_rating") @db.Decimal(3, 2)
-  feedbackCount    Int?           @default(0) @map("feedback_count")
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamp(6)
-  shop             Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  category         Category?       @relation(fields: [categoryId], references: [id])
-  images           ProductImage[]
-  variants         ProductVariant[]
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId            String             @map("shop_id") @db.Uuid
+  wbNmId            BigInt             @map("wb_nm_id")
+  wbImtId           BigInt?            @map("wb_imt_id")
+  wbNmUuid          String?            @map("wb_nm_uuid") @db.VarChar(255)
+  brand             String?            @db.VarChar(255)
+  wbTitle           String             @map("wb_title") @db.VarChar(500)
+  wbDescription     String?            @map("wb_description")
+  categoryName      String?            @map("category_name") @db.VarChar(255)
+  externalSource    String?            @map("external_source") @db.VarChar(100)
+  externalProductId String?            @map("external_product_id") @db.VarChar(255)
+  sellerSku         String?            @map("seller_sku") @db.VarChar(255)
+  gender            String?            @db.VarChar(255)
+  composition       String?
+  color             String?            @db.VarChar(255)
+  wbVendorCode      String?            @map("wb_vendor_code") @db.VarChar(255)
+  wbVideoUrl        String?            @map("wb_video_url")
+  wbCreatedAt       DateTime?          @map("wb_created_at") @db.Timestamp(6)
+  wbUpdatedAt       DateTime?          @map("wb_updated_at") @db.Timestamp(6)
+  wbNeedKiz         Boolean?           @default(false) @map("wb_need_kiz")
+  subjectId         BigInt?            @map("subject_id")
+  categoryId        BigInt?            @map("category_id")
+  wholesaleEnabled  Boolean?           @default(false) @map("wholesale_enabled")
+  wholesaleQuantum  Int?               @map("wholesale_quantum")
+  length            Int?
+  width             Int?
+  height            Int?
+  weightBrutto      Int?               @map("weight_brutto")
+  dimensionsValid   Boolean?           @default(false) @map("dimensions_valid")
+  localTitle        String?            @map("local_title") @db.VarChar(500)
+  localDescription  String?            @map("local_description")
+  seoSlug           String?            @map("seo_slug") @db.VarChar(500)
+  visibility        String?            @default("ACTIVE") @db.VarChar(50)
+  localTags         Json?              @map("local_tags")
+  averageRating     Decimal?           @default(0) @map("average_rating") @db.Decimal(3, 2)
+  feedbackCount     Int?               @default(0) @map("feedback_count")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
+  shop              Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  category          Category?          @relation(fields: [categoryId], references: [id])
+  images            ProductImage[]
+  variants          ProductVariant[]
   aiGenerationTasks AiGenerationTask[]
   aiGeneratedImages AiGeneratedImage[]
 
   @@unique([shopId, wbNmId])
+  @@unique([shopId, sellerSku])
   @@map("products")
 }
 
 model ProductImage {
-  id           String   @id @db.Uuid
-  productId    String   @map("product_id") @db.Uuid
-  wbUrl        String   @map("wb_url") @db.VarChar(1000)
-  localUrl     String?  @map("local_url") @db.VarChar(1000)
-  storageKey   String?  @map("storage_key") @db.VarChar(1024)
-  originalName String?  @map("original_name") @db.VarChar(255)
-  mimeType     String?  @map("mime_type") @db.VarChar(100)
-  size         Int?
-  imageType    String   @default("ORIGINAL") @map("image_type") @db.VarChar(50)
-  isMain       Boolean? @default(false) @map("is_main")
-  sortOrder    Int      @default(0) @map("sort_order")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sourceAiGeneratedImage AiGeneratedImage? @relation("AttachedAiImage")
-  aiSourceTasks AiGenerationTask[]
-  aiFrontInputTasks AiGenerationTask[] @relation("AiTaskFrontImage")
-  aiBackInputTasks AiGenerationTask[] @relation("AiTaskBackImage")
-  aiModelInputTasks AiGenerationTask[] @relation("AiTaskModelImage")
+  id                     String             @id @db.Uuid
+  productId              String             @map("product_id") @db.Uuid
+  wbUrl                  String             @map("wb_url") @db.VarChar(1000)
+  localUrl               String?            @map("local_url") @db.VarChar(1000)
+  storageKey             String?            @map("storage_key") @db.VarChar(1024)
+  originalName           String?            @map("original_name") @db.VarChar(255)
+  mimeType               String?            @map("mime_type") @db.VarChar(100)
+  size                   Int?
+  imageType              String             @default("ORIGINAL") @map("image_type") @db.VarChar(50)
+  isMain                 Boolean?           @default(false) @map("is_main")
+  sortOrder              Int                @default(0) @map("sort_order")
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
+  product                Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sourceAiGeneratedImage AiGeneratedImage?  @relation("AttachedAiImage")
+  aiSourceTasks          AiGenerationTask[]
+  aiFrontInputTasks      AiGenerationTask[] @relation("AiTaskFrontImage")
+  aiBackInputTasks       AiGenerationTask[] @relation("AiTaskBackImage")
+  aiModelInputTasks      AiGenerationTask[] @relation("AiTaskModelImage")
 
   @@map("product_images")
 }
 
 model ProductVariant {
-  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  productId     String    @map("product_id") @db.Uuid
-  chrtId        BigInt    @map("chrt_id")
-  techSize      String?   @map("tech_size") @db.VarChar(255)
-  wbSize        String?   @map("wb_size") @db.VarChar(255)
-  isActive      Boolean   @default(true) @map("is_active")
-  basePrice     Decimal?  @default(0) @map("base_price") @db.Decimal(15, 2)
-  discountPrice Decimal?  @map("discount_price") @db.Decimal(15, 2)
-  stockQuantity Int       @default(0) @map("stock_quantity")
-  reservedStock Int       @default(0) @map("reserved_stock")
-  lowStockThreshold Int   @default(5) @map("low_stock_threshold")
-  trackInventory   Boolean @default(true) @map("track_inventory")
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
-  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  orderItems    OrderItem[]
+  id                String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId         String      @map("product_id") @db.Uuid
+  chrtId            BigInt      @map("chrt_id")
+  externalSource    String?     @map("external_source") @db.VarChar(100)
+  sellerSku         String?     @map("seller_sku") @db.VarChar(255)
+  wbBarcode         String?     @map("wb_barcode") @db.VarChar(255)
+  sizeName          String?     @map("size_name") @db.VarChar(255)
+  russianSize       String?     @map("russian_size") @db.VarChar(255)
+  techSize          String?     @map("tech_size") @db.VarChar(255)
+  wbSize            String?     @map("wb_size") @db.VarChar(255)
+  isActive          Boolean     @default(true) @map("is_active")
+  basePrice         Decimal?    @default(0) @map("base_price") @db.Decimal(15, 2)
+  discountPrice     Decimal?    @map("discount_price") @db.Decimal(15, 2)
+  stockQuantity     Int         @default(0) @map("stock_quantity")
+  reservedStock     Int         @default(0) @map("reserved_stock")
+  lowStockThreshold Int         @default(5) @map("low_stock_threshold")
+  trackInventory    Boolean     @default(true) @map("track_inventory")
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
+  product           Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems        OrderItem[]
 
   @@unique([productId, chrtId])
+  @@unique([productId, sellerSku, sizeName, russianSize])
+  @@index([wbBarcode])
   @@map("product_variants")
 }
 
+model ProductImportSession {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId                String    @map("shop_id") @db.Uuid
+  sellerId              String    @map("seller_id") @db.Uuid
+  source                String    @db.VarChar(100)
+  originalFileName      String    @map("original_file_name") @db.VarChar(255)
+  status                String    @db.VarChar(50)
+  totalRows             Int       @default(0) @map("total_rows")
+  totalProducts         Int       @default(0) @map("total_products")
+  totalVariants         Int       @default(0) @map("total_variants")
+  totalImages           Int       @default(0) @map("total_images")
+  warningsJson          Json      @map("warnings_json")
+  errorsJson            Json      @map("errors_json")
+  normalizedPayloadJson Json      @map("normalized_payload_json")
+  optionsJson           Json?     @map("options_json")
+  resultJson            Json?     @map("result_json")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt           DateTime? @map("completed_at") @db.Timestamptz(6)
+  shop                  Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seller                User      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@index([sellerId, createdAt])
+  @@map("product_import_sessions")
+}
+
 model Order {
-  id                 String      @id @db.Uuid
-  customerId         String      @map("customer_id") @db.Uuid
-  shopId             String      @map("shop_id") @db.Uuid
-  orderNumber        String      @unique @map("order_number") @db.VarChar(255)
-  status             String      @default("NEW")
-  paymentStatus      String      @map("payment_status") @default("PENDING")
-  totalAmount        Decimal     @map("total_amount") @db.Decimal(10, 2)
-  shippingAddress    String      @map("shipping_address")
-  customerName       String      @map("customer_name") @db.VarChar(255)
-  customerPhone      String      @map("customer_phone") @db.VarChar(50)
-  customerEmail      String?     @map("customer_email") @db.VarChar(255)
-  customerNote       String?     @map("customer_note")
-  shippingMethodId   String?     @map("shipping_method_id") @db.Uuid
-  shippingZoneId     String?     @map("shipping_zone_id") @db.Uuid
-  shippingCost       Decimal     @default(0) @map("shipping_cost") @db.Decimal(10, 2)
-  shippingMethodName String?     @map("shipping_method_name") @db.VarChar(255)
-  paymentProofUrl    String?     @map("payment_proof_url") @db.VarChar(1000)
-  paymentProofStorageKey String? @map("payment_proof_storage_key") @db.VarChar(1024)
-  paymentProofOriginalName String? @map("payment_proof_original_name") @db.VarChar(255)
-  paymentProofMimeType String?   @map("payment_proof_mime_type") @db.VarChar(100)
-  paymentProofSize   Int?        @map("payment_proof_size")
-  paymentProofUploadedAt DateTime? @map("payment_proof_uploaded_at") @db.Timestamptz(6)
-  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamp(6)
-  customerCompletedAt DateTime?  @map("customer_completed_at") @db.Timestamp(6)
-  customer           User        @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
-  shop               Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  items              OrderItem[]
-  paymentReviewLogs  PaymentReviewLog[]
-  deliveryOffers     DeliveryOffer[]
-  deliveryShipments  DeliveryShipment[]
-  deliveryEvents     DeliveryEvent[]
+  id                       String             @id @db.Uuid
+  customerId               String             @map("customer_id") @db.Uuid
+  shopId                   String             @map("shop_id") @db.Uuid
+  orderNumber              String             @unique @map("order_number") @db.VarChar(255)
+  status                   String             @default("NEW")
+  paymentStatus            String             @default("PENDING") @map("payment_status")
+  totalAmount              Decimal            @map("total_amount") @db.Decimal(10, 2)
+  shippingAddress          String             @map("shipping_address")
+  customerName             String             @map("customer_name") @db.VarChar(255)
+  customerPhone            String             @map("customer_phone") @db.VarChar(50)
+  customerEmail            String?            @map("customer_email") @db.VarChar(255)
+  customerNote             String?            @map("customer_note")
+  shippingMethodId         String?            @map("shipping_method_id") @db.Uuid
+  shippingZoneId           String?            @map("shipping_zone_id") @db.Uuid
+  shippingCost             Decimal            @default(0) @map("shipping_cost") @db.Decimal(10, 2)
+  shippingMethodName       String?            @map("shipping_method_name") @db.VarChar(255)
+  paymentProofUrl          String?            @map("payment_proof_url") @db.VarChar(1000)
+  paymentProofStorageKey   String?            @map("payment_proof_storage_key") @db.VarChar(1024)
+  paymentProofOriginalName String?            @map("payment_proof_original_name") @db.VarChar(255)
+  paymentProofMimeType     String?            @map("payment_proof_mime_type") @db.VarChar(100)
+  paymentProofSize         Int?               @map("payment_proof_size")
+  paymentProofUploadedAt   DateTime?          @map("payment_proof_uploaded_at") @db.Timestamptz(6)
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt                DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
+  customerCompletedAt      DateTime?          @map("customer_completed_at") @db.Timestamp(6)
+  customer                 User               @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
+  shop                     Shop               @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  items                    OrderItem[]
+  paymentReviewLogs        PaymentReviewLog[]
+  deliveryOffers           DeliveryOffer[]
+  deliveryShipments        DeliveryShipment[]
+  deliveryEvents           DeliveryEvent[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
@@ -272,58 +314,58 @@ model Order {
 }
 
 model ShopDeliverySetting {
-  id                       String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId                   String   @unique @map("shop_id") @db.Uuid
-  pickupCountry            String   @default("RU") @map("pickup_country") @db.VarChar(100)
-  pickupCity               String   @map("pickup_city") @db.VarChar(255)
-  pickupAddress            String   @map("pickup_address")
-  pickupPostalCode         String?  @map("pickup_postal_code") @db.VarChar(50)
-  pickupLatitude           Decimal? @map("pickup_latitude") @db.Decimal(10, 7)
-  pickupLongitude          Decimal? @map("pickup_longitude") @db.Decimal(10, 7)
-  pickupContactName        String   @map("pickup_contact_name") @db.VarChar(255)
-  pickupContactPhone       String   @default("") @map("pickup_contact_phone") @db.VarChar(50)
-  pickupWorkingHours       String?  @map("pickup_working_hours")
-  pickupComment            String?  @map("pickup_comment")
-  pickupPhoneLegacy        String?  @map("pickup_phone") @db.VarChar(50)
-  enabledCarriers          Json     @map("enabled_carriers")
-  defaultCarrier           String   @map("default_carrier") @db.VarChar(50)
-  sameCityPreferredCarrier String   @default("YANDEX") @map("same_city_preferred_carrier") @db.VarChar(50)
-  interCityPreferredCarrier String  @default("CDEK") @map("inter_city_preferred_carrier") @db.VarChar(50)
-  fallbackCarrier          String   @default("CDEK") @map("fallback_carrier") @db.VarChar(50)
-  defaultWeightGram        Int      @default(1000) @map("default_weight_gram")
-  defaultLengthCm          Int      @default(30) @map("default_length_cm")
-  defaultWidthCm           Int      @default(20) @map("default_width_cm")
-  defaultHeightCm          Int      @default(10) @map("default_height_cm")
-  defaultWeightLegacy      Decimal? @map("default_weight") @db.Decimal(10, 3)
-  defaultLengthLegacy      Decimal? @map("default_length") @db.Decimal(10, 3)
-  defaultWidthLegacy       Decimal? @map("default_width") @db.Decimal(10, 3)
-  defaultHeightLegacy      Decimal? @map("default_height") @db.Decimal(10, 3)
-  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  shop                     Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id                        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId                    String   @unique @map("shop_id") @db.Uuid
+  pickupCountry             String   @default("RU") @map("pickup_country") @db.VarChar(100)
+  pickupCity                String   @map("pickup_city") @db.VarChar(255)
+  pickupAddress             String   @map("pickup_address")
+  pickupPostalCode          String?  @map("pickup_postal_code") @db.VarChar(50)
+  pickupLatitude            Decimal? @map("pickup_latitude") @db.Decimal(10, 7)
+  pickupLongitude           Decimal? @map("pickup_longitude") @db.Decimal(10, 7)
+  pickupContactName         String   @map("pickup_contact_name") @db.VarChar(255)
+  pickupContactPhone        String   @default("") @map("pickup_contact_phone") @db.VarChar(50)
+  pickupWorkingHours        String?  @map("pickup_working_hours")
+  pickupComment             String?  @map("pickup_comment")
+  pickupPhoneLegacy         String?  @map("pickup_phone") @db.VarChar(50)
+  enabledCarriers           Json     @map("enabled_carriers")
+  defaultCarrier            String   @map("default_carrier") @db.VarChar(50)
+  sameCityPreferredCarrier  String   @default("YANDEX") @map("same_city_preferred_carrier") @db.VarChar(50)
+  interCityPreferredCarrier String   @default("CDEK") @map("inter_city_preferred_carrier") @db.VarChar(50)
+  fallbackCarrier           String   @default("CDEK") @map("fallback_carrier") @db.VarChar(50)
+  defaultWeightGram         Int      @default(1000) @map("default_weight_gram")
+  defaultLengthCm           Int      @default(30) @map("default_length_cm")
+  defaultWidthCm            Int      @default(20) @map("default_width_cm")
+  defaultHeightCm           Int      @default(10) @map("default_height_cm")
+  defaultWeightLegacy       Decimal? @map("default_weight") @db.Decimal(10, 3)
+  defaultLengthLegacy       Decimal? @map("default_length") @db.Decimal(10, 3)
+  defaultWidthLegacy        Decimal? @map("default_width") @db.Decimal(10, 3)
+  defaultHeightLegacy       Decimal? @map("default_height") @db.Decimal(10, 3)
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop                      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@map("shop_delivery_settings")
 }
 
 model DeliveryOffer {
-  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId             String    @map("shop_id") @db.Uuid
-  orderId            String    @map("order_id") @db.Uuid
-  provider           String    @db.VarChar(50)
-  offerType          String    @map("offer_type") @db.VarChar(100)
-  priceAmount        Decimal   @map("price_amount") @db.Decimal(10, 2)
-  priceCurrency      String    @map("price_currency") @db.VarChar(10)
-  estimatedMinMinutes Int?     @map("estimated_min_minutes")
-  estimatedMaxMinutes Int?     @map("estimated_max_minutes")
-  estimatedMinDays   Int?      @map("estimated_min_days")
-  estimatedMaxDays   Int?      @map("estimated_max_days")
-  pickupPointId      String?   @map("pickup_point_id") @db.VarChar(255)
-  isRecommended      Boolean   @default(false) @map("is_recommended")
-  rawProviderPayload Json?     @map("raw_provider_payload")
-  expiresAt          DateTime? @map("expires_at") @db.Timestamptz(6)
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  shop               Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId              String    @map("shop_id") @db.Uuid
+  orderId             String    @map("order_id") @db.Uuid
+  provider            String    @db.VarChar(50)
+  offerType           String    @map("offer_type") @db.VarChar(100)
+  priceAmount         Decimal   @map("price_amount") @db.Decimal(10, 2)
+  priceCurrency       String    @map("price_currency") @db.VarChar(10)
+  estimatedMinMinutes Int?      @map("estimated_min_minutes")
+  estimatedMaxMinutes Int?      @map("estimated_max_minutes")
+  estimatedMinDays    Int?      @map("estimated_min_days")
+  estimatedMaxDays    Int?      @map("estimated_max_days")
+  pickupPointId       String?   @map("pickup_point_id") @db.VarChar(255)
+  isRecommended       Boolean   @default(false) @map("is_recommended")
+  rawProviderPayload  Json?     @map("raw_provider_payload")
+  expiresAt           DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  shop                Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([shopId, createdAt])
   @@index([orderId, createdAt])
@@ -331,28 +373,28 @@ model DeliveryOffer {
 }
 
 model DeliveryShipment {
-  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId              String    @map("shop_id") @db.Uuid
-  orderId             String    @map("order_id") @db.Uuid
-  provider            String    @db.VarChar(50)
-  providerShipmentId  String?   @map("provider_shipment_id") @db.VarChar(255)
-  providerOrderNumber String?   @map("provider_order_number") @db.VarChar(255)
-  providerStatus      String    @map("provider_status") @db.VarChar(100)
-  internalStatus      String    @map("internal_status") @db.VarChar(100)
-  priceAmount         Decimal?  @map("price_amount") @db.Decimal(10, 2)
-  priceCurrency       String    @map("price_currency") @db.VarChar(10)
-  trackingNumber      String?   @map("tracking_number") @db.VarChar(255)
-  trackingUrl         String?   @map("tracking_url") @db.VarChar(1000)
-  pickupAddress       String    @map("pickup_address")
-  dropoffAddress      String    @map("dropoff_address")
-  rawProviderPayload  Json?     @map("raw_provider_payload")
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  acceptedAt          DateTime? @map("accepted_at") @db.Timestamptz(6)
-  cancelledAt         DateTime? @map("cancelled_at") @db.Timestamptz(6)
-  deliveredAt         DateTime? @map("delivered_at") @db.Timestamptz(6)
-  shop                Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id                  String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId              String          @map("shop_id") @db.Uuid
+  orderId             String          @map("order_id") @db.Uuid
+  provider            String          @db.VarChar(50)
+  providerShipmentId  String?         @map("provider_shipment_id") @db.VarChar(255)
+  providerOrderNumber String?         @map("provider_order_number") @db.VarChar(255)
+  providerStatus      String          @map("provider_status") @db.VarChar(100)
+  internalStatus      String          @map("internal_status") @db.VarChar(100)
+  priceAmount         Decimal?        @map("price_amount") @db.Decimal(10, 2)
+  priceCurrency       String          @map("price_currency") @db.VarChar(10)
+  trackingNumber      String?         @map("tracking_number") @db.VarChar(255)
+  trackingUrl         String?         @map("tracking_url") @db.VarChar(1000)
+  pickupAddress       String          @map("pickup_address")
+  dropoffAddress      String          @map("dropoff_address")
+  rawProviderPayload  Json?           @map("raw_provider_payload")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  acceptedAt          DateTime?       @map("accepted_at") @db.Timestamptz(6)
+  cancelledAt         DateTime?       @map("cancelled_at") @db.Timestamptz(6)
+  deliveredAt         DateTime?       @map("delivered_at") @db.Timestamptz(6)
+  shop                Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order               Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   events              DeliveryEvent[]
 
   @@index([shopId, createdAt])
@@ -401,57 +443,57 @@ model PaymentReviewLog {
 }
 
 model OrderItem {
-  id                       String         @id @db.Uuid
-  orderId                  String         @map("order_id") @db.Uuid
-  variantId                String?        @map("variant_id") @db.Uuid
-  quantity                 Int
-  priceAtPurchase          Decimal        @map("price_at_purchase") @db.Decimal(10, 2)
-  productTitleSnapshot     String         @map("product_title_snapshot") @db.VarChar(255)
-  productSlugSnapshot      String         @map("product_slug_snapshot") @db.VarChar(255)
-  variantAttributesSnapshot String?       @map("variant_attributes_snapshot")
-  productImageSnapshot     String?        @map("product_image_snapshot")
-  wbNmIdSnapshot           BigInt?        @map("wb_nm_id_snapshot")
-  order                    Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant                  ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  id                        String          @id @db.Uuid
+  orderId                   String          @map("order_id") @db.Uuid
+  variantId                 String?         @map("variant_id") @db.Uuid
+  quantity                  Int
+  priceAtPurchase           Decimal         @map("price_at_purchase") @db.Decimal(10, 2)
+  productTitleSnapshot      String          @map("product_title_snapshot") @db.VarChar(255)
+  productSlugSnapshot       String          @map("product_slug_snapshot") @db.VarChar(255)
+  variantAttributesSnapshot String?         @map("variant_attributes_snapshot")
+  productImageSnapshot      String?         @map("product_image_snapshot")
+  wbNmIdSnapshot            BigInt?         @map("wb_nm_id_snapshot")
+  order                     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant                   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@map("order_items")
 }
 
 model AiGenerationTask {
-  id              String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId          String             @map("shop_id") @db.Uuid
-  productId       String             @map("product_id") @db.Uuid
-  requestedBy     String             @map("requested_by") @db.Uuid
-  status          String             @default("PENDING") @db.VarChar(50)
-  mode            String             @default("generate") @db.VarChar(50)
-  taskType        String             @default("PRODUCT_MODEL_IMAGE") @map("task_type") @db.VarChar(50)
-  quantity        Int                @default(1)
-  prompt          String             @db.Text
-  negativePrompt  String?            @map("negative_prompt") @db.Text
-  stylePreset     String?            @map("style_preset") @db.VarChar(255)
-  sourceImageId   String?            @map("source_image_id") @db.Uuid
-  inputFrontImageId String?          @map("input_front_image_id") @db.Uuid
-  inputBackImageId String?           @map("input_back_image_id") @db.Uuid
-  inputModelImageId String?          @map("input_model_image_id") @db.Uuid
-  creditCost      Int                @default(1) @map("credit_cost")
-  creditRefundedAt DateTime?         @map("credit_refunded_at") @db.Timestamptz(6)
-  attemptCount    Int                @default(0) @map("attempt_count")
-  queueJobId      String?            @map("queue_job_id") @db.VarChar(255)
-  providerTaskId  String?            @map("provider_task_id") @db.VarChar(255)
-  errorMessage    String?            @map("error_message")
-  completedAt     DateTime?          @map("completed_at") @db.Timestamptz(6)
-  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  shop            Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  product         Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
-  requester       User               @relation(fields: [requestedBy], references: [id], onDelete: Cascade)
-  sourceImage     ProductImage?      @relation(fields: [sourceImageId], references: [id], onDelete: SetNull)
-  inputFrontImage ProductImage?      @relation("AiTaskFrontImage", fields: [inputFrontImageId], references: [id], onDelete: SetNull)
-  inputBackImage ProductImage?       @relation("AiTaskBackImage", fields: [inputBackImageId], references: [id], onDelete: SetNull)
-  inputModelImage ProductImage?      @relation("AiTaskModelImage", fields: [inputModelImageId], references: [id], onDelete: SetNull)
-  generatedImages AiGeneratedImage[]
-  usageLogs       AiUsageLog[]
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId            String             @map("shop_id") @db.Uuid
+  productId         String             @map("product_id") @db.Uuid
+  requestedBy       String             @map("requested_by") @db.Uuid
+  status            String             @default("PENDING") @db.VarChar(50)
+  mode              String             @default("generate") @db.VarChar(50)
+  taskType          String             @default("PRODUCT_MODEL_IMAGE") @map("task_type") @db.VarChar(50)
+  quantity          Int                @default(1)
+  prompt            String             @db.Text
+  negativePrompt    String?            @map("negative_prompt") @db.Text
+  stylePreset       String?            @map("style_preset") @db.VarChar(255)
+  sourceImageId     String?            @map("source_image_id") @db.Uuid
+  inputFrontImageId String?            @map("input_front_image_id") @db.Uuid
+  inputBackImageId  String?            @map("input_back_image_id") @db.Uuid
+  inputModelImageId String?            @map("input_model_image_id") @db.Uuid
+  creditCost        Int                @default(1) @map("credit_cost")
+  creditRefundedAt  DateTime?          @map("credit_refunded_at") @db.Timestamptz(6)
+  attemptCount      Int                @default(0) @map("attempt_count")
+  queueJobId        String?            @map("queue_job_id") @db.VarChar(255)
+  providerTaskId    String?            @map("provider_task_id") @db.VarChar(255)
+  errorMessage      String?            @map("error_message")
+  completedAt       DateTime?          @map("completed_at") @db.Timestamptz(6)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop              Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  requester         User               @relation(fields: [requestedBy], references: [id], onDelete: Cascade)
+  sourceImage       ProductImage?      @relation(fields: [sourceImageId], references: [id], onDelete: SetNull)
+  inputFrontImage   ProductImage?      @relation("AiTaskFrontImage", fields: [inputFrontImageId], references: [id], onDelete: SetNull)
+  inputBackImage    ProductImage?      @relation("AiTaskBackImage", fields: [inputBackImageId], references: [id], onDelete: SetNull)
+  inputModelImage   ProductImage?      @relation("AiTaskModelImage", fields: [inputModelImageId], references: [id], onDelete: SetNull)
+  generatedImages   AiGeneratedImage[]
+  usageLogs         AiUsageLog[]
 
   @@index([shopId, status, createdAt])
   @@index([productId, createdAt])
@@ -459,64 +501,64 @@ model AiGenerationTask {
 }
 
 model AiGeneratedImage {
-  id                String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  taskId            String           @map("task_id") @db.Uuid
-  shopId            String           @map("shop_id") @db.Uuid
-  productId         String           @map("product_id") @db.Uuid
-  imageUrl          String           @map("image_url") @db.VarChar(1000)
-  storageKey        String?          @map("storage_key") @db.VarChar(1024)
-  thumbnailUrl      String?          @map("thumbnail_url") @db.VarChar(1000)
-  provider          String?          @db.VarChar(100)
-  storageProvider   String?          @map("storage_provider") @db.VarChar(100)
-  mimeType          String?          @map("mime_type") @db.VarChar(100)
-  width             Int?
-  height            Int?
-  isSelected        Boolean          @default(false) @map("is_selected")
-  metadata          Json?
-  attachedImageId   String?          @unique @map("attached_image_id") @db.Uuid
-  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  task              AiGenerationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  product           Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  shop              Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  attachedImage     ProductImage?    @relation("AttachedAiImage", fields: [attachedImageId], references: [id], onDelete: SetNull)
+  id              String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taskId          String           @map("task_id") @db.Uuid
+  shopId          String           @map("shop_id") @db.Uuid
+  productId       String           @map("product_id") @db.Uuid
+  imageUrl        String           @map("image_url") @db.VarChar(1000)
+  storageKey      String?          @map("storage_key") @db.VarChar(1024)
+  thumbnailUrl    String?          @map("thumbnail_url") @db.VarChar(1000)
+  provider        String?          @db.VarChar(100)
+  storageProvider String?          @map("storage_provider") @db.VarChar(100)
+  mimeType        String?          @map("mime_type") @db.VarChar(100)
+  width           Int?
+  height          Int?
+  isSelected      Boolean          @default(false) @map("is_selected")
+  metadata        Json?
+  attachedImageId String?          @unique @map("attached_image_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  task            AiGenerationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  attachedImage   ProductImage?    @relation("AttachedAiImage", fields: [attachedImageId], references: [id], onDelete: SetNull)
 
   @@index([productId, createdAt])
   @@map("ai_generated_images")
 }
 
 model SellerAiCredit {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId       String    @unique @map("shop_id") @db.Uuid
-  balance      Int       @default(0)
-  reserved     Int       @default(0)
-  totalCredits Int       @default(0) @map("total_credits")
-  usedCredits Int        @default(0) @map("used_credits")
-  remainingCredits Int   @default(0) @map("remaining_credits")
-  lastGrantedAt DateTime? @map("last_granted_at") @db.Timestamptz(6)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  shop         Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId           String    @unique @map("shop_id") @db.Uuid
+  balance          Int       @default(0)
+  reserved         Int       @default(0)
+  totalCredits     Int       @default(0) @map("total_credits")
+  usedCredits      Int       @default(0) @map("used_credits")
+  remainingCredits Int       @default(0) @map("remaining_credits")
+  lastGrantedAt    DateTime? @map("last_granted_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@map("seller_ai_credits")
 }
 
 model AiUsageLog {
-  id           String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId        String             @map("shop_id") @db.Uuid
-  taskId        String?            @map("task_id") @db.Uuid
-  userId        String?            @map("user_id") @db.Uuid
-  provider      String?            @db.VarChar(100)
-  action        String             @db.VarChar(100)
-  creditCost    Int                @default(0) @map("credit_cost")
-  status        String?            @db.VarChar(50)
-  errorMessage  String?            @map("error_message")
-  creditDelta   Int                @map("credit_delta")
-  balanceAfter  Int                @map("balance_after")
-  metadata      Json?
-  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  shop          Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  task          AiGenerationTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  user          User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id           String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId       String            @map("shop_id") @db.Uuid
+  taskId       String?           @map("task_id") @db.Uuid
+  userId       String?           @map("user_id") @db.Uuid
+  provider     String?           @db.VarChar(100)
+  action       String            @db.VarChar(100)
+  creditCost   Int               @default(0) @map("credit_cost")
+  status       String?           @db.VarChar(50)
+  errorMessage String?           @map("error_message")
+  creditDelta  Int               @map("credit_delta")
+  balanceAfter Int               @map("balance_after")
+  metadata     Json?
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  shop         Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  task         AiGenerationTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([shopId, createdAt])
   @@map("ai_usage_logs")

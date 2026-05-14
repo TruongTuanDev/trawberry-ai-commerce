@@ -12,6 +12,7 @@ import { ShopSwitcher } from "@/components/seller/shop-switcher";
 const navigation = [
   { href: "/seller/dashboard", label: "Dashboard" },
   { href: "/seller/products", label: "Products" },
+  { href: "/seller/import/wildberries", label: "WB Import" },
   { href: "/seller/ai-images", label: "AI Images" },
   { href: "/seller/orders", label: "Orders" },
   { href: "/seller/payments", label: "Payments" },
