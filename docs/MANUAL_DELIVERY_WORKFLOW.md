@@ -59,3 +59,8 @@ Public order tracking now shows:
 ## Migration Path
 
 When Yandex/CDEK credentials and legal setup are ready, keep the manual fields as fallback and progressively switch seller actions to provider-backed API creation/refresh. Admin supervision remains the control plane for exceptions.
+# Delivery Exceptions Addendum
+
+Seller-managed manual delivery now supports exception reporting. Sellers can mark a manual delivery `FAILED` with a required reason code, optional internal reason text, and optional customer-visible message. Internal notes and comments remain visible only to seller/admin users.
+
+Admin supervision can filter `FAILED`/`CANCELLED` deliveries, add internal comments, and update the customer-visible message shown on public tracking. Real Yandex/CDEK API integration remains a future phase; provider webhooks should map into the same internal status and reason-code model.

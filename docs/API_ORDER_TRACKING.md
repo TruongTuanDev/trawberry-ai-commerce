@@ -154,3 +154,14 @@ Customer tracking includes the latest delivery shipment when one exists:
 ```
 
 Mock mode never calls real Yandex or CDEK. Same-city mock shipments are expected to use the recommended Yandex offer; inter-city shipments are expected to use CDEK.
+# Delivery Exception Tracking Addendum
+
+Public order tracking includes customer-safe delivery exception data:
+
+- `delivery.status`
+- `delivery.failureReasonCode`, omitted for unsafe generic `OTHER`
+- `delivery.customerVisibleMessage`
+- `delivery.deliveryComments[]`, filtered to `CUSTOMER_VISIBLE`
+- `delivery.trackingUrl`, when applicable
+
+Internal seller/admin delivery comments are never returned by tracking endpoints. Failed deliveries render as a delivery issue; cancelled deliveries render as delivery cancelled.

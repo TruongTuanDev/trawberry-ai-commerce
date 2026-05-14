@@ -42,6 +42,12 @@ export class ListAdminDeliveriesQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  exceptionOnly?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
   dateFrom?: string;
 

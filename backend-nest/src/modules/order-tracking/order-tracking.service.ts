@@ -53,6 +53,14 @@ type TrackableOrderRecord = {
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
     deliveryNote: string | null;
+    failureReasonCode: string | null;
+    customerVisibleMessage: string | null;
+    comments: Array<{
+      id: string;
+      visibility: string;
+      message: string;
+      createdAt: Date;
+    }>;
   }>;
   items: Array<{
     id: string;
@@ -297,6 +305,19 @@ export class OrderTrackingService {
             estimatedDeliveryAt:
               latestShipment.estimatedDeliveryAt?.toISOString() ?? null,
             deliveryNote: latestShipment.deliveryNote,
+            failureReasonCode: this.customerSafeFailureReason(
+              latestShipment.failureReasonCode,
+            ),
+            customerVisibleMessage:
+              latestShipment.customerVisibleMessage ??
+              this.deliveryStatusMessage(latestShipment.internalStatus),
+            deliveryComments: latestShipment.comments
+              .filter((comment) => comment.visibility === 'CUSTOMER_VISIBLE')
+              .map((comment) => ({
+                id: comment.id,
+                message: comment.message,
+                createdAt: comment.createdAt.toISOString(),
+              })),
           }
         : null,
     };
@@ -323,6 +344,18 @@ export class OrderTrackingService {
           courierPhone: true,
           estimatedDeliveryAt: true,
           deliveryNote: true,
+          failureReasonCode: true,
+          customerVisibleMessage: true,
+          comments: {
+            where: { visibility: 'CUSTOMER_VISIBLE' },
+            orderBy: { createdAt: 'desc' as const },
+            select: {
+              id: true,
+              visibility: true,
+              message: true,
+              createdAt: true,
+            },
+          },
         },
       },
       items: {
@@ -369,5 +402,10 @@ export class OrderTrackingService {
       FAILED: 'The delivery needs seller or admin attention.',
     };
     return messages[status] ?? 'Delivery status is available.';
+  }
+
+  private customerSafeFailureReason(reasonCode: string | null) {
+    if (!reasonCode) return null;
+    return reasonCode === 'OTHER' ? null : reasonCode;
   }
 }

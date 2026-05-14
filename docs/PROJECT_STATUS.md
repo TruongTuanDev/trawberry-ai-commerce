@@ -660,3 +660,14 @@ To demo the MVP cleanly, the following should be available:
 - view product gallery with AI-generated assets
 - run the full stack through Docker Compose
 - runtime docs ready and accurate
+# Delivery Exception Phase Status
+
+Implemented: seller-managed manual delivery exception workflow.
+
+- Seller can report failed delivery with reason and customer-visible message.
+- Seller/admin can add internal delivery comments.
+- Admin delivery supervision supports `exceptionOnly=true` and status filters for `FAILED`/`CANCELLED`.
+- Customer tracking shows failed/cancelled messaging and never exposes internal comments.
+- Delivery event audit rows are written for exception actions.
+
+Future: map real Yandex/CDEK status webhooks into this internal exception model when provider API integration is introduced.

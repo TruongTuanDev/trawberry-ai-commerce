@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api";
 import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
+import type { DeliveryCommentVisibility, DeliveryExceptionReasonCode } from "@/lib/seller-api";
 
 export type SellerApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -62,6 +63,12 @@ export type AdminDeliveryRow = {
   courierPhone: string | null;
   estimatedDeliveryAt: string | null;
   deliveryNote: string | null;
+  failureReasonCode: string | null;
+  failureReasonText: string | null;
+  failedAt: string | null;
+  customerVisibleMessage: string | null;
+  lastAdminNote: string | null;
+  lastSellerNote: string | null;
   createdAt: string;
   updatedAt: string;
   events: Array<{
@@ -74,6 +81,14 @@ export type AdminDeliveryRow = {
     newStatus: string | null;
     providerStatus: string | null;
     message: string | null;
+    createdAt: string;
+  }>;
+  comments: Array<{
+    id: string;
+    actorUserId: string | null;
+    actorRole: string;
+    visibility: string;
+    message: string;
     createdAt: string;
   }>;
 };
@@ -143,6 +158,7 @@ export async function listAdminDeliveries(query?: {
   shopId?: string;
   sellerId?: string;
   paidWithoutDelivery?: boolean;
+  exceptionOnly?: boolean;
   dateFrom?: string;
   dateTo?: string;
   search?: string;
@@ -153,6 +169,7 @@ export async function listAdminDeliveries(query?: {
   if (query?.shopId) params.set("shopId", query.shopId);
   if (query?.sellerId) params.set("sellerId", query.sellerId);
   if (query?.paidWithoutDelivery) params.set("paidWithoutDelivery", "true");
+  if (query?.exceptionOnly) params.set("exceptionOnly", "true");
   if (query?.dateFrom) params.set("dateFrom", query.dateFrom);
   if (query?.dateTo) params.set("dateTo", query.dateTo);
   if (query?.search) params.set("search", query.search);
@@ -180,5 +197,36 @@ export async function adminCancelDelivery(deliveryShipmentId: string, note?: str
   return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/cancel`, {
     method: "POST",
     body: JSON.stringify({ note }),
+  });
+}
+
+export async function adminMarkDeliveryFailed(
+  deliveryShipmentId: string,
+  payload: {
+    reasonCode: DeliveryExceptionReasonCode;
+    reasonText?: string | null;
+    customerVisibleMessage?: string | null;
+  },
+) {
+  return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/mark-failed`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminAddDeliveryComment(
+  deliveryShipmentId: string,
+  payload: { visibility: DeliveryCommentVisibility; message: string },
+) {
+  return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/comments`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function adminUpdateDeliveryCustomerMessage(deliveryShipmentId: string, customerVisibleMessage: string) {
+  return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/customer-message`, {
+    method: "PATCH",
+    body: JSON.stringify({ customerVisibleMessage }),
   });
 }

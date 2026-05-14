@@ -307,6 +307,7 @@ model Order {
   deliveryOffers           DeliveryOffer[]
   deliveryShipments        DeliveryShipment[]
   deliveryEvents           DeliveryEvent[]
+  deliveryComments         DeliveryComment[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
@@ -388,6 +389,12 @@ model DeliveryShipment {
   courierPhone        String?         @map("courier_phone") @db.VarChar(50)
   estimatedDeliveryAt DateTime?       @map("estimated_delivery_at") @db.Timestamptz(6)
   deliveryNote        String?         @map("delivery_note")
+  failureReasonCode   String?         @map("failure_reason_code") @db.VarChar(100)
+  failureReasonText   String?         @map("failure_reason_text")
+  failedAt            DateTime?       @map("failed_at") @db.Timestamptz(6)
+  customerVisibleMessage String?      @map("customer_visible_message")
+  lastAdminNote       String?         @map("last_admin_note")
+  lastSellerNote      String?         @map("last_seller_note")
   pickupAddress       String          @map("pickup_address")
   dropoffAddress      String          @map("dropoff_address")
   rawProviderPayload  Json?           @map("raw_provider_payload")
@@ -399,11 +406,29 @@ model DeliveryShipment {
   shop                Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
   order               Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   events              DeliveryEvent[]
+  comments            DeliveryComment[]
 
   @@index([shopId, createdAt])
   @@index([orderId, createdAt])
   @@index([providerShipmentId])
   @@map("delivery_shipments")
+}
+
+model DeliveryComment {
+  id                 String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  deliveryShipmentId String           @map("delivery_shipment_id") @db.Uuid
+  orderId            String           @map("order_id") @db.Uuid
+  actorUserId        String?          @map("actor_user_id") @db.Uuid
+  actorRole          String           @map("actor_role") @db.VarChar(50)
+  visibility         String           @db.VarChar(50)
+  message            String
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  deliveryShipment   DeliveryShipment @relation(fields: [deliveryShipmentId], references: [id], onDelete: Cascade)
+  order              Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryShipmentId, createdAt])
+  @@index([orderId, createdAt])
+  @@map("delivery_comments")
 }
 
 model DeliveryEvent {

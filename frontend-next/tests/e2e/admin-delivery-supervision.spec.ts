@@ -91,6 +91,7 @@ test("admin supervises paid orders without delivery and overrides status", async
   await expect(page.getByTestId("admin-deliveries-page")).toBeVisible();
   await page.getByTestId("admin-delivery-filter-PAID_WITHOUT_DELIVERY").click();
   await page.getByTestId("admin-delivery-search").fill(checkout.orderCode);
+  await page.getByRole("button", { name: "Refresh" }).click();
   await expect(page.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode })).toBeVisible();
 
   const shipment = await backendJson<{ id: string }>(`/api/shops/${shop.id}/orders/${checkout.orderId}/delivery/manual`, {
@@ -101,6 +102,7 @@ test("admin supervises paid orders without delivery and overrides status", async
 
   await page.getByTestId("admin-delivery-filter-CREATED_MANUALLY").click();
   await page.getByTestId("admin-delivery-search").fill(checkout.orderCode);
+  await page.getByRole("button", { name: "Refresh" }).click();
   await expect(page.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode })).toBeVisible();
   await page.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode }).click();
   await page.getByTestId("admin-delivery-mark-in-transit").click();

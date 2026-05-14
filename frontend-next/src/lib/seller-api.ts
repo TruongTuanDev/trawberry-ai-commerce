@@ -4,6 +4,17 @@ export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | 
 export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE" | "UPLOAD_PROOF";
 export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "NOT_TRACKED";
 export type DeliveryProviderName = "CDEK" | "YANDEX" | "MANUAL";
+export type DeliveryExceptionReasonCode =
+  | "CUSTOMER_UNAVAILABLE"
+  | "WRONG_ADDRESS"
+  | "COURIER_CANCELLED"
+  | "SELLER_CANCELLED"
+  | "CUSTOMER_CANCELLED"
+  | "DAMAGED_PACKAGE"
+  | "LOST_PACKAGE"
+  | "DELIVERY_TIMEOUT"
+  | "OTHER";
+export type DeliveryCommentVisibility = "INTERNAL" | "CUSTOMER_VISIBLE";
 
 export type SellerOrderDeliverySummary = {
   provider: DeliveryProviderName | string;
@@ -65,6 +76,15 @@ export type DeliveryEvent = {
   createdAt: string;
 };
 
+export type DeliveryComment = {
+  id: string;
+  actorUserId: string | null;
+  actorRole: string;
+  visibility: DeliveryCommentVisibility | string;
+  message: string;
+  createdAt: string;
+};
+
 export type DeliveryShipment = {
   id: string;
   provider: DeliveryProviderName | string;
@@ -79,6 +99,12 @@ export type DeliveryShipment = {
   courierPhone: string | null;
   estimatedDeliveryAt: string | null;
   deliveryNote: string | null;
+  failureReasonCode: DeliveryExceptionReasonCode | string | null;
+  failureReasonText: string | null;
+  failedAt: string | null;
+  customerVisibleMessage: string | null;
+  lastAdminNote: string | null;
+  lastSellerNote: string | null;
   pickupAddress: string;
   dropoffAddress: string;
   createdAt: string;
@@ -94,6 +120,7 @@ export type DeliveryDetail = {
   activeShipment: DeliveryShipment | null;
   offers: DeliveryOffer[];
   events: DeliveryEvent[];
+  comments: DeliveryComment[];
 };
 
 export type ShopSummary = {
@@ -1152,6 +1179,44 @@ export async function markManualDeliveryDelivered(
       method: "POST",
       token,
       body: JSON.stringify(payload ?? {}),
+    },
+  );
+}
+
+export async function markManualDeliveryFailed(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload: {
+    reasonCode: DeliveryExceptionReasonCode;
+    reasonText?: string | null;
+    customerVisibleMessage?: string | null;
+  },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/mark-failed`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function addDeliveryComment(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload: { visibility: DeliveryCommentVisibility; message: string },
+  token?: string,
+) {
+  return apiRequest<DeliveryComment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/comments`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
     },
   );
 }

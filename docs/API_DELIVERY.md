@@ -232,3 +232,21 @@ YANDEX_DELIVERY_BASE_URL=https://b2b.taxi.yandex.net
 ```
 
 Common real-mode failures are returned as clear API errors: invalid token, inactive billing/account, address validation failure, unavailable courier, expired offer, or claim status that cannot be accepted/cancelled.
+# Delivery Exception API Addendum
+
+Seller:
+
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-failed`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/comments`
+
+Admin:
+
+- `GET /api/admin/deliveries?exceptionOnly=true`
+- `GET /api/admin/deliveries?status=FAILED|CANCELLED`
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-failed`
+- `POST /api/admin/deliveries/:deliveryShipmentId/comments`
+- `PATCH /api/admin/deliveries/:deliveryShipmentId/customer-message`
+
+`mark-failed` requires `reasonCode`. Supported codes are `CUSTOMER_UNAVAILABLE`, `WRONG_ADDRESS`, `COURIER_CANCELLED`, `SELLER_CANCELLED`, `CUSTOMER_CANCELLED`, `DAMAGED_PACKAGE`, `LOST_PACKAGE`, `DELIVERY_TIMEOUT`, and `OTHER`.
+
+Comments use `visibility: INTERNAL | CUSTOMER_VISIBLE`. Customer-visible comments require a non-empty message and are the only comments returned by public tracking.

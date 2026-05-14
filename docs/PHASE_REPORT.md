@@ -1322,3 +1322,19 @@ git rm --cached frontend-next\.env.local
   - object storage download, retry, and broken-link monitoring remain future work
   - no real WB API calls are made
   - broader admin import audit UI is future work
+# Phase Report: Delivery Exceptions
+
+Added delivery exception workflow for seller-managed manual delivery and admin supervision.
+
+Delivered:
+
+- Backend exception fields and `delivery_comments`.
+- Seller/admin failed-delivery APIs with required reason codes.
+- Internal vs customer-visible comment handling.
+- Public tracking safe exception response.
+- Admin exception filters and customer-message override.
+- Smoke script `smoke:delivery-exceptions`.
+- Frontend seller/admin/customer exception UI.
+- Playwright script `test:e2e:delivery-exceptions`.
+
+Non-goals retained: no real OpenAI calls, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.

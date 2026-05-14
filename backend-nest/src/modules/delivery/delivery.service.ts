@@ -11,6 +11,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import {
   DELIVERY_CARRIERS,
+  DELIVERY_EXCEPTION_STATUSES,
   DELIVERY_PROVIDER,
   DELIVERY_TERMINAL_STATUSES,
 } from './delivery.constants';
@@ -21,7 +22,10 @@ import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
 import { ListAdminDeliveriesQueryDto } from './dto/list-admin-deliveries-query.dto';
 import {
   AdminUpdateManualDeliveryDto,
+  DeliveryCommentDto,
   DeliveryTransitionDto,
+  MarkDeliveryExceptionDto,
+  UpdateCustomerDeliveryMessageDto,
   UpsertManualDeliveryDto,
 } from './dto/manual-delivery.dto';
 import type {
@@ -96,6 +100,12 @@ type OrderRecord = {
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
     deliveryNote: string | null;
+    failureReasonCode: string | null;
+    failureReasonText: string | null;
+    failedAt: Date | null;
+    customerVisibleMessage: string | null;
+    lastAdminNote: string | null;
+    lastSellerNote: string | null;
     pickupAddress: string;
     dropoffAddress: string;
     rawProviderPayload: Prisma.JsonValue | null;
@@ -115,6 +125,14 @@ type OrderRecord = {
       oldStatus: string | null;
       newStatus: string | null;
       message: string | null;
+      createdAt: Date;
+    }>;
+    comments: Array<{
+      id: string;
+      actorUserId: string | null;
+      actorRole: string;
+      visibility: string;
+      message: string;
       createdAt: Date;
     }>;
   }>;
@@ -791,6 +809,101 @@ export class DeliveryService {
     return this.getAdminDelivery(updated.id);
   }
 
+  async markDeliveryFailed(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: MarkDeliveryExceptionDto,
+  ) {
+    const shipment = await this.findShipmentOrThrow(
+      shopId,
+      orderId,
+      shipmentId,
+    );
+    const updated = await this.markLoadedShipmentException(
+      shipment,
+      user,
+      'FAILED',
+      'MANUAL_DELIVERY_FAILED',
+      dto,
+    );
+    return this.toShipmentResponse(updated);
+  }
+
+  async addDeliveryComment(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: DeliveryCommentDto,
+  ) {
+    const shipment = await this.findShipmentOrThrow(
+      shopId,
+      orderId,
+      shipmentId,
+    );
+    return this.createDeliveryComment(shipment, user, dto);
+  }
+
+  async adminMarkFailed(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: MarkDeliveryExceptionDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    await this.markLoadedShipmentException(
+      shipment,
+      admin,
+      'FAILED',
+      'ADMIN_DELIVERY_FAILED',
+      dto,
+    );
+    return this.getAdminDelivery(deliveryShipmentId);
+  }
+
+  async adminAddComment(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: DeliveryCommentDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    await this.createDeliveryComment(shipment, admin, dto);
+    return this.getAdminDelivery(deliveryShipmentId);
+  }
+
+  async adminUpdateCustomerMessage(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: UpdateCustomerDeliveryMessageDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    const message = this.clean(dto.customerVisibleMessage);
+    if (!message) {
+      throw new BadRequestException('customerVisibleMessage is required.');
+    }
+    await this.prisma.deliveryShipment.update({
+      where: { id: deliveryShipmentId },
+      data: { customerVisibleMessage: message },
+    });
+    await this.createEvent({
+      deliveryShipmentId,
+      shopId: shipment.shopId,
+      orderId: shipment.orderId,
+      provider: shipment.provider,
+      eventType: 'ADMIN_DELIVERY_CUSTOMER_MESSAGE_UPDATED',
+      providerStatus: shipment.providerStatus,
+      message,
+      rawPayload: { source: 'admin', customerVisible: true },
+      actorUserId: admin.userId,
+      actorRole: admin.role,
+      action: 'ADMIN_UPDATE_CUSTOMER_MESSAGE',
+      oldStatus: shipment.internalStatus,
+      newStatus: shipment.internalStatus,
+    });
+    return this.getAdminDelivery(deliveryShipmentId);
+  }
+
   async getDelivery(shopId: string, orderId: string) {
     const order = await this.findOrderOrThrow(shopId, orderId);
     const activeShipment =
@@ -805,6 +918,9 @@ export class DeliveryService {
 
     const events = order.deliveryShipments
       .flatMap((shipment) => shipment.events)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const comments = order.deliveryShipments
+      .flatMap((shipment) => shipment.comments)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return {
@@ -827,6 +943,14 @@ export class DeliveryService {
         message: event.message,
         createdAt: event.createdAt.toISOString(),
       })),
+      comments: comments.map((comment) => ({
+        id: comment.id,
+        actorUserId: comment.actorUserId,
+        actorRole: comment.actorRole,
+        visibility: comment.visibility,
+        message: comment.message,
+        createdAt: comment.createdAt.toISOString(),
+      })),
     };
   }
 
@@ -847,6 +971,9 @@ export class DeliveryService {
           orderBy: { createdAt: 'desc' },
           include: {
             events: {
+              orderBy: { createdAt: 'desc' },
+            },
+            comments: {
               orderBy: { createdAt: 'desc' },
             },
           },
@@ -936,6 +1063,11 @@ export class DeliveryService {
     eventType: string,
     message: string,
   ) {
+    this.assertAllowedStatusTransition(
+      shipment.internalStatus,
+      nextStatus,
+      user,
+    );
     const now = new Date();
     const updated = await this.prisma.deliveryShipment.update({
       where: { id: shipment.id },
@@ -967,11 +1099,182 @@ export class DeliveryService {
     return this.toShipmentResponse(updated);
   }
 
+  private async markLoadedShipmentException(
+    shipment: {
+      id: string;
+      shopId: string;
+      orderId: string;
+      provider: string;
+      internalStatus: string;
+      providerStatus: string;
+    },
+    user: AuthenticatedUser,
+    nextStatus: 'FAILED' | 'CANCELLED',
+    eventType: string,
+    dto: MarkDeliveryExceptionDto,
+  ) {
+    if (shipment.internalStatus === 'DELIVERED') {
+      throw new BadRequestException(
+        'Delivered shipment cannot be marked failed or cancelled.',
+      );
+    }
+    if (!this.clean(dto.reasonCode)) {
+      throw new BadRequestException('reasonCode is required.');
+    }
+    const now = new Date();
+    const customerVisibleMessage = this.clean(dto.customerVisibleMessage);
+    const reasonText = this.clean(dto.reasonText);
+    const updated = await this.prisma.deliveryShipment.update({
+      where: { id: shipment.id },
+      data: {
+        providerStatus: nextStatus,
+        internalStatus: nextStatus,
+        failureReasonCode: dto.reasonCode,
+        failureReasonText: reasonText,
+        customerVisibleMessage,
+        failedAt: nextStatus === 'FAILED' ? now : undefined,
+        cancelledAt: nextStatus === 'CANCELLED' ? now : undefined,
+        lastAdminNote: user.role === 'ADMIN' ? reasonText : undefined,
+        lastSellerNote: user.role !== 'ADMIN' ? reasonText : undefined,
+      },
+    });
+
+    await this.createEvent({
+      deliveryShipmentId: shipment.id,
+      shopId: shipment.shopId,
+      orderId: shipment.orderId,
+      provider: shipment.provider,
+      eventType,
+      providerStatus: nextStatus,
+      message: reasonText ?? `Delivery marked ${nextStatus.toLowerCase()}.`,
+      rawPayload: {
+        source: user.role === 'ADMIN' ? 'admin' : 'seller',
+        reasonCode: dto.reasonCode,
+        customerVisibleMessage,
+      },
+      actorUserId: user.userId,
+      actorRole: user.role,
+      action: eventType,
+      oldStatus: shipment.internalStatus,
+      newStatus: nextStatus,
+    });
+
+    return updated;
+  }
+
+  private async createDeliveryComment(
+    shipment: {
+      id: string;
+      shopId: string;
+      orderId: string;
+      provider: string;
+      internalStatus: string;
+      providerStatus: string;
+    },
+    user: AuthenticatedUser,
+    dto: DeliveryCommentDto,
+  ) {
+    const message = this.clean(dto.message);
+    if (!message) {
+      throw new BadRequestException('message is required.');
+    }
+    if (dto.visibility === 'CUSTOMER_VISIBLE' && !message) {
+      throw new BadRequestException(
+        'Customer-visible comments must include a message.',
+      );
+    }
+    const comment = await this.prisma.deliveryComment.create({
+      data: {
+        id: randomUUID(),
+        deliveryShipmentId: shipment.id,
+        orderId: shipment.orderId,
+        actorUserId: user.userId,
+        actorRole: user.role,
+        visibility: dto.visibility,
+        message,
+      },
+    });
+    await this.prisma.deliveryShipment.update({
+      where: { id: shipment.id },
+      data: {
+        customerVisibleMessage:
+          dto.visibility === 'CUSTOMER_VISIBLE' ? message : undefined,
+        lastAdminNote:
+          user.role === 'ADMIN' && dto.visibility === 'INTERNAL'
+            ? message
+            : undefined,
+        lastSellerNote:
+          user.role !== 'ADMIN' && dto.visibility === 'INTERNAL'
+            ? message
+            : undefined,
+      },
+    });
+    await this.createEvent({
+      deliveryShipmentId: shipment.id,
+      shopId: shipment.shopId,
+      orderId: shipment.orderId,
+      provider: shipment.provider,
+      eventType: 'DELIVERY_COMMENT_ADDED',
+      providerStatus: shipment.providerStatus,
+      message:
+        dto.visibility === 'CUSTOMER_VISIBLE'
+          ? 'Customer-visible delivery comment added.'
+          : 'Internal delivery comment added.',
+      rawPayload: { visibility: dto.visibility },
+      actorUserId: user.userId,
+      actorRole: user.role,
+      action: 'ADD_DELIVERY_COMMENT',
+      oldStatus: shipment.internalStatus,
+      newStatus: shipment.internalStatus,
+    });
+    return {
+      id: comment.id,
+      deliveryShipmentId: comment.deliveryShipmentId,
+      orderId: comment.orderId,
+      actorUserId: comment.actorUserId,
+      actorRole: comment.actorRole,
+      visibility: comment.visibility,
+      message: comment.message,
+      createdAt: comment.createdAt.toISOString(),
+    };
+  }
+
+  private assertAllowedStatusTransition(
+    currentStatus: string,
+    nextStatus: string,
+    user: AuthenticatedUser,
+  ) {
+    if (
+      currentStatus === 'DELIVERED' &&
+      DELIVERY_EXCEPTION_STATUSES.includes(
+        nextStatus as (typeof DELIVERY_EXCEPTION_STATUSES)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        'Delivered shipment cannot be marked failed or cancelled.',
+      );
+    }
+    if (
+      user.role !== 'ADMIN' &&
+      DELIVERY_EXCEPTION_STATUSES.includes(
+        currentStatus as (typeof DELIVERY_EXCEPTION_STATUSES)[number],
+      ) &&
+      nextStatus === 'DELIVERED'
+    ) {
+      throw new BadRequestException(
+        'Failed or cancelled shipment cannot be marked delivered without admin override.',
+      );
+    }
+  }
+
   private buildAdminShipmentWhere(
     query: ListAdminDeliveriesQueryDto,
   ): Prisma.DeliveryShipmentWhereInput {
     const where: Prisma.DeliveryShipmentWhereInput = {};
     if (query.status) where.internalStatus = query.status;
+    if (query.exceptionOnly) {
+      where.internalStatus = { in: [...DELIVERY_EXCEPTION_STATUSES] };
+    }
     if (query.provider) where.provider = query.provider;
     if (query.shopId) where.shopId = query.shopId;
     if (query.dateFrom || query.dateTo) {
@@ -1316,6 +1619,12 @@ export class DeliveryService {
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
     deliveryNote: string | null;
+    failureReasonCode: string | null;
+    failureReasonText: string | null;
+    failedAt: Date | null;
+    customerVisibleMessage: string | null;
+    lastAdminNote: string | null;
+    lastSellerNote: string | null;
     pickupAddress: string;
     dropoffAddress: string;
     createdAt: Date;
@@ -1338,6 +1647,12 @@ export class DeliveryService {
       courierPhone: shipment.courierPhone,
       estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
       deliveryNote: shipment.deliveryNote,
+      failureReasonCode: shipment.failureReasonCode,
+      failureReasonText: shipment.failureReasonText,
+      failedAt: shipment.failedAt?.toISOString() ?? null,
+      customerVisibleMessage: shipment.customerVisibleMessage,
+      lastAdminNote: shipment.lastAdminNote,
+      lastSellerNote: shipment.lastSellerNote,
       pickupAddress: shipment.pickupAddress,
       dropoffAddress: shipment.dropoffAddress,
       createdAt: shipment.createdAt.toISOString(),
@@ -1362,6 +1677,12 @@ export class DeliveryService {
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
     deliveryNote: string | null;
+    failureReasonCode: string | null;
+    failureReasonText: string | null;
+    failedAt: Date | null;
+    customerVisibleMessage: string | null;
+    lastAdminNote: string | null;
+    lastSellerNote: string | null;
     createdAt: Date;
     updatedAt: Date;
     acceptedAt: Date | null;
@@ -1398,6 +1719,14 @@ export class DeliveryService {
       message: string | null;
       createdAt: Date;
     }>;
+    comments: Array<{
+      id: string;
+      actorUserId: string | null;
+      actorRole: string;
+      visibility: string;
+      message: string;
+      createdAt: Date;
+    }>;
   }) {
     return {
       kind: 'SHIPMENT',
@@ -1429,6 +1758,12 @@ export class DeliveryService {
       courierPhone: shipment.courierPhone,
       estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
       deliveryNote: shipment.deliveryNote,
+      failureReasonCode: shipment.failureReasonCode,
+      failureReasonText: shipment.failureReasonText,
+      failedAt: shipment.failedAt?.toISOString() ?? null,
+      customerVisibleMessage: shipment.customerVisibleMessage,
+      lastAdminNote: shipment.lastAdminNote,
+      lastSellerNote: shipment.lastSellerNote,
       createdAt: shipment.createdAt.toISOString(),
       updatedAt: shipment.updatedAt.toISOString(),
       acceptedAt: shipment.acceptedAt?.toISOString() ?? null,
@@ -1445,6 +1780,14 @@ export class DeliveryService {
         providerStatus: event.providerStatus,
         message: event.message,
         createdAt: event.createdAt.toISOString(),
+      })),
+      comments: shipment.comments.map((comment) => ({
+        id: comment.id,
+        actorUserId: comment.actorUserId,
+        actorRole: comment.actorRole,
+        visibility: comment.visibility,
+        message: comment.message,
+        createdAt: comment.createdAt.toISOString(),
       })),
     };
   }
@@ -1500,12 +1843,19 @@ export class DeliveryService {
       courierPhone: null,
       estimatedDeliveryAt: null,
       deliveryNote: null,
+      failureReasonCode: null,
+      failureReasonText: null,
+      failedAt: null,
+      customerVisibleMessage: null,
+      lastAdminNote: null,
+      lastSellerNote: null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.createdAt.toISOString(),
       acceptedAt: null,
       cancelledAt: null,
       deliveredAt: null,
       events: [],
+      comments: [],
     };
   }
 
@@ -1594,6 +1944,9 @@ export class DeliveryService {
         },
       },
       events: {
+        orderBy: { createdAt: 'desc' as const },
+      },
+      comments: {
         orderBy: { createdAt: 'desc' as const },
       },
     };

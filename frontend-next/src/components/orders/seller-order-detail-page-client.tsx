@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/seller/section-card";
 import {
   calculateDeliveryOffers,
   acceptDeliveryShipment,
+  addDeliveryComment,
   cancelDeliveryShipment,
   createDeliveryShipment,
   createManualDelivery,
@@ -15,6 +16,7 @@ import {
   getOrderDelivery,
   getShopOrderById,
   markManualDeliveryDelivered,
+  markManualDeliveryFailed,
   markManualDeliveryInTransit,
   refreshDeliveryShipment,
   updateShopOrderStatus,
@@ -22,12 +24,24 @@ import {
   type DeliveryDetail,
   type DeliveryOffer,
   type DeliveryProviderName,
+  type DeliveryExceptionReasonCode,
   type SellerOrderListItem,
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const statusOptions = ["PENDING", "NEW", "ASSEMBLING", "SHIPPING", "DELIVERED", "CANCELLED"] as const;
+const exceptionReasons: DeliveryExceptionReasonCode[] = [
+  "CUSTOMER_UNAVAILABLE",
+  "WRONG_ADDRESS",
+  "COURIER_CANCELLED",
+  "SELLER_CANCELLED",
+  "CUSTOMER_CANCELLED",
+  "DAMAGED_PACKAGE",
+  "LOST_PACKAGE",
+  "DELIVERY_TIMEOUT",
+  "OTHER",
+];
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const user = useAuthStore((state) => state.user);
@@ -54,6 +68,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [manualCourierPhone, setManualCourierPhone] = useState("");
   const [manualEstimatedDeliveryAt, setManualEstimatedDeliveryAt] = useState("");
   const [manualDeliveryNote, setManualDeliveryNote] = useState("");
+  const [exceptionReasonCode, setExceptionReasonCode] = useState<DeliveryExceptionReasonCode>("CUSTOMER_UNAVAILABLE");
+  const [exceptionReasonText, setExceptionReasonText] = useState("");
+  const [exceptionCustomerMessage, setExceptionCustomerMessage] = useState("");
+  const [internalComment, setInternalComment] = useState("");
 
   function hydrateManualForm(deliveryResult: DeliveryDetail) {
     const shipment = deliveryResult.activeShipment;
@@ -290,6 +308,55 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     }
   };
 
+  const handleReportProblem = async () => {
+    if (!currentShopId || !order || !activeShipment) return;
+    setDeliveryLoading(true);
+    setError(null);
+    setDeliveryMessage(null);
+    try {
+      await markManualDeliveryFailed(
+        currentShopId,
+        order.id,
+        activeShipment.id,
+        {
+          reasonCode: exceptionReasonCode,
+          reasonText: exceptionReasonText.trim() || null,
+          customerVisibleMessage: exceptionCustomerMessage.trim() || null,
+        },
+        "",
+      );
+      setDeliveryMessage("Delivery problem reported.");
+      await refreshDeliverySnapshot();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to report delivery problem.");
+    } finally {
+      setDeliveryLoading(false);
+    }
+  };
+
+  const handleAddInternalComment = async () => {
+    if (!currentShopId || !order || !activeShipment || !internalComment.trim()) return;
+    setDeliveryLoading(true);
+    setError(null);
+    setDeliveryMessage(null);
+    try {
+      await addDeliveryComment(
+        currentShopId,
+        order.id,
+        activeShipment.id,
+        { visibility: "INTERNAL", message: internalComment.trim() },
+        "",
+      );
+      setInternalComment("");
+      setDeliveryMessage("Internal delivery comment added.");
+      await refreshDeliverySnapshot();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to add delivery comment.");
+    } finally {
+      setDeliveryLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <SectionCard eyebrow="Order detail" title="Loading order" description="Fetching order details from the NestJS seller API.">
@@ -461,6 +528,36 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </button>
             </div>
 
+            <div className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4" data-testid="delivery-exception-panel">
+              <p className="text-sm font-semibold text-[var(--foreground)]">Report delivery problem</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <Field label="Reason code">
+                  <select value={exceptionReasonCode} onChange={(event) => setExceptionReasonCode(event.target.value as DeliveryExceptionReasonCode)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-exception-reason">
+                    {exceptionReasons.map((reason) => (
+                      <option key={reason} value={reason}>{reason}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Customer message">
+                  <textarea value={exceptionCustomerMessage} onChange={(event) => setExceptionCustomerMessage(event.target.value)} rows={3} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-exception-customer-message" />
+                </Field>
+                <Field label="Reason note">
+                  <textarea value={exceptionReasonText} onChange={(event) => setExceptionReasonText(event.target.value)} rows={3} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-exception-note" />
+                </Field>
+                <Field label="Internal comment">
+                  <textarea value={internalComment} onChange={(event) => setInternalComment(event.target.value)} rows={3} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-internal-comment" />
+                </Field>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" onClick={() => void handleReportProblem()} disabled={deliveryLoading || !activeShipment || activeShipment.internalStatus === "DELIVERED"} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60" data-testid="delivery-report-problem">
+                  Submit problem
+                </button>
+                <button type="button" onClick={() => void handleAddInternalComment()} disabled={deliveryLoading || !activeShipment || !internalComment.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50" data-testid="delivery-add-internal-comment">
+                  Add internal comment
+                </button>
+              </div>
+            </div>
+
             {deliveryMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700" data-testid="delivery-action-message">{deliveryMessage}</div> : null}
           </div>
 
@@ -475,6 +572,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               <Metric label="ETA" value={activeShipment?.estimatedDeliveryAt ? new Date(activeShipment.estimatedDeliveryAt).toLocaleString() : "Not assigned"} />
             </div>
             {activeShipment?.deliveryNote ? <p className="text-sm text-[var(--muted)]" data-testid="seller-delivery-note">{activeShipment.deliveryNote}</p> : null}
+            {activeShipment?.failureReasonCode ? (
+              <div className="rounded-[1rem] border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800" data-testid="seller-delivery-exception">
+                <p className="font-semibold">{activeShipment.failureReasonCode}</p>
+                <p className="mt-1">{activeShipment.customerVisibleMessage ?? activeShipment.failureReasonText ?? "No customer message set."}</p>
+              </div>
+            ) : null}
             {activeShipment?.trackingUrl || order.delivery?.trackingUrl ? (
               <a href={activeShipment?.trackingUrl ?? order.delivery?.trackingUrl ?? "#"} target="_blank" rel="noreferrer" className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]" data-testid="seller-delivery-tracking-link">
                 Open tracking link
@@ -516,6 +619,19 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       <p className="text-xs text-[var(--muted)]">{new Date(event.createdAt).toLocaleString()}</p>
                     </div>
                     <p className="mt-2 text-sm text-[var(--foreground)]">{event.message ?? event.providerStatus ?? "No message"}</p>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+            {delivery?.comments.length ? (
+              <div className="space-y-3 border-t border-[var(--border)] pt-4" data-testid="seller-delivery-comments">
+                {delivery.comments.map((comment) => (
+                  <article key={comment.id} className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">{comment.visibility}</span>
+                      <p className="text-xs text-[var(--muted)]">{new Date(comment.createdAt).toLocaleString()}</p>
+                    </div>
+                    <p className="mt-2 text-sm text-[var(--foreground)]">{comment.message}</p>
                   </article>
                 ))}
               </div>

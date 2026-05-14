@@ -90,6 +90,25 @@ type StoredOrder = {
       fullName: string | null;
     };
   }>;
+  deliveryShipments?: Array<{
+    provider: string;
+    internalStatus: string;
+    providerShipmentId: string | null;
+    providerStatus: string;
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+    courierPhone: string | null;
+    estimatedDeliveryAt: Date | null;
+    deliveryNote: string | null;
+    failureReasonCode: string | null;
+    customerVisibleMessage: string | null;
+    comments: Array<{
+      id: string;
+      visibility: string;
+      message: string;
+      createdAt: Date;
+    }>;
+  }>;
 };
 
 describe('OrderTrackingController (e2e)', () => {
@@ -197,6 +216,7 @@ describe('OrderTrackingController (e2e)', () => {
           },
         ],
         paymentReviewLogs: [],
+        deliveryShipments: [],
       },
     ];
 
@@ -416,6 +436,66 @@ describe('OrderTrackingController (e2e)', () => {
         contentType: 'text/plain',
       })
       .expect(400);
+  });
+
+  it('shows customer-visible delivery exception data but hides internal comments', async () => {
+    orders[0].deliveryShipments = [
+      {
+        provider: 'YANDEX',
+        internalStatus: 'FAILED',
+        providerShipmentId: 'ydx-100',
+        providerStatus: 'FAILED',
+        trackingNumber: 'TRK-FAILED',
+        trackingUrl: 'https://track.example/failed',
+        courierPhone: null,
+        estimatedDeliveryAt: null,
+        deliveryNote: 'Internal note must not be used here.',
+        failureReasonCode: 'CUSTOMER_UNAVAILABLE',
+        customerVisibleMessage: 'Courier could not reach you.',
+        comments: [
+          {
+            id: 'comment-public',
+            visibility: 'CUSTOMER_VISIBLE',
+            message: 'Please contact support to schedule another attempt.',
+            createdAt: new Date('2025-01-11T10:00:00Z'),
+          },
+          {
+            id: 'comment-internal',
+            visibility: 'INTERNAL',
+            message: 'Seller internal escalation.',
+            createdAt: new Date('2025-01-11T09:00:00Z'),
+          },
+        ],
+      },
+    ];
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/orders/order-1/track?phone=123456')
+      .expect(200);
+
+    const body = readBody<
+      PublicOrderTrackingResponseDto & {
+        delivery: {
+          status: string;
+          failureReasonCode: string | null;
+          customerVisibleMessage: string | null;
+          deliveryComments: Array<{ message: string }>;
+        };
+      }
+    >(response);
+    expect(body.delivery.status).toBe('FAILED');
+    expect(body.delivery.failureReasonCode).toBe('CUSTOMER_UNAVAILABLE');
+    expect(body.delivery.customerVisibleMessage).toBe(
+      'Courier could not reach you.',
+    );
+    expect(body.delivery.deliveryComments).toEqual([
+      expect.objectContaining({
+        message: 'Please contact support to schedule another attempt.',
+      }),
+    ]);
+    expect(JSON.stringify(body.delivery)).not.toContain(
+      'Seller internal escalation.',
+    );
   });
 
   it('seller payment detail shows proof and seller can mark paid after upload', async () => {

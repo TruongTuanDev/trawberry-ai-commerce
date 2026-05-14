@@ -29,7 +29,10 @@ import { DeliveryShipmentResponseDto } from './dto/delivery-shipment-response.dt
 import { ListAdminDeliveriesQueryDto } from './dto/list-admin-deliveries-query.dto';
 import {
   AdminUpdateManualDeliveryDto,
+  DeliveryCommentDto,
   DeliveryTransitionDto,
+  MarkDeliveryExceptionDto,
+  UpdateCustomerDeliveryMessageDto,
   UpsertManualDeliveryDto,
 } from './dto/manual-delivery.dto';
 import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
@@ -169,6 +172,43 @@ export class DeliveryController {
     );
   }
 
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/mark-failed')
+  @ApiOperation({ summary: 'Report seller-managed delivery failure.' })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  markFailed(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: MarkDeliveryExceptionDto,
+  ) {
+    return this.deliveryService.markDeliveryFailed(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
+  }
+
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/comments')
+  @ApiOperation({ summary: 'Add a delivery comment.' })
+  addComment(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeliveryCommentDto,
+  ) {
+    return this.deliveryService.addDeliveryComment(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
+  }
+
   @Post('orders/:orderId/delivery/shipments/:shipmentId/refresh')
   @ApiOperation({
     summary: 'Refresh shipment status from the active provider.',
@@ -284,6 +324,40 @@ export class AdminDeliveriesController {
     @Body() dto: DeliveryTransitionDto,
   ) {
     return this.deliveryService.adminCancelDelivery(
+      deliveryShipmentId,
+      admin,
+      dto,
+    );
+  }
+
+  @Post(':deliveryShipmentId/mark-failed')
+  @ApiOperation({ summary: 'Admin marks delivery failed.' })
+  markFailed(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: MarkDeliveryExceptionDto,
+  ) {
+    return this.deliveryService.adminMarkFailed(deliveryShipmentId, admin, dto);
+  }
+
+  @Post(':deliveryShipmentId/comments')
+  @ApiOperation({ summary: 'Admin adds delivery comment.' })
+  addComment(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: DeliveryCommentDto,
+  ) {
+    return this.deliveryService.adminAddComment(deliveryShipmentId, admin, dto);
+  }
+
+  @Patch(':deliveryShipmentId/customer-message')
+  @ApiOperation({ summary: 'Admin updates customer-visible delivery message.' })
+  updateCustomerMessage(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: UpdateCustomerDeliveryMessageDto,
+  ) {
+    return this.deliveryService.adminUpdateCustomerMessage(
       deliveryShipmentId,
       admin,
       dto,

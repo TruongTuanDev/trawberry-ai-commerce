@@ -115,6 +115,13 @@ export type PublicTrackedOrder = {
     courierPhone: string | null;
     estimatedDeliveryAt: string | null;
     deliveryNote: string | null;
+    failureReasonCode: string | null;
+    customerVisibleMessage: string | null;
+    deliveryComments: Array<{
+      id: string;
+      message: string;
+      createdAt: string;
+    }>;
   } | null;
 };
 

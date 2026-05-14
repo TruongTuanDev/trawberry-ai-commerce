@@ -228,3 +228,14 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 - `frontend-next npm run test:e2e:full-commerce`: PASS
 - `frontend-next npm run test:e2e:seller-product-lifecycle`: PASS
 - `frontend-next npm run test:e2e:seller-delivery-settings`: PASS
+# Delivery Exception Audit Addendum
+
+Delivery exception operations write `delivery_events` audit rows:
+
+- seller mark failed
+- seller/admin comment added
+- admin mark failed
+- admin customer-visible message update
+- admin status override
+
+Internal comments are stored in `delivery_comments` with `visibility=INTERNAL`; customer-facing messages/comments use `CUSTOMER_VISIBLE`. Public tracking only reads customer-safe fields.

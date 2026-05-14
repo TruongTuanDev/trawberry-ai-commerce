@@ -8,7 +8,9 @@ import {
   MaxLength,
 } from 'class-validator';
 import {
+  DELIVERY_COMMENT_VISIBILITIES,
   DELIVERY_CARRIERS,
+  DELIVERY_EXCEPTION_REASON_CODES,
   MANUAL_DELIVERY_STATUSES,
 } from '../delivery.constants';
 
@@ -84,4 +86,40 @@ export class DeliveryTransitionDto {
   @IsString()
   @MaxLength(1000)
   note?: string | null;
+}
+
+export class MarkDeliveryExceptionDto {
+  @ApiProperty({ enum: DELIVERY_EXCEPTION_REASON_CODES })
+  @IsIn(DELIVERY_EXCEPTION_REASON_CODES)
+  reasonCode!: (typeof DELIVERY_EXCEPTION_REASON_CODES)[number];
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  reasonText?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  customerVisibleMessage?: string | null;
+}
+
+export class DeliveryCommentDto {
+  @ApiProperty({ enum: DELIVERY_COMMENT_VISIBILITIES })
+  @IsIn(DELIVERY_COMMENT_VISIBILITIES)
+  visibility!: (typeof DELIVERY_COMMENT_VISIBILITIES)[number];
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(2000)
+  message!: string;
+}
+
+export class UpdateCustomerDeliveryMessageDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(1000)
+  customerVisibleMessage!: string;
 }

@@ -103,6 +103,17 @@ type StoredDeliveryEvent = {
   createdAt: Date;
 };
 
+type StoredDeliveryComment = {
+  id: string;
+  deliveryShipmentId: string;
+  orderId: string;
+  actorUserId: string | null;
+  actorRole: string;
+  visibility: string;
+  message: string;
+  createdAt: Date;
+};
+
 type StoredDeliveryShipment = {
   id: string;
   shopId: string;
@@ -119,6 +130,12 @@ type StoredDeliveryShipment = {
   courierPhone: string | null;
   estimatedDeliveryAt: Date | null;
   deliveryNote: string | null;
+  failureReasonCode: string | null;
+  failureReasonText: string | null;
+  failedAt: Date | null;
+  customerVisibleMessage: string | null;
+  lastAdminNote: string | null;
+  lastSellerNote: string | null;
   pickupAddress: string;
   dropoffAddress: string;
   rawProviderPayload: Prisma.JsonValue | null;
@@ -153,6 +170,7 @@ describe('DeliveryController (e2e)', () => {
   let offers: StoredDeliveryOffer[];
   let shipments: StoredDeliveryShipment[];
   let events: StoredDeliveryEvent[];
+  let comments: StoredDeliveryComment[];
 
   const prismaMock = {
     user: { findUnique: jest.fn() },
@@ -169,6 +187,7 @@ describe('DeliveryController (e2e)', () => {
     },
     paymentReviewLog: { findMany: jest.fn() },
     deliveryEvent: { create: jest.fn(), findMany: jest.fn() },
+    deliveryComment: { create: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -242,6 +261,7 @@ describe('DeliveryController (e2e)', () => {
     offers = [];
     shipments = [];
     events = [];
+    comments = [];
     orders = [
       {
         id: 'order-paid',
@@ -391,6 +411,9 @@ describe('DeliveryController (e2e)', () => {
           events: events
             .filter((event) => event.deliveryShipmentId === shipment.id)
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+          comments: comments
+            .filter((comment) => comment.deliveryShipmentId === shipment.id)
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
         }));
 
       return Promise.resolve({
@@ -475,6 +498,12 @@ describe('DeliveryController (e2e)', () => {
         courierPhone: data.courierPhone ?? null,
         estimatedDeliveryAt: data.estimatedDeliveryAt ?? null,
         deliveryNote: data.deliveryNote ?? null,
+        failureReasonCode: data.failureReasonCode ?? null,
+        failureReasonText: data.failureReasonText ?? null,
+        failedAt: data.failedAt ?? null,
+        customerVisibleMessage: data.customerVisibleMessage ?? null,
+        lastAdminNote: data.lastAdminNote ?? null,
+        lastSellerNote: data.lastSellerNote ?? null,
         pickupAddress: data.pickupAddress,
         dropoffAddress: data.dropoffAddress,
         rawProviderPayload: data.rawProviderPayload ?? null,
@@ -510,6 +539,9 @@ describe('DeliveryController (e2e)', () => {
             events: events.filter(
               (event) => event.deliveryShipmentId === shipment.id,
             ),
+            comments: comments.filter(
+              (comment) => comment.deliveryShipmentId === shipment.id,
+            ),
           });
         }
         return Promise.resolve(shipment);
@@ -519,9 +551,17 @@ describe('DeliveryController (e2e)', () => {
     prismaMock.deliveryShipment.findMany.mockImplementation(({ where }) => {
       let rows = [...shipments];
       if (where?.internalStatus) {
-        rows = rows.filter(
-          (entry) => entry.internalStatus === where.internalStatus,
-        );
+        if (typeof where.internalStatus === 'string') {
+          rows = rows.filter(
+            (entry) => entry.internalStatus === where.internalStatus,
+          );
+        } else if ('in' in where.internalStatus) {
+          rows = rows.filter((entry) =>
+            (where.internalStatus.in as string[]).includes(
+              entry.internalStatus,
+            ),
+          );
+        }
       }
       if (where?.provider) {
         rows = rows.filter((entry) => entry.provider === where.provider);
@@ -535,6 +575,9 @@ describe('DeliveryController (e2e)', () => {
           order: adminOrderFor(shipment.orderId),
           events: events.filter(
             (event) => event.deliveryShipmentId === shipment.id,
+          ),
+          comments: comments.filter(
+            (comment) => comment.deliveryShipmentId === shipment.id,
           ),
         })),
       );
@@ -577,6 +620,21 @@ describe('DeliveryController (e2e)', () => {
     prismaMock.deliveryEvent.findMany.mockImplementation(() =>
       Promise.resolve(events),
     );
+
+    prismaMock.deliveryComment.create.mockImplementation(({ data }) => {
+      const comment: StoredDeliveryComment = {
+        id: data.id,
+        deliveryShipmentId: data.deliveryShipmentId,
+        orderId: data.orderId,
+        actorUserId: data.actorUserId ?? null,
+        actorRole: data.actorRole,
+        visibility: data.visibility,
+        message: data.message,
+        createdAt: new Date(),
+      };
+      comments.push(comment);
+      return Promise.resolve(comment);
+    });
 
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
@@ -875,6 +933,140 @@ describe('DeliveryController (e2e)', () => {
     );
     expect(events.at(-1)?.actorRole).toBe('ADMIN');
     expect(events.at(-1)?.oldStatus).toBe('CREATED_MANUALLY');
+  });
+
+  it('seller marks delivery failed with reason and audit event', async () => {
+    await setSettings(app);
+    const created = await createManualDelivery(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/mark-failed`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        reasonCode: 'CUSTOMER_UNAVAILABLE',
+        reasonText: 'Customer did not answer courier calls.',
+        customerVisibleMessage: 'Courier could not reach you today.',
+      })
+      .expect(201);
+
+    const body = readBody<DeliveryShipmentResponseDto>(response);
+    expect(body.internalStatus).toBe('FAILED');
+    expect(body.failureReasonCode).toBe('CUSTOMER_UNAVAILABLE');
+    expect(body.customerVisibleMessage).toBe(
+      'Courier could not reach you today.',
+    );
+    expect(events.at(-1)?.eventType).toBe('MANUAL_DELIVERY_FAILED');
+    expect(events.at(-1)?.actorUserId).toBe('seller-user-1');
+  });
+
+  it('seller cannot mark delivered shipment failed', async () => {
+    await setSettings(app);
+    const created = await createManualDelivery(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/mark-delivered`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Delivered.' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/mark-failed`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({ reasonCode: 'OTHER', reasonText: 'Too late.' })
+      .expect(400);
+  });
+
+  it('seller adds internal comment and customer-visible comment updates shipment message', async () => {
+    await setSettings(app);
+    const created = await createManualDelivery(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/comments`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({ visibility: 'INTERNAL', message: 'Call customer after 18:00.' })
+      .expect(201);
+
+    const visibleResponse = await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/comments`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        visibility: 'CUSTOMER_VISIBLE',
+        message: 'We will contact you to arrange a new delivery window.',
+      })
+      .expect(201);
+
+    expect(readBody<{ visibility: string }>(visibleResponse).visibility).toBe(
+      'CUSTOMER_VISIBLE',
+    );
+    expect(comments).toHaveLength(2);
+    expect(events.at(-1)?.eventType).toBe('DELIVERY_COMMENT_ADDED');
+  });
+
+  it('admin exceptionOnly sees failed and cancelled deliveries', async () => {
+    await setSettings(app);
+    const failed = await createManualDelivery(app);
+    shipments.push({
+      ...shipments[0],
+      id: 'shipment-cancelled',
+      internalStatus: 'CANCELLED',
+      providerStatus: 'CANCELLED',
+      cancelledAt: new Date(),
+      failureReasonCode: 'SELLER_CANCELLED',
+    });
+    const sellerToken = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${failed.id}/mark-failed`,
+      )
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ reasonCode: 'LOST_PACKAGE' })
+      .expect(201);
+
+    const adminToken = await loginAndGetToken(app, 'admin@example.com');
+    const response = await request(app.getHttpServer())
+      .get('/api/admin/deliveries?exceptionOnly=true')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const body = readBody<{ items: Array<{ internalStatus: string }> }>(
+      response,
+    );
+    expect(body.items.map((item) => item.internalStatus)).toEqual(
+      expect.arrayContaining(['FAILED', 'CANCELLED']),
+    );
+  });
+
+  it('admin overrides customer-visible message', async () => {
+    await setSettings(app);
+    const created = await createManualDelivery(app);
+    const adminToken = await loginAndGetToken(app, 'admin@example.com');
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/admin/deliveries/${created.id}/customer-message`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ customerVisibleMessage: 'Admin updated customer message.' })
+      .expect(200);
+
+    expect(
+      readBody<{ customerVisibleMessage: string }>(response)
+        .customerVisibleMessage,
+    ).toBe('Admin updated customer message.');
+    expect(events.at(-1)?.eventType).toBe(
+      'ADMIN_DELIVERY_CUSTOMER_MESSAGE_UPDATED',
+    );
   });
 
   async function setSettings(testApp: INestApplication<App>) {

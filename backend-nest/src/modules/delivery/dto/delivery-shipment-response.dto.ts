@@ -40,6 +40,24 @@ export class DeliveryShipmentResponseDto {
   @ApiProperty({ nullable: true })
   deliveryNote!: string | null;
 
+  @ApiProperty({ nullable: true })
+  failureReasonCode!: string | null;
+
+  @ApiProperty({ nullable: true })
+  failureReasonText!: string | null;
+
+  @ApiProperty({ nullable: true })
+  failedAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  customerVisibleMessage!: string | null;
+
+  @ApiProperty({ nullable: true })
+  lastAdminNote!: string | null;
+
+  @ApiProperty({ nullable: true })
+  lastSellerNote!: string | null;
+
   @ApiProperty()
   pickupAddress!: string;
 

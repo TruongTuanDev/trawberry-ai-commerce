@@ -3,14 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   adminCancelDelivery,
+  adminAddDeliveryComment,
   adminMarkDeliveryDelivered,
+  adminMarkDeliveryFailed,
   adminMarkDeliveryInTransit,
+  adminUpdateDeliveryCustomerMessage,
   listAdminDeliveries,
   type AdminDeliveryRow,
 } from "@/lib/admin-api";
+import type { DeliveryExceptionReasonCode } from "@/lib/seller-api";
 
 const statusFilters = [
   { label: "Paid without delivery", value: "PAID_WITHOUT_DELIVERY" },
+  { label: "Exceptions only", value: "EXCEPTIONS" },
   { label: "Created", value: "CREATED_MANUALLY" },
   { label: "In transit", value: "IN_TRANSIT" },
   { label: "Delivered", value: "DELIVERED" },
@@ -27,11 +32,15 @@ export function AdminDeliveriesPageClient() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [adminNote, setAdminNote] = useState("");
+  const [customerMessage, setCustomerMessage] = useState("");
+  const [reasonCode, setReasonCode] = useState<DeliveryExceptionReasonCode>("OTHER");
 
   const query = useMemo(
     () => ({
       paidWithoutDelivery: filter === "PAID_WITHOUT_DELIVERY",
-      status: filter === "PAID_WITHOUT_DELIVERY" ? undefined : filter,
+      exceptionOnly: filter === "EXCEPTIONS",
+      status: filter === "PAID_WITHOUT_DELIVERY" || filter === "EXCEPTIONS" ? undefined : filter,
       provider: provider || undefined,
       search: search.trim() || undefined,
     }),
@@ -78,6 +87,53 @@ export function AdminDeliveriesPageClient() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Admin delivery action failed.");
+    }
+  };
+
+  const handleMarkFailed = async () => {
+    if (!selected?.deliveryShipmentId) return;
+    setMessage(null);
+    setError(null);
+    try {
+      await adminMarkDeliveryFailed(selected.deliveryShipmentId, {
+        reasonCode,
+        reasonText: adminNote.trim() || null,
+        customerVisibleMessage: customerMessage.trim() || null,
+      });
+      setMessage("Delivery marked failed.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to mark failed.");
+    }
+  };
+
+  const handleAddAdminNote = async () => {
+    if (!selected?.deliveryShipmentId || !adminNote.trim()) return;
+    setMessage(null);
+    setError(null);
+    try {
+      await adminAddDeliveryComment(selected.deliveryShipmentId, {
+        visibility: "INTERNAL",
+        message: adminNote.trim(),
+      });
+      setAdminNote("");
+      setMessage("Internal admin comment added.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to add admin comment.");
+    }
+  };
+
+  const handleUpdateCustomerMessage = async () => {
+    if (!selected?.deliveryShipmentId || !customerMessage.trim()) return;
+    setMessage(null);
+    setError(null);
+    try {
+      await adminUpdateDeliveryCustomerMessage(selected.deliveryShipmentId, customerMessage.trim());
+      setMessage("Customer message updated.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update customer message.");
     }
   };
 
@@ -185,6 +241,8 @@ export function AdminDeliveriesPageClient() {
                 <Metric label="Status" value={selected.internalStatus} testId="admin-delivery-detail-status" />
                 <Metric label="Tracking" value={selected.trackingNumber ?? "Not assigned"} />
                 <Metric label="Courier" value={selected.courierPhone ?? "Not assigned"} />
+                <Metric label="Reason" value={selected.failureReasonCode ?? "None"} />
+                <Metric label="Customer message" value={selected.customerVisibleMessage ?? "None"} />
               </div>
               <p className="text-sm text-[var(--muted)]">{selected.customer.address}</p>
               {selected.deliveryNote ? <p className="text-sm text-[var(--muted)]">{selected.deliveryNote}</p> : null}
@@ -192,6 +250,20 @@ export function AdminDeliveriesPageClient() {
                 <button type="button" onClick={() => void handleOverride("in-transit")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-in-transit">Mark in transit</button>
                 <button type="button" onClick={() => void handleOverride("delivered")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-delivered">Mark delivered</button>
                 <button type="button" onClick={() => void handleOverride("cancel")} disabled={!selected.deliveryShipmentId} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Cancel</button>
+                <button type="button" onClick={() => void handleMarkFailed()} disabled={!selected.deliveryShipmentId} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" data-testid="admin-delivery-mark-failed">Mark failed</button>
+              </div>
+              <div className="grid gap-3 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+                <select value={reasonCode} onChange={(event) => setReasonCode(event.target.value as DeliveryExceptionReasonCode)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-reason-code">
+                  {["CUSTOMER_UNAVAILABLE", "WRONG_ADDRESS", "COURIER_CANCELLED", "SELLER_CANCELLED", "CUSTOMER_CANCELLED", "DAMAGED_PACKAGE", "LOST_PACKAGE", "DELIVERY_TIMEOUT", "OTHER"].map((reason) => (
+                    <option key={reason} value={reason}>{reason}</option>
+                  ))}
+                </select>
+                <textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} rows={3} placeholder="Internal admin comment" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-internal-comment" />
+                <textarea value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} rows={3} placeholder="Customer-visible message" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-customer-message" />
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" onClick={() => void handleAddAdminNote()} disabled={!selected.deliveryShipmentId || !adminNote.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-add-comment">Add internal comment</button>
+                  <button type="button" onClick={() => void handleUpdateCustomerMessage()} disabled={!selected.deliveryShipmentId || !customerMessage.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-update-customer-message">Update customer message</button>
+                </div>
               </div>
               {selected.events.length ? (
                 <div className="space-y-3 border-t border-[var(--border)] pt-4">
@@ -199,6 +271,16 @@ export function AdminDeliveriesPageClient() {
                     <article key={event.id} className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
                       <p className="font-semibold text-[var(--foreground)]">{event.eventType}</p>
                       <p className="mt-1 text-[var(--muted)]">{event.message ?? event.newStatus}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+              {selected.comments?.length ? (
+                <div className="space-y-3 border-t border-[var(--border)] pt-4">
+                  {selected.comments.map((comment) => (
+                    <article key={comment.id} className="rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
+                      <p className="font-semibold text-[var(--foreground)]">{comment.visibility}</p>
+                      <p className="mt-1 text-[var(--muted)]">{comment.message}</p>
                     </article>
                   ))}
                 </div>

@@ -236,8 +236,18 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         </Metric>
                       </div>
                       <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">Claim reference</p>
-                        <p className="mt-2 text-sm text-[var(--foreground)]" data-testid="tracked-delivery-message">{order.delivery.statusMessage}</p>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          {order.delivery.status === "FAILED" ? "Delivery issue" : order.delivery.status === "CANCELLED" ? "Delivery cancelled" : "Claim reference"}
+                        </p>
+                        <p className="mt-2 text-sm text-[var(--foreground)]" data-testid="tracked-delivery-message">
+                          {order.delivery.customerVisibleMessage ?? order.delivery.statusMessage}
+                        </p>
+                        {order.delivery.status === "FAILED" || order.delivery.status === "CANCELLED" ? (
+                          <div className="mt-3 rounded-[1rem] border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-800" data-testid="tracked-delivery-exception">
+                            {order.delivery.failureReasonCode ? <p className="font-semibold">{order.delivery.failureReasonCode}</p> : null}
+                            <p className="mt-1">Please contact support if you need help with the next delivery step.</p>
+                          </div>
+                        ) : null}
                         <p className="mt-2 text-sm text-[var(--muted)]">{order.delivery.providerShipmentId ?? "Awaiting provider shipment id."}</p>
                         <p className="mt-3 text-sm text-[var(--muted)]">Tracking number: {order.delivery.trackingNumber ?? "Not assigned yet."}</p>
                         {order.delivery.courierPhone ? (
@@ -254,6 +264,15 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                           <p className="mt-3 text-sm text-[var(--muted)]" data-testid="tracked-delivery-note">
                             {order.delivery.deliveryNote}
                           </p>
+                        ) : null}
+                        {order.delivery.deliveryComments.length ? (
+                          <div className="mt-4 space-y-3" data-testid="tracked-delivery-comments">
+                            {order.delivery.deliveryComments.map((comment) => (
+                              <article key={comment.id} className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--foreground)]">
+                                {comment.message}
+                              </article>
+                            ))}
+                          </div>
                         ) : null}
                         {order.delivery.trackingUrl ? (
                           <a
