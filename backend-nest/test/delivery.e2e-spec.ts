@@ -94,6 +94,11 @@ type StoredDeliveryEvent = {
   provider: string;
   eventType: string;
   providerStatus: string | null;
+  actorUserId: string | null;
+  actorRole: string | null;
+  action: string | null;
+  oldStatus: string | null;
+  newStatus: string | null;
   message: string | null;
   createdAt: Date;
 };
@@ -111,6 +116,9 @@ type StoredDeliveryShipment = {
   priceCurrency: string;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierPhone: string | null;
+  estimatedDeliveryAt: Date | null;
+  deliveryNote: string | null;
   pickupAddress: string;
   dropoffAddress: string;
   rawProviderPayload: Prisma.JsonValue | null;
@@ -130,6 +138,10 @@ type StoredOrder = {
   shippingAddress: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string | null;
+  status?: string;
+  totalAmount?: DecimalLike;
+  createdAt?: Date;
 };
 
 describe('DeliveryController (e2e)', () => {
@@ -145,20 +157,34 @@ describe('DeliveryController (e2e)', () => {
   const prismaMock = {
     user: { findUnique: jest.fn() },
     shop: { findUnique: jest.fn() },
-    order: { findFirst: jest.fn() },
+    order: { findFirst: jest.fn(), findMany: jest.fn() },
     shopDeliverySetting: { findUnique: jest.fn(), upsert: jest.fn() },
     deliveryOffer: { deleteMany: jest.fn(), create: jest.fn() },
     deliveryShipment: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
-    deliveryEvent: { create: jest.fn() },
+    paymentReviewLog: { findMany: jest.fn() },
+    deliveryEvent: { create: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
     users = [
+      {
+        id: 'admin-user-1',
+        email: 'admin@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        fullName: 'Admin One',
+        phone: null,
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: null,
+      },
       {
         id: 'seller-user-1',
         email: 'seller1@example.com',
@@ -312,6 +338,34 @@ describe('DeliveryController (e2e)', () => {
       },
     );
 
+    const adminOrderFor = (orderId: string) => {
+      const order = orders.find((entry) => entry.id === orderId);
+      if (!order) throw new Error(`Missing order ${orderId}`);
+      const shop = shops.find((entry) => entry.id === order.shopId);
+      if (!shop) throw new Error(`Missing shop ${order.shopId}`);
+      const seller = users.find(
+        (entry) => entry.id === shop.sellerProfile.userId,
+      );
+      return {
+        ...order,
+        status: order.status ?? 'NEW',
+        customerEmail: order.customerEmail ?? null,
+        totalAmount: order.totalAmount ?? new Prisma.Decimal('100'),
+        createdAt: order.createdAt ?? new Date(),
+        shop: {
+          id: shop.id,
+          name: shop.name,
+          sellerProfile: {
+            userId: shop.sellerProfile.userId,
+            user: {
+              email: seller?.email ?? 'seller@example.com',
+              fullName: seller?.fullName ?? null,
+            },
+          },
+        },
+      };
+    };
+
     prismaMock.order.findFirst.mockImplementation(({ where }) => {
       const order = orders.find((entry) => {
         if (where.id && entry.id !== where.id) return false;
@@ -341,6 +395,10 @@ describe('DeliveryController (e2e)', () => {
 
       return Promise.resolve({
         ...order,
+        status: order.status ?? 'NEW',
+        customerEmail: order.customerEmail ?? null,
+        totalAmount: order.totalAmount ?? new Prisma.Decimal('100'),
+        createdAt: order.createdAt ?? new Date(),
         shop: {
           id: shop.id,
           deliverySettings: shopSetting,
@@ -348,6 +406,29 @@ describe('DeliveryController (e2e)', () => {
         deliveryOffers: orderOffers,
         deliveryShipments: orderShipments,
       });
+    });
+
+    prismaMock.order.findMany.mockImplementation(({ where }) => {
+      let rows = orders;
+      if (where?.paymentStatus) {
+        rows = rows.filter(
+          (entry) => entry.paymentStatus === where.paymentStatus,
+        );
+      }
+      if (where?.shopId) {
+        rows = rows.filter((entry) => entry.shopId === where.shopId);
+      }
+      rows = rows.filter((entry) => {
+        const activeShipment = shipments.find(
+          (shipment) =>
+            shipment.orderId === entry.id &&
+            !['CANCELLED', 'DELIVERED', 'FAILED'].includes(
+              shipment.internalStatus,
+            ),
+        );
+        return !activeShipment;
+      });
+      return Promise.resolve(rows.map((order) => adminOrderFor(order.id)));
     });
 
     prismaMock.deliveryOffer.deleteMany.mockImplementation(({ where }) => {
@@ -391,6 +472,9 @@ describe('DeliveryController (e2e)', () => {
         priceCurrency: data.priceCurrency,
         trackingNumber: data.trackingNumber ?? null,
         trackingUrl: data.trackingUrl ?? null,
+        courierPhone: data.courierPhone ?? null,
+        estimatedDeliveryAt: data.estimatedDeliveryAt ?? null,
+        deliveryNote: data.deliveryNote ?? null,
         pickupAddress: data.pickupAddress,
         dropoffAddress: data.dropoffAddress,
         rawProviderPayload: data.rawProviderPayload ?? null,
@@ -412,6 +496,47 @@ describe('DeliveryController (e2e)', () => {
             entry.shopId === where.shopId &&
             entry.orderId === where.orderId,
         ) ?? null,
+      );
+    });
+
+    prismaMock.deliveryShipment.findUnique.mockImplementation(
+      ({ where, include }) => {
+        const shipment =
+          shipments.find((entry) => entry.id === where.id) ?? null;
+        if (shipment && include) {
+          return Promise.resolve({
+            ...shipment,
+            order: adminOrderFor(shipment.orderId),
+            events: events.filter(
+              (event) => event.deliveryShipmentId === shipment.id,
+            ),
+          });
+        }
+        return Promise.resolve(shipment);
+      },
+    );
+
+    prismaMock.deliveryShipment.findMany.mockImplementation(({ where }) => {
+      let rows = [...shipments];
+      if (where?.internalStatus) {
+        rows = rows.filter(
+          (entry) => entry.internalStatus === where.internalStatus,
+        );
+      }
+      if (where?.provider) {
+        rows = rows.filter((entry) => entry.provider === where.provider);
+      }
+      if (where?.shopId) {
+        rows = rows.filter((entry) => entry.shopId === where.shopId);
+      }
+      return Promise.resolve(
+        rows.map((shipment) => ({
+          ...shipment,
+          order: adminOrderFor(shipment.orderId),
+          events: events.filter(
+            (event) => event.deliveryShipmentId === shipment.id,
+          ),
+        })),
       );
     });
 
@@ -437,12 +562,21 @@ describe('DeliveryController (e2e)', () => {
         provider: data.provider,
         eventType: data.eventType,
         providerStatus: data.providerStatus ?? null,
+        actorUserId: data.actorUserId ?? null,
+        actorRole: data.actorRole ?? null,
+        action: data.action ?? null,
+        oldStatus: data.oldStatus ?? null,
+        newStatus: data.newStatus ?? null,
         message: data.message ?? null,
         createdAt: new Date(),
       };
       events.push(event);
       return Promise.resolve(event);
     });
+
+    prismaMock.deliveryEvent.findMany.mockImplementation(() =>
+      Promise.resolve(events),
+    );
 
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
@@ -645,6 +779,104 @@ describe('DeliveryController (e2e)', () => {
       .expect(403);
   });
 
+  it('creates seller-managed manual delivery and writes audit events', async () => {
+    await setSettings(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/manual')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        provider: 'YANDEX',
+        trackingNumber: 'YANDEX-MANUAL-1',
+        trackingUrl: 'https://track.example/yandex-manual-1',
+        courierPhone: '+79991112233',
+        deliveryNote: 'Seller created shipment in Yandex dashboard.',
+      })
+      .expect(201);
+
+    const created = readBody<DeliveryShipmentResponseDto>(createResponse);
+    expect(created.internalStatus).toBe('CREATED_MANUALLY');
+    expect(created.trackingNumber).toBe('YANDEX-MANUAL-1');
+    expect(events.at(-1)?.actorUserId).toBe('seller-user-1');
+    expect(events.at(-1)?.oldStatus).toBe('NOT_CREATED');
+  });
+
+  it('rejects manual delivery creation when order is unpaid', async () => {
+    await setSettings(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-unpaid/delivery/manual')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ provider: 'YANDEX', trackingNumber: 'UNPAID-1' })
+      .expect(400);
+  });
+
+  it('marks seller-managed delivery delivered and rejects cancelling delivered', async () => {
+    await setSettings(app);
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const created = await createManualDelivery(app);
+
+    const deliveredResponse = await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/mark-delivered`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Delivered by seller.' })
+      .expect(201);
+
+    expect(
+      readBody<DeliveryShipmentResponseDto>(deliveredResponse).internalStatus,
+    ).toBe('DELIVERED');
+
+    await request(app.getHttpServer())
+      .post(
+        `/api/shops/shop-1/orders/order-paid/delivery/shipments/${created.id}/cancel`,
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .send({ reason: 'Too late.' })
+      .expect(400);
+  });
+
+  it('lists paid orders without delivery for admin supervision', async () => {
+    const adminToken = await loginAndGetToken(app, 'admin@example.com');
+    const response = await request(app.getHttpServer())
+      .get('/api/admin/deliveries?paidWithoutDelivery=true')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(
+      readBody<{ items: Array<{ orderId: string; internalStatus: string }> }>(
+        response,
+      ).items,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          orderId: 'order-paid',
+          internalStatus: 'NOT_CREATED',
+        }),
+      ]),
+    );
+  });
+
+  it('allows admin to override manual delivery status', async () => {
+    await setSettings(app);
+    const created = await createManualDelivery(app);
+    const adminToken = await loginAndGetToken(app, 'admin@example.com');
+
+    const response = await request(app.getHttpServer())
+      .post(`/api/admin/deliveries/${created.id}/mark-in-transit`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ note: 'Admin override.' })
+      .expect(201);
+
+    expect(readBody<{ internalStatus: string }>(response).internalStatus).toBe(
+      'IN_TRANSIT',
+    );
+    expect(events.at(-1)?.actorRole).toBe('ADMIN');
+    expect(events.at(-1)?.oldStatus).toBe('CREATED_MANUALLY');
+  });
+
   async function setSettings(testApp: INestApplication<App>) {
     const token = await loginAndGetToken(testApp, 'seller1@example.com');
     await request(testApp.getHttpServer())
@@ -670,6 +902,20 @@ describe('DeliveryController (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ provider: 'YANDEX' })
       .expect(201);
+  }
+
+  async function createManualDelivery(testApp: INestApplication<App>) {
+    const token = await loginAndGetToken(testApp, 'seller1@example.com');
+    const response = await request(testApp.getHttpServer())
+      .post('/api/shops/shop-1/orders/order-paid/delivery/manual')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        provider: 'YANDEX',
+        trackingNumber: 'YANDEX-MANUAL-2',
+        trackingUrl: 'https://track.example/yandex-manual-2',
+      })
+      .expect(201);
+    return readBody<DeliveryShipmentResponseDto>(response);
   }
 });
 

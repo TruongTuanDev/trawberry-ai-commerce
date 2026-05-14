@@ -5,6 +5,7 @@
 - WB import to checkout has dedicated backend and browser coverage through `smoke:wb-import-checkout` and `test:e2e:wb-import-checkout`.
 - Public products require approved seller, active shop/product, at least one image, positive active variant price, and available stock.
 - WB import image handling remains `REMOTE_URL`; same-file re-import is expected to be idempotent.
+- Delivery operating model is now seller-managed with admin supervision: sellers paste Yandex/CDEK/manual tracking details, admins monitor paid orders without delivery, and customer tracking shows delivery status/message.
 
 ## A. Project Summary
 
@@ -33,7 +34,7 @@
 
 | Component | Tech stack | Status | Runtime verified? | Notes |
 |---|---|---|---|---|
-| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products`, `/checkout`, `/orders/track`, and `/orders/[id]` MVP now exist; seller `/payments` MVP now exists; dashboard/settings/AI route still partly placeholder. |
+| `frontend-next` | Next.js 16, React 19, TS, Zustand, RHF, Zod | Partial | Yes | Seller routes exist; customer `/products`, `/checkout`, `/orders/track`, and `/orders/[id]` MVP now exist; seller `/payments` and `/seller/orders/[id]` manual delivery exist; admin `/admin/deliveries` supervision exists; dashboard/settings/AI route still partly placeholder. |
 | `backend-nest` | NestJS 11, Prisma, PostgreSQL, BullMQ, Redis | Done / active | Yes | Auth, shops, products, public products, checkout, order tracking, payments, seller orders, images, AI tasks all present. |
 | `ai-service` | FastAPI, Pydantic, OpenAI SDK, Pillow, boto3 | Partial | Yes | Mock provider verified; OpenAI provider implemented but real OpenAI runtime not fully confirmed in this audit. |
 | `postgres` | PostgreSQL 16 | Done | Yes | Running in Docker; host `5433`, network `5432`. |

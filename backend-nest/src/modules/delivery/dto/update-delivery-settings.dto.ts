@@ -9,7 +9,7 @@ import {
   IsNumber,
   IsInt,
 } from 'class-validator';
-import { DELIVERY_CARRIERS } from '../delivery.constants';
+import { DELIVERY_AUTOMATED_CARRIERS } from '../delivery.constants';
 
 export class UpdateDeliverySettingsDto {
   @ApiPropertyOptional({ default: 'RU' })
@@ -60,25 +60,25 @@ export class UpdateDeliverySettingsDto {
   @IsString()
   pickupComment?: string;
 
-  @ApiProperty({ type: [String], enum: DELIVERY_CARRIERS })
+  @ApiProperty({ type: [String], enum: DELIVERY_AUTOMATED_CARRIERS })
   @IsArray()
-  @IsIn(DELIVERY_CARRIERS, { each: true })
+  @IsIn(DELIVERY_AUTOMATED_CARRIERS, { each: true })
   enabledCarriers!: Array<'CDEK' | 'YANDEX'>;
 
-  @ApiProperty({ enum: DELIVERY_CARRIERS })
-  @IsIn(DELIVERY_CARRIERS)
+  @ApiProperty({ enum: DELIVERY_AUTOMATED_CARRIERS })
+  @IsIn(DELIVERY_AUTOMATED_CARRIERS)
   defaultCarrier!: 'CDEK' | 'YANDEX';
 
   @ApiProperty()
-  @IsIn(DELIVERY_CARRIERS)
+  @IsIn(DELIVERY_AUTOMATED_CARRIERS)
   sameCityPreferredCarrier!: 'CDEK' | 'YANDEX';
 
   @ApiProperty()
-  @IsIn(DELIVERY_CARRIERS)
+  @IsIn(DELIVERY_AUTOMATED_CARRIERS)
   interCityPreferredCarrier!: 'CDEK' | 'YANDEX';
 
   @ApiProperty()
-  @IsIn(DELIVERY_CARRIERS)
+  @IsIn(DELIVERY_AUTOMATED_CARRIERS)
   fallbackCarrier!: 'CDEK' | 'YANDEX';
 
   @ApiProperty()

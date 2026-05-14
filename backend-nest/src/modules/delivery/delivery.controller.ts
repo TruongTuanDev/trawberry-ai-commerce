@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -13,8 +14,11 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
+import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CalculateDeliveryOffersDto } from './dto/calculate-delivery-offers.dto';
 import { CancelDeliveryShipmentDto } from './dto/cancel-delivery-shipment.dto';
 import { CreateDeliveryShipmentDto } from './dto/create-delivery-shipment.dto';
@@ -22,13 +26,19 @@ import { DeliveryDetailResponseDto } from './dto/delivery-detail-response.dto';
 import { DeliveryOffersResponseDto } from './dto/delivery-offers-response.dto';
 import { DeliverySettingsResponseDto } from './dto/delivery-settings-response.dto';
 import { DeliveryShipmentResponseDto } from './dto/delivery-shipment-response.dto';
+import { ListAdminDeliveriesQueryDto } from './dto/list-admin-deliveries-query.dto';
+import {
+  AdminUpdateManualDeliveryDto,
+  DeliveryTransitionDto,
+  UpsertManualDeliveryDto,
+} from './dto/manual-delivery.dto';
 import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
 import { DeliveryService } from './delivery.service';
 
 @ApiTags('delivery')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId')
+@UseGuards(JwtAuthGuard, ShopAccessGuard)
 export class DeliveryController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
@@ -73,6 +83,25 @@ export class DeliveryController {
     return this.deliveryService.createShipment(shopId, orderId, dto);
   }
 
+  @Post('orders/:orderId/delivery/manual')
+  @ApiOperation({
+    summary: 'Create seller-managed manual delivery for a paid order.',
+  })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  createManualDelivery(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpsertManualDeliveryDto,
+  ) {
+    return this.deliveryService.createManualDelivery(
+      shopId,
+      orderId,
+      user,
+      dto,
+    );
+  }
+
   @Get('orders/:orderId/delivery')
   @ApiOperation({ summary: 'Get delivery detail for an order.' })
   @ApiOkResponse({ type: DeliveryDetailResponseDto })
@@ -81,6 +110,63 @@ export class DeliveryController {
     @Param('orderId') orderId: string,
   ) {
     return this.deliveryService.getDelivery(shopId, orderId);
+  }
+
+  @Patch('orders/:orderId/delivery/shipments/:shipmentId/manual')
+  @ApiOperation({ summary: 'Update seller-managed manual delivery details.' })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  updateManualDelivery(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpsertManualDeliveryDto,
+  ) {
+    return this.deliveryService.updateManualDelivery(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
+  }
+
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/mark-in-transit')
+  @ApiOperation({ summary: 'Mark seller-managed delivery in transit.' })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  markManualInTransit(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.markManualInTransit(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
+  }
+
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/mark-delivered')
+  @ApiOperation({ summary: 'Mark seller-managed delivery delivered.' })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  markManualDelivered(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.markManualDelivered(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
   }
 
   @Post('orders/:orderId/delivery/shipments/:shipmentId/refresh')
@@ -116,12 +202,90 @@ export class DeliveryController {
     @Param('shopId') shopId: string,
     @Param('orderId') orderId: string,
     @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CancelDeliveryShipmentDto,
   ) {
     return this.deliveryService.cancelShipment(
       shopId,
       orderId,
       shipmentId,
+      user,
+      dto,
+    );
+  }
+}
+
+@ApiTags('admin deliveries')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@Controller('api/admin/deliveries')
+export class AdminDeliveriesController {
+  constructor(private readonly deliveryService: DeliveryService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List deliveries across all shops for admins.' })
+  listDeliveries(@Query() query: ListAdminDeliveriesQueryDto) {
+    return this.deliveryService.listAdminDeliveries(query);
+  }
+
+  @Get(':deliveryShipmentId')
+  @ApiOperation({ summary: 'Get one delivery shipment for admin review.' })
+  getDelivery(@Param('deliveryShipmentId') deliveryShipmentId: string) {
+    return this.deliveryService.getAdminDelivery(deliveryShipmentId);
+  }
+
+  @Patch(':deliveryShipmentId')
+  @ApiOperation({ summary: 'Admin override for manual delivery details.' })
+  updateDelivery(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: AdminUpdateManualDeliveryDto,
+  ) {
+    return this.deliveryService.adminUpdateDelivery(
+      deliveryShipmentId,
+      admin,
+      dto,
+    );
+  }
+
+  @Post(':deliveryShipmentId/mark-in-transit')
+  @ApiOperation({ summary: 'Admin marks delivery in transit.' })
+  markInTransit(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.adminMarkInTransit(
+      deliveryShipmentId,
+      admin,
+      dto,
+    );
+  }
+
+  @Post(':deliveryShipmentId/mark-delivered')
+  @ApiOperation({ summary: 'Admin marks delivery delivered.' })
+  markDelivered(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.adminMarkDelivered(
+      deliveryShipmentId,
+      admin,
+      dto,
+    );
+  }
+
+  @Post(':deliveryShipmentId/cancel')
+  @ApiOperation({ summary: 'Admin cancels delivery.' })
+  cancelDelivery(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.adminCancelDelivery(
+      deliveryShipmentId,
+      admin,
       dto,
     );
   }

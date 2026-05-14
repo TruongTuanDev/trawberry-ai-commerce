@@ -1,3 +1,16 @@
 export const DELIVERY_PROVIDER = Symbol('DELIVERY_PROVIDER');
-export const DELIVERY_CARRIERS = ['CDEK', 'YANDEX'] as const;
-export const DELIVERY_TERMINAL_STATUSES = ['CANCELLED', 'DELIVERED'] as const;
+export const DELIVERY_AUTOMATED_CARRIERS = ['CDEK', 'YANDEX'] as const;
+export const DELIVERY_CARRIERS = ['CDEK', 'YANDEX', 'MANUAL'] as const;
+export const MANUAL_DELIVERY_STATUSES = [
+  'NOT_CREATED',
+  'CREATED_MANUALLY',
+  'IN_TRANSIT',
+  'DELIVERED',
+  'CANCELLED',
+  'FAILED',
+] as const;
+export const DELIVERY_TERMINAL_STATUSES = [
+  'CANCELLED',
+  'DELIVERED',
+  'FAILED',
+] as const;

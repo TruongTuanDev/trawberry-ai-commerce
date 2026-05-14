@@ -57,9 +57,16 @@ Returned fields:
 Delivery projection currently includes:
 - `provider`
 - `status`
+- `statusLabel`
+- `statusMessage`
+- `internalStatus`
+- `providerStatus`
 - `providerShipmentId`
 - `trackingNumber`
 - `trackingUrl`
+- `courierPhone`
+- `estimatedDeliveryAt`
+- `deliveryNote`
 
 ## Payment Proof Upload
 
@@ -132,9 +139,16 @@ Customer tracking includes the latest delivery shipment when one exists:
   "delivery": {
     "provider": "YANDEX",
     "status": "IN_TRANSIT",
+    "statusLabel": "In transit",
+    "statusMessage": "The order is on the way.",
+    "internalStatus": "IN_TRANSIT",
+    "providerStatus": "IN_TRANSIT",
     "providerShipmentId": "mock-yandex-shipment-id",
     "trackingNumber": "MOCK-YANDEX-ORD-1",
-    "trackingUrl": "https://mock-delivery.local/yandex/track/order-id"
+    "trackingUrl": "https://mock-delivery.local/yandex/track/order-id",
+    "courierPhone": "+79991112233",
+    "estimatedDeliveryAt": "2026-05-15T12:00:00.000Z",
+    "deliveryNote": "Seller-created delivery in Yandex dashboard"
   }
 }
 ```

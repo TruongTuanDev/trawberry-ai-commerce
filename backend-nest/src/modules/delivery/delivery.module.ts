@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { CdekDeliveryClient } from './cdek-delivery.client';
 import { DELIVERY_PROVIDER } from './delivery.constants';
-import { DeliveryController } from './delivery.controller';
+import {
+  AdminDeliveriesController,
+  DeliveryController,
+} from './delivery.controller';
 import { DeliveryService } from './delivery.service';
 import { MockDeliveryProvider } from './providers/mock-delivery.provider';
 import { CdekDeliveryProvider } from './providers/cdek-delivery.provider';
@@ -12,7 +15,7 @@ import { YandexDeliveryClient } from './yandex-delivery.client';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [DeliveryController],
+  controllers: [DeliveryController, AdminDeliveriesController],
   providers: [
     DeliveryService,
     MockDeliveryProvider,

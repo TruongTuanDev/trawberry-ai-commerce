@@ -105,9 +105,16 @@ export type PublicTrackedOrder = {
   delivery: {
     provider: string;
     status: string;
+    statusLabel: string;
+    statusMessage: string;
+    internalStatus: string;
+    providerStatus: string;
     providerShipmentId: string | null;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierPhone: string | null;
+    estimatedDeliveryAt: string | null;
+    deliveryNote: string | null;
   } | null;
 };
 

@@ -1210,6 +1210,66 @@ git rm --cached frontend-next\.env.local
 - Commit info:
   - pending commit message: `test: finalize delivery and demo workflow coverage`
 
+## Seller-Managed Manual Delivery + Admin Supervision
+
+- Scope:
+  - implement seller-managed delivery because Yandex/CDEK legal/API credentials are not available yet
+  - let sellers paste carrier tracking data after creating shipments outside the marketplace
+  - give admins a supervision view for paid orders without delivery and delivery status override
+- Result:
+  - added manual delivery statuses: `NOT_CREATED`, `CREATED_MANUALLY`, `IN_TRANSIT`, `DELIVERED`, `CANCELLED`, `FAILED`
+  - added seller manual delivery create/update/status endpoints under shop-scoped order delivery routes
+  - added `/api/admin/deliveries` supervision APIs and `/admin/deliveries` Next.js page
+  - delivery events now store actor user, role, action, old status, and new status
+  - customer tracking shows status label/message, provider status, courier phone, ETA, and delivery note
+  - added `smoke:manual-delivery`, `smoke:admin-delivery-supervision`, `test:e2e:manual-delivery`, and `test:e2e:admin-delivery-supervision`
+- Verification for this pass:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, 16 suites / 89 tests
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:manual-delivery`: pass
+  - `backend-nest npm run smoke:admin-delivery-supervision`: pass
+  - `backend-nest npm run smoke:delivery`: pass
+  - `backend-nest npm run smoke:checkout`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:order-tracking`: pass
+  - `backend-nest npm run smoke:inventory`: pass
+  - `backend-nest npm run smoke:inventory-alerts`: pass
+  - `backend-nest npm run smoke:wb-import-checkout`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:manual-delivery`: pass
+  - `frontend-next npm run test:e2e:admin-delivery-supervision`: pass
+  - `frontend-next npm run test:e2e:full-commerce`: pass after isolated rerun; first parallel run hit a Playwright artifact `ENOENT` during trace handling
+  - `frontend-next npm run test:e2e:seller-delivery-settings`: pass
+  - `frontend-next npm run test:e2e:three-role-demo`: pass
+  - `frontend-next npm run test:e2e:wb-import-checkout`: pass
+  - Docker compose `ps`: pass, services healthy
+  - backend, frontend `/products`, and ai-service health checks: pass
+- Files changed:
+  - `backend-nest/prisma/schema.prisma`
+  - `backend-nest/prisma/migrations/20260514_add_manual_delivery_supervision/migration.sql`
+  - `backend-nest/src/modules/delivery/*`
+  - `backend-nest/src/modules/order-tracking/*`
+  - `backend-nest/scripts/smoke-manual-delivery.ps1`
+  - `backend-nest/scripts/smoke-admin-delivery-supervision.ps1`
+  - `backend-nest/test/delivery.e2e-spec.ts`
+  - `frontend-next/src/app/admin/deliveries/page.tsx`
+  - `frontend-next/src/components/admin/admin-deliveries-page-client.tsx`
+  - `frontend-next/src/components/orders/seller-order-detail-page-client.tsx`
+  - `frontend-next/tests/e2e/manual-delivery.spec.ts`
+  - `frontend-next/tests/e2e/admin-delivery-supervision.spec.ts`
+  - `docs/MANUAL_DELIVERY_WORKFLOW.md`
+  - `docs/SELLER_OPERATIONS.md`
+- Remaining gaps:
+  - real Yandex/CDEK API creation remains future work
+  - webhooks/provider polling remain future work
+- Commit info:
+  - pending commit message: `feat: add seller managed delivery with admin supervision`
+
 ## Wildberries Excel Product Import
 
 - Scope:

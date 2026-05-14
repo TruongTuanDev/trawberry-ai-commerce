@@ -81,6 +81,18 @@ class PublicOrderDeliveryDto {
   @ApiProperty()
   status!: string;
 
+  @ApiProperty()
+  statusLabel!: string;
+
+  @ApiProperty()
+  statusMessage!: string;
+
+  @ApiProperty()
+  internalStatus!: string;
+
+  @ApiProperty()
+  providerStatus!: string;
+
   @ApiProperty({ nullable: true })
   providerShipmentId!: string | null;
 
@@ -89,6 +101,15 @@ class PublicOrderDeliveryDto {
 
   @ApiProperty({ nullable: true })
   trackingUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  courierPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  estimatedDeliveryAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  deliveryNote!: string | null;
 }
 
 export class PublicOrderTrackingResponseDto {

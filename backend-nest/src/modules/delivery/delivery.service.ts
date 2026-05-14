@@ -8,7 +8,9 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import {
+  DELIVERY_CARRIERS,
   DELIVERY_PROVIDER,
   DELIVERY_TERMINAL_STATUSES,
 } from './delivery.constants';
@@ -16,6 +18,12 @@ import { CalculateDeliveryOffersDto } from './dto/calculate-delivery-offers.dto'
 import { CancelDeliveryShipmentDto } from './dto/cancel-delivery-shipment.dto';
 import { CreateDeliveryShipmentDto } from './dto/create-delivery-shipment.dto';
 import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
+import { ListAdminDeliveriesQueryDto } from './dto/list-admin-deliveries-query.dto';
+import {
+  AdminUpdateManualDeliveryDto,
+  DeliveryTransitionDto,
+  UpsertManualDeliveryDto,
+} from './dto/manual-delivery.dto';
 import type {
   DeliveryCarrierCode,
   DeliveryOrderContext,
@@ -85,6 +93,9 @@ type OrderRecord = {
     priceCurrency: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierPhone: string | null;
+    estimatedDeliveryAt: Date | null;
+    deliveryNote: string | null;
     pickupAddress: string;
     dropoffAddress: string;
     rawProviderPayload: Prisma.JsonValue | null;
@@ -98,6 +109,11 @@ type OrderRecord = {
       provider: string;
       eventType: string;
       providerStatus: string | null;
+      actorUserId: string | null;
+      actorRole: string | null;
+      action: string | null;
+      oldStatus: string | null;
+      newStatus: string | null;
       message: string | null;
       createdAt: Date;
     }>;
@@ -284,16 +300,18 @@ export class DeliveryService {
       },
     });
 
-    await this.createEvent(
-      shipment.id,
+    await this.createEvent({
+      deliveryShipmentId: shipment.id,
       shopId,
       orderId,
-      created.provider,
-      'SHIPMENT_CREATED',
-      created.providerStatus,
-      'Delivery shipment created.',
-      created.rawProviderPayload,
-    );
+      provider: created.provider,
+      eventType: 'SHIPMENT_CREATED',
+      providerStatus: created.providerStatus,
+      message: 'Delivery shipment created.',
+      rawPayload: created.rawProviderPayload,
+      oldStatus: 'NOT_CREATED',
+      newStatus: created.internalStatus,
+    });
 
     return this.toShipmentResponse({
       ...shipment,
@@ -328,16 +346,18 @@ export class DeliveryService {
       },
     });
 
-    await this.createEvent(
-      shipmentId,
+    await this.createEvent({
+      deliveryShipmentId: shipmentId,
       shopId,
       orderId,
-      refreshed.provider,
-      'SHIPMENT_REFRESHED',
-      refreshed.providerStatus,
-      'Delivery shipment refreshed.',
-      refreshed.rawProviderPayload,
-    );
+      provider: refreshed.provider,
+      eventType: 'SHIPMENT_REFRESHED',
+      providerStatus: refreshed.providerStatus,
+      message: 'Delivery shipment refreshed.',
+      rawPayload: refreshed.rawProviderPayload,
+      oldStatus: shipment.internalStatus,
+      newStatus: refreshed.internalStatus,
+    });
 
     return this.toShipmentResponse(updated);
   }
@@ -376,16 +396,18 @@ export class DeliveryService {
       },
     });
 
-    await this.createEvent(
-      shipmentId,
+    await this.createEvent({
+      deliveryShipmentId: shipmentId,
       shopId,
       orderId,
-      accepted.provider,
-      'SHIPMENT_ACCEPTED',
-      accepted.providerStatus,
-      'Delivery shipment accepted.',
-      accepted.rawProviderPayload,
-    );
+      provider: accepted.provider,
+      eventType: 'SHIPMENT_ACCEPTED',
+      providerStatus: accepted.providerStatus,
+      message: 'Delivery shipment accepted.',
+      rawPayload: accepted.rawProviderPayload,
+      oldStatus: shipment.internalStatus,
+      newStatus: accepted.internalStatus,
+    });
 
     return this.toShipmentResponse(updated);
   }
@@ -394,6 +416,7 @@ export class DeliveryService {
     shopId: string,
     orderId: string,
     shipmentId: string,
+    user: AuthenticatedUser,
     dto: CancelDeliveryShipmentDto,
   ) {
     const shipment = await this.findShipmentOrThrow(
@@ -401,6 +424,25 @@ export class DeliveryService {
       orderId,
       shipmentId,
     );
+    if (
+      shipment.internalStatus === 'CREATED_MANUALLY' ||
+      shipment.provider === 'MANUAL' ||
+      this.toPlainObject(shipment.rawProviderPayload)?.source ===
+        'seller_manual'
+    ) {
+      if (shipment.internalStatus === 'DELIVERED') {
+        throw new BadRequestException(
+          'Delivered shipment cannot be cancelled.',
+        );
+      }
+      return this.transitionLoadedShipment(
+        shipment,
+        user,
+        'CANCELLED',
+        'MANUAL_DELIVERY_CANCELLED',
+        dto.reason?.trim() || 'Manual delivery cancelled.',
+      );
+    }
     const cancelled = await this.provider.cancelShipment({
       ...this.toShipmentContext(shipment),
       reason: dto.reason?.trim() || null,
@@ -418,18 +460,335 @@ export class DeliveryService {
       },
     });
 
-    await this.createEvent(
-      shipmentId,
+    await this.createEvent({
+      deliveryShipmentId: shipmentId,
       shopId,
       orderId,
-      cancelled.provider,
-      'SHIPMENT_CANCELLED',
-      cancelled.providerStatus,
-      dto.reason?.trim() || 'Delivery shipment cancelled.',
-      cancelled.rawProviderPayload,
-    );
+      provider: cancelled.provider,
+      eventType: 'SHIPMENT_CANCELLED',
+      providerStatus: cancelled.providerStatus,
+      message: dto.reason?.trim() || 'Delivery shipment cancelled.',
+      rawPayload: cancelled.rawProviderPayload,
+      oldStatus: shipment.internalStatus,
+      newStatus: cancelled.internalStatus,
+    });
 
     return this.toShipmentResponse(updated);
+  }
+
+  async createManualDelivery(
+    shopId: string,
+    orderId: string,
+    user: AuthenticatedUser,
+    dto: UpsertManualDeliveryDto,
+  ) {
+    const order = await this.findOrderOrThrow(shopId, orderId);
+    this.assertOrderPaid(order);
+    this.assertNoActiveShipment(order);
+    this.assertManualProvider(dto.provider);
+
+    const shipment = await this.prisma.deliveryShipment.create({
+      data: {
+        id: randomUUID(),
+        shopId,
+        orderId: order.id,
+        provider: dto.provider,
+        providerShipmentId: this.clean(dto.providerShipmentId),
+        providerOrderNumber: this.clean(dto.providerOrderNumber),
+        providerStatus: 'CREATED_MANUALLY',
+        internalStatus: 'CREATED_MANUALLY',
+        priceAmount: null,
+        priceCurrency: this.configService.get<string>(
+          'MANUAL_DELIVERY_DEFAULT_CURRENCY',
+          'RUB',
+        ),
+        trackingNumber: this.clean(dto.trackingNumber),
+        trackingUrl: this.clean(dto.trackingUrl),
+        courierPhone: this.clean(dto.courierPhone),
+        estimatedDeliveryAt: dto.estimatedDeliveryAt
+          ? new Date(dto.estimatedDeliveryAt)
+          : null,
+        deliveryNote: this.clean(dto.deliveryNote),
+        pickupAddress:
+          this.clean(dto.pickupAddress) ??
+          order.shop.deliverySettings?.pickupAddress ??
+          'Seller-managed pickup',
+        dropoffAddress: order.shippingAddress,
+        rawProviderPayload: this.toJsonInput({
+          source: 'seller_manual',
+          note: this.clean(dto.note),
+        }),
+      },
+    });
+
+    await this.createEvent({
+      deliveryShipmentId: shipment.id,
+      shopId,
+      orderId,
+      provider: shipment.provider,
+      eventType: 'MANUAL_DELIVERY_CREATED',
+      providerStatus: shipment.providerStatus,
+      message: this.clean(dto.note) ?? 'Seller created manual delivery.',
+      rawPayload: { source: 'seller_manual' },
+      actorUserId: user.userId,
+      actorRole: user.role,
+      action: 'CREATE_DELIVERY',
+      oldStatus: 'NOT_CREATED',
+      newStatus: shipment.internalStatus,
+    });
+
+    return this.toShipmentResponse(shipment);
+  }
+
+  async updateManualDelivery(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: UpsertManualDeliveryDto,
+  ) {
+    const shipment = await this.findShipmentOrThrow(
+      shopId,
+      orderId,
+      shipmentId,
+    );
+    this.assertManualProvider(dto.provider);
+
+    const updated = await this.prisma.deliveryShipment.update({
+      where: { id: shipmentId },
+      data: {
+        provider: dto.provider,
+        providerShipmentId: this.clean(dto.providerShipmentId),
+        providerOrderNumber: this.clean(dto.providerOrderNumber),
+        trackingNumber: this.clean(dto.trackingNumber),
+        trackingUrl: this.clean(dto.trackingUrl),
+        courierPhone: this.clean(dto.courierPhone),
+        estimatedDeliveryAt: dto.estimatedDeliveryAt
+          ? new Date(dto.estimatedDeliveryAt)
+          : null,
+        deliveryNote: this.clean(dto.deliveryNote),
+        pickupAddress: this.clean(dto.pickupAddress) ?? shipment.pickupAddress,
+      },
+    });
+
+    await this.createEvent({
+      deliveryShipmentId: shipmentId,
+      shopId,
+      orderId,
+      provider: updated.provider,
+      eventType: 'MANUAL_DELIVERY_UPDATED',
+      providerStatus: updated.providerStatus,
+      message: this.clean(dto.note) ?? 'Manual delivery details updated.',
+      rawPayload: { source: 'seller_manual' },
+      actorUserId: user.userId,
+      actorRole: user.role,
+      action: 'UPDATE_DELIVERY',
+      oldStatus: shipment.internalStatus,
+      newStatus: updated.internalStatus,
+    });
+
+    return this.toShipmentResponse(updated);
+  }
+
+  async markManualInTransit(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    return this.transitionManualShipment(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      'IN_TRANSIT',
+      'MANUAL_DELIVERY_IN_TRANSIT',
+      this.clean(dto.note) ?? 'Manual delivery marked in transit.',
+    );
+  }
+
+  async markManualDelivered(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    return this.transitionManualShipment(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      'DELIVERED',
+      'MANUAL_DELIVERY_DELIVERED',
+      this.clean(dto.note) ?? 'Manual delivery marked delivered.',
+    );
+  }
+
+  async cancelManualShipment(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    const shipment = await this.findShipmentOrThrow(
+      shopId,
+      orderId,
+      shipmentId,
+    );
+    if (shipment.internalStatus === 'DELIVERED') {
+      throw new BadRequestException('Delivered shipment cannot be cancelled.');
+    }
+
+    return this.transitionLoadedShipment(
+      shipment,
+      user,
+      'CANCELLED',
+      'MANUAL_DELIVERY_CANCELLED',
+      this.clean(dto.note) ?? 'Manual delivery cancelled.',
+    );
+  }
+
+  async listAdminDeliveries(query: ListAdminDeliveriesQueryDto) {
+    if (query.paidWithoutDelivery) {
+      const orders = await this.prisma.order.findMany({
+        where: this.buildPaidWithoutDeliveryWhere(query),
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+        include: this.adminOrderInclude,
+      });
+      return {
+        items: orders.map((order) => this.toAdminOrderDeliveryRow(order)),
+      };
+    }
+
+    const shipments = await this.prisma.deliveryShipment.findMany({
+      where: this.buildAdminShipmentWhere(query),
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: this.adminShipmentInclude,
+    });
+
+    return {
+      items: shipments.map((shipment) => this.toAdminShipmentRow(shipment)),
+    };
+  }
+
+  async getAdminDelivery(deliveryShipmentId: string) {
+    const shipment = await this.prisma.deliveryShipment.findUnique({
+      where: { id: deliveryShipmentId },
+      include: this.adminShipmentInclude,
+    });
+    if (!shipment) {
+      throw new NotFoundException(
+        `Delivery shipment ${deliveryShipmentId} was not found.`,
+      );
+    }
+    return this.toAdminShipmentRow(shipment);
+  }
+
+  async adminUpdateDelivery(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: AdminUpdateManualDeliveryDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    this.assertManualProvider(dto.provider);
+
+    const nextStatus = dto.internalStatus ?? shipment.internalStatus;
+    const updated = await this.prisma.deliveryShipment.update({
+      where: { id: deliveryShipmentId },
+      data: {
+        provider: dto.provider,
+        providerShipmentId: this.clean(dto.providerShipmentId),
+        providerOrderNumber: this.clean(dto.providerOrderNumber),
+        trackingNumber: this.clean(dto.trackingNumber),
+        trackingUrl: this.clean(dto.trackingUrl),
+        courierPhone: this.clean(dto.courierPhone),
+        estimatedDeliveryAt: dto.estimatedDeliveryAt
+          ? new Date(dto.estimatedDeliveryAt)
+          : null,
+        deliveryNote: this.clean(dto.deliveryNote),
+        pickupAddress: this.clean(dto.pickupAddress) ?? shipment.pickupAddress,
+        providerStatus: nextStatus,
+        internalStatus: nextStatus,
+        acceptedAt:
+          nextStatus === 'IN_TRANSIT' ? new Date() : shipment.acceptedAt,
+        deliveredAt:
+          nextStatus === 'DELIVERED' ? new Date() : shipment.deliveredAt,
+        cancelledAt:
+          nextStatus === 'CANCELLED' ? new Date() : shipment.cancelledAt,
+      },
+      include: this.adminShipmentInclude,
+    });
+
+    await this.createEvent({
+      deliveryShipmentId,
+      shopId: shipment.shopId,
+      orderId: shipment.orderId,
+      provider: updated.provider,
+      eventType: 'ADMIN_DELIVERY_OVERRIDE',
+      providerStatus: updated.providerStatus,
+      message: this.clean(dto.note) ?? 'Admin updated manual delivery.',
+      rawPayload: { source: 'admin_override' },
+      actorUserId: admin.userId,
+      actorRole: admin.role,
+      action: 'ADMIN_OVERRIDE',
+      oldStatus: shipment.internalStatus,
+      newStatus: updated.internalStatus,
+    });
+
+    return this.toAdminShipmentRow(updated);
+  }
+
+  async adminMarkInTransit(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    const updated = await this.transitionLoadedShipment(
+      shipment,
+      admin,
+      'IN_TRANSIT',
+      'ADMIN_DELIVERY_IN_TRANSIT',
+      this.clean(dto.note) ?? 'Admin marked delivery in transit.',
+    );
+    return this.getAdminDelivery(updated.id);
+  }
+
+  async adminMarkDelivered(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    const updated = await this.transitionLoadedShipment(
+      shipment,
+      admin,
+      'DELIVERED',
+      'ADMIN_DELIVERY_DELIVERED',
+      this.clean(dto.note) ?? 'Admin marked delivery delivered.',
+    );
+    return this.getAdminDelivery(updated.id);
+  }
+
+  async adminCancelDelivery(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    const updated = await this.transitionLoadedShipment(
+      shipment,
+      admin,
+      'CANCELLED',
+      'ADMIN_DELIVERY_CANCELLED',
+      this.clean(dto.note) ?? 'Admin cancelled delivery.',
+    );
+    return this.getAdminDelivery(updated.id);
   }
 
   async getDelivery(shopId: string, orderId: string) {
@@ -459,6 +818,11 @@ export class DeliveryService {
         id: event.id,
         provider: event.provider,
         eventType: event.eventType,
+        actorUserId: event.actorUserId,
+        actorRole: event.actorRole,
+        action: event.action,
+        oldStatus: event.oldStatus,
+        newStatus: event.newStatus,
         providerStatus: event.providerStatus,
         message: event.message,
         createdAt: event.createdAt.toISOString(),
@@ -519,6 +883,154 @@ export class DeliveryService {
     }
 
     return shipment;
+  }
+
+  private async findAdminShipmentOrThrow(shipmentId: string) {
+    const shipment = await this.prisma.deliveryShipment.findUnique({
+      where: { id: shipmentId },
+    });
+
+    if (!shipment) {
+      throw new NotFoundException(
+        `Delivery shipment ${shipmentId} was not found.`,
+      );
+    }
+
+    return shipment;
+  }
+
+  private async transitionManualShipment(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    nextStatus: string,
+    eventType: string,
+    message: string,
+  ) {
+    const shipment = await this.findShipmentOrThrow(
+      shopId,
+      orderId,
+      shipmentId,
+    );
+    return this.transitionLoadedShipment(
+      shipment,
+      user,
+      nextStatus,
+      eventType,
+      message,
+    );
+  }
+
+  private async transitionLoadedShipment(
+    shipment: {
+      id: string;
+      shopId: string;
+      orderId: string;
+      provider: string;
+      internalStatus: string;
+      providerStatus: string;
+    },
+    user: AuthenticatedUser,
+    nextStatus: string,
+    eventType: string,
+    message: string,
+  ) {
+    const now = new Date();
+    const updated = await this.prisma.deliveryShipment.update({
+      where: { id: shipment.id },
+      data: {
+        providerStatus: nextStatus,
+        internalStatus: nextStatus,
+        acceptedAt: nextStatus === 'IN_TRANSIT' ? now : undefined,
+        deliveredAt: nextStatus === 'DELIVERED' ? now : undefined,
+        cancelledAt: nextStatus === 'CANCELLED' ? now : undefined,
+      },
+    });
+
+    await this.createEvent({
+      deliveryShipmentId: shipment.id,
+      shopId: shipment.shopId,
+      orderId: shipment.orderId,
+      provider: shipment.provider,
+      eventType,
+      providerStatus: nextStatus,
+      message,
+      rawPayload: { source: user.role === 'ADMIN' ? 'admin' : 'seller' },
+      actorUserId: user.userId,
+      actorRole: user.role,
+      action: eventType,
+      oldStatus: shipment.internalStatus,
+      newStatus: nextStatus,
+    });
+
+    return this.toShipmentResponse(updated);
+  }
+
+  private buildAdminShipmentWhere(
+    query: ListAdminDeliveriesQueryDto,
+  ): Prisma.DeliveryShipmentWhereInput {
+    const where: Prisma.DeliveryShipmentWhereInput = {};
+    if (query.status) where.internalStatus = query.status;
+    if (query.provider) where.provider = query.provider;
+    if (query.shopId) where.shopId = query.shopId;
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {
+        gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+        lte: query.dateTo ? new Date(query.dateTo) : undefined,
+      };
+    }
+    if (query.sellerId || query.search?.trim()) {
+      const search = query.search?.trim();
+      where.order = {
+        shop: {
+          sellerProfile: {
+            userId: query.sellerId,
+          },
+        },
+        OR: search
+          ? [
+              { orderNumber: { contains: search, mode: 'insensitive' } },
+              { customerName: { contains: search, mode: 'insensitive' } },
+              { customerPhone: { contains: search, mode: 'insensitive' } },
+            ]
+          : undefined,
+      };
+    }
+    return where;
+  }
+
+  private buildPaidWithoutDeliveryWhere(
+    query: ListAdminDeliveriesQueryDto,
+  ): Prisma.OrderWhereInput {
+    const where: Prisma.OrderWhereInput = {
+      paymentStatus: 'PAID',
+      status: { notIn: ['DELIVERED', 'CANCELLED'] },
+      deliveryShipments: {
+        none: {
+          internalStatus: { notIn: [...DELIVERY_TERMINAL_STATUSES] },
+        },
+      },
+    };
+    if (query.shopId) where.shopId = query.shopId;
+    if (query.sellerId) {
+      where.shop = { sellerProfile: { userId: query.sellerId } };
+    }
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {
+        gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+        lte: query.dateTo ? new Date(query.dateTo) : undefined,
+      };
+    }
+    if (query.search?.trim()) {
+      const search = query.search.trim();
+      where.OR = [
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { customerPhone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    return where;
   }
 
   private buildOrderContext(
@@ -649,27 +1161,37 @@ export class DeliveryService {
     };
   }
 
-  private async createEvent(
-    deliveryShipmentId: string,
-    shopId: string,
-    orderId: string,
-    provider: string,
-    eventType: string,
-    providerStatus: string,
-    message: string,
-    rawPayload: Record<string, unknown> | null,
-  ) {
+  private async createEvent(input: {
+    deliveryShipmentId: string;
+    shopId: string;
+    orderId: string;
+    provider: string;
+    eventType: string;
+    providerStatus: string;
+    message: string;
+    rawPayload: Record<string, unknown> | null;
+    actorUserId?: string | null;
+    actorRole?: string | null;
+    action?: string | null;
+    oldStatus?: string | null;
+    newStatus?: string | null;
+  }) {
     await this.prisma.deliveryEvent.create({
       data: {
         id: randomUUID(),
-        deliveryShipmentId,
-        shopId,
-        orderId,
-        provider,
-        eventType,
-        providerStatus,
-        message,
-        rawPayload: this.toJsonInput(rawPayload),
+        deliveryShipmentId: input.deliveryShipmentId,
+        shopId: input.shopId,
+        orderId: input.orderId,
+        provider: input.provider,
+        eventType: input.eventType,
+        actorUserId: input.actorUserId ?? null,
+        actorRole: input.actorRole ?? null,
+        action: input.action ?? input.eventType,
+        oldStatus: input.oldStatus ?? null,
+        newStatus: input.newStatus ?? null,
+        providerStatus: input.providerStatus,
+        message: input.message,
+        rawPayload: this.toJsonInput(input.rawPayload),
       },
     });
   }
@@ -791,6 +1313,9 @@ export class DeliveryService {
     priceCurrency: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierPhone: string | null;
+    estimatedDeliveryAt: Date | null;
+    deliveryNote: string | null;
     pickupAddress: string;
     dropoffAddress: string;
     createdAt: Date;
@@ -810,6 +1335,9 @@ export class DeliveryService {
       priceCurrency: shipment.priceCurrency,
       trackingNumber: shipment.trackingNumber,
       trackingUrl: shipment.trackingUrl,
+      courierPhone: shipment.courierPhone,
+      estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
+      deliveryNote: shipment.deliveryNote,
       pickupAddress: shipment.pickupAddress,
       dropoffAddress: shipment.dropoffAddress,
       createdAt: shipment.createdAt.toISOString(),
@@ -818,6 +1346,180 @@ export class DeliveryService {
       cancelledAt: shipment.cancelledAt?.toISOString() ?? null,
       deliveredAt: shipment.deliveredAt?.toISOString() ?? null,
     };
+  }
+
+  private toAdminShipmentRow(shipment: {
+    id: string;
+    shopId: string;
+    orderId: string;
+    provider: string;
+    providerShipmentId: string | null;
+    providerOrderNumber: string | null;
+    providerStatus: string;
+    internalStatus: string;
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+    courierPhone: string | null;
+    estimatedDeliveryAt: Date | null;
+    deliveryNote: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    acceptedAt: Date | null;
+    cancelledAt: Date | null;
+    deliveredAt: Date | null;
+    order: {
+      orderNumber: string;
+      status: string;
+      paymentStatus: string;
+      totalAmount: Prisma.Decimal;
+      customerName: string;
+      customerPhone: string;
+      customerEmail: string | null;
+      shippingAddress: string;
+      createdAt: Date;
+      shop: {
+        id: string;
+        name: string;
+        sellerProfile: {
+          userId: string;
+          user: { email: string; fullName: string | null };
+        };
+      };
+    };
+    events: Array<{
+      id: string;
+      eventType: string;
+      actorUserId: string | null;
+      actorRole: string | null;
+      action: string | null;
+      oldStatus: string | null;
+      newStatus: string | null;
+      providerStatus: string | null;
+      message: string | null;
+      createdAt: Date;
+    }>;
+  }) {
+    return {
+      kind: 'SHIPMENT',
+      id: shipment.id,
+      deliveryShipmentId: shipment.id,
+      orderId: shipment.orderId,
+      orderNumber: shipment.order.orderNumber,
+      shopId: shipment.shopId,
+      shopName: shipment.order.shop.name,
+      sellerId: shipment.order.shop.sellerProfile.userId,
+      sellerEmail: shipment.order.shop.sellerProfile.user.email,
+      sellerName: shipment.order.shop.sellerProfile.user.fullName,
+      orderStatus: shipment.order.status,
+      paymentStatus: shipment.order.paymentStatus,
+      totalAmount: shipment.order.totalAmount.toString(),
+      customer: {
+        name: shipment.order.customerName,
+        phone: shipment.order.customerPhone,
+        email: shipment.order.customerEmail,
+        address: shipment.order.shippingAddress,
+      },
+      provider: shipment.provider,
+      providerShipmentId: shipment.providerShipmentId,
+      providerOrderNumber: shipment.providerOrderNumber,
+      providerStatus: shipment.providerStatus,
+      internalStatus: shipment.internalStatus,
+      trackingNumber: shipment.trackingNumber,
+      trackingUrl: shipment.trackingUrl,
+      courierPhone: shipment.courierPhone,
+      estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
+      deliveryNote: shipment.deliveryNote,
+      createdAt: shipment.createdAt.toISOString(),
+      updatedAt: shipment.updatedAt.toISOString(),
+      acceptedAt: shipment.acceptedAt?.toISOString() ?? null,
+      cancelledAt: shipment.cancelledAt?.toISOString() ?? null,
+      deliveredAt: shipment.deliveredAt?.toISOString() ?? null,
+      events: shipment.events.map((event) => ({
+        id: event.id,
+        eventType: event.eventType,
+        actorUserId: event.actorUserId,
+        actorRole: event.actorRole,
+        action: event.action,
+        oldStatus: event.oldStatus,
+        newStatus: event.newStatus,
+        providerStatus: event.providerStatus,
+        message: event.message,
+        createdAt: event.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  private toAdminOrderDeliveryRow(order: {
+    id: string;
+    shopId: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+    totalAmount: Prisma.Decimal;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string | null;
+    shippingAddress: string;
+    createdAt: Date;
+    shop: {
+      id: string;
+      name: string;
+      sellerProfile: {
+        userId: string;
+        user: { email: string; fullName: string | null };
+      };
+    };
+  }) {
+    return {
+      kind: 'PAID_WITHOUT_DELIVERY',
+      id: `order-${order.id}`,
+      deliveryShipmentId: null,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      shopId: order.shopId,
+      shopName: order.shop.name,
+      sellerId: order.shop.sellerProfile.userId,
+      sellerEmail: order.shop.sellerProfile.user.email,
+      sellerName: order.shop.sellerProfile.user.fullName,
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+      totalAmount: order.totalAmount.toString(),
+      customer: {
+        name: order.customerName,
+        phone: order.customerPhone,
+        email: order.customerEmail,
+        address: order.shippingAddress,
+      },
+      provider: null,
+      providerShipmentId: null,
+      providerOrderNumber: null,
+      providerStatus: 'NOT_CREATED',
+      internalStatus: 'NOT_CREATED',
+      trackingNumber: null,
+      trackingUrl: null,
+      courierPhone: null,
+      estimatedDeliveryAt: null,
+      deliveryNote: null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.createdAt.toISOString(),
+      acceptedAt: null,
+      cancelledAt: null,
+      deliveredAt: null,
+      events: [],
+    };
+  }
+
+  private assertManualProvider(provider: string) {
+    if (!DELIVERY_CARRIERS.includes(provider as never)) {
+      throw new BadRequestException(
+        `Unsupported delivery provider ${provider}.`,
+      );
+    }
+  }
+
+  private clean(value?: string | null) {
+    const cleaned = value?.trim();
+    return cleaned ? cleaned : null;
   }
 
   private readCarrierList(value: Prisma.JsonValue) {
@@ -857,5 +1559,65 @@ export class DeliveryService {
       return null;
     }
     return value as Record<string, unknown>;
+  }
+
+  private get adminShipmentInclude() {
+    return {
+      order: {
+        select: {
+          orderNumber: true,
+          status: true,
+          paymentStatus: true,
+          totalAmount: true,
+          customerName: true,
+          customerPhone: true,
+          customerEmail: true,
+          shippingAddress: true,
+          createdAt: true,
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              sellerProfile: {
+                select: {
+                  userId: true,
+                  user: {
+                    select: {
+                      email: true,
+                      fullName: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      events: {
+        orderBy: { createdAt: 'desc' as const },
+      },
+    };
+  }
+
+  private get adminOrderInclude() {
+    return {
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          sellerProfile: {
+            select: {
+              userId: true,
+              user: {
+                select: {
+                  email: true,
+                  fullName: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
   }
 }

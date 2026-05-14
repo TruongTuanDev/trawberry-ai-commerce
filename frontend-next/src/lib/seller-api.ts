@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/api";
 export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
 export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE" | "UPLOAD_PROOF";
 export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "NOT_TRACKED";
-export type DeliveryProviderName = "CDEK" | "YANDEX";
+export type DeliveryProviderName = "CDEK" | "YANDEX" | "MANUAL";
 
 export type SellerOrderDeliverySummary = {
   provider: DeliveryProviderName | string;
@@ -11,6 +11,9 @@ export type SellerOrderDeliverySummary = {
   providerShipmentId: string | null;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierPhone: string | null;
+  estimatedDeliveryAt: string | null;
+  deliveryNote: string | null;
 };
 
 export type DeliverySettings = {
@@ -73,6 +76,9 @@ export type DeliveryShipment = {
   priceCurrency: string;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierPhone: string | null;
+  estimatedDeliveryAt: string | null;
+  deliveryNote: string | null;
   pickupAddress: string;
   dropoffAddress: string;
   createdAt: string;
@@ -1066,6 +1072,86 @@ export async function getOrderDelivery(
     {
       method: "GET",
       token,
+    },
+  );
+}
+
+export type ManualDeliveryPayload = {
+  provider: DeliveryProviderName;
+  providerShipmentId?: string | null;
+  providerOrderNumber?: string | null;
+  trackingNumber?: string | null;
+  trackingUrl?: string | null;
+  courierPhone?: string | null;
+  estimatedDeliveryAt?: string | null;
+  deliveryNote?: string | null;
+  pickupAddress?: string | null;
+  note?: string | null;
+};
+
+export async function createManualDelivery(
+  shopId: string,
+  orderId: string,
+  payload: ManualDeliveryPayload,
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/manual`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function updateManualDelivery(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload: ManualDeliveryPayload,
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/manual`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function markManualDeliveryInTransit(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload?: { note?: string | null },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/mark-in-transit`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+}
+
+export async function markManualDeliveryDelivered(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload?: { note?: string | null },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/mark-delivered`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
     },
   );
 }

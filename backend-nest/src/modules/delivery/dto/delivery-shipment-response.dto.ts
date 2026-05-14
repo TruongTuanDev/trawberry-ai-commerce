@@ -31,6 +31,15 @@ export class DeliveryShipmentResponseDto {
   @ApiProperty({ nullable: true })
   trackingUrl!: string | null;
 
+  @ApiProperty({ nullable: true })
+  courierPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  estimatedDeliveryAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  deliveryNote!: string | null;
+
   @ApiProperty()
   pickupAddress!: string;
 

@@ -47,8 +47,12 @@ type TrackableOrderRecord = {
     provider: string;
     internalStatus: string;
     providerShipmentId: string | null;
+    providerStatus: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierPhone: string | null;
+    estimatedDeliveryAt: Date | null;
+    deliveryNote: string | null;
   }>;
   items: Array<{
     id: string;
@@ -278,9 +282,21 @@ export class OrderTrackingService {
         ? {
             provider: latestShipment.provider,
             status: latestShipment.internalStatus,
+            statusLabel: this.deliveryStatusLabel(
+              latestShipment.internalStatus,
+            ),
+            statusMessage: this.deliveryStatusMessage(
+              latestShipment.internalStatus,
+            ),
+            internalStatus: latestShipment.internalStatus,
+            providerStatus: latestShipment.providerStatus,
             providerShipmentId: latestShipment.providerShipmentId,
             trackingNumber: latestShipment.trackingNumber,
             trackingUrl: latestShipment.trackingUrl,
+            courierPhone: latestShipment.courierPhone,
+            estimatedDeliveryAt:
+              latestShipment.estimatedDeliveryAt?.toISOString() ?? null,
+            deliveryNote: latestShipment.deliveryNote,
           }
         : null,
     };
@@ -300,9 +316,13 @@ export class OrderTrackingService {
         select: {
           provider: true,
           internalStatus: true,
+          providerStatus: true,
           providerShipmentId: true,
           trackingNumber: true,
           trackingUrl: true,
+          courierPhone: true,
+          estimatedDeliveryAt: true,
+          deliveryNote: true,
         },
       },
       items: {
@@ -324,5 +344,30 @@ export class OrderTrackingService {
         },
       },
     };
+  }
+
+  private deliveryStatusLabel(status: string) {
+    const labels: Record<string, string> = {
+      CREATED_MANUALLY: 'Delivery created',
+      CREATED: 'Delivery created',
+      IN_TRANSIT: 'In transit',
+      DELIVERED: 'Delivered',
+      CANCELLED: 'Cancelled',
+      FAILED: 'Delivery failed',
+    };
+    return labels[status] ?? status;
+  }
+
+  private deliveryStatusMessage(status: string) {
+    const messages: Record<string, string> = {
+      CREATED_MANUALLY:
+        'The seller has created delivery in their carrier dashboard.',
+      CREATED: 'The seller has created delivery.',
+      IN_TRANSIT: 'The order is on the way.',
+      DELIVERED: 'The order has been delivered.',
+      CANCELLED: 'The delivery was cancelled.',
+      FAILED: 'The delivery needs seller or admin attention.',
+    };
+    return messages[status] ?? 'Delivery status is available.';
   }
 }

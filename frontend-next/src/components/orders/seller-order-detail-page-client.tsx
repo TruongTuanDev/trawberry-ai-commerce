@@ -10,13 +10,18 @@ import {
   acceptDeliveryShipment,
   cancelDeliveryShipment,
   createDeliveryShipment,
+  createManualDelivery,
   getDeliverySettings,
   getOrderDelivery,
   getShopOrderById,
+  markManualDeliveryDelivered,
+  markManualDeliveryInTransit,
   refreshDeliveryShipment,
   updateShopOrderStatus,
+  updateManualDelivery,
   type DeliveryDetail,
   type DeliveryOffer,
+  type DeliveryProviderName,
   type SellerOrderListItem,
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
@@ -43,6 +48,23 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [widthCm, setWidthCm] = useState("20");
   const [heightCm, setHeightCm] = useState("10");
   const [selectedOfferId, setSelectedOfferId] = useState("");
+  const [manualProvider, setManualProvider] = useState<DeliveryProviderName>("YANDEX");
+  const [manualTrackingNumber, setManualTrackingNumber] = useState("");
+  const [manualTrackingUrl, setManualTrackingUrl] = useState("");
+  const [manualCourierPhone, setManualCourierPhone] = useState("");
+  const [manualEstimatedDeliveryAt, setManualEstimatedDeliveryAt] = useState("");
+  const [manualDeliveryNote, setManualDeliveryNote] = useState("");
+
+  function hydrateManualForm(deliveryResult: DeliveryDetail) {
+    const shipment = deliveryResult.activeShipment;
+    if (!shipment) return;
+    setManualProvider((shipment.provider as DeliveryProviderName) ?? "YANDEX");
+    setManualTrackingNumber(shipment.trackingNumber ?? "");
+    setManualTrackingUrl(shipment.trackingUrl ?? "");
+    setManualCourierPhone(shipment.courierPhone ?? "");
+    setManualEstimatedDeliveryAt(shipment.estimatedDeliveryAt ? shipment.estimatedDeliveryAt.slice(0, 16) : "");
+    setManualDeliveryNote(shipment.deliveryNote ?? "");
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -66,6 +88,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           setDeliveryOffers(deliveryResult.offers);
           setSelectedOfferId(deliveryResult.offers[0]?.id ?? "");
           setPickupAddress(deliveryResult.activeShipment?.pickupAddress ?? orderResult.shippingAddress);
+          hydrateManualForm(deliveryResult);
         } else {
           setPickupAddress(orderResult.shippingAddress);
         }
@@ -134,7 +157,19 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     setOrder(orderResult);
     setDelivery(deliveryResult);
     setDeliveryOffers(deliveryResult.offers);
+    hydrateManualForm(deliveryResult);
   };
+
+  const buildManualPayload = () => ({
+    provider: manualProvider,
+    trackingNumber: manualTrackingNumber.trim() || null,
+    trackingUrl: manualTrackingUrl.trim() || null,
+    courierPhone: manualCourierPhone.trim() || null,
+    estimatedDeliveryAt: manualEstimatedDeliveryAt ? new Date(manualEstimatedDeliveryAt).toISOString() : null,
+    deliveryNote: manualDeliveryNote.trim() || null,
+    pickupAddress: pickupAddress.trim() || null,
+    note: "Seller updated manual delivery from order detail.",
+  });
 
   const handleDeliveryAction = async (action: "calculate" | "create" | "accept" | "refresh" | "cancel") => {
     if (!currentShopId || !order) return;
@@ -215,6 +250,41 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delivery action failed.");
+    } finally {
+      setDeliveryLoading(false);
+    }
+  };
+
+  const handleManualDeliveryAction = async (action: "save" | "in-transit" | "delivered" | "cancel") => {
+    if (!currentShopId || !order) return;
+    setDeliveryLoading(true);
+    setError(null);
+    setDeliveryMessage(null);
+    try {
+      if (action === "save") {
+        if (activeShipment) {
+          await updateManualDelivery(currentShopId, order.id, activeShipment.id, buildManualPayload(), "");
+          setDeliveryMessage("Manual delivery updated.");
+        } else {
+          await createManualDelivery(currentShopId, order.id, buildManualPayload(), "");
+          setDeliveryMessage("Manual delivery saved.");
+        }
+      } else {
+        if (!activeShipment) throw new Error("No manual delivery exists yet.");
+        if (action === "in-transit") {
+          await markManualDeliveryInTransit(currentShopId, order.id, activeShipment.id, { note: "Seller marked manual delivery in transit." }, "");
+          setDeliveryMessage("Manual delivery marked in transit.");
+        } else if (action === "delivered") {
+          await markManualDeliveryDelivered(currentShopId, order.id, activeShipment.id, { note: "Seller marked manual delivery delivered." }, "");
+          setDeliveryMessage("Manual delivery marked delivered.");
+        } else {
+          await cancelDeliveryShipment(currentShopId, order.id, activeShipment.id, { reason: "Seller cancelled manual delivery." }, "");
+          setDeliveryMessage("Manual delivery cancelled.");
+        }
+      }
+      await refreshDeliverySnapshot();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Manual delivery action failed.");
     } finally {
       setDeliveryLoading(false);
     }
@@ -309,6 +379,28 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Manual provider">
+                <select value={manualProvider} onChange={(event) => setManualProvider(event.target.value as DeliveryProviderName)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="manual-delivery-provider">
+                  <option value="YANDEX">Yandex</option>
+                  <option value="CDEK">CDEK</option>
+                  <option value="MANUAL">Manual</option>
+                </select>
+              </Field>
+              <Field label="Tracking number">
+                <input value={manualTrackingNumber} onChange={(event) => setManualTrackingNumber(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="manual-delivery-tracking-number" />
+              </Field>
+              <Field label="Tracking URL">
+                <input value={manualTrackingUrl} onChange={(event) => setManualTrackingUrl(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="manual-delivery-tracking-url" />
+              </Field>
+              <Field label="Courier phone">
+                <input value={manualCourierPhone} onChange={(event) => setManualCourierPhone(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="manual-delivery-courier-phone" />
+              </Field>
+              <Field label="Estimated delivery">
+                <input type="datetime-local" value={manualEstimatedDeliveryAt} onChange={(event) => setManualEstimatedDeliveryAt(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="manual-delivery-estimated-at" />
+              </Field>
+              <Field label="Delivery note">
+                <input value={manualDeliveryNote} onChange={(event) => setManualDeliveryNote(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="manual-delivery-note" />
+              </Field>
               <Field label="Pickup address">
                 <input value={pickupAddress} onChange={(event) => setPickupAddress(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-order-pickup-address" />
               </Field>
@@ -334,6 +426,21 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   ))}
                 </select>
               </Field>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <button type="button" onClick={() => void handleManualDeliveryAction("save")} disabled={deliveryLoading || order.paymentStatus !== "PAID"} className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="manual-delivery-save">
+                Save delivery
+              </button>
+              <button type="button" onClick={() => void handleManualDeliveryAction("in-transit")} disabled={deliveryLoading || !activeShipment} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50" data-testid="manual-delivery-mark-in-transit">
+                Mark in transit
+              </button>
+              <button type="button" onClick={() => void handleManualDeliveryAction("delivered")} disabled={deliveryLoading || !activeShipment} className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50" data-testid="manual-delivery-mark-delivered">
+                Mark delivered
+              </button>
+              <button type="button" onClick={() => void handleManualDeliveryAction("cancel")} disabled={deliveryLoading || !activeShipment || activeShipment.internalStatus === "DELIVERED"} className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60" data-testid="manual-delivery-cancel">
+                Cancel delivery
+              </button>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -364,7 +471,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               <Metric label="Status" value={activeShipment?.internalStatus ?? order.delivery?.status ?? "Not created"} testId="seller-delivery-status" />
               <Metric label="Shipment id" value={activeShipment?.providerShipmentId ?? order.delivery?.providerShipmentId ?? "Not assigned"} />
               <Metric label="Tracking" value={activeShipment?.trackingNumber ?? order.delivery?.trackingNumber ?? "Not assigned"} />
+              <Metric label="Courier" value={activeShipment?.courierPhone ?? order.delivery?.courierPhone ?? "Not assigned"} />
+              <Metric label="ETA" value={activeShipment?.estimatedDeliveryAt ? new Date(activeShipment.estimatedDeliveryAt).toLocaleString() : "Not assigned"} />
             </div>
+            {activeShipment?.deliveryNote ? <p className="text-sm text-[var(--muted)]" data-testid="seller-delivery-note">{activeShipment.deliveryNote}</p> : null}
             {activeShipment?.trackingUrl || order.delivery?.trackingUrl ? (
               <a href={activeShipment?.trackingUrl ?? order.delivery?.trackingUrl ?? "#"} target="_blank" rel="noreferrer" className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]" data-testid="seller-delivery-tracking-link">
                 Open tracking link

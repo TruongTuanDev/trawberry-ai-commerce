@@ -7,11 +7,13 @@
 Supported providers:
 - `YANDEX`
 - `CDEK`
+- `MANUAL` for seller-managed entries
 
 Default strategy:
 - same-city order: Yandex first, CDEK fallback
 - inter-city order: CDEK first
 - tests and smoke scripts use mock mode by default
+- seller-managed manual delivery does not call real Yandex/CDEK APIs
 
 ## Settings
 
@@ -93,6 +95,69 @@ Rules:
 - order must have customer phone and address
 - shop delivery settings must be configured
 
+## Seller-Managed Manual Delivery
+
+Seller creates the real shipment outside the marketplace and saves tracking data:
+
+`POST /api/shops/:shopId/orders/:orderId/delivery/manual`
+
+`PATCH /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/manual`
+
+```json
+{
+  "provider": "YANDEX",
+  "trackingNumber": "YANDEX-123",
+  "trackingUrl": "https://track.example/yandex-123",
+  "courierPhone": "+79991112233",
+  "estimatedDeliveryAt": "2026-05-15T12:00:00.000Z",
+  "deliveryNote": "Created manually in Yandex dashboard"
+}
+```
+
+Seller status actions:
+
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-in-transit`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-delivered`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel`
+
+Manual status values:
+- `NOT_CREATED`
+- `CREATED_MANUALLY`
+- `IN_TRANSIT`
+- `DELIVERED`
+- `CANCELLED`
+- `FAILED`
+
+Validation:
+- seller can only operate orders in their shop
+- order must be `PAID`
+- seller cannot cancel `DELIVERED`
+- `trackingUrl` must be a valid URL when provided
+
+## Admin Supervision
+
+Admins monitor all shops:
+
+`GET /api/admin/deliveries`
+
+Query filters:
+- `status`
+- `provider`
+- `shopId`
+- `sellerId`
+- `paidWithoutDelivery=true`
+- `dateFrom`
+- `dateTo`
+
+Admin actions:
+- `GET /api/admin/deliveries/:deliveryShipmentId`
+- `PATCH /api/admin/deliveries/:deliveryShipmentId`
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-in-transit`
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-delivered`
+- `POST /api/admin/deliveries/:deliveryShipmentId/cancel`
+
+`paidWithoutDelivery=true` returns paid orders with no active delivery shipment and non-terminal order status.
+
 ## Delivery Detail
 
 `GET /api/shops/:shopId/orders/:orderId/delivery`
@@ -125,18 +190,26 @@ Cancel body:
 Public order tracking exposes latest delivery projection:
 - provider
 - status
+- customer-facing status label/message
+- provider status
 - provider shipment id
 - tracking number
 - tracking URL
+- courier phone
+- estimated delivery
+- delivery note
 
 ## Browser UI Coverage
 
 The Next.js seller UI exposes the delivery MVP at:
 - `/seller/settings` for pickup address, pickup city, pickup contact, enabled carriers, carrier priorities, and default package dimensions
 - `/seller/orders/[id]` for offer calculation, recommended offer selection, shipment creation, shipment refresh, and tracking link visibility
+- `/seller/orders/[id]` for seller-managed manual delivery entry and status updates
+- `/admin/deliveries` for paid-without-delivery monitoring and admin status override
 - `/orders/[id]` for customer-facing delivery provider, delivery status, and tracking link
 
 `npm run test:e2e:seller-delivery-settings` verifies these paths in mock mode. The test uses API setup for seller approval, shop/product creation, and paid order creation, then performs delivery settings and shipment operations through browser UI.
+`npm run test:e2e:manual-delivery` and `npm run test:e2e:admin-delivery-supervision` verify the seller-managed delivery model.
 
 ## Real Carrier Calls
 

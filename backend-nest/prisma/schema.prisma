@@ -385,6 +385,9 @@ model DeliveryShipment {
   priceCurrency       String          @map("price_currency") @db.VarChar(10)
   trackingNumber      String?         @map("tracking_number") @db.VarChar(255)
   trackingUrl         String?         @map("tracking_url") @db.VarChar(1000)
+  courierPhone        String?         @map("courier_phone") @db.VarChar(50)
+  estimatedDeliveryAt DateTime?       @map("estimated_delivery_at") @db.Timestamptz(6)
+  deliveryNote        String?         @map("delivery_note")
   pickupAddress       String          @map("pickup_address")
   dropoffAddress      String          @map("dropoff_address")
   rawProviderPayload  Json?           @map("raw_provider_payload")
@@ -410,6 +413,11 @@ model DeliveryEvent {
   orderId            String           @map("order_id") @db.Uuid
   provider           String           @db.VarChar(50)
   eventType          String           @map("event_type") @db.VarChar(100)
+  actorUserId        String?          @map("actor_user_id") @db.Uuid
+  actorRole          String?          @map("actor_role") @db.VarChar(50)
+  action             String?          @db.VarChar(100)
+  oldStatus          String?          @map("old_status") @db.VarChar(100)
+  newStatus          String?          @map("new_status") @db.VarChar(100)
   providerStatus     String?          @map("provider_status") @db.VarChar(100)
   message            String?
   rawPayload         Json?            @map("raw_payload")

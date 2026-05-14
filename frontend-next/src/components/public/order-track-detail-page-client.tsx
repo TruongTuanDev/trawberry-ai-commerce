@@ -230,12 +230,31 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                           <p className="text-sm font-semibold text-[var(--foreground)]" data-testid="tracked-delivery-status">
                             {order.delivery.status}
                           </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]" data-testid="tracked-delivery-status-label">
+                            {order.delivery.statusLabel}
+                          </p>
                         </Metric>
                       </div>
                       <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
                         <p className="text-sm font-semibold text-[var(--foreground)]">Claim reference</p>
+                        <p className="mt-2 text-sm text-[var(--foreground)]" data-testid="tracked-delivery-message">{order.delivery.statusMessage}</p>
                         <p className="mt-2 text-sm text-[var(--muted)]">{order.delivery.providerShipmentId ?? "Awaiting provider shipment id."}</p>
                         <p className="mt-3 text-sm text-[var(--muted)]">Tracking number: {order.delivery.trackingNumber ?? "Not assigned yet."}</p>
+                        {order.delivery.courierPhone ? (
+                          <p className="mt-3 text-sm text-[var(--muted)]" data-testid="tracked-delivery-courier-phone">
+                            Courier phone: {order.delivery.courierPhone}
+                          </p>
+                        ) : null}
+                        {order.delivery.estimatedDeliveryAt ? (
+                          <p className="mt-3 text-sm text-[var(--muted)]" data-testid="tracked-delivery-eta">
+                            ETA: {new Date(order.delivery.estimatedDeliveryAt).toLocaleString()}
+                          </p>
+                        ) : null}
+                        {order.delivery.deliveryNote ? (
+                          <p className="mt-3 text-sm text-[var(--muted)]" data-testid="tracked-delivery-note">
+                            {order.delivery.deliveryNote}
+                          </p>
+                        ) : null}
                         {order.delivery.trackingUrl ? (
                           <a
                             href={order.delivery.trackingUrl}

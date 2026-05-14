@@ -10,6 +10,8 @@ Overall result: **PASS for the current MVP/demo flow; PARTIAL for production rea
 
 The practical seller-to-customer path is now verifiable end to end in the new stack: public product browse, checkout, stock deduction, order tracking, payment proof upload, seller payment review, mark paid, mock delivery shipment, seller status update, and customer tracking refresh all pass through automated checks.
 
+Seller-managed manual delivery is now supported for the current no-credentials operating model: sellers create shipments in Yandex/CDEK dashboards outside the system, paste tracking data into seller order detail, and admins supervise paid orders without delivery from `/admin/deliveries`.
+
 Wildberries import is also covered end to end by `npm run smoke:wb-import-checkout` and `npm run test:e2e:wb-import-checkout`: approved seller import, `REMOTE_URL` images, seller price/stock update, public catalog eligibility, customer checkout, stock deduction, order tracking, seller order/payment visibility, and re-import idempotency.
 
 Strong points:
@@ -50,6 +52,7 @@ Demo readiness: **Yes, demo-ready for the MVP using Docker, seeded demo data, ma
 | Seller payment queue/detail | Seller | `/seller/payments`, `/seller/payments/[orderId]`, `GET /api/shops/:shopId/payments` | PASS | `npm run smoke:payments`; `npm run test:e2e:public-payment-review`; full-commerce | Payment proof link verified. |
 | Seller mark paid | Seller | `POST /api/shops/:shopId/payments/:orderId/mark-paid` | PASS | `npm run smoke:payments`; payment-review E2E; full-commerce | Audit log created. |
 | Delivery calculate/create/refresh | Seller | `/seller/orders/[id]`, delivery endpoints | PASS | `npm run smoke:delivery`; `npm run test:e2e:seller-delivery-settings`; `npm run test:e2e:full-commerce` | Browser E2E verifies same-city Yandex recommendation and mock shipment create/refresh. |
+| Seller-managed manual delivery | Seller/Admin | `/seller/orders/[id]`, `/admin/deliveries`, manual delivery endpoints | PASS | `npm run smoke:manual-delivery`; `npm run smoke:admin-delivery-supervision`; `npm run test:e2e:manual-delivery`; `npm run test:e2e:admin-delivery-supervision` | Seller pastes Yandex/CDEK tracking data; admin monitors paid-without-delivery and can override status. |
 | Customer sees delivery tracking | Customer | `/orders/[id]` | PASS | `npm run smoke:delivery`; `npm run test:e2e:seller-delivery-settings`; `npm run test:e2e:full-commerce` | Customer sees provider, `IN_TRANSIT`, and tracking link after seller refresh. |
 | Seller order status update | Seller | `/seller/orders/[id]`, `PATCH /api/shops/:shopId/orders/:orderId/status` | PASS | `npm run test:e2e:full-commerce` | Full E2E updates to `ASSEMBLING` then `SHIPPING`. |
 | Logout/session refresh | Seller | `/login`, `/seller/dashboard`, `POST /api/auth/logout` | PASS | `npm run test:e2e:auth` | Refresh/reload and protected redirect verified. |
