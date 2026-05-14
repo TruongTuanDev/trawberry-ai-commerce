@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { PublicProduct } from "@/lib/public-api";
+import { FallbackImage } from "@/components/ui/fallback-image";
 
 export function ProductCard({ product }: { product: PublicProduct }) {
   return (
     <article className="card-panel group flex h-full flex-col overflow-hidden rounded-[1.75rem]" data-testid="product-card">
       <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(180deg,#efe0ce,#e2c7aa)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={product.images[0]?.url ?? "https://placehold.co/960x720?text=No+Image"}
+        <FallbackImage
+          src={product.images[0]?.url}
           alt={product.name}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
         />

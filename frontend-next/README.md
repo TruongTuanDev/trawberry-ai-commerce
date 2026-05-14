@@ -66,6 +66,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - `.xlsx` upload
   - stock, publish, and fallback-price options
   - preview counts, warnings, and errors
+  - Wildberries remote image links as the default MVP image mode
   - confirm import and result summary
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages

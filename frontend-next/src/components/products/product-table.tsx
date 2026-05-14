@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import type { ProductListItem, StockStatus } from "@/lib/seller-api";
+import { FallbackImage } from "@/components/ui/fallback-image";
 
 function StatusBadge({ visibility, inStock }: { visibility: string | null; inStock: boolean }) {
   const tone = visibility === "ACTIVE" && inStock
@@ -77,8 +78,7 @@ export function ProductTable({
             <div className="flex min-w-0 gap-4">
               <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--panel-strong)]">
                 {product.mainImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={product.mainImage} alt={product.title} className="h-full w-full object-cover" />
+                  <FallbackImage src={product.mainImage} alt={product.title} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-[11px] text-[var(--muted)]">No image</div>
                 )}

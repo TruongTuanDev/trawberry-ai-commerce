@@ -1171,5 +1171,23 @@ git rm --cached frontend-next\.env.local
   - supports aliases for `Артикул ВБ`, `Баркод`, and `Фотографии`
   - handles `КИЗ` values such as `Нужен` and `Не нужен`
   - stores the first barcode when a barcode cell contains multiple values
+
+## Wildberries Remote Image Strategy
+
+- Decision:
+  - keep `REMOTE_URL` as the default and recommended MVP image mode
+  - do not download Wildberries images to storage in this phase
+- Backend behavior:
+  - trims and dedupes URLs from `Фото`
+  - accepts only `http` and `https` URLs
+  - emits `INVALID_IMAGE_URL` warnings and skips invalid URLs
+  - stores remote URLs on product images with no storage download requirement
+  - keeps first valid image as main and preserves valid URL sort order
+  - treats `DOWNLOAD_TO_STORAGE` as not implemented and continues with a warning
+- Frontend behavior:
+  - import UI presents Wildberries image links as the fixed MVP image mode
+  - product cards, public gallery, and seller image gallery use fallback rendering when a remote image fails
+- Remaining gap:
+  - object storage download, retry, and broken-link monitoring remain future work
   - no real WB API calls are made
   - broader admin import audit UI is future work

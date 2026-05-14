@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ProductDetail, ProductImage } from "@/lib/seller-api";
+import { FallbackImage } from "@/components/ui/fallback-image";
 
 const IMAGE_TYPES: ProductImage["imageType"][] = [
   "ORIGINAL",
@@ -53,8 +54,7 @@ export function ProductImageGallery({
           images.map((image) => (
             <article key={image.id} className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)]" data-testid="product-image-card">
               <div className="aspect-[4/3] bg-[var(--panel-strong)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <FallbackImage
                   src={("url" in image ? image.url : image.localUrl) ?? image.wbUrl}
                   alt={`Product image ${image.id}`}
                   className="h-full w-full object-cover"

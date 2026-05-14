@@ -102,7 +102,7 @@ export default function WildberriesImportPage() {
               />
             </label>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <label className="block">
                 <span className="text-sm font-semibold text-[var(--foreground)]">Default stock</span>
                 <input
@@ -137,6 +137,17 @@ export default function WildberriesImportPage() {
                   onChange={(event) => setPriceFallback(event.target.value)}
                 />
               </label>
+              <label className="block">
+                <span className="text-sm font-semibold text-[var(--foreground)]">Image mode</span>
+                <select
+                  value="REMOTE_URL"
+                  disabled
+                  className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--foreground)]"
+                >
+                  <option value="REMOTE_URL">Use Wildberries image links</option>
+                  <option value="DOWNLOAD_TO_STORAGE">Download to storage (coming soon)</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -144,7 +155,7 @@ export default function WildberriesImportPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Target shop</p>
             <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? "No shop selected"}</p>
             <p className="mt-2 text-sm text-[var(--muted)]">Wildberries export Excel is supported.</p>
-            <p className="mt-2 text-sm text-[var(--muted)]">Images use remote WB URLs in the MVP.</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Images use remote WB URLs by default for fast imports. Downloading to storage is planned for a later phase.</p>
             <button
               type="button"
               onClick={() => void previewImport()}

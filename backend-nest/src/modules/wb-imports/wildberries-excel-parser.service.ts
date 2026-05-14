@@ -141,6 +141,15 @@ export class WildberriesExcelParserService {
 
     const warnings: WbImportIssue[] = [];
     const errors: WbImportIssue[] = [];
+    if (options.imageMode === 'DOWNLOAD_TO_STORAGE') {
+      warnings.push({
+        level: 'WARNING',
+        code: 'IMAGE_DOWNLOAD_NOT_IMPLEMENTED',
+        message:
+          'DOWNLOAD_TO_STORAGE is not implemented yet. Images will be imported as remote URLs.',
+      });
+    }
+
     const rows = this.readRows(sheet, warnings);
     const productsByKey = new Map<string, WbImportProduct>();
     const seenSellerSkuRows = new Map<string, number>();
@@ -388,7 +397,10 @@ export class WildberriesExcelParserService {
     warnings: WbImportIssue[],
   ) {
     const seen = new Set<string>();
-    return (this.text(value) ?? '')
+    const images: Array<{ url: string; isMain: boolean; sortOrder: number }> =
+      [];
+
+    for (const url of (this.text(value) ?? '')
       .split(';')
       .map((url) => url.trim())
       .filter(Boolean)
@@ -398,24 +410,26 @@ export class WildberriesExcelParserService {
         }
         seen.add(url);
         return true;
-      })
-      .map((url, index) => {
-        if (!this.isValidUrl(url)) {
-          warnings.push({
-            level: 'WARNING',
-            code: 'INVALID_IMAGE_URL',
-            message: `Image URL is invalid: ${url}`,
-            row: rowNumber,
-            sellerSku,
-          });
-        }
+      })) {
+      if (!this.isValidUrl(url)) {
+        warnings.push({
+          level: 'WARNING',
+          code: 'INVALID_IMAGE_URL',
+          message: `Image URL is invalid: ${url}`,
+          row: rowNumber,
+          sellerSku,
+        });
+        continue;
+      }
 
-        return {
-          url,
-          isMain: index === 0,
-          sortOrder: index,
-        };
+      images.push({
+        url,
+        isMain: images.length === 0,
+        sortOrder: images.length,
       });
+    }
+
+    return images;
   }
 
   private validateProduct(product: WbImportProduct) {

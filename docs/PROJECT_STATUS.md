@@ -610,6 +610,7 @@ Status: implemented in `frontend-next`.
 - Added additive Prisma fields for product/variant external metadata and `product_import_sessions`.
 - Added parser support for sheet `Товары`, header row `3`, auto-detected data rows, SKU grouping, variants, image URL split, warnings, and blocking errors.
 - Audited local private `data.xlsx` against the parser; the real export has help text on row `4` and first product data on row `5`, so the parser no longer assumes data starts on row `6`.
+- Wildberries images remain remote URLs by default for MVP. Parser skips invalid image URLs with warnings, dedupes duplicates, keeps the first valid image as main, and treats `DOWNLOAD_TO_STORAGE` as a future mode.
 - Added `/seller/import/wildberries` in `frontend-next` with upload options, preview summary/table, confirm action, and result summary.
 - Added sanitized fixture `backend-nest/test/fixtures/wb-products-sample.xlsx`.
 - Added `npm run smoke:wb-import`.

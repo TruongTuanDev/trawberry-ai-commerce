@@ -9,6 +9,7 @@ Seller product import from a Wildberries `.xlsx` export.
 - Rows are grouped into products by `Артикул продавца`, then `Артикул WB`, then product name + color fallback.
 - Each grouped row becomes a variant/size.
 - `Фото` is split by `;` and stored as remote URLs in the MVP.
+- `REMOTE_URL` is the default and recommended image mode for this phase.
 - Local `data.xlsx` is a private reference export for audit only and must not be committed.
 
 ## Audited Wildberries Layout
@@ -45,6 +46,23 @@ Seller product import from a Wildberries `.xlsx` export.
 
 Header matching trims text, lowercases it, collapses duplicate spaces, tolerates `ё`/`е`, and supports small aliases such as `Артикул ВБ`, `Баркод`, and `Фотографии`.
 
+## Image Strategy
+- MVP keeps Wildberries image links as remote URLs. This is the fastest path for sellers importing an existing WB catalog.
+- Image URLs are trimmed, deduped per product, and accepted only when they use `http` or `https`.
+- Invalid image URLs create `INVALID_IMAGE_URL` warnings and are skipped; they do not block the import.
+- The first valid image becomes the main product image. Sort order follows the valid URL order from the Excel cell.
+- Confirm import stores the remote URL in product image records and does not require object storage.
+- Re-import checks existing image URLs and does not create duplicates.
+
+Risks of remote URLs:
+- A Wildberries CDN URL can stop resolving or change availability outside our control.
+- Image latency and caching behavior depend on the remote host.
+- Public and seller UIs include an image fallback when a remote image fails to load.
+
+Future plan:
+- `DOWNLOAD_TO_STORAGE` remains a future mode. If the option appears, the import warns that it is not implemented and continues with remote URLs.
+- A later phase can add background download, storage keys, retry handling, and broken-link monitoring without changing the normalized import payload shape.
+
 ## Backend Endpoints
 All endpoints require seller auth and shop access. Only `APPROVED` sellers can import.
 
@@ -55,7 +73,7 @@ Multipart fields:
 - `file`: `.xlsx`
 - `defaultStockQuantity`: optional number, default `0`
 - `publishMode`: `DRAFT | ACTIVE`, default `DRAFT`
-- `imageMode`: `REMOTE_URL | DOWNLOAD_TO_STORAGE`; MVP currently supports `REMOTE_URL`
+- `imageMode`: `REMOTE_URL | DOWNLOAD_TO_STORAGE`; default is `REMOTE_URL`. `DOWNLOAD_TO_STORAGE` is not implemented yet and falls back to remote URLs with a warning.
 - `priceFallback`: optional number
 
 ### Confirm

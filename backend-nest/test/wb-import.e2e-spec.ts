@@ -23,6 +23,20 @@ function fileFromBuffer(
   };
 }
 
+function buildWorkbook(rows: unknown[][]) {
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.aoa_to_sheet(rows),
+    'Товары',
+  );
+
+  return XLSX.write(workbook, {
+    type: 'buffer',
+    bookType: 'xlsx',
+  }) as Buffer;
+}
+
 describe('WildberriesExcelParserService', () => {
   const parser = new WildberriesExcelParserService();
 
@@ -91,6 +105,79 @@ describe('WildberriesExcelParserService', () => {
     expect(preview.errors).toEqual([
       expect.objectContaining({ code: 'SHEET_NOT_FOUND' }),
     ]);
+  });
+
+  it('dedupes remote images, skips invalid URLs, and keeps the first valid image as main', () => {
+    const buffer = buildWorkbook([
+      [],
+      [],
+      [
+        'Артикул продавца',
+        'Наименование',
+        'Категория продавца',
+        'Описание',
+        'Фото',
+        'Размер',
+        'Рос. размер',
+        'Цена',
+      ],
+      ['Help text'],
+      [
+        'SKU-IMAGE',
+        'WB Image Product',
+        'Shirts',
+        'Description',
+        'not-a-url; https://example.com/valid-a.jpg ;https://example.com/valid-a.jpg;https://example.com/valid-b.jpg',
+        'S',
+        '42',
+        1000,
+      ],
+    ]);
+
+    const preview = parser.parse(fileFromBuffer(buffer), {
+      defaultStockQuantity: 0,
+      publishMode: 'DRAFT',
+      imageMode: 'REMOTE_URL',
+    });
+
+    expect(preview.products[0].images).toEqual([
+      {
+        url: 'https://example.com/valid-a.jpg',
+        isMain: true,
+        sortOrder: 0,
+      },
+      {
+        url: 'https://example.com/valid-b.jpg',
+        isMain: false,
+        sortOrder: 1,
+      },
+    ]);
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'INVALID_IMAGE_URL', row: 5 }),
+      ]),
+    );
+  });
+
+  it('warns that DOWNLOAD_TO_STORAGE is not implemented and keeps remote URL parsing', () => {
+    const buffer = fs.readFileSync(
+      path.join(__dirname, 'fixtures', 'wb-products-sample.xlsx'),
+    );
+
+    const preview = parser.parse(fileFromBuffer(buffer), {
+      defaultStockQuantity: 0,
+      publishMode: 'DRAFT',
+      imageMode: 'DOWNLOAD_TO_STORAGE',
+    });
+
+    expect(preview.products[0].images[0].url).toBe(
+      'https://example.com/a1.jpg',
+    );
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'IMAGE_DOWNLOAD_NOT_IMPLEMENTED' }),
+      ]),
+    );
   });
 
   it('rejects unsupported file types', () => {

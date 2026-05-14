@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FallbackImage } from "@/components/ui/fallback-image";
 
 export function ProductGallery({
   name,
@@ -26,8 +27,7 @@ export function ProductGallery({
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-[1.75rem] bg-[linear-gradient(180deg,#efe0ce,#e2c7aa)] p-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={selectedImage.url} alt={name} className="h-full w-full rounded-[1.35rem] object-cover" />
+        <FallbackImage src={selectedImage.url} alt={name} className="h-full w-full rounded-[1.35rem] object-cover" />
       </div>
       <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
         {normalizedImages.map((image, index) => (
@@ -38,8 +38,7 @@ export function ProductGallery({
             className={`overflow-hidden rounded-[1.1rem] border p-1 ${index === selectedIndex ? "border-[var(--accent)] bg-[var(--accent-soft)]/50" : "border-[var(--border)] bg-white"}`}
             aria-label={`Select product image ${index + 1}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} alt={`${name} thumbnail ${index + 1}`} className="aspect-square w-full rounded-[0.85rem] object-cover" />
+            <FallbackImage src={image.url} alt={`${name} thumbnail ${index + 1}`} className="aspect-square w-full rounded-[0.85rem] object-cover" />
           </button>
         ))}
       </div>

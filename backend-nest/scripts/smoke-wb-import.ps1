@@ -78,6 +78,42 @@ if (@($detail.variants).Count -lt 2) {
 if (@($detail.images).Count -lt 2) {
   throw 'Expected imported remote images for SKU-100.'
 }
+if (-not (@($detail.images) | Where-Object { $_.wbUrl -like 'https://example.com/*' -or $_.localUrl -like 'https://example.com/*' })) {
+  throw 'Expected product detail to expose remote image URLs.'
+}
+
+$env:TARGET_PRODUCT_ID = $productId
+$remoteImageAuditRaw = @'
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+(async () => {
+  const images = await prisma.productImage.findMany({
+    where: { productId: process.env.TARGET_PRODUCT_ID },
+    orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
+  });
+  const urls = images.map((image) => image.wbUrl);
+  const duplicateUrls = urls.filter((url, index) => urls.indexOf(url) !== index);
+  console.log(JSON.stringify({
+    count: images.length,
+    mainUrl: images[0]?.wbUrl ?? null,
+    firstIsMain: images[0]?.isMain ?? false,
+    remoteUrlCount: images.filter((image) => image.wbUrl?.startsWith('https://example.com/') && image.localUrl?.startsWith('https://example.com/')).length,
+    storageKeyCount: images.filter((image) => image.storageKey).length,
+    duplicateUrlCount: duplicateUrls.length,
+  }));
+  await prisma.$disconnect();
+})().catch(async (error) => {
+  console.error(error);
+  await prisma.$disconnect();
+  process.exit(1);
+});
+'@ | node -
+$remoteImageAudit = $remoteImageAuditRaw | ConvertFrom-Json
+Remove-Item Env:TARGET_PRODUCT_ID
+
+if ($remoteImageAudit.remoteUrlCount -lt 2 -or $remoteImageAudit.storageKeyCount -ne 0 -or $remoteImageAudit.duplicateUrlCount -ne 0 -or -not $remoteImageAudit.firstIsMain) {
+  throw "Remote image persistence audit failed: $remoteImageAuditRaw"
+}
 
 $secondPreviewRaw = curl.exe -s -X POST `
   -H "Authorization: Bearer $($login.accessToken)" `
@@ -96,6 +132,11 @@ if ($after.meta.total -ne $preview.totalProducts) {
   throw "Re-import duplicated products. Expected $($preview.totalProducts), got $($after.meta.total)."
 }
 
+$detailAfterReimport = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/products/$productId" -Headers $headers
+if (@($detailAfterReimport.images).Count -ne @($detail.images).Count) {
+  throw 'Re-import duplicated product images.'
+}
+
 [pscustomobject]@{
   baseUrl = $baseUrl
   shopId = $shop.id
@@ -109,4 +150,7 @@ if ($after.meta.total -ne $preview.totalProducts) {
   productListTotalAfterReimport = $after.meta.total
   groupedVariantCount = @($detail.variants).Count
   imageCount = @($detail.images).Count
+  remoteImageCount = $remoteImageAudit.remoteUrlCount
+  storageKeyCount = $remoteImageAudit.storageKeyCount
+  duplicateImageUrlCount = $remoteImageAudit.duplicateUrlCount
 } | ConvertTo-Json -Compress
