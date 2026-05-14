@@ -14,6 +14,8 @@ import { readBody } from './test-helpers';
 type DecimalLike = {
   plus(value: DecimalLike): DecimalLike;
   mul(value: DecimalLike): DecimalLike;
+  gt(value: number): boolean;
+  lte(value: number): boolean;
   toString(): string;
 };
 
@@ -41,7 +43,7 @@ type StoredShop = {
   slug: string;
   status: string;
   paymentInstructions: string | null;
-  sellerProfile: { userId: string };
+  sellerProfile: { userId: string; approvalStatus: string };
 };
 
 type StoredVariant = {
@@ -77,6 +79,12 @@ type StoredProduct = {
     sortOrder: number;
   }>;
   variants: StoredVariant[];
+  shop: {
+    status: string;
+    sellerProfile: {
+      approvalStatus: string;
+    };
+  };
 };
 
 type StoredOrder = {
@@ -125,6 +133,12 @@ describe('CheckoutController (e2e)', () => {
       },
       mul(other: DecimalLike) {
         return decimal(String(numeric * Number(other.toString())));
+      },
+      gt(other: number) {
+        return numeric > other;
+      },
+      lte(other: number) {
+        return numeric <= other;
       },
       toString() {
         return numeric.toFixed(2).replace(/\.?0+$/, '');
@@ -183,7 +197,7 @@ describe('CheckoutController (e2e)', () => {
         slug: 'shop-one',
         status: 'ACTIVE',
         paymentInstructions: 'Transfer to bank account 123.',
-        sellerProfile: { userId: 'seller-user-1' },
+        sellerProfile: { userId: 'seller-user-1', approvalStatus: 'APPROVED' },
       },
     ];
 
@@ -208,6 +222,12 @@ describe('CheckoutController (e2e)', () => {
             sortOrder: 0,
           },
         ],
+        shop: {
+          status: 'ACTIVE',
+          sellerProfile: {
+            approvalStatus: 'APPROVED',
+          },
+        },
         variants: [
           {
             id: 'variant-1',
@@ -236,6 +256,12 @@ describe('CheckoutController (e2e)', () => {
         brand: null,
         visibility: 'ACTIVE',
         images: [],
+        shop: {
+          status: 'ACTIVE',
+          sellerProfile: {
+            approvalStatus: 'APPROVED',
+          },
+        },
         variants: [
           {
             id: 'variant-2',
@@ -339,6 +365,9 @@ describe('CheckoutController (e2e)', () => {
         if (select?.sellerProfile) {
           return {
             id: shop.id,
+            name: shop.name,
+            paymentInstructions: shop.paymentInstructions,
+            status: shop.status,
             sellerProfile: shop.sellerProfile,
           };
         }

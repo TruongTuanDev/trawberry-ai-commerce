@@ -26,6 +26,7 @@ export default function SellerProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [inventorySavingId, setInventorySavingId] = useState<string | null>(null);
+  const [priceSavingId, setPriceSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -106,6 +107,26 @@ export default function SellerProductDetailPage() {
     }
   };
 
+  const handlePriceSave = async (variantId: string, chrtId: string, basePrice: number) => {
+    if (!currentShopId || !product) {
+      return;
+    }
+
+    setPriceSavingId(variantId);
+    try {
+      const updated = await updateShopProduct(currentShopId, product.id, {
+        variants: [{ chrtId: Number(chrtId), basePrice, discountPrice: basePrice }],
+      });
+      setProduct(updated);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update price.");
+      throw err;
+    } finally {
+      setPriceSavingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <SectionCard eyebrow="Product detail" title="Loading product" description="Fetching seller product details from NestJS.">
@@ -150,7 +171,7 @@ export default function SellerProductDetailPage() {
             description="Inventory is managed per variant in this MVP. Stock updates are absolute values and checkout deducts inventory immediately."
           >
             <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-              <div className="hidden grid-cols-[120px_120px_120px_120px_120px_160px_140px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
+              <div className="hidden grid-cols-[110px_110px_130px_100px_120px_150px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
                 <div>Tech size</div>
                 <div>WB size</div>
                 <div>Base price</div>
@@ -162,6 +183,7 @@ export default function SellerProductDetailPage() {
               <div className="divide-y divide-[var(--border)]">
                 {(inventory?.variants ?? product.variants.map((variant) => ({
                   id: variant.id,
+                  chrtId: variant.chrtId,
                   techSize: variant.techSize,
                   wbSize: variant.wbSize,
                   stockQuantity: variant.stockQuantity,
@@ -180,7 +202,9 @@ export default function SellerProductDetailPage() {
                       discountPrice: product.variants.find((entry) => entry.id === variant.id)?.discountPrice ?? null,
                     }}
                     saving={inventorySavingId === variant.id}
+                    priceSaving={priceSavingId === variant.id}
                     onSave={handleInventorySave}
+                    onPriceSave={handlePriceSave}
                   />
                 ))}
               </div>
@@ -223,10 +247,13 @@ export default function SellerProductDetailPage() {
 function InventoryRow({
   variant,
   saving,
+  priceSaving,
   onSave,
+  onPriceSave,
 }: {
   variant: {
     id: string;
+    chrtId: string;
     techSize: string | null;
     wbSize: string | null;
     basePrice: string | null;
@@ -240,15 +267,27 @@ function InventoryRow({
     inStock: boolean;
   };
   saving: boolean;
+  priceSaving: boolean;
   onSave: (variantId: string, stockQuantity: number) => Promise<void>;
+  onPriceSave: (variantId: string, chrtId: string, basePrice: number) => Promise<void>;
 }) {
   const [value, setValue] = useState(String(variant.stockQuantity));
+  const [priceValue, setPriceValue] = useState(variant.basePrice ?? "0");
 
   return (
-    <article className="grid gap-3 px-4 py-4 md:grid-cols-[120px_120px_120px_120px_120px_160px_140px] md:px-5">
+    <article className="grid gap-3 px-4 py-4 md:grid-cols-[110px_110px_130px_100px_120px_150px_220px] md:px-5">
       <div className="text-sm text-[var(--foreground)]">{variant.techSize ?? "N/A"}</div>
       <div className="text-sm text-[var(--muted)]">{variant.wbSize ?? "N/A"}</div>
-      <div className="text-sm text-[var(--foreground)]">{variant.basePrice ?? "0.00"}</div>
+      <div>
+        <input
+          type="number"
+          min={0}
+          value={priceValue}
+          onChange={(event) => setPriceValue(event.target.value)}
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--foreground)]"
+          data-testid="product-price-input"
+        />
+      </div>
       <div className="text-sm text-[var(--foreground)]">{variant.discountPrice ?? "-"}</div>
       <div>
           <input
@@ -263,10 +302,19 @@ function InventoryRow({
       <div className={variant.stockStatus === "OUT_OF_STOCK" ? "text-sm font-semibold text-rose-700" : variant.stockStatus === "LOW_STOCK" ? "text-sm font-semibold text-amber-700" : "text-sm text-emerald-700"}>
         {variant.trackInventory ? `${variant.availableQuantity} available` : "Not tracked"}
         <div className="text-xs text-[var(--muted)]">
-          {variant.trackInventory ? `${variant.reservedStock} reserved · threshold ${variant.lowStockThreshold}` : "Inventory tracking disabled"}
+          {variant.trackInventory ? `${variant.reservedStock} reserved - threshold ${variant.lowStockThreshold}` : "Inventory tracking disabled"}
         </div>
       </div>
-      <div className="flex items-center justify-start">
+      <div className="flex flex-wrap items-center justify-start gap-2">
+        <button
+          type="button"
+          onClick={() => void onPriceSave(variant.id, variant.chrtId, Math.max(0, Number(priceValue) || 0))}
+          disabled={priceSaving}
+          className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+          data-testid="product-price-save"
+        >
+          {priceSaving ? "Saving..." : "Save price"}
+        </button>
         <button
           type="button"
           onClick={() => void onSave(variant.id, Math.max(0, Number(value) || 0))}

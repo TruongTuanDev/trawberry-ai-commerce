@@ -509,6 +509,15 @@ export type UpdateProductPayload = Partial<{
   seoSlug: string;
   visibility: string;
   localTags: string[];
+  variants: Array<{
+    chrtId: number;
+    isActive?: boolean;
+    basePrice?: number;
+    discountPrice?: number;
+    stockQuantity?: number;
+    lowStockThreshold?: number;
+    trackInventory?: boolean;
+  }>;
 }>;
 
 export async function createSellerShop(payload: CreateShopPayload, token?: string) {

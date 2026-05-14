@@ -21,6 +21,12 @@ type CheckoutProductRecord = {
   visibility: string | null;
   images: ProductImage[];
   variants: ProductVariant[];
+  shop: {
+    status: string;
+    sellerProfile: {
+      approvalStatus: string;
+    };
+  };
 };
 
 type NormalizedCheckoutItem = {
@@ -43,6 +49,11 @@ export class CheckoutService {
         name: true,
         paymentInstructions: true,
         status: true,
+        sellerProfile: {
+          select: {
+            approvalStatus: true,
+          },
+        },
       },
     });
 
@@ -50,7 +61,10 @@ export class CheckoutService {
       throw new NotFoundException(`Shop ${dto.shopId} was not found.`);
     }
 
-    if (shop.status !== 'ACTIVE') {
+    if (
+      shop.status !== 'ACTIVE' ||
+      shop.sellerProfile.approvalStatus !== 'APPROVED'
+    ) {
       throw new BadRequestException(
         `Shop ${dto.shopId} is not available for checkout.`,
       );
@@ -76,6 +90,16 @@ export class CheckoutService {
           },
           orderBy: { createdAt: 'asc' },
         },
+        shop: {
+          select: {
+            status: true,
+            sellerProfile: {
+              select: {
+                approvalStatus: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -98,7 +122,12 @@ export class CheckoutService {
         );
       }
 
-      if (product.visibility !== 'ACTIVE') {
+      if (
+        product.visibility !== 'ACTIVE' ||
+        product.shop.status !== 'ACTIVE' ||
+        product.shop.sellerProfile.approvalStatus !== 'APPROVED' ||
+        product.images.length < 1
+      ) {
         throw new BadRequestException(
           `Product ${item.productId} is not available for checkout.`,
         );
@@ -119,7 +148,7 @@ export class CheckoutService {
       }
 
       const unitPrice = this.resolveVariantPrice(variant);
-      if (!unitPrice) {
+      if (!unitPrice || unitPrice.lte(0)) {
         throw new BadRequestException(
           `Product ${item.productId} is not purchasable because its price is missing.`,
         );
@@ -287,9 +316,10 @@ export class CheckoutService {
 
   private resolveVariant(product: CheckoutProductRecord) {
     return (
-      product.variants.find(
-        (variant) => this.resolveVariantPrice(variant) !== null,
-      ) ?? null
+      product.variants.find((variant) => {
+        const price = this.resolveVariantPrice(variant);
+        return price !== null && price.gt(0) && variant.stockQuantity > 0;
+      }) ?? null
     );
   }
 

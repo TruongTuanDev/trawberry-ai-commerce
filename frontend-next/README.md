@@ -110,6 +110,16 @@ With the Docker stack or local frontend/backend already running:
 npm run test:e2e:auth
 ```
 
+## Playwright WB Import Checkout Flow
+
+With Docker runtime and demo seed available:
+
+```bash
+npm run test:e2e:wb-import-checkout
+```
+
+This browser flow sets up an approved seller and shop through the API, then verifies seller login, WB import preview/confirm, imported product price and stock update, public checkout, customer order tracking, seller order visibility, and stock after checkout.
+
 Defaults:
 - frontend base URL: `http://localhost:3000`
 - backend API URL for test registration: `http://localhost:3001`

@@ -195,45 +195,70 @@ export class ProductsService {
       }
     }
 
-    const product = await this.prisma.product.update({
-      where: { id: productId },
-      data: {
-        wbNmId: dto.wbNmId !== undefined ? BigInt(dto.wbNmId) : undefined,
-        wbImtId: dto.wbImtId !== undefined ? BigInt(dto.wbImtId) : undefined,
-        wbNmUuid: dto.wbNmUuid,
-        brand: dto.brand,
-        wbTitle: dto.wbTitle,
-        wbDescription: dto.wbDescription,
-        categoryId:
-          dto.categoryId !== undefined ? BigInt(dto.categoryId) : undefined,
-        categoryName: dto.categoryName,
-        wbVendorCode: dto.wbVendorCode,
-        wbVideoUrl: dto.wbVideoUrl,
-        wbNeedKiz: dto.wbNeedKiz,
-        subjectId:
-          dto.subjectId !== undefined ? BigInt(dto.subjectId) : undefined,
-        wholesaleEnabled: dto.wholesaleEnabled,
-        wholesaleQuantum: dto.wholesaleQuantum,
-        length: dto.length,
-        width: dto.width,
-        height: dto.height,
-        weightBrutto: dto.weightBrutto,
-        dimensionsValid: dto.dimensionsValid,
-        localTitle: dto.localTitle,
-        localDescription: dto.localDescription,
-        seoSlug: dto.seoSlug,
-        visibility: dto.visibility,
-        localTags: dto.localTags,
-      },
-      include: {
-        images: {
-          orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
+    await this.prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          wbNmId: dto.wbNmId !== undefined ? BigInt(dto.wbNmId) : undefined,
+          wbImtId: dto.wbImtId !== undefined ? BigInt(dto.wbImtId) : undefined,
+          wbNmUuid: dto.wbNmUuid,
+          brand: dto.brand,
+          wbTitle: dto.wbTitle,
+          wbDescription: dto.wbDescription,
+          categoryId:
+            dto.categoryId !== undefined ? BigInt(dto.categoryId) : undefined,
+          categoryName: dto.categoryName,
+          wbVendorCode: dto.wbVendorCode,
+          wbVideoUrl: dto.wbVideoUrl,
+          wbNeedKiz: dto.wbNeedKiz,
+          subjectId:
+            dto.subjectId !== undefined ? BigInt(dto.subjectId) : undefined,
+          wholesaleEnabled: dto.wholesaleEnabled,
+          wholesaleQuantum: dto.wholesaleQuantum,
+          length: dto.length,
+          width: dto.width,
+          height: dto.height,
+          weightBrutto: dto.weightBrutto,
+          dimensionsValid: dto.dimensionsValid,
+          localTitle: dto.localTitle,
+          localDescription: dto.localDescription,
+          seoSlug: dto.seoSlug,
+          visibility: dto.visibility,
+          localTags: dto.localTags,
         },
-        category: true,
-        variants: true,
-        shop: true,
-      },
+      });
+
+      for (const variant of dto.variants ?? []) {
+        const updated = await tx.productVariant.updateMany({
+          where: {
+            productId,
+            chrtId: BigInt(variant.chrtId),
+          },
+          data: {
+            isActive: variant.isActive,
+            basePrice:
+              variant.basePrice !== undefined
+                ? new Prisma.Decimal(variant.basePrice)
+                : undefined,
+            discountPrice:
+              variant.discountPrice !== undefined
+                ? new Prisma.Decimal(variant.discountPrice)
+                : undefined,
+            stockQuantity: variant.stockQuantity,
+            lowStockThreshold: variant.lowStockThreshold,
+            trackInventory: variant.trackInventory,
+          },
+        });
+
+        if (updated.count !== 1) {
+          throw new BadRequestException(
+            `Variant ${variant.chrtId} was not found in product ${productId}.`,
+          );
+        }
+      }
     });
+
+    const product = await this.findShopProductOrThrow(shopId, productId);
 
     return this.mapProductDetail(product);
   }

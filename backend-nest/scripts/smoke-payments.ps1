@@ -81,6 +81,16 @@ const prisma = new PrismaClient();
       reservedStock: 0,
     },
   });
+  await prisma.productImage.create({
+    data: {
+      id: randomUUID(),
+      productId: process.env.TARGET_PRODUCT_ID,
+      wbUrl: 'https://example.com/smoke-payments.jpg',
+      localUrl: 'https://example.com/smoke-payments.jpg',
+      isMain: true,
+      sortOrder: 0,
+    },
+  });
   await prisma.$disconnect();
 })().catch(async (error) => {
   console.error(error);

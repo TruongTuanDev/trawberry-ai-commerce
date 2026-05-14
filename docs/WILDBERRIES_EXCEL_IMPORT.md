@@ -103,4 +103,19 @@ Smoke:
 ```bash
 cd backend-nest
 npm run smoke:wb-import
+npm run smoke:wb-import-checkout
 ```
+
+## Import To Checkout Flow
+
+The verified WB import-to-checkout path is:
+
+1. Approved seller creates an active shop.
+2. Seller previews and confirms the sanitized Wildberries Excel fixture.
+3. Import stores image links as `REMOTE_URL`; images are not downloaded in this phase.
+4. Seller reviews imported products and updates price and stock.
+5. Product becomes public when seller is approved, shop is active, product visibility is `ACTIVE`, at least one image exists, an active variant has price `> 0`, and stock is available.
+6. Customer checkout uses backend-calculated totals and deducts stock immediately.
+7. Re-importing the same file is idempotent for products, variants, and images.
+
+`npm run smoke:wb-import-checkout` verifies price `1990`, stock `5`, checkout quantity `2`, total `3980`, stock after checkout `3`, insufficient-stock rejection, customer tracking, seller order/payment visibility, and same-file re-import without duplicates.

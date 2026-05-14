@@ -180,4 +180,12 @@ Run:
 ```bash
 cd backend-nest
 npm run smoke:inventory
+npm run smoke:inventory-alerts
+npm run smoke:wb-import-checkout
 ```
+
+## WB Import Inventory Notes
+
+Imported WB products use the import `defaultStockQuantity` first. Sellers can then update stock per variant from the seller product detail or `PATCH /api/shops/:shopId/products/:productId/inventory`.
+
+The WB import checkout smoke sets stock to `5`, checks out quantity `2`, verifies available stock becomes `3`, and verifies a follow-up checkout quantity `4` is rejected for insufficient stock.

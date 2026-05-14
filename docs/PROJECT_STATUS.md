@@ -1,5 +1,11 @@
 # Project Status
 
+## Latest Verification Addendum
+
+- WB import to checkout has dedicated backend and browser coverage through `smoke:wb-import-checkout` and `test:e2e:wb-import-checkout`.
+- Public products require approved seller, active shop/product, at least one image, positive active variant price, and available stock.
+- WB import image handling remains `REMOTE_URL`; same-file re-import is expected to be idempotent.
+
 ## A. Project Summary
 
 - Project name: `Trawberry AI Commerce`

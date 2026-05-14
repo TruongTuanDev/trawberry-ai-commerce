@@ -56,6 +56,7 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
 $env:TARGET_PRODUCT_ID = $product.id
 @'
 const { PrismaClient } = require('@prisma/client');
+const { randomUUID } = require('node:crypto');
 const prisma = new PrismaClient();
 (async () => {
   await prisma.productVariant.create({
@@ -67,6 +68,16 @@ const prisma = new PrismaClient();
       basePrice: 99,
       stockQuantity: 2,
       reservedStock: 0,
+    },
+  });
+  await prisma.productImage.create({
+    data: {
+      id: randomUUID(),
+      productId: process.env.TARGET_PRODUCT_ID,
+      wbUrl: 'https://example.com/smoke-inventory.jpg',
+      localUrl: 'https://example.com/smoke-inventory.jpg',
+      isMain: true,
+      sortOrder: 0,
     },
   });
   await prisma.$disconnect();

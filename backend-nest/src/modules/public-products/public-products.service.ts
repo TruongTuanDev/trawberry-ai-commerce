@@ -31,9 +31,33 @@ export class PublicProductsService {
   async list(query: ListPublicProductsQueryDto) {
     const where: Prisma.ProductWhereInput = {
       visibility: 'ACTIVE',
+      images: {
+        some: {},
+      },
+      shop: {
+        status: 'ACTIVE',
+        sellerProfile: {
+          approvalStatus: 'APPROVED',
+        },
+      },
       variants: {
         some: {
           isActive: true,
+          stockQuantity: {
+            gt: 0,
+          },
+          OR: [
+            {
+              discountPrice: {
+                gt: 0,
+              },
+            },
+            {
+              basePrice: {
+                gt: 0,
+              },
+            },
+          ],
         },
       },
       ...(query.search?.trim()
@@ -72,6 +96,21 @@ export class PublicProductsService {
           variants: {
             where: {
               isActive: true,
+              stockQuantity: {
+                gt: 0,
+              },
+              OR: [
+                {
+                  discountPrice: {
+                    gt: 0,
+                  },
+                },
+                {
+                  basePrice: {
+                    gt: 0,
+                  },
+                },
+              ],
             },
             orderBy: { createdAt: 'asc' },
           },
@@ -107,9 +146,33 @@ export class PublicProductsService {
       where: {
         id: productId,
         visibility: 'ACTIVE',
+        images: {
+          some: {},
+        },
+        shop: {
+          status: 'ACTIVE',
+          sellerProfile: {
+            approvalStatus: 'APPROVED',
+          },
+        },
         variants: {
           some: {
             isActive: true,
+            stockQuantity: {
+              gt: 0,
+            },
+            OR: [
+              {
+                discountPrice: {
+                  gt: 0,
+                },
+              },
+              {
+                basePrice: {
+                  gt: 0,
+                },
+              },
+            ],
           },
         },
       },
@@ -120,6 +183,21 @@ export class PublicProductsService {
         variants: {
           where: {
             isActive: true,
+            stockQuantity: {
+              gt: 0,
+            },
+            OR: [
+              {
+                discountPrice: {
+                  gt: 0,
+                },
+              },
+              {
+                basePrice: {
+                  gt: 0,
+                },
+              },
+            ],
           },
           orderBy: { createdAt: 'asc' },
         },

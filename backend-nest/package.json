@@ -21,6 +21,7 @@
     "smoke:inventory": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory.ps1",
     "smoke:inventory-alerts": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory-alerts.ps1",
     "smoke:wb-import": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import.ps1",
+    "smoke:wb-import-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import-checkout.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",
     "smoke:payments": "powershell -ExecutionPolicy Bypass -File scripts/smoke-payments.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",

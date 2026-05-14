@@ -112,6 +112,7 @@ npm run start:dev
 - Preview groups rows by seller SKU into products and variants.
 - Confirm import upserts products, variants, and remote image URLs. `REMOTE_URL` is the default MVP image mode; `DOWNLOAD_TO_STORAGE` is reserved for a future phase.
 - Smoke: `npm run smoke:wb-import`.
+- Full import-to-checkout smoke: `npm run smoke:wb-import-checkout`.
 
 ## AI image tasks
 - NestJS only creates tasks, checks credits, and enqueues BullMQ jobs.

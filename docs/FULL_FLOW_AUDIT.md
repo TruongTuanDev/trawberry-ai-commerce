@@ -10,6 +10,8 @@ Overall result: **PASS for the current MVP/demo flow; PARTIAL for production rea
 
 The practical seller-to-customer path is now verifiable end to end in the new stack: public product browse, checkout, stock deduction, order tracking, payment proof upload, seller payment review, mark paid, mock delivery shipment, seller status update, and customer tracking refresh all pass through automated checks.
 
+Wildberries import is also covered end to end by `npm run smoke:wb-import-checkout` and `npm run test:e2e:wb-import-checkout`: approved seller import, `REMOTE_URL` images, seller price/stock update, public catalog eligibility, customer checkout, stock deduction, order tracking, seller order/payment visibility, and re-import idempotency.
+
 Strong points:
 - Docker runtime is healthy for frontend, backend, AI service, Postgres, Redis, and MinIO.
 - Backend module tests and smoke scripts cover checkout, order tracking, payments, inventory, low-stock alerts, and mock delivery.

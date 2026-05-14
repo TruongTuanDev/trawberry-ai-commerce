@@ -1,5 +1,28 @@
 # Phase Report
 
+## Wildberries Import To Checkout Verification
+
+- Scope:
+  - verify approved seller Wildberries Excel import through customer checkout
+  - keep legacy `strawberry-frontend` and `strawberry-backend` untouched
+  - avoid real OpenAI, Yandex, and CDEK calls
+- Result:
+  - added `backend-nest/scripts/smoke-wb-import-checkout.ps1`
+  - added `npm run smoke:wb-import-checkout`
+  - added `frontend-next/tests/e2e/wb-import-checkout-flow.spec.ts`
+  - added `npm run test:e2e:wb-import-checkout`
+  - seller product detail can update variant price as well as stock
+  - public products and checkout now require approved seller, active shop/product, image, price `> 0`, and stock
+- Flow covered:
+  - WB import preview/confirm with sanitized fixture and `REMOTE_URL` images
+  - seller price update to `1990` and stock update to `5`
+  - public product listing/detail
+  - customer checkout quantity `2`, backend total `3980`, pending payment/order
+  - stock deduction to `3`
+  - insufficient stock rejection
+  - customer tracking and seller order/payment visibility
+  - re-import idempotency for products, variants, and images
+
 ## Scope
 Review the current Docker Compose runtime for `C:\Users\admin\trawberry-ai-commerce`, verify commit safety, and prepare a clean commit checklist without changing business logic.
 

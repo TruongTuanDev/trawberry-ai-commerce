@@ -77,9 +77,13 @@ Validation:
 - `items` must contain at least one item
 - `quantity >= 1`
 - shop must exist and be `ACTIVE`
+- seller approval must be `APPROVED`
 - every product must exist
 - every product must belong to the requested shop
 - inactive products are rejected when `visibility !== ACTIVE`
+- products without at least one image are rejected
+- active checkout variant price must be greater than `0`
+- requested quantity must be within available stock
 - customer `fullName`, `phone`, and `address` are required
 - frontend-supplied totals or seller-only fields are ignored because they are not accepted by the DTO
 
@@ -143,3 +147,14 @@ Coverage currently includes:
 - Checkout currently chooses the first active priced variant for a product.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
 - Inventory is tracked at the variant layer, but the current customer checkout MVP still selects the first active priced variant for each product.
+
+## WB Import Checkout Verification
+
+Run:
+
+```bash
+cd backend-nest
+npm run smoke:wb-import-checkout
+```
+
+The smoke confirms imported WB products use `REMOTE_URL` images, seller-updated price/stock make the product public, `totalAmount` is calculated as `1990 * 2`, stock is deducted from `5` to `3`, insufficient stock is blocked, the customer can track by `orderCode + phone`, and the seller sees the pending payment.
