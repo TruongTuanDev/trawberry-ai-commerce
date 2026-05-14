@@ -108,6 +108,7 @@ npm run start:dev
 
 ## Wildberries Excel import
 - Seller endpoint for WB `.xlsx` exports from sheet `Товары`.
+- Header row is `3`; product data rows are auto-detected after the Wildberries help row. The audited real export starts product rows at `5`.
 - Preview groups rows by seller SKU into products and variants.
 - Confirm import upserts products, variants, and remote image URLs.
 - Smoke: `npm run smoke:wb-import`.

@@ -21,13 +21,13 @@ test("seller previews and confirms Wildberries Excel import", async ({ page }) =
 
   await expect(page.getByTestId("wb-import-summary")).toContainText("Products");
   await expect(page.getByTestId("wb-import-product-row").filter({ hasText: "SKU-100" })).toBeVisible();
-  await expect(page.getByTestId("wb-import-product-row").filter({ hasText: "WB Linen Dress" })).toBeVisible();
+  await expect(page.getByTestId("wb-import-product-row").filter({ hasText: "WB Linen Shorts" })).toBeVisible();
 
   await page.getByTestId("wb-import-confirm").click();
   await expect(page.getByTestId("wb-import-result")).toBeVisible();
 
   await page.getByRole("link", { name: "Open products" }).click();
-  await page.getByPlaceholder("Search by product name, WB ID, brand or vendor code...").fill("WB Linen Dress");
+  await page.getByPlaceholder("Search by product name, WB ID, brand or vendor code...").fill("WB Linen Shorts");
   await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page.getByTestId("seller-product-row").filter({ hasText: "WB Linen Dress" })).toBeVisible();
+  await expect(page.getByTestId("seller-product-row").filter({ hasText: "WB Linen Shorts" })).toBeVisible();
 });

@@ -8,7 +8,7 @@ Seller WB import endpoints live under shop scope:
 - `POST /api/shops/:shopId/imports/wildberries/confirm`
 - `GET /api/shops/:shopId/imports/wildberries/:importId`
 
-The preview endpoint accepts multipart `.xlsx` uploads from the Wildberries export sheet `Товары`. Header row is `3`, product rows start at `6`, and rows sharing `Артикул продавца` are grouped into one product with multiple variants.
+The preview endpoint accepts multipart `.xlsx` uploads from the Wildberries export sheet `Товары`. Header row is `3`; product rows are auto-detected after the Wildberries help row, with the audited real export starting data at row `5`. Rows sharing `Артикул продавца` are grouped into one product with multiple variants.
 
 Confirm import upserts products by `shopId + sellerSku`, variants by barcode or size tuple, and remote images by URL. Only approved sellers can import into shops they own. See `docs/WILDBERRIES_EXCEL_IMPORT.md` for the full mapping and smoke flow.
 

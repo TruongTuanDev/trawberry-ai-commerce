@@ -83,7 +83,7 @@ export default function WildberriesImportPage() {
       <SectionCard
         eyebrow="Wildberries Excel"
         title="Import products from Wildberries"
-        description="Upload the WB export with sheet Товары. The backend groups rows by seller SKU into products with size variants."
+        description="Upload a Wildberries export Excel file with sheet Товары. The backend groups rows by seller SKU into products with size variants."
       >
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-4">
@@ -143,6 +143,7 @@ export default function WildberriesImportPage() {
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Target shop</p>
             <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? "No shop selected"}</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Wildberries export Excel is supported.</p>
             <p className="mt-2 text-sm text-[var(--muted)]">Images use remote WB URLs in the MVP.</p>
             <button
               type="button"

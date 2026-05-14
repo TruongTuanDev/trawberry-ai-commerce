@@ -46,12 +46,28 @@ describe('WildberriesExcelParserService', () => {
       'https://example.com/a2.jpg',
     ]);
     expect(preview.products[0].variants[0]).toMatchObject({
+      rowNumber: 5,
       sizeName: 'S',
       russianSize: '42',
       wbBarcode: '460000000001',
       price: 1200,
       stockQuantity: 7,
     });
+    expect(preview.products[0]).toMatchObject({
+      externalProductId: '990000001',
+      needKiz: true,
+      packageWeightGram: 500,
+      packageHeightCm: 5,
+      packageLengthCm: 30,
+      packageWidthCm: 30,
+    });
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'DUPLICATE_SKU_ROW', row: 6 }),
+        expect.objectContaining({ code: 'MISSING_PRICE', row: 7 }),
+        expect.objectContaining({ code: 'MISSING_BARCODE', row: 7 }),
+      ]),
+    );
   });
 
   it('returns an error when the WB products sheet is missing', () => {

@@ -13,8 +13,9 @@ type WorksheetCell = { v?: unknown; w?: string };
 
 const SHEET_NAME = '\u0422\u043e\u0432\u0430\u0440\u044b';
 const HEADER_ROW = 3;
-const DATA_START_ROW = 6;
+const MIN_DATA_START_ROW = 4;
 const H = {
+  group: '\u0413\u0440\u0443\u043f\u043f\u0430',
   sellerSku:
     '\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u043f\u0440\u043e\u0434\u0430\u0432\u0446\u0430',
   wbArticle: '\u0410\u0440\u0442\u0438\u043a\u0443\u043b WB',
@@ -44,6 +45,56 @@ const H = {
   packageWidth:
     '\u0428\u0438\u0440\u0438\u043d\u0430 \u0443\u043f\u0430\u043a\u043e\u0432\u043a\u0438',
 } as const;
+
+const HEADER_ALIASES: Record<keyof typeof H, string[]> = {
+  group: [H.group],
+  sellerSku: [H.sellerSku],
+  wbArticle: [
+    H.wbArticle,
+    '\u0410\u0440\u0442\u0438\u043a\u0443\u043b \u0412\u0411',
+  ],
+  name: [H.name],
+  sellerCategory: [H.sellerCategory],
+  brand: [H.brand],
+  description: [H.description],
+  photo: [
+    H.photo,
+    '\u0424\u043e\u0442\u043e\u0433\u0440\u0430\u0444\u0438\u0438',
+  ],
+  video: [H.video],
+  kiz: [H.kiz],
+  packageWeightKg: [H.packageWeightKg],
+  gender: [H.gender],
+  composition: [H.composition],
+  color: [H.color],
+  barcodes: [H.barcodes, '\u0411\u0430\u0440\u043a\u043e\u0434'],
+  size: [H.size],
+  russianSize: [H.russianSize],
+  price: [H.price],
+  packageWeightGram: [H.packageWeightGram],
+  packageHeight: [H.packageHeight],
+  packageLength: [H.packageLength],
+  packageWidth: [H.packageWidth],
+};
+
+const IMPORTANT_HEADERS = [
+  H.sellerSku,
+  H.wbArticle,
+  H.name,
+  H.sellerCategory,
+  H.description,
+  H.photo,
+  H.color,
+  H.barcodes,
+  H.size,
+  H.russianSize,
+  H.price,
+  H.packageWeightKg,
+  H.packageWeightGram,
+  H.packageHeight,
+  H.packageLength,
+  H.packageWidth,
+] as const;
 
 @Injectable()
 export class WildberriesExcelParserService {
@@ -88,9 +139,9 @@ export class WildberriesExcelParserService {
       };
     }
 
-    const rows = this.readRows(sheet);
     const warnings: WbImportIssue[] = [];
     const errors: WbImportIssue[] = [];
+    const rows = this.readRows(sheet, warnings);
     const productsByKey = new Map<string, WbImportProduct>();
     const seenSellerSkuRows = new Map<string, number>();
 
@@ -213,9 +264,14 @@ export class WildberriesExcelParserService {
     };
   }
 
-  private readRows(sheet: XLSX.WorkSheet): WbRawRow[] {
+  private readRows(
+    sheet: XLSX.WorkSheet,
+    warnings: WbImportIssue[],
+  ): WbRawRow[] {
     const range = XLSX.utils.decode_range(sheet['!ref'] ?? 'A1:A1');
+    const canonicalHeaders = this.buildCanonicalHeaderMap();
     const headers = new Map<number, string>();
+    const foundHeaders = new Set<string>();
 
     for (let column = range.s.c; column <= range.e.c; column += 1) {
       const cell = sheet[
@@ -223,16 +279,26 @@ export class WildberriesExcelParserService {
       ] as WorksheetCell | undefined;
       const header = this.text(cell?.v);
       if (header) {
-        headers.set(column, header);
+        const canonical =
+          canonicalHeaders.get(this.normalizeHeader(header)) ?? header;
+        headers.set(column, canonical);
+        foundHeaders.add(canonical);
       }
     }
 
+    for (const header of IMPORTANT_HEADERS) {
+      if (!foundHeaders.has(header)) {
+        warnings.push({
+          level: 'WARNING',
+          code: 'MISSING_COLUMN',
+          message: `Expected Wildberries column is missing: ${header}.`,
+        });
+      }
+    }
+
+    const firstDataRow = this.findFirstDataRow(sheet, range, headers);
     const rows: WbRawRow[] = [];
-    for (
-      let rowIndex = DATA_START_ROW - 1;
-      rowIndex <= range.e.r;
-      rowIndex += 1
-    ) {
+    for (let rowIndex = firstDataRow; rowIndex <= range.e.r; rowIndex += 1) {
       const row: WbRawRow = { __rowNumber: rowIndex + 1 };
       let hasValue = false;
 
@@ -255,6 +321,48 @@ export class WildberriesExcelParserService {
     return rows;
   }
 
+  private buildCanonicalHeaderMap() {
+    const canonicalHeaders = new Map<string, string>();
+    for (const [key, aliases] of Object.entries(HEADER_ALIASES) as [
+      keyof typeof H,
+      string[],
+    ][]) {
+      for (const alias of aliases) {
+        canonicalHeaders.set(this.normalizeHeader(alias), H[key]);
+      }
+    }
+
+    return canonicalHeaders;
+  }
+
+  private findFirstDataRow(
+    sheet: XLSX.WorkSheet,
+    range: XLSX.Range,
+    headers: Map<number, string>,
+  ) {
+    const firstCandidate = Math.max(HEADER_ROW, MIN_DATA_START_ROW - 1);
+
+    for (let rowIndex = firstCandidate; rowIndex <= range.e.r; rowIndex += 1) {
+      const row: WbRawRow = { __rowNumber: rowIndex + 1 };
+      for (const [column, header] of headers) {
+        const cell = sheet[
+          XLSX.utils.encode_cell({ r: rowIndex, c: column })
+        ] as WorksheetCell | undefined;
+        row[header] = cell?.w ?? cell?.v;
+      }
+
+      const name = this.text(row[H.name]);
+      const sellerSku = this.text(row[H.sellerSku]);
+      const externalProductId = this.text(row[H.wbArticle]);
+      const category = this.text(row[H.sellerCategory]);
+      if (name && category && (sellerSku || externalProductId)) {
+        return rowIndex;
+      }
+    }
+
+    return firstCandidate;
+  }
+
   private parseVariant(
     row: WbRawRow,
     sellerSku: string | null,
@@ -265,7 +373,7 @@ export class WildberriesExcelParserService {
     return {
       rowNumber: row.__rowNumber,
       sellerSku,
-      wbBarcode: this.text(row[H.barcodes]),
+      wbBarcode: this.firstToken(row[H.barcodes]),
       sizeName: this.text(row[H.size]),
       russianSize: this.text(row[H.russianSize]),
       price,
@@ -433,7 +541,31 @@ export class WildberriesExcelParserService {
       return null;
     }
 
-    return ['\u0434\u0430', 'true', '1', 'yes'].includes(text);
+    if (
+      [
+        '\u0434\u0430',
+        '\u043d\u0443\u0436\u0435\u043d',
+        'true',
+        '1',
+        'yes',
+      ].includes(text)
+    ) {
+      return true;
+    }
+
+    if (
+      [
+        '\u043d\u0435\u0442',
+        '\u043d\u0435 \u043d\u0443\u0436\u0435\u043d',
+        'false',
+        '0',
+        'no',
+      ].includes(text)
+    ) {
+      return false;
+    }
+
+    return null;
   }
 
   private isValidUrl(value: string) {
@@ -449,7 +581,29 @@ export class WildberriesExcelParserService {
     return value
       .trim()
       .toLowerCase()
-      .replace(/[^a-zа-я0-9]+/gi, '-')
+      .replace(/[^a-z\u0430-\u044f0-9]+/gi, '-')
       .replace(/^-|-$/g, '');
+  }
+
+  private firstToken(value: unknown) {
+    const text = this.text(value);
+    if (!text) {
+      return null;
+    }
+
+    return (
+      text
+        .split(/[;,\n\r]+/)
+        .map((token) => token.trim())
+        .find(Boolean) ?? null
+    );
+  }
+
+  private normalizeHeader(value: string) {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\u0451/g, '\u0435')
+      .replace(/\s+/g, ' ');
   }
 }

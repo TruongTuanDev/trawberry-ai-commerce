@@ -1143,7 +1143,7 @@ git rm --cached frontend-next\.env.local
 
 - Scope:
   - approved sellers import Wildberries `.xlsx` exports into their own shop
-  - preview parses sheet `Товары`, header row `3`, data row `6`
+  - preview parses sheet `Товары`, header row `3`, and auto-detects product data after the Wildberries help row
   - rows are grouped by `Артикул продавца` into products with variants
   - photos are split by `;` and stored as remote URLs for MVP
 - Result:
@@ -1155,5 +1155,21 @@ git rm --cached frontend-next\.env.local
   - added sanitized fixture `backend-nest/test/fixtures/wb-products-sample.xlsx`
 - Remaining gaps:
   - `DOWNLOAD_TO_STORAGE` is not implemented in MVP; remote URL mode is used
+
+## Wildberries Real Export Audit
+
+- Local private reference: `data.xlsx` in the repo root; this file is ignored and must not be committed.
+- Audited layout:
+  - sheets: `Товары`, `Инструкция`
+  - product sheet range: `A1:CT42`
+  - header row: `3`
+  - help/instruction row: `4`
+  - first product data row: `5`
+- Parser updates:
+  - auto-detects the first product data row instead of assuming row `6`
+  - normalizes header text by trim/lowercase/space collapse and `ё` to `е`
+  - supports aliases for `Артикул ВБ`, `Баркод`, and `Фотографии`
+  - handles `КИЗ` values such as `Нужен` and `Не нужен`
+  - stores the first barcode when a barcode cell contains multiple values
   - no real WB API calls are made
   - broader admin import audit UI is future work

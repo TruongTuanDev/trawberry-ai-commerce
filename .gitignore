@@ -40,3 +40,7 @@ Thumbs.db
 #other
 strawberry-backend
 strawberry-frontend
+
+# local private import references
+data.xlsx
+*.local.xlsx
