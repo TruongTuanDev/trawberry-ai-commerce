@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   adminCancelDelivery,
   adminAddDeliveryComment,
@@ -24,7 +25,13 @@ const statusFilters = [
 ] as const;
 
 export function AdminDeliveriesPageClient() {
-  const [filter, setFilter] = useState<(typeof statusFilters)[number]["value"]>("PAID_WITHOUT_DELIVERY");
+  const searchParams = useSearchParams();
+  const initialFilter = searchParams.get("exceptionOnly") === "true"
+    ? "EXCEPTIONS"
+    : searchParams.get("paidWithoutDelivery") === "true"
+      ? "PAID_WITHOUT_DELIVERY"
+      : ((searchParams.get("status") as (typeof statusFilters)[number]["value"] | null) ?? "PAID_WITHOUT_DELIVERY");
+  const [filter, setFilter] = useState<(typeof statusFilters)[number]["value"]>(initialFilter);
   const [provider, setProvider] = useState("");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<AdminDeliveryRow[]>([]);

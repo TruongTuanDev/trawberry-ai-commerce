@@ -34,6 +34,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold">Marketplace Ops</h1>
           <nav className="mt-8 space-y-2">
             <Link
+              href="/admin/dashboard"
+              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                pathname.startsWith("/admin/dashboard") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+              }`}
+            >
+              Dashboard
+            </Link>
+            <Link
               href="/admin/sellers"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
                 pathname.startsWith("/admin/sellers") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"

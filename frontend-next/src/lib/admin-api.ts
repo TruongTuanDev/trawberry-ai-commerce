@@ -93,6 +93,115 @@ export type AdminDeliveryRow = {
   }>;
 };
 
+export type AdminDashboardSummary = {
+  filters: {
+    dateFrom: string | null;
+    dateTo: string | null;
+    shopId: string | null;
+    sellerId: string | null;
+    defaultRange: string;
+  };
+  orders: {
+    total: number;
+    pending: number;
+    paid: number;
+    paidWithoutDelivery: number;
+    inTransit: number;
+    delivered: number;
+    cancelled: number;
+  };
+  payments: {
+    pending: number;
+    paid: number;
+    rejected: number;
+  };
+  deliveries: {
+    notCreated: number;
+    created: number;
+    inTransit: number;
+    delivered: number;
+    deliveredToday: number;
+    deliveredThisWeek: number;
+    failed: number;
+    cancelled: number;
+    exceptions: number;
+  };
+  inventory: {
+    outOfStock: number;
+    lowStock: number;
+  };
+  sellers: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    withPaidOrdersWithoutDelivery: number;
+  };
+  recent: {
+    orders: Array<{
+      id: string;
+      orderNumber: string;
+      status: string;
+      paymentStatus: string;
+      totalAmount: string;
+      customerName: string;
+      shopId: string;
+      shopName: string;
+      createdAt: string;
+    }>;
+    paymentReviews: Array<{
+      id: string;
+      action: string;
+      fromStatus: string | null;
+      toStatus: string | null;
+      note: string | null;
+      orderId: string;
+      orderNumber: string;
+      shopId: string;
+      shopName: string;
+      createdAt: string;
+    }>;
+    deliveryExceptions: Array<{
+      id: string;
+      orderId: string;
+      orderNumber: string;
+      customerName: string;
+      shopId: string;
+      shopName: string;
+      status: string;
+      reasonCode: string | null;
+      customerVisibleMessage: string | null;
+      updatedAt: string;
+    }>;
+    auditLogs: Array<{
+      id: string;
+      actorUserId: string;
+      targetUserId: string | null;
+      action: string;
+      entityType: string;
+      entityId: string | null;
+      reason: string | null;
+      createdAt: string;
+    }>;
+  };
+};
+
+export async function getAdminDashboardSummary(query?: {
+  dateFrom?: string;
+  dateTo?: string;
+  shopId?: string;
+  sellerId?: string;
+}) {
+  const params = new URLSearchParams();
+  if (query?.dateFrom) params.set("dateFrom", query.dateFrom);
+  if (query?.dateTo) params.set("dateTo", query.dateTo);
+  if (query?.shopId) params.set("shopId", query.shopId);
+  if (query?.sellerId) params.set("sellerId", query.sellerId);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<AdminDashboardSummary>(`/api/admin/dashboard/summary${suffix}`, {
+    method: "GET",
+  });
+}
+
 export async function listAdminSellers(status: SellerApprovalStatus) {
   return apiRequest<AdminSeller[]>(`/api/admin/sellers?status=${status}`, {
     method: "GET",

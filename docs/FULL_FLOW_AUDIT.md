@@ -239,3 +239,8 @@ Delivery exception operations write `delivery_events` audit rows:
 - admin status override
 
 Internal comments are stored in `delivery_comments` with `visibility=INTERNAL`; customer-facing messages/comments use `CUSTOMER_VISIBLE`. Public tracking only reads customer-safe fields.
+# Admin Dashboard Audit Addendum
+
+Admin operations dashboard is read-only and admin-only. It aggregates operational counts from orders, payments, delivery shipments, inventory variants, seller profiles, delivery exceptions, payment review logs, and admin audit logs.
+
+The dashboard does not create audit rows because it does not mutate state. It exposes existing latest admin audit actions for operational context.

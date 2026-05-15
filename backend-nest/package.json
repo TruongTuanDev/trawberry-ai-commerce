@@ -19,6 +19,7 @@
     "smoke:manual-delivery": "powershell -ExecutionPolicy Bypass -File scripts/smoke-manual-delivery.ps1",
     "smoke:delivery-exceptions": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-exceptions.ps1",
     "smoke:admin-delivery-supervision": "powershell -ExecutionPolicy Bypass -File scripts/smoke-admin-delivery-supervision.ps1",
+    "smoke:admin-dashboard": "powershell -ExecutionPolicy Bypass -File scripts/smoke-admin-dashboard.ps1",
     "smoke:delivery-cdek": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery.ps1",
     "smoke:delivery-yandex-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-yandex-real.ps1",
     "smoke:inventory": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory.ps1",

@@ -671,3 +671,12 @@ Implemented: seller-managed manual delivery exception workflow.
 - Delivery event audit rows are written for exception actions.
 
 Future: map real Yandex/CDEK status webhooks into this internal exception model when provider API integration is introduced.
+# Admin Operations Dashboard Phase Status
+
+Implemented: admin-only marketplace operations dashboard.
+
+- Backend summary API at `GET /api/admin/dashboard/summary`.
+- Frontend page at `/admin/dashboard`.
+- Admin navigation includes Dashboard, Sellers, and Deliveries.
+- Dashboard highlights pending sellers, pending payments, paid orders without delivery, delivery exceptions, and low/out-of-stock inventory.
+- Recent activity includes latest orders, payment reviews, delivery exceptions, and admin audit logs.

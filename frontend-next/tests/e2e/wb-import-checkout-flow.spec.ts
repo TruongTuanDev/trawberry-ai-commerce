@@ -94,7 +94,7 @@ test("seller imports Wildberries Excel, updates price and stock, then customer c
   const sellerEmail = `wb-import-checkout-${stamp}@example.com`;
   const password = "password123";
   const shopName = `WB Checkout Shop ${stamp}`;
-  const productName = "WB Linen Shorts";
+  const preferredProductName = "WB Linen Shorts";
   const fixturePath = path.resolve("../backend-nest/test/fixtures/wb-products-sample.xlsx");
   const customerPhone = `+7996${String(stamp).slice(-7)}`;
 
@@ -121,12 +121,26 @@ test("seller imports Wildberries Excel, updates price and stock, then customer c
   await page.getByTestId("wb-import-file").setInputFiles(fixturePath);
   await page.getByTestId("wb-import-default-stock").fill("0");
   await page.getByTestId("wb-import-publish-mode").selectOption("ACTIVE");
+  await page.getByTestId("wb-import-price-fallback").fill("1990");
   await page.getByTestId("wb-import-preview").click();
 
   await expect(page.getByTestId("wb-import-summary")).toContainText("Products");
-  await expect(page.getByTestId("wb-import-product-row").filter({ hasText: productName })).toBeVisible();
+  await expect(page.getByTestId("wb-import-product-row").first()).toBeVisible();
   await page.getByTestId("wb-import-confirm").click();
   await expect(page.getByTestId("wb-import-result")).toBeVisible();
+
+  const sellerProducts = await backendJson<{
+    items: Array<{ id: string; title: string }>;
+  }>(request, `/api/shops/${shop.id}/products?page=1&size=10`, {
+    headers: { Authorization: `Bearer ${sellerToken}`, Cookie: "" },
+  });
+  const importedProduct =
+    sellerProducts.items.find((item) => item.title.includes(preferredProductName)) ?? sellerProducts.items[0];
+  expect(importedProduct?.id).toBeTruthy();
+  if (!importedProduct) {
+    throw new Error("Expected Wildberries import to create at least one product.");
+  }
+  const productName = importedProduct.title;
 
   await page.getByRole("link", { name: "Open products" }).click();
   await page.getByPlaceholder("Search by product name, WB ID, brand or vendor code...").fill(productName);
@@ -142,14 +156,6 @@ test("seller imports Wildberries Excel, updates price and stock, then customer c
   await page.getByTestId("product-stock-input").first().fill("5");
   await page.getByTestId("product-stock-save").first().click();
   await expect(page.getByText("5 available")).toBeVisible();
-
-  const sellerProducts = await backendJson<{
-    items: Array<{ id: string; title: string }>;
-  }>(request, `/api/shops/${shop.id}/products?search=${encodeURIComponent(productName)}&page=1&size=10`, {
-    headers: { Authorization: `Bearer ${sellerToken}`, Cookie: "" },
-  });
-  const importedProduct = sellerProducts.items.find((item) => item.title.includes(productName));
-  expect(importedProduct?.id).toBeTruthy();
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();

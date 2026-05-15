@@ -1338,3 +1338,17 @@ Delivered:
 - Playwright script `test:e2e:delivery-exceptions`.
 
 Non-goals retained: no real OpenAI calls, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
+# Phase Report: Admin Operations Dashboard
+
+Added admin-only marketplace operations dashboard.
+
+Delivered:
+
+- `GET /api/admin/dashboard/summary` with date/shop/seller filters.
+- Aggregated counts for orders, payments, deliveries, inventory, and sellers.
+- Recent orders, payment reviews, delivery exceptions, and audit actions.
+- `/admin/dashboard` page with operational cards, needs-attention queue, recent activity, and quick links.
+- Smoke script `smoke:admin-dashboard`.
+- Playwright script `test:e2e:admin-dashboard`.
+
+Non-goals retained: no real OpenAI calls, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.

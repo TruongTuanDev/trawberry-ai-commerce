@@ -15,6 +15,8 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/`
 - `/admin/sellers`
 - `/admin/sellers/[id]`
+- `/admin/dashboard`
+- `/admin/deliveries`
 - `/products`
 - `/products/[id]`
 - `/checkout`
@@ -42,6 +44,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - audit timeline
   - approve action
   - reject action with optional reason
+- Admin operations dashboard UI with:
+  - orders, payments, deliveries, inventory, sellers, and exceptions cards
+  - needs-attention queue
+  - latest orders, delivery exceptions, and audit actions
+  - quick links to seller approvals and delivery supervision
 - Seller onboarding UI with:
   - legal profile form
   - KYC document upload
@@ -145,6 +152,21 @@ Current coverage:
 - opens `/admin/sellers`
 - approves the pending seller
 - verifies the seller moves to the approved tab
+
+## Playwright admin dashboard flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:admin-dashboard
+```
+
+Current coverage:
+- prepares seller, order, inventory, and delivery exception data through the backend API
+- logs in as seeded demo admin
+- opens `/admin/dashboard`
+- verifies dashboard cards and numeric counts
+- follows the delivery exceptions link
+- verifies a non-admin is redirected away from the dashboard
 
 ## Playwright seller onboarding flow
 With Docker runtime already healthy and demo data seeded:

@@ -50,6 +50,7 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `POST /api/shops/:shopId/imports/wildberries/preview`
 - `POST /api/shops/:shopId/imports/wildberries/confirm`
 - `GET /api/shops/:shopId/imports/wildberries/:importId`
+- `GET /api/admin/dashboard/summary`
 
 ## Local run
 
@@ -113,6 +114,11 @@ npm run start:dev
 - Confirm import upserts products, variants, and remote image URLs. `REMOTE_URL` is the default MVP image mode; `DOWNLOAD_TO_STORAGE` is reserved for a future phase.
 - Smoke: `npm run smoke:wb-import`.
 - Full import-to-checkout smoke: `npm run smoke:wb-import-checkout`.
+
+## Admin operations dashboard
+- Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.
+- Supports optional `dateFrom`, `dateTo`, `shopId`, and `sellerId` filters.
+- Smoke: `npm run smoke:admin-dashboard`.
 
 ## AI image tasks
 - NestJS only creates tasks, checks credits, and enqueues BullMQ jobs.
