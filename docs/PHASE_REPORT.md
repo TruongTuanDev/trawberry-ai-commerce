@@ -1347,7 +1347,20 @@ Implemented admin-only operational queues for daily marketplace supervision.
 - Added `/admin/queues` with tabs, filters, status/SLA badges, and queue summary counts.
 - Updated `/admin/dashboard` cards and needs-attention tiles to open queue filters.
 - Added `smoke:admin-queues` and `test:e2e:admin-queues`.
-- Admin assignment ownership was intentionally deferred as a future phase.
+- Admin assignment ownership is now handled by the Admin Task Ownership phase below.
+
+# Phase Report: Admin Task Ownership + Escalation Workflow
+
+Implemented admin-only task ownership for operational queues.
+
+- Added `admin_queue_tasks` and `admin_queue_task_events`.
+- Added `/api/admin/queue-tasks` create/list/assign/unassign/status/escalate/events APIs.
+- Queue responses now include task id, task status, priority, assignee, and task timestamps.
+- `/admin/queues` supports Claim, In progress, Escalate, and Resolve actions.
+- Added task event and admin audit writes for ownership mutations.
+- Added `smoke:admin-task-ownership` and `test:e2e:admin-task-ownership`.
+
+Non-goals retained: no notification email, no ops export/reporting, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
 
 # Phase Report: Admin Operations Dashboard
 

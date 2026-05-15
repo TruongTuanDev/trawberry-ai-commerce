@@ -687,6 +687,17 @@ Implemented: admin-only operational queues with SLA timers.
 
 - Backend queue APIs under `GET /api/admin/queues/*`.
 - Frontend page at `/admin/queues` with Sellers, Payments, Deliveries, and Inventory tabs.
-- Queue rows include age, `slaStatus`, status badges, and action links.
+- Queue rows include age, `slaStatus`, status badges, action links, and task ownership fields when present.
 - Dashboard needs-attention cards now deep-link into queue filters.
-- Ownership assignment is deferred to a future admin task assignment phase.
+
+# Admin Task Ownership Phase Status
+
+Implemented: admin-only queue task ownership and escalation workflow.
+
+- Backend task APIs under `GET/POST /api/admin/queue-tasks`.
+- Task records support `OPEN`, `IN_PROGRESS`, `WAITING_SELLER`, `WAITING_CUSTOMER`, `RESOLVED`, and `ESCALATED`.
+- Admins can claim, assign, unassign, set status, escalate, and resolve queue tasks.
+- Assignment targets are validated as admin users only.
+- Task events and admin audit logs are written for ownership mutations.
+- `/admin/queues` shows assignee, task status, priority, Claim, In progress, Escalate, and Resolve actions.
+- Notification email and ownership reporting/export remain future phases.

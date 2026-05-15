@@ -20,6 +20,8 @@ model User {
   reviewedSellerDocuments SellerDocument[]       @relation("SellerDocumentReviewer")
   adminAuditActions       AdminAuditLog[]        @relation("AdminAuditActor")
   adminAuditTargets       AdminAuditLog[]        @relation("AdminAuditTarget")
+  assignedAdminQueueTasks  AdminQueueTask[]       @relation("AdminQueueTaskAssignee")
+  adminQueueTaskEvents     AdminQueueTaskEvent[]  @relation("AdminQueueTaskEventActor")
   aiGenerationTasks       AiGenerationTask[]
   aiUsageLogs             AiUsageLog[]
   customerOrders          Order[]                @relation("CustomerOrders")
@@ -100,6 +102,53 @@ model AdminAuditLog {
   @@index([targetUserId, createdAt])
   @@index([actorUserId, createdAt])
   @@map("admin_audit_logs")
+}
+
+model AdminQueueTask {
+  id               String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  entityType       String                @map("entity_type") @db.VarChar(50)
+  entityId         String                @map("entity_id") @db.VarChar(100)
+  shopId           String?               @map("shop_id") @db.Uuid
+  sellerId         String?               @map("seller_id") @db.Uuid
+  assignedToUserId String?               @map("assigned_to_user_id") @db.Uuid
+  status           String                @default("OPEN") @db.VarChar(50)
+  priority         String                @default("NORMAL") @db.VarChar(50)
+  slaStatus        String                @default("OK") @map("sla_status") @db.VarChar(50)
+  title            String                @db.VarChar(500)
+  summary          String?
+  lastNote         String?               @map("last_note")
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  assignedAt       DateTime?             @map("assigned_at") @db.Timestamptz(6)
+  resolvedAt       DateTime?             @map("resolved_at") @db.Timestamptz(6)
+  escalatedAt      DateTime?             @map("escalated_at") @db.Timestamptz(6)
+  assignedTo       User?                 @relation("AdminQueueTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  events           AdminQueueTaskEvent[]
+
+  @@unique([entityType, entityId])
+  @@index([status, updatedAt])
+  @@index([assignedToUserId, status])
+  @@index([entityType, entityId])
+  @@map("admin_queue_tasks")
+}
+
+model AdminQueueTaskEvent {
+  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taskId          String         @map("task_id") @db.Uuid
+  actorUserId     String         @map("actor_user_id") @db.Uuid
+  action          String         @db.VarChar(100)
+  fromStatus      String?        @map("from_status") @db.VarChar(50)
+  toStatus        String?        @map("to_status") @db.VarChar(50)
+  fromAssigneeId  String?        @map("from_assignee_id") @db.Uuid
+  toAssigneeId    String?        @map("to_assignee_id") @db.Uuid
+  note            String?
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  task            AdminQueueTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor           User           @relation("AdminQueueTaskEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([taskId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("admin_queue_task_events")
 }
 
 model Shop {

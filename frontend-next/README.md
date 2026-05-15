@@ -50,6 +50,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - needs-attention queue
   - latest orders, delivery exceptions, and audit actions
   - quick links to seller approvals and delivery supervision
+- Admin operational queues UI with:
+  - seller, payment, delivery, and inventory tabs
+  - SLA badges and age indicators
+  - task assignee, status, and priority badges
+  - Claim, In progress, Escalate, and Resolve actions
 - Seller onboarding UI with:
   - legal profile form
   - KYC document upload
@@ -183,6 +188,21 @@ Current coverage:
 - follows the pending seller queue link
 - verifies `/admin/queues` tabs, queue rows, and SLA badges
 - verifies a non-admin is redirected away from the queues page
+
+## Playwright admin task ownership flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:admin-task-ownership
+```
+
+Current coverage:
+- prepares a pending seller through the backend API
+- logs in as seeded demo admin
+- opens `/admin/queues` filtered to that seller
+- claims the queue task
+- escalates the task
+- resolves the task
 
 ## Playwright seller onboarding flow
 With Docker runtime already healthy and demo data seeded:

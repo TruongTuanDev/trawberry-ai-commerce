@@ -36,4 +36,20 @@ Each item includes `ageMinutes`, `ageHours`, and `slaStatus` as `OK`, `WARNING`,
 
 ## Ownership
 
-Admin assignment ownership is not included in this phase. The recommended next step is an `admin_queue_assignments` table with entity type, entity id, assigned admin, status, and timestamps.
+Admin ownership is now implemented through `admin_queue_tasks`.
+
+Queue rows include ownership fields when a task exists:
+
+- `taskId`
+- `taskStatus`
+- `taskPriority`
+- `assignedToUserId`
+- `assignedToEmail`
+- `assignedToName`
+- `assignedAt`
+- `escalatedAt`
+- `resolvedAt`
+
+Admins can claim, assign, unassign, update status, escalate, and resolve queue tasks through `/api/admin/queue-tasks`. Resolved tasks are hidden from default queue views and remain queryable from the task API.
+
+See `docs/ADMIN_TASK_OWNERSHIP.md`.

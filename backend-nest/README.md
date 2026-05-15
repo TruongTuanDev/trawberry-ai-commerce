@@ -122,8 +122,14 @@ npm run start:dev
 
 ## Admin operational queues
 - Admin-only queue endpoints: `GET /api/admin/queues/sellers`, `/payments`, `/deliveries`, and `/inventory`.
-- Queue items include age and SLA status for daily operations.
+- Queue items include age, SLA status, and task ownership fields when an admin task exists.
 - Smoke: `npm run smoke:admin-queues`.
+
+## Admin queue task ownership
+- Admin-only task endpoints: `GET/POST /api/admin/queue-tasks`.
+- Supported mutations: assign, unassign, status update, escalate, and list task events.
+- Only admin users can be assigned to queue tasks.
+- Smoke: `npm run smoke:admin-task-ownership`.
 
 ## AI image tasks
 - NestJS only creates tasks, checks credits, and enqueues BullMQ jobs.

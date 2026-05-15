@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 import { Prisma } from '@prisma/client';
 import { AdminQueuesController } from '../src/modules/admin/admin-queues.controller';
 import { AdminQueuesService } from '../src/modules/admin/admin-queues.service';
+import { AdminQueueTasksService } from '../src/modules/admin/admin-queue-tasks.service';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { readBody } from './test-helpers';
@@ -124,6 +125,12 @@ describe('AdminQueuesController (e2e)', () => {
       controllers: [AdminQueuesController],
       providers: [
         AdminQueuesService,
+        {
+          provide: AdminQueueTasksService,
+          useValue: {
+            findTasksForEntities: jest.fn().mockResolvedValue(new Map()),
+          },
+        },
         { provide: PrismaService, useValue: prismaMock },
       ],
     })
@@ -155,7 +162,7 @@ describe('AdminQueuesController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) await app.close();
     jest.clearAllMocks();
   });
 

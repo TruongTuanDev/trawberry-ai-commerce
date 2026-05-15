@@ -48,6 +48,7 @@ Admin navigation now includes:
 - Sellers
 - Deliveries
 - Operational queues
+- Queue task ownership actions from Operational queues
 
 Dashboard cards now link to operational queues:
 
@@ -61,4 +62,6 @@ Dashboard cards now link to operational queues:
 
 The dashboard is a supervisory view. `/admin/queues` provides the daily worklists and action links into seller approval, payment detail, delivery supervision, and product detail pages.
 
-See `docs/ADMIN_OPERATIONAL_QUEUES.md` for queue API details and SLA thresholds.
+Queue task ownership is handled from `/admin/queues`, where admins can claim work, mark it in progress, escalate it, and resolve it.
+
+See `docs/ADMIN_OPERATIONAL_QUEUES.md` for queue API details and SLA thresholds. See `docs/ADMIN_TASK_OWNERSHIP.md` for ownership and escalation.

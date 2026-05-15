@@ -202,6 +202,8 @@ export type AdminQueueResponse<T> = {
 
 export type AdminQueueItem = {
   id: string;
+  entityType: "SELLER" | "PAYMENT" | "DELIVERY" | "INVENTORY" | "ORDER";
+  entityId: string;
   shopId: string | null;
   shopName: string | null;
   sellerId: string;
@@ -224,6 +226,52 @@ export type AdminQueueItem = {
   ageHours: number;
   slaStatus: AdminQueueSlaStatus;
   actionUrl: string;
+  taskId: string | null;
+  taskStatus: string | null;
+  taskPriority: string | null;
+  assignedToUserId: string | null;
+  assignedToEmail: string | null;
+  assignedToName: string | null;
+  assignedAt: string | null;
+  escalatedAt: string | null;
+  resolvedAt: string | null;
+};
+
+export type AdminQueueTask = {
+  id: string;
+  entityType: string;
+  entityId: string;
+  shopId: string | null;
+  sellerId: string | null;
+  assignedToUserId: string | null;
+  assignedToEmail: string | null;
+  assignedToName: string | null;
+  status: string;
+  priority: string;
+  slaStatus: string;
+  title: string;
+  summary: string | null;
+  lastNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedAt: string | null;
+  resolvedAt: string | null;
+  escalatedAt: string | null;
+};
+
+export type AdminQueueTaskEvent = {
+  id: string;
+  taskId: string;
+  actorUserId: string;
+  actorEmail: string;
+  actorName: string | null;
+  action: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  fromAssigneeId: string | null;
+  toAssigneeId: string | null;
+  note: string | null;
+  createdAt: string;
 };
 
 export async function getAdminDashboardSummary(query?: {
@@ -298,6 +346,49 @@ export async function listAdminQueueInventory(query?: {
   limit?: number;
 }) {
   return apiRequest<AdminQueueResponse<AdminQueueItem>>(`/api/admin/queues/inventory${queueSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function createAdminQueueTask(payload: {
+  entityType: AdminQueueItem["entityType"];
+  entityId: string;
+  shopId?: string | null;
+  sellerId?: string | null;
+  title: string;
+  summary?: string;
+  priority?: string;
+  slaStatus?: AdminQueueSlaStatus;
+}) {
+  return apiRequest<AdminQueueTask>("/api/admin/queue-tasks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function assignAdminQueueTask(taskId: string, assignedToUserId?: string) {
+  return apiRequest<AdminQueueTask>(`/api/admin/queue-tasks/${taskId}/assign`, {
+    method: "POST",
+    body: JSON.stringify({ assignedToUserId }),
+  });
+}
+
+export async function updateAdminQueueTaskStatus(taskId: string, status: string, note?: string) {
+  return apiRequest<AdminQueueTask>(`/api/admin/queue-tasks/${taskId}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status, note }),
+  });
+}
+
+export async function escalateAdminQueueTask(taskId: string, note?: string, priority = "HIGH") {
+  return apiRequest<AdminQueueTask>(`/api/admin/queue-tasks/${taskId}/escalate`, {
+    method: "POST",
+    body: JSON.stringify({ note, priority }),
+  });
+}
+
+export async function listAdminQueueTaskEvents(taskId: string) {
+  return apiRequest<AdminQueueTaskEvent[]>(`/api/admin/queue-tasks/${taskId}/events`, {
     method: "GET",
   });
 }

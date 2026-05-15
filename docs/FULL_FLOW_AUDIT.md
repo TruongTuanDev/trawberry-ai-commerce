@@ -250,3 +250,17 @@ The dashboard does not create audit rows because it does not mutate state. It ex
 Admin operational queues are read-only and admin-only. They expose seller, payment, delivery, and inventory worklists with SLA age calculations but do not mutate marketplace state.
 
 No audit rows are created by queue reads. Follow-up actions still happen through existing seller approval, payment review, delivery supervision, and product/inventory flows, which keep their existing audit/event behavior.
+
+# Admin Task Ownership Audit Addendum
+
+Admin queue task ownership is admin-only and mutates only operational task metadata. It does not change the underlying seller, payment, order, delivery, or inventory business status by itself.
+
+Ownership mutations create `admin_queue_task_events` rows and admin audit logs for:
+
+- task creation
+- assignment/reassignment
+- unassignment
+- status changes
+- escalation
+
+Only users with role `ADMIN` can be assigned to tasks. Sellers and customers receive `403` from task APIs through the admin guard.

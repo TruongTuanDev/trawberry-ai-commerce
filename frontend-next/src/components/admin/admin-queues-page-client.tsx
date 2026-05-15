@@ -4,10 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  assignAdminQueueTask,
+  createAdminQueueTask,
+  escalateAdminQueueTask,
   listAdminQueueDeliveries,
   listAdminQueueInventory,
   listAdminQueuePayments,
   listAdminQueueSellers,
+  updateAdminQueueTaskStatus,
   type AdminQueueItem,
   type AdminQueueResponse,
   type AdminQueueSlaStatus,
@@ -29,16 +33,18 @@ export function AdminQueuesPageClient() {
   const [status, setStatus] = useState(searchParams.get("status") ?? "");
   const [ageBucket, setAgeBucket] = useState(searchParams.get("ageBucket") ?? "");
   const [provider, setProvider] = useState(searchParams.get("provider") ?? "");
+  const [q, setQ] = useState(searchParams.get("q") ?? "");
   const [data, setData] = useState<AdminQueueResponse<AdminQueueItem> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        const result = await loadQueue(tab, status, ageBucket, provider);
+        const result = await loadQueue(tab, status, ageBucket, provider, q);
         if (!mounted) return;
         setData(result);
         setError(null);
@@ -52,7 +58,40 @@ export function AdminQueuesPageClient() {
     return () => {
       mounted = false;
     };
-  }, [tab, status, ageBucket, provider]);
+  }, [tab, status, ageBucket, provider, q]);
+
+  const refresh = async () => {
+    setData(await loadQueue(tab, status, ageBucket, provider, q));
+  };
+
+  const handleTaskAction = async (item: AdminQueueItem, action: "claim" | "progress" | "escalate" | "resolve") => {
+    setError(null);
+    setMessage(null);
+    try {
+      const task = item.taskId
+        ? null
+        : await createAdminQueueTask({
+            entityType: item.entityType,
+            entityId: item.entityId,
+            shopId: item.shopId,
+            sellerId: item.sellerId,
+            title: item.orderCode ?? item.productName ?? item.sellerName ?? item.sellerEmail,
+            summary: `${item.status} - ${item.shopName ?? "No shop"}`,
+            priority: item.slaStatus === "BREACHED" ? "HIGH" : "NORMAL",
+            slaStatus: item.slaStatus,
+          });
+      const taskId = item.taskId ?? task?.id;
+      if (!taskId) throw new Error("Queue task was not available.");
+      if (action === "claim") await assignAdminQueueTask(taskId, "me");
+      if (action === "progress") await updateAdminQueueTaskStatus(taskId, "IN_PROGRESS", "Admin started work.");
+      if (action === "escalate") await escalateAdminQueueTask(taskId, "Escalated from admin queue.", item.slaStatus === "BREACHED" ? "URGENT" : "HIGH");
+      if (action === "resolve") await updateAdminQueueTaskStatus(taskId, "RESOLVED", "Resolved from admin queue.");
+      setMessage("Task updated.");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update task.");
+    }
+  };
 
   const statusOptions = useMemo(() => {
     if (tab === "sellers") return ["PENDING", "APPROVED", "REJECTED"];
@@ -89,6 +128,7 @@ export function AdminQueuesPageClient() {
                 setStatus("");
                 setAgeBucket("");
                 setProvider("");
+                setQ("");
               }}
               className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === item.value ? "bg-[#2f2025] text-white" : "border border-[var(--border)] text-[var(--foreground)]"}`}
               data-testid={`admin-queue-tab-${item.value}`}
@@ -98,7 +138,7 @@ export function AdminQueuesPageClient() {
           ))}
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="mt-5 grid gap-3 md:grid-cols-4">
           <label className="text-sm font-semibold text-[var(--foreground)]">
             Status
             <select value={currentStatus} onChange={(event) => setStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-queue-status-filter">
@@ -116,6 +156,12 @@ export function AdminQueuesPageClient() {
               <option value="BREACHED">Breached</option>
             </select>
           </label>
+          {tab === "sellers" ? (
+            <label className="text-sm font-semibold text-[var(--foreground)]">
+              Search
+              <input value={q} onChange={(event) => setQ(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-queue-search" placeholder="Seller email or name" />
+            </label>
+          ) : null}
           {tab === "deliveries" ? (
             <label className="text-sm font-semibold text-[var(--foreground)]">
               Provider
@@ -130,6 +176,7 @@ export function AdminQueuesPageClient() {
       </section>
 
       {error ? <div className="rounded-[1rem] bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+      {message ? <div className="rounded-[1rem] bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
 
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -152,7 +199,7 @@ export function AdminQueuesPageClient() {
             <p className="px-4 py-5 text-sm text-[var(--muted)]">Loading queue...</p>
           ) : data && data.items.length > 0 ? (
             <div className="divide-y divide-[var(--border)]" data-testid="admin-queue-list">
-              {data.items.map((item) => <QueueRow key={`${tab}-${item.id}`} item={item} />)}
+              {data.items.map((item) => <QueueRow key={`${tab}-${item.id}`} item={item} onTaskAction={handleTaskAction} />)}
             </div>
           ) : (
             <p className="px-4 py-5 text-sm text-[var(--muted)]">No queue items match these filters.</p>
@@ -163,26 +210,34 @@ export function AdminQueuesPageClient() {
   );
 }
 
-async function loadQueue(tab: QueueTab, status: string, ageBucket: string, provider: string) {
+async function loadQueue(tab: QueueTab, status: string, ageBucket: string, provider: string, q: string) {
   const limit = 20;
-  if (tab === "sellers") return listAdminQueueSellers({ status: status || "PENDING", ageBucket, limit });
+  if (tab === "sellers") return listAdminQueueSellers({ status: status || "PENDING", q, ageBucket, limit });
   if (tab === "payments") return listAdminQueuePayments({ status: status || "PENDING", ageBucket, limit });
   if (tab === "deliveries") return listAdminQueueDeliveries({ queueType: status || "PAID_WITHOUT_DELIVERY", ageBucket, provider, limit });
   return listAdminQueueInventory({ stockStatus: status || "LOW_STOCK", limit });
 }
 
-function QueueRow({ item }: { item: AdminQueueItem }) {
+function QueueRow({
+  item,
+  onTaskAction,
+}: {
+  item: AdminQueueItem;
+  onTaskAction: (item: AdminQueueItem, action: "claim" | "progress" | "escalate" | "resolve") => Promise<void>;
+}) {
   const title = item.orderCode ?? item.productName ?? item.sellerName ?? item.sellerEmail;
   return (
-    <article className="grid gap-4 px-4 py-4 lg:grid-cols-[1.3fr_1fr_auto] lg:items-center" data-testid="admin-queue-row">
+    <article className="grid gap-4 px-4 py-4 xl:grid-cols-[1.3fr_1fr_1fr_auto] xl:items-center" data-testid="admin-queue-row">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-semibold text-[var(--foreground)]">{title}</p>
           <StatusBadge value={item.status} />
           <SlaBadge value={item.slaStatus} />
+          {item.taskStatus ? <TaskBadge value={item.taskStatus} /> : null}
+          {item.taskPriority ? <PriorityBadge value={item.taskPriority} /> : null}
         </div>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {item.shopName ?? "No shop"} · {item.sellerEmail}
+          {item.shopName ?? "No shop"} - {item.sellerEmail}
         </p>
         {item.customerName ? <p className="mt-1 text-xs text-[var(--muted)]">Customer: {item.customerName}</p> : null}
       </div>
@@ -191,9 +246,18 @@ function QueueRow({ item }: { item: AdminQueueItem }) {
         <p>Updated {new Date(item.updatedAt).toLocaleString()}</p>
         {typeof item.stockQuantity === "number" ? <p>Stock {item.stockQuantity} / threshold {item.lowStockThreshold}</p> : null}
       </div>
-      <Link href={item.actionUrl} className="rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold" data-testid="admin-queue-action">
-        Open
-      </Link>
+      <div className="text-sm text-[var(--muted)]" data-testid="admin-queue-assignee">
+        <p className="font-semibold text-[var(--foreground)]">{item.assignedToEmail ? "Assigned" : "Unassigned"}</p>
+        <p>{item.assignedToName ?? item.assignedToEmail ?? "No admin owner"}</p>
+        {item.assignedAt ? <p>Since {new Date(item.assignedAt).toLocaleString()}</p> : null}
+      </div>
+      <div className="flex flex-wrap gap-2 xl:justify-end">
+        {!item.assignedToUserId ? <button type="button" onClick={() => void onTaskAction(item, "claim")} className="rounded-full bg-[#2f2025] px-3 py-2 text-xs font-semibold text-white" data-testid="admin-task-claim">Claim</button> : null}
+        <button type="button" onClick={() => void onTaskAction(item, "progress")} className="rounded-full border border-[var(--border)] px-3 py-2 text-xs font-semibold" data-testid="admin-task-progress">In progress</button>
+        <button type="button" onClick={() => void onTaskAction(item, "escalate")} className="rounded-full border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700" data-testid="admin-task-escalate">Escalate</button>
+        <button type="button" onClick={() => void onTaskAction(item, "resolve")} className="rounded-full border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700" data-testid="admin-task-resolve">Resolve</button>
+        <Link href={item.actionUrl} className="rounded-full border border-[var(--border)] px-3 py-2 text-center text-xs font-semibold" data-testid="admin-queue-action">Open</Link>
+      </div>
     </article>
   );
 }
@@ -205,4 +269,13 @@ function StatusBadge({ value }: { value: string }) {
 function SlaBadge({ value }: { value: AdminQueueSlaStatus }) {
   const styles = value === "BREACHED" ? "bg-rose-100 text-rose-800" : value === "WARNING" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800";
   return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles}`} data-testid="admin-queue-sla">{value}</span>;
+}
+
+function TaskBadge({ value }: { value: string }) {
+  return <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-800" data-testid="admin-task-status">{value}</span>;
+}
+
+function PriorityBadge({ value }: { value: string }) {
+  const styles = value === "URGENT" ? "bg-rose-100 text-rose-800" : value === "HIGH" ? "bg-amber-100 text-amber-800" : "bg-[var(--panel)] text-[var(--foreground)]";
+  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${styles}`} data-testid="admin-task-priority">{value}</span>;
 }
