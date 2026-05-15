@@ -700,4 +700,14 @@ Implemented: admin-only queue task ownership and escalation workflow.
 - Assignment targets are validated as admin users only.
 - Task events and admin audit logs are written for ownership mutations.
 - `/admin/queues` shows assignee, task status, priority, Claim, In progress, Escalate, and Resolve actions.
-- Notification email and ownership reporting/export remain future phases.
+- Notification email remains a future phase; ownership reporting/export is covered by Admin Ops Reporting.
+
+# Admin Ops Reporting Phase Status
+
+Implemented: admin-only operations reporting and CSV exports.
+
+- Backend report APIs under `GET /api/admin/reports/*`.
+- Reports include ops summary, SLA breaches, workload by admin, delivery exceptions, and payment aging.
+- CSV exports are available for SLA breaches, workload, delivery exceptions, and payment aging.
+- `/admin/reports` provides date filters, tabs, report tables, and CSV export buttons.
+- Report reads and exports are read-only; notification email remains a future phase.

@@ -53,3 +53,14 @@ Queue rows include ownership fields when a task exists:
 Admins can claim, assign, unassign, update status, escalate, and resolve queue tasks through `/api/admin/queue-tasks`. Resolved tasks are hidden from default queue views and remain queryable from the task API.
 
 See `docs/ADMIN_TASK_OWNERSHIP.md`.
+
+## Reporting
+
+Queue SLA and ownership data feeds Admin Ops Reporting:
+
+- SLA breached task report
+- workload by assigned admin
+- payment aging report
+- delivery exception report
+
+See `docs/ADMIN_REPORTING.md`.

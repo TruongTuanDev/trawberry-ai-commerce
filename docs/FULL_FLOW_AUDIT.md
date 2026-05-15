@@ -264,3 +264,11 @@ Ownership mutations create `admin_queue_task_events` rows and admin audit logs f
 - escalation
 
 Only users with role `ADMIN` can be assigned to tasks. Sellers and customers receive `403` from task APIs through the admin guard.
+
+# Admin Ops Reporting Audit Addendum
+
+Admin Ops Reporting is read-only and admin-only. It exposes operational aggregates and row-level reports for SLA breaches, workload, delivery exceptions, and payment aging.
+
+CSV exports use explicit column allowlists and do not include secrets, tokens, raw provider payloads, internal private files, or customer-invisible internal comments. CSV values are escaped for commas, quotes, and newlines and are capped at 5000 rows per export.
+
+No audit rows are created by report reads or exports.

@@ -131,6 +131,12 @@ npm run start:dev
 - Only admin users can be assigned to queue tasks.
 - Smoke: `npm run smoke:admin-task-ownership`.
 
+## Admin ops reporting
+- Admin-only report endpoints under `GET /api/admin/reports/*`.
+- Reports: ops summary, SLA breaches, workload, delivery exceptions, and payment aging.
+- CSV exports: `sla-breaches.csv`, `workload.csv`, `delivery-exceptions.csv`, and `payment-aging.csv`.
+- Smoke: `npm run smoke:admin-reports`.
+
 ## AI image tasks
 - NestJS only creates tasks, checks credits, and enqueues BullMQ jobs.
 - Worker calls the separate `ai-service` over `POST /internal/ai-images/generate`.

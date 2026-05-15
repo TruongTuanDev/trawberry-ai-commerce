@@ -17,6 +17,7 @@
     "test:e2e:admin-dashboard": "playwright test admin-dashboard",
     "test:e2e:admin-queues": "playwright test admin-queues",
     "test:e2e:admin-task-ownership": "playwright test admin-task-ownership",
+    "test:e2e:admin-reports": "playwright test admin-reports",
     "test:e2e:seller-onboarding": "playwright test seller-onboarding",
     "test:e2e:public": "playwright test public-smoke",
     "test:e2e:public-full": "playwright test public-full",

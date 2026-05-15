@@ -65,6 +65,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             >
               Operational queues
             </Link>
+            <Link
+              href="/admin/reports"
+              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                pathname.startsWith("/admin/reports") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+              }`}
+            >
+              Reports
+            </Link>
             <Link href="/seller/dashboard" className="flex rounded-2xl px-4 py-3 text-sm font-medium text-white/78 transition hover:bg-white/8">
               Seller center
             </Link>

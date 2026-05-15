@@ -49,6 +49,7 @@ Admin navigation now includes:
 - Deliveries
 - Operational queues
 - Queue task ownership actions from Operational queues
+- Reports
 
 Dashboard cards now link to operational queues:
 
@@ -64,4 +65,6 @@ The dashboard is a supervisory view. `/admin/queues` provides the daily worklist
 
 Queue task ownership is handled from `/admin/queues`, where admins can claim work, mark it in progress, escalate it, and resolve it.
 
-See `docs/ADMIN_OPERATIONAL_QUEUES.md` for queue API details and SLA thresholds. See `docs/ADMIN_TASK_OWNERSHIP.md` for ownership and escalation.
+Operational reporting is handled from `/admin/reports`, where admins can review SLA breaches, workload, delivery exceptions, and payment aging with CSV exports.
+
+See `docs/ADMIN_OPERATIONAL_QUEUES.md` for queue API details and SLA thresholds. See `docs/ADMIN_TASK_OWNERSHIP.md` for ownership and escalation. See `docs/ADMIN_REPORTING.md` for reporting and exports.

@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { API_URL, apiRequest } from "@/lib/api";
 import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
 import type { DeliveryCommentVisibility, DeliveryExceptionReasonCode } from "@/lib/seller-api";
 
@@ -274,6 +274,90 @@ export type AdminQueueTaskEvent = {
   createdAt: string;
 };
 
+export type AdminReportResponse<T> = {
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  total: number;
+  filters: Record<string, unknown>;
+};
+
+export type AdminOpsSummaryReport = {
+  totalTasks: number;
+  openTasks: number;
+  inProgressTasks: number;
+  escalatedTasks: number;
+  resolvedTasks: number;
+  breachedTasks: number;
+  averageResolutionHours: number;
+  pendingPayments: number;
+  paidWithoutDelivery: number;
+  deliveryExceptions: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+};
+
+export type AdminSlaBreachReportRow = {
+  id: string;
+  entityType: string;
+  entityId: string;
+  title: string;
+  status: string;
+  priority: string;
+  slaStatus: string;
+  assignedToEmail: string | null;
+  ageHours: number;
+  createdAt: string;
+  updatedAt: string;
+  actionUrl: string;
+};
+
+export type AdminWorkloadReportRow = {
+  adminUserId: string;
+  adminEmail: string;
+  adminName: string | null;
+  assignedTasks: number;
+  openTasks: number;
+  inProgressTasks: number;
+  escalatedTasks: number;
+  resolvedTasks: number;
+  averageResolutionHours: number;
+};
+
+export type AdminDeliveryExceptionReportRow = {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  shopName: string;
+  sellerEmail: string;
+  provider: string;
+  status: string;
+  reasonCode: string | null;
+  reasonText: string | null;
+  customerVisibleMessage: string | null;
+  ageHours: number;
+  updatedAt: string;
+  actionUrl: string;
+};
+
+export type AdminPaymentAgingReportRow = {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  shopName: string;
+  sellerEmail: string;
+  paymentStatus: string;
+  totalAmount: string;
+  ageHours: number;
+  ageBucket: string;
+  updatedAt: string;
+  actionUrl: string;
+};
+
 export async function getAdminDashboardSummary(query?: {
   dateFrom?: string;
   dateTo?: string;
@@ -297,6 +381,72 @@ function queueSuffix(query?: Record<string, string | number | undefined>) {
     if (value !== undefined && value !== "") params.set(key, String(value));
   });
   return params.toString() ? `?${params.toString()}` : "";
+}
+
+function reportSuffix(query?: Record<string, string | number | undefined>) {
+  return queueSuffix(query);
+}
+
+export function adminReportCsvUrl(report: "sla-breaches" | "workload" | "delivery-exceptions" | "payment-aging", query?: Record<string, string | number | undefined>) {
+  return `${API_URL}/api/admin/reports/${report}.csv${reportSuffix(query)}`;
+}
+
+export async function getAdminOpsSummaryReport(query?: {
+  dateFrom?: string;
+  dateTo?: string;
+  shopId?: string;
+  sellerId?: string;
+  assignedToUserId?: string;
+}) {
+  return apiRequest<AdminOpsSummaryReport>(`/api/admin/reports/ops-summary${reportSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminSlaBreachesReport(query?: {
+  dateFrom?: string;
+  dateTo?: string;
+  entityType?: string;
+  assignedToUserId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminReportResponse<AdminSlaBreachReportRow>>(`/api/admin/reports/sla-breaches${reportSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminWorkloadReport(query?: { dateFrom?: string; dateTo?: string }) {
+  return apiRequest<{ filters: Record<string, unknown>; items: AdminWorkloadReportRow[] }>(`/api/admin/reports/workload${reportSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminDeliveryExceptionsReport(query?: {
+  dateFrom?: string;
+  dateTo?: string;
+  provider?: string;
+  reasonCode?: string;
+  shopId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminReportResponse<AdminDeliveryExceptionReportRow>>(`/api/admin/reports/delivery-exceptions${reportSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminPaymentAgingReport(query?: {
+  dateFrom?: string;
+  dateTo?: string;
+  ageBucket?: string;
+  shopId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminReportResponse<AdminPaymentAgingReportRow>>(`/api/admin/reports/payment-aging${reportSuffix(query)}`, {
+    method: "GET",
+  });
 }
 
 export async function listAdminQueueSellers(query?: {

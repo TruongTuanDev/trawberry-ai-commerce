@@ -17,6 +17,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/admin/sellers/[id]`
 - `/admin/dashboard`
 - `/admin/queues`
+- `/admin/reports`
 - `/admin/deliveries`
 - `/products`
 - `/products/[id]`
@@ -55,6 +56,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - SLA badges and age indicators
   - task assignee, status, and priority badges
   - Claim, In progress, Escalate, and Resolve actions
+- Admin reports UI with:
+  - ops summary cards
+  - SLA breach, workload, delivery exception, and payment aging tabs
+  - date range filters
+  - CSV export buttons
 - Seller onboarding UI with:
   - legal profile form
   - KYC document upload
@@ -203,6 +209,21 @@ Current coverage:
 - claims the queue task
 - escalates the task
 - resolves the task
+
+## Playwright admin reports flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:admin-reports
+```
+
+Current coverage:
+- prepares a breached admin queue task through the backend API
+- logs in as seeded demo admin
+- opens `/admin/reports`
+- verifies summary, SLA, and workload sections
+- verifies a CSV download event
+- verifies a non-admin is redirected away from reports
 
 ## Playwright seller onboarding flow
 With Docker runtime already healthy and demo data seeded:

@@ -90,3 +90,13 @@ Queue reads remain read-only and do not create audit rows.
 - Frontend E2E: `npm run test:e2e:admin-task-ownership`
 
 The smoke flow creates or finds an operational item, creates a task, assigns it to the current admin, moves it to `IN_PROGRESS`, escalates it, resolves it, verifies events, and confirms non-admin access is forbidden.
+
+## Reporting
+
+Task ownership data is exposed through Admin Ops Reporting:
+
+- `GET /api/admin/reports/sla-breaches`
+- `GET /api/admin/reports/workload`
+- CSV exports for SLA and workload reports
+
+Reports are read-only and do not mutate task or business entity state.

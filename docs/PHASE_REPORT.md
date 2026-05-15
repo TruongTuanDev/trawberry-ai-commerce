@@ -1362,6 +1362,19 @@ Implemented admin-only task ownership for operational queues.
 
 Non-goals retained: no notification email, no ops export/reporting, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
 
+# Phase Report: Admin Ops Reporting + Export
+
+Implemented admin-only operational reporting and CSV export.
+
+- Added `/api/admin/reports/ops-summary`.
+- Added SLA breach, workload, delivery exception, and payment aging report APIs.
+- Added CSV exports for SLA breaches, workload, delivery exceptions, and payment aging.
+- CSV exports use UTF-8 BOM, safe escaping, allowlisted columns, and a 5000 row cap.
+- Added `/admin/reports` with date filters, summary cards, tabs, tables, and export buttons.
+- Added `smoke:admin-reports` and `test:e2e:admin-reports`.
+
+Non-goals retained: no notification email, no scheduled report delivery, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
+
 # Phase Report: Admin Operations Dashboard
 
 Added admin-only marketplace operations dashboard.

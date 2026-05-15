@@ -151,7 +151,9 @@ test("seller and admin handle delivery exception without leaking internal notes"
   const exceptionRow = page.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode });
   await expect(exceptionRow).toBeVisible();
   await exceptionRow.click();
+  await expect(page.getByTestId("admin-delivery-detail")).toContainText(checkout.orderCode);
   await page.getByTestId("admin-delivery-internal-comment").fill("Internal admin note hidden from customer.");
+  await expect(page.getByTestId("admin-delivery-add-comment")).toBeEnabled();
   await page.getByTestId("admin-delivery-add-comment").click();
   await expect(page.getByTestId("admin-delivery-message")).toHaveText("Internal admin comment added.");
   await page.getByTestId("admin-delivery-customer-message").fill("Admin updated delivery message.");
