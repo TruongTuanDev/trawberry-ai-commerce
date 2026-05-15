@@ -120,6 +120,11 @@ npm run start:dev
 - Supports optional `dateFrom`, `dateTo`, `shopId`, and `sellerId` filters.
 - Smoke: `npm run smoke:admin-dashboard`.
 
+## Admin operational queues
+- Admin-only queue endpoints: `GET /api/admin/queues/sellers`, `/payments`, `/deliveries`, and `/inventory`.
+- Queue items include age and SLA status for daily operations.
+- Smoke: `npm run smoke:admin-queues`.
+
 ## AI image tasks
 - NestJS only creates tasks, checks credits, and enqueues BullMQ jobs.
 - Worker calls the separate `ai-service` over `POST /internal/ai-images/generate`.

@@ -16,6 +16,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/admin/sellers`
 - `/admin/sellers/[id]`
 - `/admin/dashboard`
+- `/admin/queues`
 - `/admin/deliveries`
 - `/products`
 - `/products/[id]`
@@ -167,6 +168,21 @@ Current coverage:
 - verifies dashboard cards and numeric counts
 - follows the delivery exceptions link
 - verifies a non-admin is redirected away from the dashboard
+
+## Playwright admin queues flow
+With Docker runtime already healthy and demo data seeded:
+
+```bash
+npm run test:e2e:admin-queues
+```
+
+Current coverage:
+- prepares a pending seller through the backend API
+- logs in as seeded demo admin
+- opens `/admin/dashboard`
+- follows the pending seller queue link
+- verifies `/admin/queues` tabs, queue rows, and SLA badges
+- verifies a non-admin is redirected away from the queues page
 
 ## Playwright seller onboarding flow
 With Docker runtime already healthy and demo data seeded:

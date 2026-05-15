@@ -47,13 +47,18 @@ Admin navigation now includes:
 - Dashboard
 - Sellers
 - Deliveries
+- Operational queues
 
-Dashboard cards link to existing operational pages:
+Dashboard cards now link to operational queues:
 
-- pending sellers: `/admin/sellers?status=PENDING`
-- delivery exceptions: `/admin/deliveries?exceptionOnly=true`
-- paid without delivery: `/admin/deliveries?paidWithoutDelivery=true`
+- pending sellers: `/admin/queues?tab=sellers&status=PENDING`
+- pending payments: `/admin/queues?tab=payments&status=PENDING`
+- delivery exceptions: `/admin/queues?tab=deliveries&status=EXCEPTION`
+- paid without delivery: `/admin/queues?tab=deliveries&status=PAID_WITHOUT_DELIVERY`
+- low stock: `/admin/queues?tab=inventory&status=LOW_STOCK`
 
 ## Operational Notes
 
-The dashboard is a supervisory view, not a workflow editor. Admins still resolve seller approvals in `/admin/sellers` and delivery issues in `/admin/deliveries`.
+The dashboard is a supervisory view. `/admin/queues` provides the daily worklists and action links into seller approval, payment detail, delivery supervision, and product detail pages.
+
+See `docs/ADMIN_OPERATIONAL_QUEUES.md` for queue API details and SLA thresholds.

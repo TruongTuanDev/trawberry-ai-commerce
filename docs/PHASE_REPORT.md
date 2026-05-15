@@ -1338,6 +1338,17 @@ Delivered:
 - Playwright script `test:e2e:delivery-exceptions`.
 
 Non-goals retained: no real OpenAI calls, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
+# Phase Report: Admin Operational Queues + SLA Timers
+
+Implemented admin-only operational queues for daily marketplace supervision.
+
+- Added `GET /api/admin/queues/sellers`, `/payments`, `/deliveries`, and `/inventory`.
+- Queue items include seller/shop/order/product context, age, `slaStatus`, and action links.
+- Added `/admin/queues` with tabs, filters, status/SLA badges, and queue summary counts.
+- Updated `/admin/dashboard` cards and needs-attention tiles to open queue filters.
+- Added `smoke:admin-queues` and `test:e2e:admin-queues`.
+- Admin assignment ownership was intentionally deferred as a future phase.
+
 # Phase Report: Admin Operations Dashboard
 
 Added admin-only marketplace operations dashboard.

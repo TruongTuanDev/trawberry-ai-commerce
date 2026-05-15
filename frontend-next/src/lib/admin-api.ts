@@ -185,6 +185,47 @@ export type AdminDashboardSummary = {
   };
 };
 
+export type AdminQueueSlaStatus = "OK" | "WARNING" | "BREACHED";
+
+export type AdminQueueResponse<T> = {
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  total: number;
+  filters: Record<string, unknown>;
+  summary: Record<string, number>;
+};
+
+export type AdminQueueItem = {
+  id: string;
+  shopId: string | null;
+  shopName: string | null;
+  sellerId: string;
+  sellerEmail: string;
+  sellerName?: string | null;
+  orderCode?: string;
+  productId?: string;
+  productName?: string;
+  customerName?: string;
+  status: string;
+  orderStatus?: string;
+  deliveryStatus?: string;
+  provider?: string | null;
+  reasonCode?: string | null;
+  stockQuantity?: number;
+  lowStockThreshold?: number;
+  createdAt: string;
+  updatedAt: string;
+  ageMinutes: number;
+  ageHours: number;
+  slaStatus: AdminQueueSlaStatus;
+  actionUrl: string;
+};
+
 export async function getAdminDashboardSummary(query?: {
   dateFrom?: string;
   dateTo?: string;
@@ -198,6 +239,65 @@ export async function getAdminDashboardSummary(query?: {
   if (query?.sellerId) params.set("sellerId", query.sellerId);
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<AdminDashboardSummary>(`/api/admin/dashboard/summary${suffix}`, {
+    method: "GET",
+  });
+}
+
+function queueSuffix(query?: Record<string, string | number | undefined>) {
+  const params = new URLSearchParams();
+  Object.entries(query ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  });
+  return params.toString() ? `?${params.toString()}` : "";
+}
+
+export async function listAdminQueueSellers(query?: {
+  status?: string;
+  q?: string;
+  ageBucket?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminQueueResponse<AdminQueueItem>>(`/api/admin/queues/sellers${queueSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminQueuePayments(query?: {
+  status?: string;
+  ageBucket?: string;
+  shopId?: string;
+  sellerId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminQueueResponse<AdminQueueItem>>(`/api/admin/queues/payments${queueSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminQueueDeliveries(query?: {
+  queueType?: string;
+  provider?: string;
+  ageBucket?: string;
+  shopId?: string;
+  sellerId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminQueueResponse<AdminQueueItem>>(`/api/admin/queues/deliveries${queueSuffix(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function listAdminQueueInventory(query?: {
+  stockStatus?: string;
+  shopId?: string;
+  sellerId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return apiRequest<AdminQueueResponse<AdminQueueItem>>(`/api/admin/queues/inventory${queueSuffix(query)}`, {
     method: "GET",
   });
 }

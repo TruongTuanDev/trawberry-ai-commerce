@@ -680,3 +680,13 @@ Implemented: admin-only marketplace operations dashboard.
 - Admin navigation includes Dashboard, Sellers, and Deliveries.
 - Dashboard highlights pending sellers, pending payments, paid orders without delivery, delivery exceptions, and low/out-of-stock inventory.
 - Recent activity includes latest orders, payment reviews, delivery exceptions, and admin audit logs.
+
+# Admin Operational Queues Phase Status
+
+Implemented: admin-only operational queues with SLA timers.
+
+- Backend queue APIs under `GET /api/admin/queues/*`.
+- Frontend page at `/admin/queues` with Sellers, Payments, Deliveries, and Inventory tabs.
+- Queue rows include age, `slaStatus`, status badges, and action links.
+- Dashboard needs-attention cards now deep-link into queue filters.
+- Ownership assignment is deferred to a future admin task assignment phase.

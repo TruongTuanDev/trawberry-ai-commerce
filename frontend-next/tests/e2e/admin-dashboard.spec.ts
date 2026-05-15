@@ -172,8 +172,8 @@ test("admin operations dashboard renders cards and links", async ({ page, reques
   await expect(page.getByTestId("admin-dashboard-card-exceptions-value")).toContainText(/\d+/);
 
   await page.getByTestId("admin-dashboard-card-exceptions").click();
-  await page.waitForURL("**/admin/deliveries?exceptionOnly=true");
-  await expect(page.getByTestId("admin-deliveries-page")).toBeVisible();
+  await page.waitForURL("**/admin/queues?tab=deliveries&status=EXCEPTION");
+  await expect(page.getByTestId("admin-queues-page")).toBeVisible();
 });
 
 test("non-admin cannot view admin operations dashboard", async ({ page, request }) => {

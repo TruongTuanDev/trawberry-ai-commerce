@@ -54,31 +54,31 @@ export function AdminDashboardPageClient() {
       {
         label: "Paid without delivery",
         value: summary.orders.paidWithoutDelivery,
-        href: "/admin/deliveries?paidWithoutDelivery=true",
+        href: "/admin/queues?tab=deliveries&status=PAID_WITHOUT_DELIVERY",
         tone: "amber",
       },
       {
         label: "Pending payment review",
         value: summary.payments.pending,
-        href: "/seller/payments",
+        href: "/admin/queues?tab=payments&status=PENDING",
         tone: "blue",
       },
       {
         label: "Delivery exceptions",
         value: summary.deliveries.exceptions,
-        href: "/admin/deliveries?exceptionOnly=true",
+        href: "/admin/queues?tab=deliveries&status=EXCEPTION",
         tone: "rose",
       },
       {
         label: "Low or out of stock",
         value: summary.inventory.lowStock + summary.inventory.outOfStock,
-        href: "/seller/products",
+        href: "/admin/queues?tab=inventory&status=LOW_STOCK",
         tone: "amber",
       },
       {
         label: "Pending seller approvals",
         value: summary.sellers.pending,
-        href: "/admin/sellers?status=PENDING",
+        href: "/admin/queues?tab=sellers&status=PENDING",
         tone: "blue",
       },
     ];
@@ -134,14 +134,14 @@ export function AdminDashboardPageClient() {
           title="Orders"
           value={summary.orders.total}
           detail={`${summary.orders.pending} pending · ${summary.orders.paid} paid`}
-          href="/admin/deliveries?paidWithoutDelivery=true"
+          href="/admin/queues?tab=deliveries&status=PAID_WITHOUT_DELIVERY"
           testId="admin-dashboard-card-orders"
         />
         <DashboardCard
           title="Payments"
           value={summary.payments.pending}
           detail={`${summary.payments.paid} paid · ${summary.payments.rejected} rejected`}
-          href="/seller/payments"
+          href="/admin/queues?tab=payments&status=PENDING"
           testId="admin-dashboard-card-payments"
         />
         <DashboardCard
@@ -155,21 +155,21 @@ export function AdminDashboardPageClient() {
           title="Inventory"
           value={summary.inventory.lowStock + summary.inventory.outOfStock}
           detail={`${summary.inventory.lowStock} low · ${summary.inventory.outOfStock} out`}
-          href="/seller/products"
+          href="/admin/queues?tab=inventory&status=LOW_STOCK"
           testId="admin-dashboard-card-inventory"
         />
         <DashboardCard
           title="Sellers"
           value={summary.sellers.pending}
           detail={`${summary.sellers.approved} approved · ${summary.sellers.rejected} rejected`}
-          href="/admin/sellers?status=PENDING"
+          href="/admin/queues?tab=sellers&status=PENDING"
           testId="admin-dashboard-card-sellers"
         />
         <DashboardCard
           title="Exceptions"
           value={summary.deliveries.exceptions}
           detail={`${summary.deliveries.failed} failed · ${summary.deliveries.cancelled} cancelled`}
-          href="/admin/deliveries?exceptionOnly=true"
+          href="/admin/queues?tab=deliveries&status=EXCEPTION"
           testId="admin-dashboard-card-exceptions"
         />
       </section>
