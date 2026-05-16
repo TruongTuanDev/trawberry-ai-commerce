@@ -26,6 +26,15 @@ The checkout response keeps the legacy first-order fields for old consumers and 
 }
 ```
 
+Current checkout also creates a parent marketplace receipt:
+
+- `checkoutId`
+- `checkoutCode`
+- `grandTotal`
+- child `orders[]`
+
+The first `orderId` and `orderCode` remain backward compatible for existing single-order consumers.
+
 ## Customer Flow
 
 1. Customer adds items from one or more shops to the localStorage cart.
@@ -34,7 +43,8 @@ The checkout response keeps the legacy first-order fields for old consumers and 
 4. Backend validates all items first.
 5. Backend groups validated items by `product.shopId`.
 6. Backend creates one order per shop in one transaction.
-7. Customer sees one confirmation card per created shop order and tracks each order separately.
+7. Customer receives one `checkoutCode` for the parent receipt.
+8. Customer sees one confirmation card per created shop order and tracks each order separately.
 
 ## Backend Rules
 
@@ -60,9 +70,11 @@ Seller order and payment APIs remain shop-scoped through existing guards. Seller
 
 ## Verification
 
+- Backend receipt/history smoke: `npm run smoke:customer-order-history`
 - Backend smoke: `npm run smoke:multi-shop-checkout`
 - Frontend E2E: `npm run test:e2e:multi-shop-checkout`
+- Frontend receipt/history E2E: `npm run test:e2e:customer-order-history`
 
 ## Future Phase
 
-An optional parent marketplace checkout id/order code can be added later for combined customer receipts, combined payment routing, or marketplace-level support workflows.
+Future work can add combined payment routing or marketplace-level support workflows on top of the existing parent receipt.

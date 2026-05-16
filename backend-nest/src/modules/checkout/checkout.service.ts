@@ -163,8 +163,25 @@ export class CheckoutService {
 
     const customerId = await this.resolveCustomerId(dto, user);
     const itemsByShop = this.groupItemsByShop(normalizedItems);
+    const grandTotal = this.sumLineTotals(normalizedItems);
 
     const created = await this.prisma.$transaction(async (tx) => {
+      const marketplaceCheckout = await tx.marketplaceCheckout.create({
+        data: {
+          id: randomUUID(),
+          checkoutCode: this.buildCheckoutCode(),
+          customerUserId: user?.userId ?? null,
+          customerName: dto.customer.fullName.trim(),
+          customerPhone: dto.customer.phone.trim(),
+          customerEmail: dto.customer.email?.trim() || null,
+          grandTotal,
+          status: 'PENDING',
+        },
+        select: {
+          id: true,
+          checkoutCode: true,
+        },
+      });
       for (const item of normalizedItems) {
         if (!item.variant.trackInventory) {
           continue;
@@ -201,6 +218,7 @@ export class CheckoutService {
         const order = await tx.order.create({
           data: {
             id: randomUUID(),
+            marketplaceCheckoutId: marketplaceCheckout.id,
             customerId,
             shopId: shop.id,
             orderNumber: this.buildOrderNumber(),
@@ -243,15 +261,14 @@ export class CheckoutService {
         });
       }
 
-      return createdOrders;
+      return {
+        marketplaceCheckout,
+        orders: createdOrders,
+      };
     });
 
-    const firstOrder = created[0];
-    const grandTotal = created.reduce(
-      (sum, order) => sum.plus(order.totalAmount),
-      new Prisma.Decimal(0),
-    );
-    const orders = created.map((order) => ({
+    const firstOrder = created.orders[0];
+    const orders = created.orders.map((order) => ({
       orderId: order.id,
       orderCode: order.orderNumber,
       shopId: order.shop.id,
@@ -265,6 +282,8 @@ export class CheckoutService {
     }));
 
     return {
+      checkoutId: created.marketplaceCheckout.id,
+      checkoutCode: created.marketplaceCheckout.checkoutCode,
       orderId: firstOrder.id,
       orderCode: firstOrder.orderNumber,
       status: firstOrder.status,
@@ -418,5 +437,9 @@ export class CheckoutService {
 
   private buildOrderNumber() {
     return `ORD-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+  }
+
+  private buildCheckoutCode() {
+    return `CHK-${Date.now()}-${Math.round(Math.random() * 1000)}`;
   }
 }

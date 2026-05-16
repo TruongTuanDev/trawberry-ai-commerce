@@ -32,6 +32,18 @@ export async function loginRequest(input: { email: string; password: string }) {
   });
 }
 
+export async function registerRequest(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role?: "CUSTOMER" | "SELLER" | "USER";
+}) {
+  return apiRequest<AuthResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function currentUserRequest(token?: string) {
   return apiRequest<CurrentUserResponse>("/api/auth/me", {
     method: "GET",

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import clsx from "clsx";
 import { useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 const links = [
   { href: "/", label: "Home" },
@@ -17,10 +18,13 @@ export function PublicHeader() {
   const pathname = usePathname();
   const hydrateCart = useCartStore((state) => state.hydrate);
   const cartCount = useCartStore((state) => state.getItemCount());
+  const hydrateAuth = useAuthStore((state) => state.hydrate);
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     hydrateCart();
-  }, [hydrateCart]);
+    hydrateAuth();
+  }, [hydrateAuth, hydrateCart]);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border)]/70 bg-[rgba(249,243,234,0.82)] backdrop-blur-xl">
@@ -71,10 +75,11 @@ export function PublicHeader() {
         </nav>
 
         <Link
-          href="/products"
+          href={user?.role === "CUSTOMER" ? "/customer/orders" : "/customer/login"}
           className="public-button-primary px-4 py-2 text-sm shadow-[0_14px_28px_rgba(182,49,75,0.2)]"
+          data-testid="public-customer-link"
         >
-          Shop now
+          {user?.role === "CUSTOMER" ? "My orders" : "Customer login"}
         </Link>
         <Link
           href="/cart"

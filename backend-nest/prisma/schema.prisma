@@ -25,6 +25,7 @@ model User {
   aiGenerationTasks       AiGenerationTask[]
   aiUsageLogs             AiUsageLog[]
   customerOrders          Order[]                @relation("CustomerOrders")
+  marketplaceCheckouts    MarketplaceCheckout[]  @relation("CustomerMarketplaceCheckouts")
   paymentReviewLogs       PaymentReviewLog[]     @relation("PaymentReviewerLogs")
   productImportSessions   ProductImportSession[]
   wbSyncRuns              WbSyncRun[]            @relation("WbSyncRunSeller")
@@ -398,6 +399,7 @@ model WbSyncRun {
 
 model Order {
   id                       String             @id @db.Uuid
+  marketplaceCheckoutId    String?            @map("marketplace_checkout_id") @db.Uuid
   customerId               String             @map("customer_id") @db.Uuid
   shopId                   String             @map("shop_id") @db.Uuid
   orderNumber              String             @unique @map("order_number") @db.VarChar(255)
@@ -423,6 +425,7 @@ model Order {
   updatedAt                DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
   customerCompletedAt      DateTime?          @map("customer_completed_at") @db.Timestamp(6)
   customer                 User               @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: Restrict)
+  marketplaceCheckout      MarketplaceCheckout? @relation(fields: [marketplaceCheckoutId], references: [id], onDelete: SetNull)
   shop                     Shop               @relation(fields: [shopId], references: [id], onDelete: Restrict)
   items                    OrderItem[]
   paymentReviewLogs        PaymentReviewLog[]
@@ -433,7 +436,27 @@ model Order {
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
+  @@index([marketplaceCheckoutId])
   @@map("orders")
+}
+
+model MarketplaceCheckout {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  checkoutCode   String   @unique @map("checkout_code") @db.VarChar(255)
+  customerUserId String?  @map("customer_user_id") @db.Uuid
+  customerName   String   @map("customer_name") @db.VarChar(255)
+  customerPhone  String   @map("customer_phone") @db.VarChar(50)
+  customerEmail  String?  @map("customer_email") @db.VarChar(255)
+  grandTotal     Decimal  @map("grand_total") @db.Decimal(10, 2)
+  status         String   @default("PENDING") @db.VarChar(50)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer       User?    @relation("CustomerMarketplaceCheckouts", fields: [customerUserId], references: [id], onDelete: SetNull)
+  orders         Order[]
+
+  @@index([customerUserId, createdAt])
+  @@index([customerPhone, checkoutCode])
+  @@map("marketplace_checkouts")
 }
 
 model ShopDeliverySetting {

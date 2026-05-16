@@ -1444,6 +1444,24 @@ Implemented:
 
 Deferred:
 
-- Parent marketplace order id/code.
 - Combined multi-shop payment orchestration.
 - Combined customer tracking page.
+
+# Phase Report: Customer Account + Order History + Parent Checkout Receipt
+
+Implemented:
+
+- Added `marketplace_checkouts` parent receipt model and optional order relation.
+- Checkout now creates a parent receipt for single-shop and multi-shop orders.
+- Checkout response returns `checkoutId`, `checkoutCode`, `orders[]`, `orderCodes[]`, `grandTotal`, and legacy first-order fields.
+- Logged-in customer checkout attaches `customerUserId`.
+- Added logged-in customer receipt APIs under `/api/customer/orders`.
+- Added public anonymous receipt lookup under `/api/public/checkouts/:checkoutCode?phone=...`.
+- Added customer register/login pages, order history, order detail, and public receipt page.
+- Added `smoke:customer-order-history` and `test:e2e:customer-order-history`.
+
+Deferred:
+
+- Combined payment capture across shops.
+- Refund/dispute flows at parent receipt level.
+- Marketplace support case workflow attached to parent receipts.

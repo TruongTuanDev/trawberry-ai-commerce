@@ -100,6 +100,7 @@ Order creation behavior:
 - variant stock is reserved by increasing `reservedStock`
 - deduction and reservation are executed atomically inside the checkout transaction to prevent oversell
 - multi-shop cart checkout creates one order per `product.shopId`
+- every checkout creates one parent marketplace receipt in `marketplace_checkouts`
 - any validation or stock failure blocks the entire checkout and prevents partial order creation
 
 Response:
@@ -107,6 +108,8 @@ Response:
 ```json
 {
   "orderId": "uuid",
+  "checkoutId": "uuid",
+  "checkoutCode": "CHK-1715512345678-123",
   "orderCode": "ORD-1715512345678-123",
   "status": "PENDING",
   "paymentStatus": "PENDING",
@@ -135,7 +138,13 @@ Response:
 
 Compatibility:
 - `orderId`, `orderCode`, `status`, `paymentStatus`, `totalAmount`, `paymentInstructions`, and `trackingPath` describe the first created order for legacy single-order consumers.
-- New cart consumers should read `orders[]`, `orderCodes[]`, and `grandTotal`.
+- New cart consumers should read `checkoutCode`, `orders[]`, `orderCodes[]`, and `grandTotal`.
+
+## Customer Receipt APIs
+
+- `GET /api/customer/orders`: logged-in customer receipt history.
+- `GET /api/customer/orders/:checkoutCode`: logged-in customer receipt detail.
+- `GET /api/public/checkouts/:checkoutCode?phone=...`: anonymous receipt lookup by checkout code plus phone.
 
 Tracking follow-up:
 - customer can continue directly to `/orders/:orderId`
@@ -168,7 +177,7 @@ Coverage currently includes:
 - Payment flow is still manual and informational only.
 - Checkout chooses the requested `variantId` when provided, otherwise it falls back to the first active priced variant for legacy callers.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
-- Multi-shop checkout has no parent marketplace order code yet; tracking and payment proof are per created shop order.
+- Payment proof and delivery remain per created shop order; parent receipt is for combined customer view/history.
 
 ## WB Import Checkout Verification
 

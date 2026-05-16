@@ -298,8 +298,9 @@ Future audit item: design an optional marketplace parent order for combined rece
 
 # Multi-shop Checkout Audit Update
 
-- Backend `POST /api/checkout/orders` accepts items from multiple shops, validates all items before writes, creates one order per shop in one transaction, and returns `orders[]`, `orderCodes[]`, and `grandTotal`.
+- Backend `POST /api/checkout/orders` accepts items from multiple shops, validates all items before writes, creates a parent marketplace checkout receipt, creates one order per shop in one transaction, and returns `checkoutCode`, `orders[]`, `orderCodes[]`, and `grandTotal`.
 - Existing single-order fields remain in the checkout response for backward compatibility.
 - Seller order/payment queues remain shop-scoped, so sellers only see their own split order.
-- Customer tracking remains per order code plus phone.
-- Verification targets: `backend-nest npm run smoke:multi-shop-checkout` and `frontend-next npm run test:e2e:multi-shop-checkout`.
+- Customer tracking remains per order code plus phone, while receipt lookup is available by checkout code plus phone.
+- Logged-in customers can access `/customer/orders` and `/customer/orders/[checkoutCode]`.
+- Verification targets: `backend-nest npm run smoke:customer-order-history`, `backend-nest npm run smoke:multi-shop-checkout`, `frontend-next npm run test:e2e:customer-order-history`, and `frontend-next npm run test:e2e:multi-shop-checkout`.

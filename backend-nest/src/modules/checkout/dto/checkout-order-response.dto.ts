@@ -34,6 +34,12 @@ class CheckoutSplitOrderResponseDto {
 
 export class CheckoutOrderResponseDto {
   @ApiProperty()
+  checkoutId!: string;
+
+  @ApiProperty()
+  checkoutCode!: string;
+
+  @ApiProperty()
   orderId!: string;
 
   @ApiProperty()

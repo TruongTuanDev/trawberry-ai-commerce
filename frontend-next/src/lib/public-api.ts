@@ -93,6 +93,8 @@ export type CheckoutOrderPayload = {
 };
 
 export type CheckoutOrderResponse = {
+  checkoutId: string;
+  checkoutCode: string;
   orderId: string;
   orderCode: string;
   status: string;

@@ -9,6 +9,7 @@ import {
   type CheckoutOrderResponse,
 } from "@/lib/public-api";
 import { type CartItem, useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 const initialCustomer = {
   fullName: "",
@@ -54,6 +55,9 @@ export function CheckoutPageClient({
   const hydrateCart = useCartStore((state) => state.hydrate);
   const addItem = useCartStore((state) => state.addItem);
   const clearCart = useCartStore((state) => state.clearCart);
+  const authUser = useAuthStore((state) => state.user);
+  const hydrateAuth = useAuthStore((state) => state.hydrate);
+  const refreshMe = useAuthStore((state) => state.refreshMe);
   const [paymentMethod, setPaymentMethod] = useState<
     "MANUAL_TRANSFER" | "CASH_ON_DELIVERY"
   >("MANUAL_TRANSFER");
@@ -75,6 +79,20 @@ export function CheckoutPageClient({
   useEffect(() => {
     hydrateCart();
   }, [hydrateCart]);
+
+  useEffect(() => {
+    hydrateAuth();
+    void refreshMe();
+  }, [hydrateAuth, refreshMe]);
+
+  const customerForm = {
+    fullName:
+      customer.fullName || (authUser?.role === "CUSTOMER" ? authUser.fullName ?? "" : ""),
+    phone: customer.phone || (authUser?.role === "CUSTOMER" ? authUser.phone ?? "" : ""),
+    email: customer.email || (authUser?.role === "CUSTOMER" ? authUser.email : ""),
+    address: customer.address,
+    note: customer.note,
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -118,9 +136,9 @@ export function CheckoutPageClient({
       return;
     }
     if (
-      !customer.fullName.trim() ||
-      !customer.phone.trim() ||
-      !customer.address.trim()
+      !customerForm.fullName.trim() ||
+      !customerForm.phone.trim() ||
+      !customerForm.address.trim()
     ) {
       setError("Full name, phone, and address are required.");
       return;
@@ -137,11 +155,11 @@ export function CheckoutPageClient({
           quantity: item.quantity,
         })),
         customer: {
-          fullName: customer.fullName.trim(),
-          phone: customer.phone.trim(),
-          email: customer.email.trim() || undefined,
-          address: customer.address.trim(),
-          note: customer.note.trim() || undefined,
+          fullName: customerForm.fullName.trim(),
+          phone: customerForm.phone.trim(),
+          email: customerForm.email.trim() || undefined,
+          address: customerForm.address.trim(),
+          note: customerForm.note.trim() || undefined,
         },
         paymentMethod,
       });
@@ -175,9 +193,27 @@ export function CheckoutPageClient({
               </h1>
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Metric label="Orders" value={String(order.orders.length)} />
+                <Metric label="Receipt" value={order.checkoutCode} />
                 <Metric label="Grand total" value={order.grandTotal} />
                 <Metric label="First order" value={order.orderCode} />
-                <Metric label="Status" value={order.status} />
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href={`/orders/receipt/${order.checkoutCode}?phone=${encodeURIComponent(order.customerPhone)}`}
+                  className="public-button-primary px-5 py-3 text-sm"
+                  data-testid="checkout-receipt-link"
+                >
+                  Open receipt
+                </Link>
+                {authUser?.role === "CUSTOMER" ? (
+                  <Link
+                    href={`/customer/orders/${order.checkoutCode}`}
+                    className="public-button-secondary px-5 py-3 text-sm"
+                    data-testid="checkout-customer-order-link"
+                  >
+                    Save in my orders
+                  </Link>
+                ) : null}
               </div>
               <div className="mt-6 grid gap-4" data-testid="checkout-orders">
                 {order.orders.map((splitOrder, index) => (
@@ -250,7 +286,7 @@ export function CheckoutPageClient({
                   <div className="mt-6 grid gap-4">
                     <Field label="Full name">
                       <input
-                        value={customer.fullName}
+                        value={customerForm.fullName}
                         onChange={(event) =>
                           setCustomer((current) => ({
                             ...current,
@@ -264,7 +300,7 @@ export function CheckoutPageClient({
                     <div className="grid gap-4 md:grid-cols-2">
                       <Field label="Phone">
                         <input
-                          value={customer.phone}
+                          value={customerForm.phone}
                           onChange={(event) =>
                             setCustomer((current) => ({
                               ...current,
@@ -277,7 +313,7 @@ export function CheckoutPageClient({
                       </Field>
                       <Field label="Email">
                         <input
-                          value={customer.email}
+                          value={customerForm.email}
                           onChange={(event) =>
                             setCustomer((current) => ({
                               ...current,

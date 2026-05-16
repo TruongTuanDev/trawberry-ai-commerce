@@ -12,6 +12,7 @@ import { PublicProductsModule } from './modules/public-products/public-products.
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrderTrackingModule } from './modules/order-tracking/order-tracking.module';
+import { CustomerOrdersModule } from './modules/customer-orders/customer-orders.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SellerOnboardingModule } from './modules/seller-onboarding/seller-onboarding.module';
@@ -50,6 +51,7 @@ import { HealthController } from './health.controller';
     PublicProductsModule,
     CheckoutModule,
     OrderTrackingModule,
+    CustomerOrdersModule,
   ],
   controllers: [HealthController],
 })

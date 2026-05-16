@@ -98,6 +98,7 @@ type StoredProduct = {
 
 type StoredOrder = {
   id: string;
+  marketplaceCheckoutId: string | null;
   customerId: string;
   shopId: string;
   orderNumber: string;
@@ -114,7 +115,7 @@ type StoredOrder = {
   createdAt: Date;
   updatedAt: Date;
   customerCompletedAt: Date | null;
-  shop: { id: string; name: string };
+  shop: { id: string; name: string; paymentInstructions: string | null };
   items: Array<{
     id: string;
     productId: string | null;
@@ -130,12 +131,26 @@ type StoredOrder = {
   }>;
 };
 
+type StoredMarketplaceCheckout = {
+  id: string;
+  checkoutCode: string;
+  customerUserId: string | null;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  grandTotal: DecimalLike;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 describe('CheckoutController (e2e)', () => {
   let app: INestApplication<App>;
   let users: StoredUser[];
   let shops: StoredShop[];
   let products: StoredProduct[];
   let orders: StoredOrder[];
+  let marketplaceCheckouts: StoredMarketplaceCheckout[];
 
   const decimal = (value: string): DecimalLike => {
     const numeric = Number(value);
@@ -179,6 +194,11 @@ describe('CheckoutController (e2e)', () => {
       count: jest.fn(),
       findFirst: jest.fn(),
     },
+    marketplaceCheckout: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -215,6 +235,17 @@ describe('CheckoutController (e2e)', () => {
           approvalStatus: 'APPROVED',
           currentShopId: 'shop-2',
         },
+      },
+      {
+        id: 'customer-user-1',
+        email: 'customer@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        fullName: 'Customer One',
+        phone: '0123456789',
+        role: 'CUSTOMER',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: null,
       },
     ];
 
@@ -354,6 +385,7 @@ describe('CheckoutController (e2e)', () => {
     ];
 
     orders = [];
+    marketplaceCheckouts = [];
 
     prismaMock.user.findUnique.mockImplementation(
       ({
@@ -510,6 +542,7 @@ describe('CheckoutController (e2e)', () => {
       }: {
         data: {
           id: string;
+          marketplaceCheckoutId?: string | null;
           customerId: string;
           shopId: string;
           orderNumber: string;
@@ -549,6 +582,7 @@ describe('CheckoutController (e2e)', () => {
 
         const created: StoredOrder = {
           id: data.id,
+          marketplaceCheckoutId: data.marketplaceCheckoutId ?? null,
           customerId: data.customerId,
           shopId: data.shopId,
           orderNumber: data.orderNumber,
@@ -568,6 +602,7 @@ describe('CheckoutController (e2e)', () => {
           shop: {
             id: shop.id,
             name: shop.name,
+            paymentInstructions: shop.paymentInstructions,
           },
           items: data.items.create.map((item) => ({
             id: item.id,
@@ -603,6 +638,83 @@ describe('CheckoutController (e2e)', () => {
         }
 
         return created;
+      },
+    );
+
+    prismaMock.marketplaceCheckout.create.mockImplementation(
+      ({
+        data,
+        select,
+      }: {
+        data: {
+          id: string;
+          checkoutCode: string;
+          customerUserId: string | null;
+          customerName: string;
+          customerPhone: string;
+          customerEmail: string | null;
+          grandTotal: DecimalLike;
+          status: string;
+        };
+        select?: Record<string, unknown>;
+      }) => {
+        const created: StoredMarketplaceCheckout = {
+          ...data,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        marketplaceCheckouts.push(created);
+        if (select) {
+          return {
+            id: created.id,
+            checkoutCode: created.checkoutCode,
+          };
+        }
+        return created;
+      },
+    );
+
+    const attachCheckoutOrders = (checkout: StoredMarketplaceCheckout) => ({
+      ...checkout,
+      orders: orders
+        .filter((order) => order.marketplaceCheckoutId === checkout.id)
+        .map((order) => ({
+          ...order,
+          deliveryShipments: [],
+        })),
+    });
+
+    prismaMock.marketplaceCheckout.findMany.mockImplementation(
+      ({ where }: { where: { customerUserId?: string } }) =>
+        marketplaceCheckouts
+          .filter((checkout) =>
+            where.customerUserId
+              ? checkout.customerUserId === where.customerUserId
+              : true,
+          )
+          .map(attachCheckoutOrders),
+    );
+
+    prismaMock.marketplaceCheckout.findFirst.mockImplementation(
+      ({
+        where,
+      }: {
+        where: {
+          checkoutCode?: string;
+          customerUserId?: string;
+          customerPhone?: string;
+        };
+      }) => {
+        const checkout = marketplaceCheckouts.find(
+          (entry) =>
+            (!where.checkoutCode ||
+              entry.checkoutCode === where.checkoutCode) &&
+            (!where.customerUserId ||
+              entry.customerUserId === where.customerUserId) &&
+            (!where.customerPhone ||
+              entry.customerPhone === where.customerPhone),
+        );
+        return checkout ? attachCheckoutOrders(checkout) : null;
       },
     );
 
@@ -676,6 +788,7 @@ describe('CheckoutController (e2e)', () => {
       .expect(201);
 
     const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.checkoutCode).toMatch(/^CHK-/);
     expect(createBody.orderId).toBeTruthy();
     expect(createBody.status).toBe('PENDING');
     expect(createBody.paymentStatus).toBe('PENDING');
@@ -736,6 +849,7 @@ describe('CheckoutController (e2e)', () => {
       .expect(201);
 
     const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.checkoutCode).toMatch(/^CHK-/);
     expect(createBody.totalAmount).toBe('528');
     expect(products[0].variants[0].stockQuantity).toBe(8);
     expect(products[0].variants[0].reservedStock).toBe(3);
@@ -780,6 +894,7 @@ describe('CheckoutController (e2e)', () => {
       .expect(201);
 
     const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.checkoutCode).toMatch(/^CHK-/);
     expect(createBody.orders).toHaveLength(2);
     expect(createBody.grandTotal).toBe('798');
     expect(createBody.orderCodes).toHaveLength(2);
@@ -819,6 +934,64 @@ describe('CheckoutController (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/api/shops/shop-1/orders/${shopTwoOrder!.orderId}`)
       .set('Authorization', `Bearer ${sellerOneToken}`)
+      .expect(404);
+  });
+
+  it('attaches logged-in customer checkout to order history and public receipt lookup', async () => {
+    const customerToken = await loginAndGetToken(app, 'customer@example.com');
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 2 },
+          { productId: 'product-2', variantId: 'variant-2', quantity: 3 },
+        ],
+        customer: {
+          fullName: 'Customer One',
+          phone: '0123456789',
+          email: 'customer@example.com',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(201);
+
+    const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.checkoutCode).toMatch(/^CHK-/);
+    expect(createBody.orderCode).toBe(createBody.orders[0].orderCode);
+
+    const historyResponse = await request(app.getHttpServer())
+      .get('/api/customer/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+    const historyBody = readBody<{ items: Array<{ checkoutCode: string }> }>(
+      historyResponse,
+    );
+    expect(historyBody.items.map((item) => item.checkoutCode)).toContain(
+      createBody.checkoutCode,
+    );
+
+    const detailResponse = await request(app.getHttpServer())
+      .get(`/api/customer/orders/${createBody.checkoutCode}`)
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+    const detailBody = readBody<{ orders: unknown[]; grandTotal: string }>(
+      detailResponse,
+    );
+    expect(detailBody.orders).toHaveLength(2);
+    expect(detailBody.grandTotal).toBe('798');
+
+    const publicResponse = await request(app.getHttpServer())
+      .get(`/api/public/checkouts/${createBody.checkoutCode}?phone=0123456789`)
+      .expect(200);
+    expect(readBody<{ orders: unknown[] }>(publicResponse).orders).toHaveLength(
+      2,
+    );
+
+    await request(app.getHttpServer())
+      .get(`/api/public/checkouts/${createBody.checkoutCode}?phone=wrong`)
       .expect(404);
   });
 
