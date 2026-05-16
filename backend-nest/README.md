@@ -119,8 +119,25 @@ npm run start:dev
 - Seller endpoints under `POST /api/shops/:shopId/wb-sync/*`.
 - Supports sync all products and sync by article/vendorCode.
 - Default `WB_SYNC_MODE=mock` does not call WB.
-- Real mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
+- Real mode requires:
+  - `WB_SYNC_MODE=real`
+  - `WB_API_BASE_URL=https://content-api.wildberries.ru`
+  - `WB_CREDENTIAL_ENCRYPTION_KEY=...`
+- Credential APIs:
+  - `POST /api/shops/:shopId/wb-sync/credentials`
+  - `GET /api/shops/:shopId/wb-sync/credentials/status`
+  - `POST /api/shops/:shopId/wb-sync/credentials/verify`
+  - `DELETE /api/shops/:shopId/wb-sync/credentials`
+- Real mode never silently falls back to mock after an error.
 - Smoke: `npm run smoke:wb-api-sync`.
+- Optional real smoke:
+
+```bash
+WB_SYNC_MODE=real
+WB_REAL_API_KEY=...
+WB_REAL_TEST_ARTICLE=...
+npm run smoke:wb-api-sync-real
+```
 
 ## Category Mapping And Marketplace Search
 - `npm run seed:demo` seeds internal marketplace categories and baseline WB mappings.

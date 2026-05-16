@@ -1482,3 +1482,24 @@ Deferred:
 - Combined payment capture across shops.
 - Refund/dispute flows at parent receipt level.
 - Marketplace support case workflow attached to parent receipts.
+
+# Phase Report: Wildberries Real API Sync Hardening
+
+Implemented:
+
+- explicit real-mode credential save, status, verify, and delete APIs
+- persisted WB credential verification metadata on `shop_wb_credentials`
+- AES-GCM credential encryption via `WB_CREDENTIAL_ENCRYPTION_KEY`
+- real-mode `POST /content/v2/get/cards/list` client with cursor pagination
+- no silent mock fallback when `WB_SYNC_MODE=real`
+- seller UI connection card with mode, key last4, verify status, and sanitized error
+- real-mode sync result reporting with `sourceMode`
+- optional `smoke:wb-api-sync-real`
+- backend WB sync tests for credential lifecycle, verify failure sanitization, request body, and pagination
+
+Retained non-goals:
+
+- no WB price sync
+- no WB stock sync
+- no real WB calls in default CI smoke/E2E
+- no legacy app changes

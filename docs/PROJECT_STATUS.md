@@ -13,6 +13,7 @@
 - Public products require approved seller, active shop/product, at least one image, positive active variant price, and available stock.
 - WB import image handling remains `REMOTE_URL`; same-file re-import is expected to be idempotent.
 - Delivery operating model is now seller-managed with admin supervision: sellers paste Yandex/CDEK/manual tracking details, admins monitor paid orders without delivery, and customer tracking shows delivery status/message.
+- WB API sync real mode now has encrypted shop credentials, explicit verify/delete endpoints, cursor pagination for `POST /content/v2/get/cards/list`, and no silent mock fallback when `WB_SYNC_MODE=real`.
 
 ## A. Project Summary
 
@@ -730,6 +731,21 @@ Implemented: seller-managed WB API product sync foundation.
 - Product, variant, and remote image upsert is idempotent.
 - Excel import remains unchanged and continues to use `/seller/import/wildberries`.
 - Real WB mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
+
+# Wildberries Real API Sync Hardening Status
+
+Implemented:
+
+- seller credential save/status/verify/delete flow
+- stored verification metadata: `lastVerifiedAt`, `lastVerificationStatus`, `lastError`
+- `WB_CREDENTIAL_ENCRYPTION_KEY` as the primary credential encryption env
+- real-mode cursor pagination and article filtering from real fetched cards
+- UI mode badge and connection diagnostics
+- optional `npm run smoke:wb-api-sync-real`
+
+Current limitation:
+
+- default browser/API verification remains mock-only unless a local real token is supplied
 # Project Status Update
 
 Cart, multi-item checkout, multi-shop split orders, customer accounts, and parent receipts are in place:

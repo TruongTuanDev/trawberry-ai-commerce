@@ -11,8 +11,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    if (user && user.role !== "ADMIN") {
+    if (!user) {
+      return;
+    }
+    if (user.role === "SELLER") {
       router.replace("/seller/dashboard");
+      return;
+    }
+    if (user.role === "CUSTOMER") {
+      router.replace("/customer/orders");
     }
   }, [router, user]);
 

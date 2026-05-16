@@ -474,6 +474,7 @@ export type WbSyncRun = {
   mode: string;
   syncType: string;
   article: string | null;
+  sourceMode: "mock" | "real";
   totalFetched: number;
   totalProducts: number;
   totalVariants: number;
@@ -489,6 +490,7 @@ export type WbSyncRun = {
       sellerSku: string | null;
       externalProductId: string | null;
       name: string;
+      brand?: string | null;
       variantsCount: number;
       imagesCount: number;
       warnings: WbImportIssue[];
@@ -502,10 +504,21 @@ export type WbSyncRun = {
 
 export type WbCredentialsStatus = {
   shopId: string;
+  connected: boolean;
   hasCredentials: boolean;
   keyLast4: string | null;
   updatedAt: string | null;
   mode: "mock" | "real";
+  lastVerifiedAt: string | null;
+  lastVerificationStatus: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+  lastError: string | null;
+};
+
+export type WbConnectionVerifyResult = {
+  success: true;
+  mode: "mock" | "real";
+  fetched: number;
+  message: string;
 };
 
 export type ProductImage = {
@@ -903,6 +916,32 @@ export async function saveWbSyncCredentials(
       method: "POST",
       token,
       body: JSON.stringify({ apiKey }),
+    },
+  );
+}
+
+export async function verifyWbSyncCredentials(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<WbConnectionVerifyResult>(
+    `/api/shops/${shopId}/wb-sync/credentials/verify`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export async function deleteWbSyncCredentials(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<{ success: boolean; shopId: string; mode: "mock" | "real" }>(
+    `/api/shops/${shopId}/wb-sync/credentials`,
+    {
+      method: "DELETE",
+      token,
     },
   );
 }

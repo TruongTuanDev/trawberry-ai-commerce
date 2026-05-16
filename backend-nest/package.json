@@ -34,6 +34,7 @@
     "smoke:marketplace-search": "powershell -ExecutionPolicy Bypass -File scripts/smoke-marketplace-search.ps1",
     "smoke:wb-import": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import.ps1",
     "smoke:wb-api-sync": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-api-sync.ps1",
+    "smoke:wb-api-sync-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-api-sync-real.ps1",
     "smoke:wb-import-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import-checkout.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",
     "smoke:payments": "powershell -ExecutionPolicy Bypass -File scripts/smoke-payments.ps1",

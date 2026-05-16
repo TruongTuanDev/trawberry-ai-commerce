@@ -26,6 +26,7 @@ ENV PORT=3001
 
 COPY package*.json ./
 COPY prisma ./prisma
+COPY scripts ./scripts
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 

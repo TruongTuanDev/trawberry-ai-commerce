@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginRequest, currentUserRequest } from "@/lib/auth-api";
+import { currentUserRequest, loginRequest } from "@/lib/auth-api";
 import { useAuthStore } from "@/stores/auth-store";
 
 const loginSchema = z.object({
@@ -16,7 +16,31 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+type RoleLoginFormProps = {
+  roleLabel: string;
+  badgeLabel: string;
+  title: string;
+  description?: string;
+  expectedRoles: Array<"ADMIN" | "SELLER" | "CUSTOMER">;
+  defaultRedirect: string;
+  redirectByRole?: Partial<Record<"ADMIN" | "SELLER" | "CUSTOMER", string>>;
+  secondaryLinkHref?: string;
+  secondaryLinkLabel?: string;
+  testIdPrefix: "admin-login" | "seller-login" | "customer-login" | "login";
+};
+
+export function RoleLoginForm({
+  roleLabel,
+  badgeLabel,
+  title,
+  description,
+  expectedRoles,
+  defaultRedirect,
+  redirectByRole,
+  secondaryLinkHref,
+  secondaryLinkLabel,
+  testIdPrefix,
+}: RoleLoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
@@ -26,8 +50,8 @@ export function LoginForm() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "seller@example.com",
-      password: "password123",
+      email: "",
+      password: "",
     },
   });
 
@@ -39,11 +63,16 @@ export function LoginForm() {
       await loginRequest(values);
       const user = await currentUserRequest();
 
-      setSession({
-        user,
-      });
+      if (!expectedRoles.includes(user.role as "ADMIN" | "SELLER" | "CUSTOMER")) {
+        throw new Error(`${roleLabel} account is required.`);
+      }
 
-      router.push(searchParams.get("next") || "/seller/dashboard");
+      setSession({ user });
+      router.push(
+        searchParams.get("next") ||
+          redirectByRole?.[user.role as "ADMIN" | "SELLER" | "CUSTOMER"] ||
+          defaultRedirect,
+      );
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Unable to log in.");
     } finally {
@@ -52,20 +81,21 @@ export function LoginForm() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-md" data-testid="login-form">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Next.js migration</p>
+    <div className="mx-auto w-full max-w-md" data-testid={`${testIdPrefix}-form`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">{badgeLabel}</p>
       <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-        Seller login
+        {title}
       </h2>
+      {description ? <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{description}</p> : null}
       <form className="mt-8 space-y-5" onSubmit={onSubmit}>
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor="email">
+          <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor={`${testIdPrefix}-email`}>
             Email
           </label>
           <input
-            id="email"
+            id={`${testIdPrefix}-email`}
             type="email"
-            data-testid="login-email"
+            data-testid={`${testIdPrefix}-email`}
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
             {...form.register("email")}
           />
@@ -74,13 +104,13 @@ export function LoginForm() {
           ) : null}
         </div>
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor="password">
+          <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor={`${testIdPrefix}-password`}>
             Password
           </label>
           <input
-            id="password"
+            id={`${testIdPrefix}-password`}
             type="password"
-            data-testid="login-password"
+            data-testid={`${testIdPrefix}-password`}
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
             {...form.register("password")}
           />
@@ -96,18 +126,20 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          data-testid="login-submit"
+          data-testid={`${testIdPrefix}-submit`}
           className="inline-flex w-full items-center justify-center rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
-      <div className="mt-8 flex items-center justify-between text-sm text-[var(--muted)]">
-        <span>Need the old Angular app?</span>
-        <Link href="/" className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">
-          Back to landing page
-        </Link>
-      </div>
+      {secondaryLinkHref && secondaryLinkLabel ? (
+        <div className="mt-8 flex items-center justify-between text-sm text-[var(--muted)]">
+          <span>Need another account area?</span>
+          <Link href={secondaryLinkHref} className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">
+            {secondaryLinkLabel}
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@ export type WbSyncMode = 'PREVIEW' | 'IMPORT';
 export type WbSyncType = 'ALL_PRODUCTS' | 'BY_ARTICLE';
 export type WbPublishMode = 'DRAFT' | 'ACTIVE_IF_VALID';
 export type WbImageMode = 'REMOTE_URL';
+export type WbApiSourceMode = 'mock' | 'real';
 
 export type WbSyncIssue = {
   level: 'WARNING' | 'ERROR';
@@ -63,6 +64,27 @@ export type WbCard = {
 export type WbCardsResponse = {
   cards: WbCard[];
   cursor?: { updatedAt?: string; nmID?: number; total?: number };
+};
+
+export type WbFetchCardsOptions = {
+  apiKey: string | null;
+  limit: number;
+  article?: string;
+};
+
+export type WbFetchCardsResult = {
+  cards: WbCard[];
+  mode: WbApiSourceMode;
+  pagesFetched: number;
+  fetchedCount: number;
+  cursor?: { updatedAt?: string; nmID?: number; total?: number };
+};
+
+export type WbConnectionVerifyResult = {
+  success: true;
+  mode: WbApiSourceMode;
+  fetched: number;
+  message: string;
 };
 
 export type WbMappedVariant = {

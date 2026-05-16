@@ -7,58 +7,71 @@ export class WbProductMapperService {
     const warnings: WbSyncIssue[] = [];
     const errors: WbSyncIssue[] = [];
     const article = card.vendorCode?.trim() || null;
-    if (!article)
+
+    if (!article) {
       warnings.push(
         this.warning('MISSING_ARTICLE', 'WB card is missing vendorCode.', card),
       );
-    if (!card.nmID)
+    }
+
+    if (!card.nmID) {
       warnings.push(
         this.warning('MISSING_NM_ID', 'WB card is missing nmID.', card),
       );
+    }
+
     const images = this.images(card);
-    if (images.length === 0)
+    if (images.length === 0) {
       warnings.push(
         this.warning('MISSING_IMAGE', 'WB card has no images.', card),
       );
+    }
+
     const variants = (card.sizes ?? []).map((size, index) => {
       const barcode = size.skus?.find(Boolean) ?? null;
-      if (!barcode)
+      if (!barcode) {
         warnings.push(
           this.warning('MISSING_BARCODE', 'WB size has no barcode.', card),
         );
-      if (!size.techSize && !size.wbSize)
+      }
+      if (!size.techSize && !size.wbSize) {
         warnings.push(
           this.warning('MISSING_SIZE', 'WB size has no techSize/wbSize.', card),
         );
+      }
+
       return {
         chrtId: BigInt(
           size.chrtID ?? this.stableNumber(`${article ?? card.nmID}-${index}`),
         ),
         sellerSku: article,
         wbBarcode: barcode,
-        sizeName: size.techSize ?? null,
-        russianSize: size.wbSize ?? null,
+        sizeName: size.techSize?.trim() ?? null,
+        russianSize: size.wbSize?.trim() ?? null,
       };
     });
+
     if (variants.length === 0) {
       warnings.push(
         this.warning('MISSING_SIZE', 'WB card has no sizes.', card),
       );
     }
+
     warnings.push(
       this.warning(
         'MISSING_PRICE',
-        'Content cards API does not include price; variant price defaults to 0.',
+        'WB Content API cards do not include price; local variant price is preserved or defaults to 0.',
         card,
       ),
     );
     warnings.push(
       this.warning(
         'MISSING_STOCK',
-        'Content cards API does not include stock; variant stock defaults to 0.',
+        'WB Content API cards do not include stock; local variant stock is preserved or defaults to 0.',
         card,
       ),
     );
+
     return {
       source: 'WILDBERRIES_API',
       externalProductId: card.nmID ? String(card.nmID) : null,
@@ -70,12 +83,12 @@ export class WbProductMapperService {
       wbNmUuid: card.nmUUID ?? null,
       name:
         card.title?.trim() || article || `WB product ${card.nmID ?? 'unknown'}`,
-      description: card.description ?? null,
-      brand: card.brand ?? null,
-      categoryName: card.subjectName ?? null,
+      description: card.description?.trim() ?? null,
+      brand: card.brand?.trim() ?? null,
+      categoryName: card.subjectName?.trim() ?? null,
       categoryId: null,
       mappedCategoryName: null,
-      sourceCategoryName: card.subjectName ?? null,
+      sourceCategoryName: card.subjectName?.trim() ?? null,
       subjectId: card.subjectID ? BigInt(card.subjectID) : null,
       videoUrl: card.video ?? null,
       needKiz: card.needKiz ?? null,
@@ -87,9 +100,13 @@ export class WbProductMapperService {
         isValid: card.dimensions?.isValid ?? null,
       },
       characteristics: {
-        gender: this.characteristic(card, ['пол', 'gender']),
-        composition: this.characteristic(card, ['состав', 'composition']),
-        color: this.characteristic(card, ['цвет', 'color']),
+        gender: this.characteristic(card, ['пол', 'gender', 'Ð¿Ð¾Ð»']),
+        composition: this.characteristic(card, [
+          'состав',
+          'composition',
+          'ÑÐ¾ÑÑ‚Ð°Ð²',
+        ]),
+        color: this.characteristic(card, ['цвет', 'color', 'Ñ†Ð²ÐµÑ‚']),
       },
       variants,
       images,
@@ -111,7 +128,9 @@ export class WbProductMapperService {
       )
       .filter((url): url is string => Boolean(url?.startsWith('http')))
       .filter((url) => {
-        if (seen.has(url)) return false;
+        if (seen.has(url)) {
+          return false;
+        }
         seen.add(url);
         return true;
       })
@@ -123,7 +142,9 @@ export class WbProductMapperService {
       const name = item.name?.trim().toLowerCase();
       return name ? names.includes(name) : false;
     });
-    if (!found) return null;
+    if (!found) {
+      return null;
+    }
     return Array.isArray(found.value)
       ? found.value.join(', ')
       : String(found.value);
@@ -141,8 +162,9 @@ export class WbProductMapperService {
 
   private stableNumber(value: string) {
     let hash = 0;
-    for (const char of value)
+    for (const char of value) {
       hash = (hash * 31 + char.charCodeAt(0)) % 900000000;
+    }
     return 9000000000000 + hash;
   }
 }

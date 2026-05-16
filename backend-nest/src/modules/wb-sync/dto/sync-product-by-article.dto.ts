@@ -1,6 +1,10 @@
+import { Transform } from 'class-transformer';
 import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class SyncProductByArticleDto {
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   article!: string;

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
@@ -28,6 +36,22 @@ export class WbSyncController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.syncService.credentialsStatus(shopId, user);
+  }
+
+  @Delete('credentials')
+  deleteCredentials(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.syncService.deleteCredentials(shopId, user);
+  }
+
+  @Post('credentials/verify')
+  verifyCredentials(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.syncService.verifyCredentials(shopId, user);
   }
 
   @Post('products')

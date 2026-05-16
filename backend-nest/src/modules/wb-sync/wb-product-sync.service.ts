@@ -21,9 +21,24 @@ import { SyncAllProductsDto } from './dto/sync-all-products.dto';
 import { SyncProductByArticleDto } from './dto/sync-product-by-article.dto';
 import { WbApiClientService } from './wb-api-client.service';
 import { WbProductMapperService } from './wb-product-mapper.service';
-import { WbMappedProduct, WbSyncType } from './wb-sync.types';
+import {
+  WbApiSourceMode,
+  WbConnectionVerifyResult,
+  WbMappedProduct,
+  WbSyncIssue,
+  WbSyncType,
+} from './wb-sync.types';
 
 const SOURCE = 'WILDBERRIES_API';
+
+type CredentialRecord = {
+  encryptedApiKey: string;
+  keyLast4: string | null;
+  lastVerifiedAt: Date | null;
+  lastVerificationStatus: string;
+  lastError: string | null;
+  updatedAt: Date;
+};
 
 @Injectable()
 export class WbProductSyncService {
@@ -41,29 +56,104 @@ export class WbProductSyncService {
     apiKey: string,
   ) {
     await this.assertApprovedSellerForShop(shopId, user);
-    const encryptedApiKey = this.encryptApiKey(apiKey);
-    const keyLast4 = apiKey.slice(-4);
-    await this.prisma.shopWbCredential.upsert({
+    const normalizedApiKey = apiKey.trim();
+    if (!normalizedApiKey) {
+      throw new BadRequestException('Wildberries API key is required.');
+    }
+
+    const encryptedApiKey = this.encryptApiKey(normalizedApiKey);
+    const keyLast4 = normalizedApiKey.slice(-4);
+
+    const credentials = await this.prisma.shopWbCredential.upsert({
       where: { shopId },
-      create: { shopId, encryptedApiKey, keyLast4 },
-      update: { encryptedApiKey, keyLast4 },
+      create: {
+        shopId,
+        encryptedApiKey,
+        keyLast4,
+        lastVerificationStatus: 'NOT_VERIFIED',
+        lastError: null,
+      },
+      update: {
+        encryptedApiKey,
+        keyLast4,
+        lastVerifiedAt: null,
+        lastVerificationStatus: 'NOT_VERIFIED',
+        lastError: null,
+      },
+      select: {
+        encryptedApiKey: true,
+        keyLast4: true,
+        lastVerifiedAt: true,
+        lastVerificationStatus: true,
+        lastError: true,
+        updatedAt: true,
+      },
     });
-    return { shopId, hasCredentials: true, keyLast4 };
+
+    return this.mapCredentialsStatus(shopId, credentials);
   }
 
   async credentialsStatus(shopId: string, user: AuthenticatedUser) {
     await this.assertApprovedSellerForShop(shopId, user);
     const credentials = await this.prisma.shopWbCredential.findUnique({
       where: { shopId },
-      select: { keyLast4: true, updatedAt: true },
+      select: {
+        encryptedApiKey: true,
+        keyLast4: true,
+        lastVerifiedAt: true,
+        lastVerificationStatus: true,
+        lastError: true,
+        updatedAt: true,
+      },
+    });
+    return this.mapCredentialsStatus(shopId, credentials);
+  }
+
+  async deleteCredentials(shopId: string, user: AuthenticatedUser) {
+    await this.assertApprovedSellerForShop(shopId, user);
+    await this.prisma.shopWbCredential.deleteMany({
+      where: { shopId },
     });
     return {
+      success: true,
       shopId,
-      hasCredentials: Boolean(credentials),
-      keyLast4: credentials?.keyLast4 ?? null,
-      updatedAt: credentials?.updatedAt.toISOString() ?? null,
       mode: this.syncMode(),
     };
+  }
+
+  async verifyCredentials(
+    shopId: string,
+    user: AuthenticatedUser,
+  ): Promise<WbConnectionVerifyResult> {
+    await this.assertApprovedSellerForShop(shopId, user);
+    const apiKey = await this.getApiKey(shopId);
+    if (!apiKey) {
+      throw new BadRequestException('Real mode active, API key required.');
+    }
+
+    try {
+      const result = await this.apiClient.verifyConnection(apiKey);
+      await this.prisma.shopWbCredential.update({
+        where: { shopId },
+        data: {
+          lastVerifiedAt: new Date(),
+          lastVerificationStatus: 'SUCCESS',
+          lastError: null,
+        },
+      });
+      return result;
+    } catch (error) {
+      const safeError = this.safeErrorMessage(error);
+      await this.prisma.shopWbCredential.update({
+        where: { shopId },
+        data: {
+          lastVerifiedAt: new Date(),
+          lastVerificationStatus: 'FAILED',
+          lastError: safeError,
+        },
+      });
+      throw new BadRequestException(safeError);
+    }
   }
 
   async syncAll(
@@ -74,7 +164,7 @@ export class WbProductSyncService {
     return this.sync(shopId, user, 'ALL_PRODUCTS', {
       mode: dto.mode ?? 'PREVIEW',
       limit: dto.limit ?? this.defaultLimit(),
-      cursor: dto.cursor,
+      article: undefined,
       publishMode: dto.publishMode ?? 'DRAFT',
       imageMode: dto.imageMode ?? 'REMOTE_URL',
     });
@@ -85,10 +175,15 @@ export class WbProductSyncService {
     user: AuthenticatedUser,
     dto: SyncProductByArticleDto,
   ) {
+    const article = dto.article.trim();
+    if (!article) {
+      throw new BadRequestException('Article / APT / vendorCode is required.');
+    }
+
     return this.sync(shopId, user, 'BY_ARTICLE', {
       mode: dto.mode ?? 'PREVIEW',
       limit: this.defaultLimit(),
-      article: dto.article.trim(),
+      article,
       publishMode: dto.publishMode ?? 'DRAFT',
       imageMode: dto.imageMode ?? 'REMOTE_URL',
     });
@@ -99,7 +194,9 @@ export class WbProductSyncService {
     const run = await this.prisma.wbSyncRun.findFirst({
       where: { id: syncRunId, shopId, sellerId: user.userId },
     });
-    if (!run) throw new NotFoundException('WB sync run was not found.');
+    if (!run) {
+      throw new NotFoundException('WB sync run was not found.');
+    }
     return this.mapRun(run);
   }
 
@@ -110,7 +207,6 @@ export class WbProductSyncService {
     options: {
       mode: 'PREVIEW' | 'IMPORT';
       limit: number;
-      cursor?: string;
       article?: string;
       publishMode: 'DRAFT' | 'ACTIVE_IF_VALID';
       imageMode: 'REMOTE_URL';
@@ -118,7 +214,9 @@ export class WbProductSyncService {
   ) {
     await this.assertApprovedSellerForShop(shopId, user);
     const startedAt = new Date();
+    const sourceMode = this.syncMode();
     const credentials = await this.getApiKey(shopId);
+
     const run = await this.prisma.wbSyncRun.create({
       data: {
         shopId,
@@ -129,6 +227,11 @@ export class WbProductSyncService {
         article: options.article,
         warningsJson: [],
         errorsJson: [],
+        rawSummaryJson: {
+          sourceMode,
+          imageMode: options.imageMode,
+          publishMode: options.publishMode,
+        },
         startedAt,
       },
     });
@@ -137,15 +240,11 @@ export class WbProductSyncService {
       const cardsResponse = await this.apiClient.fetchCards({
         apiKey: credentials,
         limit: options.limit,
-        cursor: options.cursor,
+        article: options.article,
       });
-      const cards = (cardsResponse.cards ?? []).filter((card) =>
-        options.article
-          ? card.vendorCode?.toLowerCase() === options.article.toLowerCase()
-          : true,
-      );
+
       const mapped = await Promise.all(
-        cards.map(async (card) => {
+        cardsResponse.cards.map(async (card) => {
           const product = this.mapper.mapCard(card);
           const mapping = await this.categoryMappingService.mapSourceCategory(
             SOURCE,
@@ -163,8 +262,19 @@ export class WbProductSyncService {
           return product;
         }),
       );
+
       const warnings = mapped.flatMap((product) => product.warnings);
       const errors = mapped.flatMap((product) => product.errors);
+
+      if (options.article && mapped.length === 0) {
+        warnings.push({
+          level: 'WARNING',
+          code: 'ARTICLE_NOT_FOUND',
+          message: `No Wildberries card matched article "${options.article}".`,
+          article: options.article,
+        });
+      }
+
       const importResult =
         options.mode === 'IMPORT'
           ? await this.prisma.$transaction((tx) =>
@@ -176,11 +286,12 @@ export class WbProductSyncService {
               createdVariants: 0,
               updatedVariants: 0,
             };
+
       const updated = await this.prisma.wbSyncRun.update({
         where: { id: run.id },
         data: {
           status: 'COMPLETED',
-          totalFetched: cardsResponse.cards?.length ?? 0,
+          totalFetched: cardsResponse.fetchedCount,
           totalProducts: mapped.length,
           totalVariants: mapped.reduce(
             (sum, product) => sum + product.variants.length,
@@ -194,11 +305,17 @@ export class WbProductSyncService {
           warningsJson: warnings,
           errorsJson: errors,
           rawSummaryJson: {
+            sourceMode: cardsResponse.mode,
+            fetchedCount: cardsResponse.fetchedCount,
+            pagesFetched: cardsResponse.pagesFetched,
             cursor: cardsResponse.cursor ?? null,
+            imageMode: options.imageMode,
+            publishMode: options.publishMode,
             products: mapped.map((product) => ({
               sellerSku: product.sellerSku,
               externalProductId: product.externalProductId,
               name: product.name,
+              brand: product.brand,
               categoryId: product.categoryId,
               categoryName: product.categoryName,
               sourceCategoryName: product.sourceCategoryName,
@@ -213,6 +330,7 @@ export class WbProductSyncService {
       });
       return this.mapRun(updated);
     } catch (error) {
+      const safeError = this.safeErrorMessage(error);
       const updated = await this.prisma.wbSyncRun.update({
         where: { id: run.id },
         data: {
@@ -221,19 +339,23 @@ export class WbProductSyncService {
             {
               level: 'ERROR',
               code: 'SYNC_FAILED',
-              message:
-                error instanceof Error ? error.message : 'WB sync failed.',
+              message: safeError,
+              article: options.article ?? null,
             },
           ],
+          rawSummaryJson: {
+            sourceMode,
+            imageMode: options.imageMode,
+            publishMode: options.publishMode,
+          },
           completedAt: new Date(),
         },
       });
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
+
+      if (sourceMode === 'real') {
+        throw new BadRequestException(safeError);
       }
+
       return this.mapRun(updated);
     }
   }
@@ -250,6 +372,7 @@ export class WbProductSyncService {
       createdVariants: 0,
       updatedVariants: 0,
     };
+
     for (const mapped of products) {
       const existing = await this.findExistingProduct(tx, shopId, mapped);
       const productData = {
@@ -285,6 +408,7 @@ export class WbProductSyncService {
           `${mapped.sellerSku ?? mapped.externalProductId ?? mapped.name}-${mapped.name}`,
         ),
       };
+
       const product = existing
         ? await tx.product.update({
             where: { id: existing.id },
@@ -293,8 +417,12 @@ export class WbProductSyncService {
         : await tx.product.create({
             data: { id: randomUUID(), shopId, ...productData },
           });
-      if (existing) result.updatedProducts += 1;
-      else result.createdProducts += 1;
+
+      if (existing) {
+        result.updatedProducts += 1;
+      } else {
+        result.createdProducts += 1;
+      }
 
       for (const variant of mapped.variants) {
         const created = await this.upsertVariant(
@@ -303,9 +431,13 @@ export class WbProductSyncService {
           mapped,
           variant,
         );
-        if (created) result.createdVariants += 1;
-        else result.updatedVariants += 1;
+        if (created) {
+          result.createdVariants += 1;
+        } else {
+          result.updatedVariants += 1;
+        }
       }
+
       for (const image of mapped.images) {
         const exists = await tx.productImage.findFirst({
           where: { productId: product.id, wbUrl: image.url },
@@ -326,6 +458,7 @@ export class WbProductSyncService {
         }
       }
     }
+
     return result;
   }
 
@@ -348,38 +481,60 @@ export class WbProductSyncService {
           },
         ],
       },
-      select: { id: true },
+      select: {
+        id: true,
+        basePrice: true,
+        discountPrice: true,
+        stockQuantity: true,
+        reservedStock: true,
+        lowStockThreshold: true,
+        trackInventory: true,
+      },
     });
-    const data = {
-      externalSource: SOURCE,
-      sellerSku: variant.sellerSku ?? product.sellerSku,
-      wbBarcode: variant.wbBarcode,
-      sizeName: variant.sizeName,
-      russianSize: variant.russianSize,
-      techSize: variant.sizeName,
-      wbSize: variant.russianSize ?? variant.sizeName,
-      isActive: false,
-      basePrice: 0,
-      discountPrice: 0,
-      stockQuantity: 0,
-      reservedStock: 0,
-      lowStockThreshold: 5,
-      trackInventory: true,
-    };
+
     if (existing) {
       await tx.productVariant.update({
         where: { id: existing.id },
         data: {
-          ...data,
-          basePrice: undefined,
-          discountPrice: undefined,
-          stockQuantity: undefined,
+          externalSource: SOURCE,
+          sellerSku: variant.sellerSku ?? product.sellerSku,
+          wbBarcode: variant.wbBarcode,
+          sizeName: variant.sizeName,
+          russianSize: variant.russianSize,
+          techSize: variant.sizeName,
+          wbSize: variant.russianSize ?? variant.sizeName,
+          isActive: false,
+          basePrice: existing.basePrice,
+          discountPrice: existing.discountPrice,
+          stockQuantity: existing.stockQuantity,
+          reservedStock: existing.reservedStock,
+          lowStockThreshold: existing.lowStockThreshold,
+          trackInventory: existing.trackInventory,
         },
       });
       return false;
     }
+
     await tx.productVariant.create({
-      data: { id: randomUUID(), productId, chrtId: variant.chrtId, ...data },
+      data: {
+        id: randomUUID(),
+        productId,
+        chrtId: variant.chrtId,
+        externalSource: SOURCE,
+        sellerSku: variant.sellerSku ?? product.sellerSku,
+        wbBarcode: variant.wbBarcode,
+        sizeName: variant.sizeName,
+        russianSize: variant.russianSize,
+        techSize: variant.sizeName,
+        wbSize: variant.russianSize ?? variant.sizeName,
+        isActive: false,
+        basePrice: 0,
+        discountPrice: 0,
+        stockQuantity: 0,
+        reservedStock: 0,
+        lowStockThreshold: 5,
+        trackInventory: true,
+      },
     });
     return true;
   }
@@ -410,12 +565,20 @@ export class WbProductSyncService {
   }
 
   private async getApiKey(shopId: string) {
-    if (this.syncMode() === 'mock') return null;
+    const mode = this.syncMode();
+    if (mode === 'mock') {
+      return null;
+    }
+
     const credentials = await this.prisma.shopWbCredential.findUnique({
       where: { shopId },
+      select: { encryptedApiKey: true },
     });
-    if (!credentials)
-      throw new BadRequestException('Wildberries credentials are required.');
+
+    if (!credentials) {
+      throw new BadRequestException('Real mode active, API key required.');
+    }
+
     return this.decryptApiKey(credentials.encryptedApiKey);
   }
 
@@ -432,8 +595,9 @@ export class WbProductSyncService {
       where: { id: shopId, sellerProfile: { userId: user.userId } },
       select: { id: true, sellerProfile: { select: { approvalStatus: true } } },
     });
-    if (!shop)
+    if (!shop) {
       throw new ForbiddenException('You do not have access to this shop.');
+    }
     if (shop.sellerProfile.approvalStatus !== 'APPROVED') {
       throw new ForbiddenException(
         'Only APPROVED sellers can sync WB products.',
@@ -445,7 +609,9 @@ export class WbProductSyncService {
     product: WbMappedProduct,
     publishMode: 'DRAFT' | 'ACTIVE_IF_VALID',
   ) {
-    if (publishMode === 'DRAFT') return 'DRAFT';
+    if (publishMode === 'DRAFT') {
+      return 'DRAFT';
+    }
     return product.images.length > 0 && product.variants.length > 0
       ? 'ACTIVE'
       : 'DRAFT';
@@ -472,12 +638,32 @@ export class WbProductSyncService {
     startedAt: Date | null;
     completedAt: Date | null;
   }) {
+    const rawSummary = (run.rawSummaryJson ?? null) as {
+      sourceMode?: WbApiSourceMode;
+      fetchedCount?: number;
+      pagesFetched?: number;
+      cursor?: unknown;
+      imageMode?: string;
+      publishMode?: string;
+      products?: Array<{
+        sellerSku: string | null;
+        externalProductId: string | null;
+        name: string;
+        brand?: string | null;
+        variantsCount: number;
+        imagesCount: number;
+        warnings: WbSyncIssue[];
+        errors: WbSyncIssue[];
+      }>;
+    } | null;
+
     return {
       syncRunId: run.id,
       status: run.status,
       mode: run.mode,
       syncType: run.syncType,
       article: run.article,
+      sourceMode: rawSummary?.sourceMode ?? this.syncMode(),
       totalFetched: run.totalFetched,
       totalProducts: run.totalProducts,
       totalVariants: run.totalVariants,
@@ -488,19 +674,36 @@ export class WbProductSyncService {
       updatedVariants: run.updatedVariants,
       warnings: run.warningsJson,
       errors: run.errorsJson,
-      rawSummary: run.rawSummaryJson,
+      rawSummary,
       createdAt: run.createdAt.toISOString(),
       startedAt: run.startedAt?.toISOString() ?? null,
       completedAt: run.completedAt?.toISOString() ?? null,
     };
   }
 
+  private mapCredentialsStatus(
+    shopId: string,
+    credentials: CredentialRecord | null,
+  ) {
+    return {
+      shopId,
+      connected: Boolean(credentials),
+      hasCredentials: Boolean(credentials),
+      keyLast4: credentials?.keyLast4 ?? null,
+      updatedAt: credentials?.updatedAt.toISOString() ?? null,
+      mode: this.syncMode(),
+      lastVerifiedAt: credentials?.lastVerifiedAt?.toISOString() ?? null,
+      lastVerificationStatus:
+        credentials?.lastVerificationStatus ?? 'NOT_VERIFIED',
+      lastError: credentials?.lastError ?? null,
+    };
+  }
+
   private encryptApiKey(apiKey: string) {
     const key = this.encryptionKey();
     if (!key) {
-      if (this.syncMode() === 'mock') return `mock:${apiKey.slice(-4)}`;
       throw new BadRequestException(
-        'WB_CREDENTIALS_ENCRYPTION_KEY is required to store real WB credentials.',
+        'WB_CREDENTIAL_ENCRYPTION_KEY is required to store WB credentials.',
       );
     }
     const iv = randomBytes(12);
@@ -515,12 +718,15 @@ export class WbProductSyncService {
 
   private decryptApiKey(encrypted: string) {
     const key = this.encryptionKey();
-    if (!key || encrypted.startsWith('mock:')) {
+    if (!key) {
       throw new BadRequestException(
-        'Valid encrypted Wildberries credentials are required.',
+        'WB_CREDENTIAL_ENCRYPTION_KEY is required to read WB credentials.',
       );
     }
-    const [, ivRaw, tagRaw, dataRaw] = encrypted.split(':');
+    const [version, ivRaw, tagRaw, dataRaw] = encrypted.split(':');
+    if (version !== 'v1' || !ivRaw || !tagRaw || !dataRaw) {
+      throw new BadRequestException('Stored WB credentials are invalid.');
+    }
     const decipher = createDecipheriv(
       'aes-256-gcm',
       key,
@@ -534,13 +740,17 @@ export class WbProductSyncService {
   }
 
   private encryptionKey() {
-    const raw = this.config.get<string>('WB_CREDENTIALS_ENCRYPTION_KEY');
-    if (!raw) return null;
+    const raw =
+      this.config.get<string>('WB_CREDENTIAL_ENCRYPTION_KEY') ??
+      this.config.get<string>('WB_CREDENTIALS_ENCRYPTION_KEY');
+    if (!raw) {
+      return null;
+    }
     return createHash('sha256').update(raw).digest();
   }
 
-  private syncMode() {
-    return this.config.get<string>('WB_SYNC_MODE') === 'real' ? 'real' : 'mock';
+  private syncMode(): WbApiSourceMode {
+    return this.apiClient.getMode();
   }
 
   private defaultLimit() {
@@ -548,6 +758,13 @@ export class WbProductSyncService {
       100,
       Math.max(1, Number(this.config.get<string>('WB_SYNC_PAGE_LIMIT') ?? 100)),
     );
+  }
+
+  private safeErrorMessage(error: unknown) {
+    if (error instanceof Error && error.message) {
+      return error.message.replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer ***');
+    }
+    return 'WB sync failed.';
   }
 
   private slug(value: string) {

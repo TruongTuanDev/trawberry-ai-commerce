@@ -313,3 +313,14 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Internal admin notes are never returned to customer or seller responses.
 - Seller visibility remains constrained to the linked shop/order.
 - Verification targets: `backend-nest/test/support-cases.e2e-spec.ts`, `backend-nest npm run smoke:support-cases`, and `frontend-next npm run test:e2e:support-cases`.
+
+# Wildberries Real API Sync Audit Addendum
+
+- Real WB sync is now explicit and shop-scoped:
+  - `WB_SYNC_MODE=real`
+  - saved encrypted credential per shop
+  - `POST /api/shops/:shopId/wb-sync/credentials/verify`
+- Real mode calls `POST /content/v2/get/cards/list` and paginates with WB cursor fields `updatedAt` and `nmID`.
+- Real mode does not fall back to mock data after credential or API failure.
+- Seller UI at `/seller/import/wildberries-api` now shows mode, connection state, `keyLast4`, verify status, and last sanitized error.
+- Optional runtime verification is `backend-nest npm run smoke:wb-api-sync-real` with local env `WB_REAL_API_KEY`.

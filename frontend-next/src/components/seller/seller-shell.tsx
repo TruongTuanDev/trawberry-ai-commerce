@@ -36,6 +36,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+    if (user.role !== "SELLER") return;
     if (sellerBlocked) return;
     void loadShops();
   }, [loadShops, sellerBlocked, user]);
@@ -44,7 +45,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     setLoggingOut(true);
     try {
       await logout();
-      router.replace("/login");
+      router.replace("/seller-login");
     } finally {
       setLoggingOut(false);
     }

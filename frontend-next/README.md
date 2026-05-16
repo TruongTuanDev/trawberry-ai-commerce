@@ -89,7 +89,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - Wildberries remote image links as the default MVP image mode
   - confirm import and result summary
 - Seller Wildberries API sync UI with:
-  - credentials status
+  - explicit `MOCK` / `REAL` mode state
+  - credentials status with `keyLast4`
+  - verify connection button
+  - delete key action
+  - last verification status and sanitized error
   - preview/import all products
   - preview/import by article/APT/vendorCode
   - sync result summary
@@ -171,6 +175,12 @@ Current coverage:
 - imports all mock WB API products
 - imports one product by article/APT
 - verifies the imported product appears in `/seller/products`
+
+Real runtime note:
+
+- default Playwright stays in mock mode
+- real WB verification is done through backend smoke, not default browser CI
+- seller page now shows explicit mode and connection diagnostics so real-mode issues are visible in the UI
 
 ## Playwright Marketplace Search/Filter/Sort
 

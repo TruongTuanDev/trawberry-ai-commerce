@@ -11,7 +11,8 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
   { href: "/orders/track", label: "Track Order" },
-  { href: "/login", label: "Seller Login" },
+  { href: "/seller-login", label: "Seller Login" },
+  { href: "/admin-login", label: "Admin Login" },
 ];
 
 export function PublicHeader() {

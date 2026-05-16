@@ -19,7 +19,8 @@ export function PublicFooter() {
           <div className="mt-4 flex flex-col gap-3 text-sm font-semibold text-[var(--foreground)]">
             <Link href="/products">Marketplace</Link>
             <Link href="/orders/track">Track an order</Link>
-            <Link href="/login">Seller login</Link>
+            <Link href="/seller-login">Seller login</Link>
+            <Link href="/admin-login">Admin login</Link>
           </div>
         </div>
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">

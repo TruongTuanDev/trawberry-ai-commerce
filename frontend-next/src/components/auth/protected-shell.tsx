@@ -4,7 +4,23 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
-export function ProtectedShell({ children }: { children: React.ReactNode }) {
+type ProtectedShellProps = {
+  children: React.ReactNode;
+  allowedRoles?: string[];
+  loginPath?: string;
+  redirectByRole?: Partial<Record<string, string>>;
+};
+
+export function ProtectedShell({
+  children,
+  allowedRoles,
+  loginPath = "/seller-login",
+  redirectByRole = {
+    ADMIN: "/admin/dashboard",
+    SELLER: "/seller/dashboard",
+    CUSTOMER: "/customer/orders",
+  },
+}: ProtectedShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
@@ -22,10 +38,10 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     void refreshMe().then((authenticated) => {
       setSessionChecked(true);
       if (!authenticated) {
-        router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+        router.replace(`${loginPath}?next=${encodeURIComponent(pathname)}`);
       }
     });
-  }, [hydrated, pathname, refreshMe, router, sessionChecked]);
+  }, [hydrated, loginPath, pathname, refreshMe, router, sessionChecked]);
 
   useEffect(() => {
     if (!hydrated || sessionLoading || !sessionChecked) {
@@ -33,11 +49,33 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
     }
 
     if (!user) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      router.replace(`${loginPath}?next=${encodeURIComponent(pathname)}`);
+      return;
     }
-  }, [hydrated, pathname, router, sessionChecked, sessionLoading, user]);
 
-  if (!hydrated || sessionLoading || !sessionChecked || !user) {
+    if (allowedRoles?.length && !allowedRoles.includes(user.role)) {
+      const redirectTarget = redirectByRole[user.role] ?? loginPath;
+      router.replace(redirectTarget);
+    }
+  }, [
+    allowedRoles,
+    hydrated,
+    loginPath,
+    pathname,
+    redirectByRole,
+    router,
+    sessionChecked,
+    sessionLoading,
+    user,
+  ]);
+
+  if (
+    !hydrated ||
+    sessionLoading ||
+    !sessionChecked ||
+    !user ||
+    (allowedRoles?.length ? !allowedRoles.includes(user.role) : false)
+  ) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-panel max-w-md rounded-[1.5rem] px-8 py-6 text-center">

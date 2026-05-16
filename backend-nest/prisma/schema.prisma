@@ -363,6 +363,9 @@ model ShopWbCredential {
   shopId          String   @unique @map("shop_id") @db.Uuid
   encryptedApiKey String   @map("encrypted_api_key")
   keyLast4        String?  @map("key_last4") @db.VarChar(10)
+  lastVerifiedAt  DateTime? @map("last_verified_at") @db.Timestamptz(6)
+  lastVerificationStatus String @default("NOT_VERIFIED") @map("last_verification_status") @db.VarChar(50)
+  lastError       String?  @map("last_error") @db.VarChar(1000)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)

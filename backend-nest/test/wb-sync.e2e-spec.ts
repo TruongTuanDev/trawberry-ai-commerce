@@ -1,8 +1,29 @@
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WbApiClientService } from '../src/modules/wb-sync/wb-api-client.service';
 import { WbProductMapperService } from '../src/modules/wb-sync/wb-product-mapper.service';
 
+function responseWithJson(payload: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(payload),
+  } as Response;
+}
+
+function getRequestBody(init: RequestInit | undefined): string {
+  if (typeof init?.body !== 'string') {
+    throw new Error('Expected request body to be a JSON string.');
+  }
+
+  return init.body;
+}
+
 describe('WB API sync foundation', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('mock client returns WB cards without a real token', async () => {
     const client = new WbApiClientService({
       get: (key: string) => (key === 'WB_SYNC_MODE' ? 'mock' : undefined),
@@ -10,6 +31,144 @@ describe('WB API sync foundation', () => {
     const response = await client.fetchCards({ apiKey: null, limit: 100 });
     expect(response.cards.length).toBeGreaterThanOrEqual(2);
     expect(response.cards[0].vendorCode).toBe('APT-MOCK-HOODIE');
+    expect(response.mode).toBe('mock');
+  });
+
+  it('real mode does not fall back to mock when token is missing', async () => {
+    const client = new WbApiClientService({
+      get: (key: string) => {
+        if (key === 'WB_SYNC_MODE') return 'real';
+        return undefined;
+      },
+    } as ConfigService);
+
+    await expect(
+      client.fetchCards({ apiKey: null, limit: 10 }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('real client sends the expected cards list request body', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue(responseWithJson({ cards: [], cursor: { total: 0 } }));
+
+    const client = new WbApiClientService({
+      get: (key: string) => {
+        switch (key) {
+          case 'WB_SYNC_MODE':
+            return 'real';
+          case 'WB_API_BASE_URL':
+            return 'https://content-api.wildberries.ru';
+          case 'WB_SYNC_PAGE_LIMIT':
+            return '100';
+          case 'WB_SYNC_MAX_PAGES':
+            return '20';
+          default:
+            return undefined;
+        }
+      },
+    } as ConfigService);
+
+    await client.fetchCards({ apiKey: 'secret-token', limit: 5 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      'https://content-api.wildberries.ru/content/v2/get/cards/list',
+    );
+    expect(init?.method).toBe('POST');
+    expect(init?.headers).toMatchObject({
+      Authorization: 'secret-token',
+      'Content-Type': 'application/json',
+    });
+    expect(JSON.parse(getRequestBody(init))).toEqual({
+      settings: {
+        cursor: { limit: 5 },
+        filter: { withPhoto: -1 },
+      },
+    });
+  });
+
+  it('real client paginates with cursor until total is below limit', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(
+        responseWithJson({
+          cards: [
+            { vendorCode: 'APT-1', nmID: 1 },
+            { vendorCode: 'APT-2', nmID: 2 },
+          ],
+          cursor: { total: 2, nmID: 2, updatedAt: '2026-05-17T00:00:00Z' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        responseWithJson({
+          cards: [{ vendorCode: 'APT-3', nmID: 3 }],
+          cursor: { total: 1, nmID: 3, updatedAt: '2026-05-17T00:01:00Z' },
+        }),
+      );
+
+    const client = new WbApiClientService({
+      get: (key: string) => {
+        switch (key) {
+          case 'WB_SYNC_MODE':
+            return 'real';
+          case 'WB_API_BASE_URL':
+            return 'https://content-api.wildberries.ru';
+          case 'WB_SYNC_PAGE_LIMIT':
+            return '2';
+          case 'WB_SYNC_MAX_PAGES':
+            return '20';
+          default:
+            return undefined;
+        }
+      },
+    } as ConfigService);
+
+    const response = await client.fetchCards({
+      apiKey: 'secret-token',
+      limit: 10,
+    });
+
+    expect(response.cards).toHaveLength(3);
+    expect(response.pagesFetched).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, secondInit] = fetchMock.mock.calls[1] as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ];
+    const secondBody = JSON.parse(getRequestBody(secondInit)) as {
+      settings: {
+        cursor: {
+          limit: number;
+          updatedAt?: string;
+          nmID?: number;
+        };
+        filter: { withPhoto: number };
+      };
+    };
+    expect(secondBody).toEqual({
+      settings: {
+        cursor: {
+          limit: 2,
+          updatedAt: '2026-05-17T00:00:00Z',
+          nmID: 2,
+        },
+        filter: { withPhoto: -1 },
+      },
+    });
+  });
+
+  it('verify connection maps 401 to a safe failure', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(responseWithJson({}, 401));
+
+    const client = new WbApiClientService({
+      get: (key: string) => (key === 'WB_SYNC_MODE' ? 'real' : undefined),
+    } as ConfigService);
+
+    await expect(client.verifyConnection('bad-token')).rejects.toThrow(
+      'Wildberries API rejected the token or token scope.',
+    );
   });
 
   it('mapper maps WB card to product, variants, images, and warnings', () => {
@@ -42,6 +201,7 @@ describe('WB API sync foundation', () => {
     expect(product.externalProductId).toBe('123');
     expect(product.variants[0].wbBarcode).toBe('4600000000001');
     expect(product.images[0].isMain).toBe(true);
+    expect(product.characteristics.color).toBe('red');
     expect(product.warnings.map((warning) => warning.code)).toContain(
       'MISSING_PRICE',
     );

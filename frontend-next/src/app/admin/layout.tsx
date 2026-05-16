@@ -3,7 +3,7 @@ import { ProtectedShell } from "@/components/auth/protected-shell";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedShell>
+    <ProtectedShell allowedRoles={["ADMIN"]} loginPath="/admin-login">
       <AdminShell>{children}</AdminShell>
     </ProtectedShell>
   );
