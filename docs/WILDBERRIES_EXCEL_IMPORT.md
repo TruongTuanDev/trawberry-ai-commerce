@@ -6,6 +6,10 @@ API-based product sync is documented separately in `docs/WB_API_SYNC.md`.
 
 Use Excel import when the seller has an `.xlsx` export with price/stock columns. Use WB API sync when the seller wants to pull Content API cards directly from Wildberries.
 
+Category mapping is applied during preview and confirm. The source seller category is preserved as `sourceCategoryName`, mapped internal categories are shown in preview, and unmapped source categories add `UNMAPPED_CATEGORY` warnings without blocking import.
+
+This phase intentionally does not add WB price or stock sync; sellers still manage local price and inventory after import.
+
 ## Scope
 - Source sheet: `Товары`.
 - Header row: `3`.

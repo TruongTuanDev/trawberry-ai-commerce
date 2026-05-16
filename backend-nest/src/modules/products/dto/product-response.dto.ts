@@ -32,6 +32,18 @@ export class ProductResponseDto {
   categoryName!: string | null;
 
   @ApiProperty({ nullable: true })
+  categoryId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  categorySlug!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sourceCategoryName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sourceCategorySource!: string | null;
+
+  @ApiProperty({ nullable: true })
   wbVendorCode!: string | null;
 
   @ApiProperty({ nullable: true })

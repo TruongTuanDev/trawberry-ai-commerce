@@ -122,6 +122,12 @@ export class ProductDetailResponseDto {
   @ApiProperty({ nullable: true })
   categoryName!: string | null;
 
+  @ApiProperty({ nullable: true })
+  sourceCategoryName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sourceCategorySource!: string | null;
+
   @ApiProperty({ nullable: true, type: ProductCategoryDto })
   category!: ProductCategoryDto | null;
 

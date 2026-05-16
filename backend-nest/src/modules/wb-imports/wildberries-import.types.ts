@@ -30,6 +30,9 @@ export type WbImportProduct = {
   externalProductId: string | null;
   name: string;
   categoryName: string | null;
+  categoryId: string | null;
+  mappedCategoryName: string | null;
+  sourceCategoryName: string | null;
   brand: string | null;
   description: string | null;
   videoUrl: string | null;

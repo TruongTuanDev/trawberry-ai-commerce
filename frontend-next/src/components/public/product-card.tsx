@@ -22,6 +22,10 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         ) : null}
       </div>
       <div className="flex flex-1 flex-col gap-4 px-5 py-5">
+        <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+          {product.categoryName ? <span>{product.categoryName}</span> : null}
+          {product.brand ? <span>{product.brand}</span> : null}
+        </div>
         <p className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{product.description ?? "No description yet."}</p>
         <div className="mt-auto flex items-end justify-between gap-4">
           <div>

@@ -27,6 +27,7 @@
     "smoke:delivery-yandex-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-yandex-real.ps1",
     "smoke:inventory": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory.ps1",
     "smoke:inventory-alerts": "powershell -ExecutionPolicy Bypass -File scripts/smoke-inventory-alerts.ps1",
+    "smoke:marketplace-search": "powershell -ExecutionPolicy Bypass -File scripts/smoke-marketplace-search.ps1",
     "smoke:wb-import": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import.ps1",
     "smoke:wb-api-sync": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-api-sync.ps1",
     "smoke:wb-import-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import-checkout.ps1",

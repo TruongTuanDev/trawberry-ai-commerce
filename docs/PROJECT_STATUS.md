@@ -1,5 +1,12 @@
 # Project Status
 
+## Category Mapping + Marketplace Search
+
+- Internal marketplace categories and category mappings are implemented in `backend-nest`.
+- WB Excel import and WB API sync preserve source category and map to internal category when possible.
+- `/products` supports search, category/brand/color/gender/stock/price filters, URL persistence, facets, and sorting.
+- WB price/stock sync is intentionally not implemented; sellers manage local price and inventory.
+
 ## Latest Verification Addendum
 
 - WB import to checkout has dedicated backend and browser coverage through `smoke:wb-import-checkout` and `test:e2e:wb-import-checkout`.

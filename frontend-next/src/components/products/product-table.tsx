@@ -95,7 +95,14 @@ export function ProductTable({
                 <StockBadge stockStatus={product.stockStatus} trackInventory={product.trackInventory} />
               </div>
             </div>
-            <div className="text-sm text-[var(--muted)] lg:flex lg:items-center">{product.categoryName ?? "Uncategorized"}</div>
+            <div className="text-sm text-[var(--muted)] lg:flex lg:items-center">
+              <div>
+                <p>{product.categoryName ?? "Uncategorized"}</p>
+                {product.sourceCategoryName && product.sourceCategoryName !== product.categoryName ? (
+                  <p className="mt-1 text-xs">WB: {product.sourceCategoryName}</p>
+                ) : null}
+              </div>
+            </div>
             <div className="text-sm lg:flex lg:items-center">
               <div className="space-y-1">
                 <p className={product.stockStatus === "OUT_OF_STOCK" ? "font-semibold text-rose-700" : product.stockStatus === "LOW_STOCK" ? "font-semibold text-amber-700" : "text-emerald-700"}>

@@ -211,7 +211,12 @@ export default function WildberriesImportPage() {
                 <div className="truncate font-semibold">{product.sellerSku ?? product.externalProductId ?? "N/A"}</div>
                 <div className="truncate">{product.name}</div>
                 <div className="truncate">{product.brand ?? "N/A"}</div>
-                <div className="truncate">{product.categoryName ?? "N/A"}</div>
+                <div className="truncate" title={product.sourceCategoryName ?? undefined}>
+                  {product.mappedCategoryName ?? product.categoryName ?? "N/A"}
+                  {product.sourceCategoryName && product.sourceCategoryName !== (product.mappedCategoryName ?? product.categoryName) ? (
+                    <span className="ml-1 text-xs text-[var(--muted)]">from {product.sourceCategoryName}</span>
+                  ) : null}
+                </div>
                 <div>{product.variantsCount}</div>
                 <div>{product.imagesCount}</div>
                 <div>{product.priceStatus}</div>

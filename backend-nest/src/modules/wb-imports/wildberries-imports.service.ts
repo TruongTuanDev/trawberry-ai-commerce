@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { CategoryMappingService } from '../categories/category-mapping.service';
 import { WildberriesImportOptionsDto } from './dto/wildberries-import-options.dto';
 import { WildberriesExcelParserService } from './wildberries-excel-parser.service';
 import {
@@ -25,6 +26,7 @@ export class WildberriesImportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly parser: WildberriesExcelParserService,
+    private readonly categoryMappingService: CategoryMappingService,
   ) {}
 
   async preview(
@@ -40,6 +42,7 @@ export class WildberriesImportsService {
     await this.assertApprovedSellerForShop(shopId, user);
     const resolvedOptions = this.resolveOptions(options);
     const payload = this.parser.parse(file, resolvedOptions);
+    await this.applyCategoryMappings(payload);
     const session = await this.prisma.productImportSession.create({
       data: {
         shopId,
@@ -207,7 +210,16 @@ export class WildberriesImportsService {
         wbDescription: normalizedProduct.description,
         localDescription: normalizedProduct.description,
         brand: normalizedProduct.brand,
-        categoryName: normalizedProduct.categoryName,
+        categoryName:
+          normalizedProduct.mappedCategoryName ??
+          normalizedProduct.categoryName,
+        categoryId: normalizedProduct.categoryId
+          ? BigInt(normalizedProduct.categoryId)
+          : null,
+        sourceCategoryName:
+          normalizedProduct.sourceCategoryName ??
+          normalizedProduct.categoryName,
+        sourceCategorySource: SOURCE,
         wbVendorCode: normalizedProduct.sellerSku,
         wbVideoUrl: normalizedProduct.videoUrl,
         wbNeedKiz: normalizedProduct.needKiz ?? undefined,
@@ -444,6 +456,9 @@ export class WildberriesImportsService {
         name: product.name,
         brand: product.brand,
         categoryName: product.categoryName,
+        categoryId: product.categoryId,
+        mappedCategoryName: product.mappedCategoryName,
+        sourceCategoryName: product.sourceCategoryName,
         variantsCount: product.variants.length,
         imagesCount: product.images.length,
         priceStatus: product.variants.some(
@@ -478,6 +493,31 @@ export class WildberriesImportsService {
       imageMode: options.imageMode ?? 'REMOTE_URL',
       priceFallback: options.priceFallback,
     };
+  }
+
+  private async applyCategoryMappings(payload: WbImportNormalizedPayload) {
+    const warnings = [...payload.warnings];
+    for (const product of payload.products) {
+      const mapping = await this.categoryMappingService.mapSourceCategory(
+        SOURCE,
+        product.categoryName,
+      );
+      product.sourceCategoryName = mapping.sourceCategoryName;
+      product.categoryId = mapping.categoryId?.toString() ?? null;
+      product.mappedCategoryName = mapping.categoryName;
+      if (mapping.categoryName) {
+        product.categoryName = mapping.categoryName;
+      }
+      if (mapping.warning) {
+        const warning = {
+          ...mapping.warning,
+          sellerSku: product.sellerSku,
+        };
+        product.warnings.push(warning);
+        warnings.push(warning);
+      }
+    }
+    payload.warnings = warnings;
   }
 
   private async assertApprovedSellerForShop(

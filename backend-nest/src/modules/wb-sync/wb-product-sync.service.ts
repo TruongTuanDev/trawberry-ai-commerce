@@ -16,6 +16,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { CategoryMappingService } from '../categories/category-mapping.service';
 import { SyncAllProductsDto } from './dto/sync-all-products.dto';
 import { SyncProductByArticleDto } from './dto/sync-product-by-article.dto';
 import { WbApiClientService } from './wb-api-client.service';
@@ -30,6 +31,7 @@ export class WbProductSyncService {
     private readonly prisma: PrismaService,
     private readonly apiClient: WbApiClientService,
     private readonly mapper: WbProductMapperService,
+    private readonly categoryMappingService: CategoryMappingService,
     private readonly config: ConfigService,
   ) {}
 
@@ -142,7 +144,25 @@ export class WbProductSyncService {
           ? card.vendorCode?.toLowerCase() === options.article.toLowerCase()
           : true,
       );
-      const mapped = cards.map((card) => this.mapper.mapCard(card));
+      const mapped = await Promise.all(
+        cards.map(async (card) => {
+          const product = this.mapper.mapCard(card);
+          const mapping = await this.categoryMappingService.mapSourceCategory(
+            SOURCE,
+            product.categoryName,
+          );
+          product.sourceCategoryName = mapping.sourceCategoryName;
+          product.categoryId = mapping.categoryId?.toString() ?? null;
+          product.mappedCategoryName = mapping.categoryName;
+          if (mapping.categoryName) {
+            product.categoryName = mapping.categoryName;
+          }
+          if (mapping.warning) {
+            product.warnings.push(mapping.warning);
+          }
+          return product;
+        }),
+      );
       const warnings = mapped.flatMap((product) => product.warnings);
       const errors = mapped.flatMap((product) => product.errors);
       const importResult =
@@ -179,6 +199,9 @@ export class WbProductSyncService {
               sellerSku: product.sellerSku,
               externalProductId: product.externalProductId,
               name: product.name,
+              categoryId: product.categoryId,
+              categoryName: product.categoryName,
+              sourceCategoryName: product.sourceCategoryName,
               variantsCount: product.variants.length,
               imagesCount: product.images.length,
               warnings: product.warnings,
@@ -241,7 +264,10 @@ export class WbProductSyncService {
         localTitle: mapped.name,
         wbDescription: mapped.description,
         localDescription: mapped.description,
-        categoryName: mapped.categoryName,
+        categoryName: mapped.mappedCategoryName ?? mapped.categoryName,
+        categoryId: mapped.categoryId ? BigInt(mapped.categoryId) : null,
+        sourceCategoryName: mapped.sourceCategoryName ?? mapped.categoryName,
+        sourceCategorySource: SOURCE,
         subjectId: mapped.subjectId,
         wbVendorCode: mapped.sellerSku,
         wbVideoUrl: mapped.videoUrl,

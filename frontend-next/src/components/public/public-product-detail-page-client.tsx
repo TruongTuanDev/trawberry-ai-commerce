@@ -96,6 +96,8 @@ export function PublicProductDetailPageClient({
                     <Metric label="Estimated total" value={estimatedTotal ?? "Calculated at checkout"} />
                     <Metric label="Brand" value={product.brand ?? "Unbranded"} />
                     <Metric label="Category" value={product.categoryName ?? "General"} />
+                    <Metric label="Color" value={product.color ?? "Not specified"} />
+                    <Metric label="Gender" value={product.gender ?? "Not specified"} />
                     <Metric label="Availability" value={product.inStock ? `In stock (${product.availableQuantity})` : "Out of stock"} />
                   </div>
 

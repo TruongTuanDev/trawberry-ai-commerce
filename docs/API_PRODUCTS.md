@@ -7,6 +7,14 @@ Wildberries product ingestion has two paths:
 
 Both paths upsert into the same product, variant, and image schema. WB API sync uses Content API card data; price/stock may require separate WB APIs in a later phase.
 
+## Public Marketplace Search
+
+`GET /api/public/products` supports `q`, `search`, `categoryId`, `categorySlug`, `brand`, `color`, `gender`, `minPrice`, `maxPrice`, `inStock`, `sort`, `page`, and `size`.
+
+`sort` supports `newest`, `price_asc`, `price_desc`, `name_asc`, and `stock_desc`. Price sorting uses the lowest active sellable variant price. Checkout still recalculates totals server-side.
+
+`GET /api/categories` returns the active internal category tree. Admin category and mapping APIs live under `/api/admin/categories` and `/api/admin/category-mappings`.
+
 ## Wildberries Excel Import
 
 Seller WB import endpoints live under shop scope:

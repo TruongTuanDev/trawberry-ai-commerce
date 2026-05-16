@@ -84,6 +84,9 @@ export type WbMappedProduct = {
   description: string | null;
   brand: string | null;
   categoryName: string | null;
+  categoryId: string | null;
+  mappedCategoryName: string | null;
+  sourceCategoryName: string | null;
   subjectId: bigint | null;
   videoUrl: string | null;
   needKiz: boolean | null;

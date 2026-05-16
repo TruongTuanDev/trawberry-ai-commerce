@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, type PublicProduct } from "@/lib/public-api";
+import { getPublicProducts, type PaginatedPublicProducts, type PublicProduct } from "@/lib/public-api";
 
 type ProductsMeta = {
   page: number;
@@ -15,12 +16,34 @@ type ProductsMeta = {
 const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 };
 
 export default function ProductsPage() {
+  return (
+    <Suspense fallback={<PublicShell><main className="px-4 py-8 sm:px-6 sm:py-10"><div className="mx-auto max-w-7xl">Loading products...</div></main></PublicShell>}>
+      <ProductsPageClient />
+    </Suspense>
+  );
+}
+
+function ProductsPageClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<PublicProduct[]>([]);
   const [meta, setMeta] = useState<ProductsMeta>(initialMeta);
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    q: searchParams.get("q") ?? searchParams.get("search") ?? "",
+    categorySlug: searchParams.get("categorySlug") ?? "",
+    brand: searchParams.get("brand") ?? "",
+    color: searchParams.get("color") ?? "",
+    gender: searchParams.get("gender") ?? "",
+    inStock: searchParams.get("inStock") ?? "",
+    minPrice: searchParams.get("minPrice") ?? "",
+    maxPrice: searchParams.get("maxPrice") ?? "",
+    sort: searchParams.get("sort") ?? "newest",
+  });
+  const [facets, setFacets] = useState<PaginatedPublicProducts["filters"]>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const page = Number(searchParams.get("page") ?? "1");
 
   useEffect(() => {
     let mounted = true;
@@ -29,13 +52,22 @@ export default function ProductsPage() {
       setLoading(true);
       try {
         const response = await getPublicProducts({
-          page: meta.page,
+          page,
           size: meta.size,
-          search: search || undefined,
+          q: filters.q || undefined,
+          categorySlug: filters.categorySlug || undefined,
+          brand: filters.brand || undefined,
+          color: filters.color || undefined,
+          gender: filters.gender || undefined,
+          inStock: filters.inStock ? filters.inStock === "true" : undefined,
+          minPrice: filters.minPrice || undefined,
+          maxPrice: filters.maxPrice || undefined,
+          sort: filters.sort || undefined,
         });
         if (!mounted) return;
         setItems(response.items);
         setMeta(response.meta);
+        setFacets(response.filters);
         setError(null);
       } catch (err) {
         if (mounted) {
@@ -53,13 +85,46 @@ export default function ProductsPage() {
     return () => {
       mounted = false;
     };
-  }, [meta.page, meta.size, search]);
+  }, [filters, meta.size, page]);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMeta((current) => ({ ...current, page: 1 }));
-    setSearch(searchInput.trim());
+    const params = new URLSearchParams();
+    if (filters.q.trim()) params.set("q", filters.q.trim());
+    if (filters.categorySlug) params.set("categorySlug", filters.categorySlug);
+    if (filters.brand.trim()) params.set("brand", filters.brand.trim());
+    if (filters.color.trim()) params.set("color", filters.color.trim());
+    if (filters.gender.trim()) params.set("gender", filters.gender.trim());
+    if (filters.inStock) params.set("inStock", filters.inStock);
+    if (filters.minPrice) params.set("minPrice", filters.minPrice);
+    if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
+    if (filters.sort && filters.sort !== "newest") params.set("sort", filters.sort);
+    params.set("page", "1");
+    router.replace(`/products?${params.toString()}`);
   };
+
+  const clearFilters = () => {
+    setFilters({
+      q: "",
+      categorySlug: "",
+      brand: "",
+      color: "",
+      gender: "",
+      inStock: "",
+      minPrice: "",
+      maxPrice: "",
+      sort: "newest",
+    });
+    router.replace("/products");
+  };
+
+  const pageUrl = (nextPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(nextPage));
+    return `/products?${params.toString()}`;
+  };
+
+  const categoryOptions = useMemo(() => facets?.categories ?? [], [facets]);
 
   return (
     <PublicShell>
@@ -72,26 +137,51 @@ export default function ProductsPage() {
                 <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold tracking-tight text-[var(--foreground)] sm:text-5xl">
                   Browse active products ready for checkout in the new stack.
                 </h1>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-                  Search by product name or brand. This page only exposes public-safe data and still relies on backend-calculated order totals during checkout.
-                </p>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">Search and filter by category, brand, color, gender, stock, and price. Prices are sorted by the lowest sellable variant price.</p>
               </div>
 
-              <form onSubmit={handleSearch} className="public-muted-card flex items-end gap-3 rounded-[1.5rem] p-4">
-                <div className="flex-1">
+              <form onSubmit={handleSearch} className="public-muted-card grid gap-3 rounded-[1.5rem] p-4 sm:grid-cols-2">
+                <div className="space-y-2 text-sm font-semibold text-[var(--foreground)] sm:col-span-2">
                   <label htmlFor="catalog-search" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     Search catalog
                   </label>
                   <input
                     id="catalog-search"
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Product name or brand"
+                    value={filters.q}
+                    onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
+                    placeholder="Product name, article, brand, category"
                     className="public-input"
+                    data-testid="marketplace-search"
                   />
                 </div>
-                <button type="submit" className="public-button-primary px-5 py-3 text-sm">
+                <select value={filters.categorySlug} onChange={(event) => setFilters((current) => ({ ...current, categorySlug: event.target.value }))} className="public-input" data-testid="marketplace-category">
+                  <option value="">All categories</option>
+                  {categoryOptions.map((category) => (
+                    <option key={category.id || category.name} value={category.slug ?? ""}>{category.name}</option>
+                  ))}
+                </select>
+                <input value={filters.brand} onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))} placeholder="Brand" className="public-input" data-testid="marketplace-brand" />
+                <input value={filters.color} onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))} placeholder="Color" className="public-input" data-testid="marketplace-color" />
+                <input value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))} placeholder="Gender" className="public-input" data-testid="marketplace-gender" />
+                <select value={filters.inStock} onChange={(event) => setFilters((current) => ({ ...current, inStock: event.target.value }))} className="public-input" data-testid="marketplace-stock">
+                  <option value="">Any stock</option>
+                  <option value="true">In stock</option>
+                  <option value="false">Out of stock</option>
+                </select>
+                <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value }))} className="public-input" data-testid="marketplace-sort">
+                  <option value="newest">Newest</option>
+                  <option value="price_asc">Price low to high</option>
+                  <option value="price_desc">Price high to low</option>
+                  <option value="name_asc">Name A-Z</option>
+                  <option value="stock_desc">Stock high to low</option>
+                </select>
+                <input value={filters.minPrice} onChange={(event) => setFilters((current) => ({ ...current, minPrice: event.target.value }))} placeholder="Min price" type="number" className="public-input" />
+                <input value={filters.maxPrice} onChange={(event) => setFilters((current) => ({ ...current, maxPrice: event.target.value }))} placeholder="Max price" type="number" className="public-input" />
+                <button type="submit" className="public-button-primary px-5 py-3 text-sm" data-testid="marketplace-apply">
                   Search
+                </button>
+                <button type="button" onClick={clearFilters} className="public-button-secondary px-5 py-3 text-sm" data-testid="marketplace-clear">
+                  Clear filters
                 </button>
               </form>
             </div>
@@ -125,13 +215,14 @@ export default function ProductsPage() {
             </section>
           ) : (
             <section className="card-panel rounded-[2rem] px-6 py-10 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Catalog empty</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">No products found</p>
               <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-                No public products match this search yet.
+                No products found for these filters.
               </h2>
               <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
                 Try a different keyword or publish more products from the seller workspace.
               </p>
+              <button type="button" onClick={clearFilters} className="public-button-primary mt-5 px-5 py-3 text-sm">Clear filters</button>
             </section>
           )}
 
@@ -142,16 +233,16 @@ export default function ProductsPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                disabled={meta.page <= 1}
-                onClick={() => setMeta((current) => ({ ...current, page: current.page - 1 }))}
+                disabled={page <= 1}
+                onClick={() => router.replace(pageUrl(page - 1))}
                 className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 type="button"
-                disabled={meta.page >= Math.max(meta.totalPages, 1)}
-                onClick={() => setMeta((current) => ({ ...current, page: current.page + 1 }))}
+                disabled={page >= Math.max(meta.totalPages, 1)}
+                onClick={() => router.replace(pageUrl(page + 1))}
                 className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next

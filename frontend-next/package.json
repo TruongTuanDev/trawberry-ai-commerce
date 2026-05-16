@@ -26,6 +26,7 @@
     "test:e2e:three-role-demo": "playwright test three-role-demo-workflow",
     "test:e2e:wb-import": "playwright test wb-import",
     "test:e2e:wb-api-sync": "playwright test wb-api-sync",
+    "test:e2e:marketplace-search-filter-sort": "playwright test marketplace-search-filter-sort",
     "test:e2e:wb-import-checkout": "playwright test wb-import-checkout-flow",
     "test:e2e:seller-product-lifecycle": "playwright test seller-product-lifecycle"
   },

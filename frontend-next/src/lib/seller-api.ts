@@ -243,7 +243,11 @@ export type ProductListItem = {
   brand: string | null;
   visibility: string | null;
   seoSlug: string | null;
+  categoryId: string | null;
+  categorySlug: string | null;
   categoryName: string | null;
+  sourceCategoryName: string | null;
+  sourceCategorySource: string | null;
   wbVendorCode: string | null;
   mainImage: string | null;
   inStock: boolean;
@@ -281,6 +285,8 @@ export type ProductDetail = {
   seoSlug: string | null;
   wbVendorCode: string | null;
   categoryName: string | null;
+  sourceCategoryName: string | null;
+  sourceCategorySource: string | null;
   category: {
     id: number;
     name: string;
@@ -353,6 +359,9 @@ export type WbImportPreviewProduct = {
   name: string;
   brand: string | null;
   categoryName: string | null;
+  categoryId: string | null;
+  mappedCategoryName: string | null;
+  sourceCategoryName: string | null;
   variantsCount: number;
   imagesCount: number;
   priceStatus: "OK" | "MISSING";
@@ -540,6 +549,7 @@ export type CreateProductPayload = {
   wbTitle: string;
   wbDescription?: string;
   brand?: string;
+  categoryId?: number;
   categoryName?: string;
   wbVendorCode?: string;
   localTitle?: string;

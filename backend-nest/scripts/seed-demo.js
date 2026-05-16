@@ -57,6 +57,35 @@ const demoProducts = [
   },
 ];
 
+const marketplaceCategories = [
+  { id: BigInt(1000), name: "Женская одежда", slug: "women", parentId: null, sortOrder: 10 },
+  { id: BigInt(1010), name: "Джинсы", slug: "jeans", parentId: BigInt(1000), sortOrder: 10 },
+  { id: BigInt(1020), name: "Брюки", slug: "pants", parentId: BigInt(1000), sortOrder: 20 },
+  { id: BigInt(1030), name: "Юбки", slug: "skirts", parentId: BigInt(1000), sortOrder: 30 },
+  { id: BigInt(1040), name: "Шорты", slug: "shorts", parentId: BigInt(1000), sortOrder: 40 },
+  { id: BigInt(1050), name: "Платья", slug: "dresses", parentId: BigInt(1000), sortOrder: 50 },
+  { id: BigInt(1060), name: "Рубашки", slug: "shirts", parentId: BigInt(1000), sortOrder: 60 },
+  { id: BigInt(1070), name: "Куртки", slug: "jackets", parentId: BigInt(1000), sortOrder: 70 },
+  { id: BigInt(1080), name: "Толстовки", slug: "hoodies", parentId: BigInt(1000), sortOrder: 80 },
+  { id: BigInt(1090), name: "Комплекты", slug: "sets", parentId: BigInt(1000), sortOrder: 90 },
+  { id: BigInt(2000), name: "Мужская одежда", slug: "men", parentId: null, sortOrder: 20 },
+  { id: BigInt(3000), name: "Детская одежда", slug: "kids", parentId: null, sortOrder: 30 },
+  { id: BigInt(4000), name: "Обувь", slug: "shoes", parentId: null, sortOrder: 40 },
+  { id: BigInt(5000), name: "Аксессуары", slug: "accessories", parentId: null, sortOrder: 50 },
+];
+
+const categoryMappings = [
+  ["WILDBERRIES_EXCEL", "Dresses", null, BigInt(1050), "0.9800"],
+  ["WILDBERRIES_EXCEL", "Outerwear", null, BigInt(1070), "0.9500"],
+  ["WILDBERRIES_EXCEL", "Sets", null, BigInt(1090), "0.9500"],
+  ["WILDBERRIES_EXCEL", "Jeans", null, BigInt(1010), "0.9800"],
+  ["WILDBERRIES_EXCEL", "Skirts", null, BigInt(1030), "0.9800"],
+  ["WILDBERRIES_EXCEL", "Shirts", null, BigInt(1060), "0.9800"],
+  ["WILDBERRIES_API", "Dresses", null, BigInt(1050), "0.9800"],
+  ["WILDBERRIES_API", "Hoodies", null, BigInt(1080), "0.9800"],
+  ["WILDBERRIES_API", "Shirts", null, BigInt(1060), "0.9800"],
+];
+
 function assertSeedAllowed() {
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const confirmed = process.env.DEMO_SEED_CONFIRM === "true";
@@ -73,6 +102,44 @@ async function main() {
   const passwordHash = await bcrypt.hash(DEMO_SELLER_PASSWORD, 10);
   const adminPasswordHash = await bcrypt.hash(DEMO_ADMIN_PASSWORD, 10);
   const customerPasswordHash = await bcrypt.hash(DEMO_CUSTOMER_PASSWORD, 10);
+
+  for (const category of marketplaceCategories) {
+    await prisma.category.upsert({
+      where: { id: category.id },
+      update: {
+        name: category.name,
+        slug: category.slug,
+        parentId: category.parentId,
+        sortOrder: category.sortOrder,
+        isActive: true,
+      },
+      create: {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        parentId: category.parentId,
+        sortOrder: category.sortOrder,
+        isActive: true,
+      },
+    });
+  }
+
+  for (const [source, sourceCategoryName, sourceSubjectName, targetCategoryId, confidence] of categoryMappings) {
+    const existing = await prisma.categoryMapping.findFirst({
+      where: { source, sourceCategoryName, sourceSubjectName },
+      select: { id: true },
+    });
+    if (existing) {
+      await prisma.categoryMapping.update({
+        where: { id: existing.id },
+        data: { targetCategoryId, confidence },
+      });
+    } else {
+      await prisma.categoryMapping.create({
+        data: { source, sourceCategoryName, sourceSubjectName, targetCategoryId, confidence },
+      });
+    }
+  }
 
   await prisma.user.upsert({
     where: { email: DEMO_ADMIN_EMAIL },
@@ -202,6 +269,16 @@ async function main() {
         seoSlug: product.slug,
         brand: product.brand,
         categoryName: product.categoryName,
+        sourceCategoryName: product.categoryName,
+        sourceCategorySource: "MANUAL",
+        categoryId:
+          product.categoryName === "Dresses"
+            ? BigInt(1050)
+            : product.categoryName === "Outerwear"
+              ? BigInt(1070)
+              : product.categoryName === "Sets"
+                ? BigInt(1090)
+                : null,
         visibility: "ACTIVE",
       },
       create: {
@@ -215,6 +292,16 @@ async function main() {
         seoSlug: product.slug,
         brand: product.brand,
         categoryName: product.categoryName,
+        sourceCategoryName: product.categoryName,
+        sourceCategorySource: "MANUAL",
+        categoryId:
+          product.categoryName === "Dresses"
+            ? BigInt(1050)
+            : product.categoryName === "Outerwear"
+              ? BigInt(1070)
+              : product.categoryName === "Sets"
+                ? BigInt(1090)
+                : null,
         visibility: "ACTIVE",
       },
       select: { id: true },

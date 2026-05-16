@@ -187,13 +187,37 @@ model Shop {
 }
 
 model Category {
-  id        BigInt    @id
-  name      String    @db.VarChar(255)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamp(6)
-  products  Product[]
+  id             BigInt            @id
+  name           String            @db.VarChar(255)
+  slug           String?           @db.VarChar(255)
+  parentId       BigInt?           @map("parent_id")
+  sortOrder      Int               @default(0) @map("sort_order")
+  isActive       Boolean           @default(true) @map("is_active")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamp(6)
+  products       Product[]
+  parent         Category?         @relation("CategoryTree", fields: [parentId], references: [id])
+  children       Category[]        @relation("CategoryTree")
+  sourceMappings CategoryMapping[]
 
+  @@index([slug])
   @@map("categories")
+}
+
+model CategoryMapping {
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  source             String   @db.VarChar(100)
+  sourceCategoryName String   @map("source_category_name") @db.VarChar(255)
+  sourceSubjectName  String?  @map("source_subject_name") @db.VarChar(255)
+  targetCategoryId   BigInt   @map("target_category_id")
+  confidence         Decimal? @db.Decimal(5, 4)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  targetCategory     Category @relation(fields: [targetCategoryId], references: [id])
+
+  @@index([source, sourceCategoryName])
+  @@index([targetCategoryId])
+  @@map("category_mappings")
 }
 
 model Product {
@@ -206,6 +230,8 @@ model Product {
   wbTitle           String             @map("wb_title") @db.VarChar(500)
   wbDescription     String?            @map("wb_description")
   categoryName      String?            @map("category_name") @db.VarChar(255)
+  sourceCategoryName   String?         @map("source_category_name") @db.VarChar(255)
+  sourceCategorySource String?         @map("source_category_source") @db.VarChar(100)
   externalSource    String?            @map("external_source") @db.VarChar(100)
   externalProductId String?            @map("external_product_id") @db.VarChar(255)
   sellerSku         String?            @map("seller_sku") @db.VarChar(255)

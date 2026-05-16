@@ -61,6 +61,8 @@ Product:
 - `subjectID` -> `subjectId`
 - selected characteristics -> gender, composition, color
 
+Category mapping preserves `subjectName` as `sourceCategoryName`, stores mapped internal category in `categoryId`, and emits `UNMAPPED_CATEGORY` when no mapping exists. WB price and stock remain out of scope; sellers manage local price and inventory.
+
 Variant:
 
 - `sizes[].chrtID` -> `chrtId`

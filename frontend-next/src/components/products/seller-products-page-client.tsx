@@ -12,6 +12,7 @@ import {
   updateShopProductInventory,
   type ProductListItem,
 } from "@/lib/seller-api";
+import { getCategories, type PublicCategory } from "@/lib/public-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
@@ -30,6 +31,7 @@ export function SellerProductsPageClient() {
     title: "",
     description: "",
     brand: "",
+    categoryId: "",
     categoryName: "",
     price: "100",
     stockQuantity: "5",
@@ -53,6 +55,7 @@ export function SellerProductsPageClient() {
   });
   const [creatingShop, setCreatingShop] = useState(false);
   const [creatingProduct, setCreatingProduct] = useState(false);
+  const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -105,6 +108,20 @@ export function SellerProductsPageClient() {
 
     void run();
   }, [currentShopId, filters.search, filters.status, filters.stockStatus, page, user]);
+
+  useEffect(() => {
+    let mounted = true;
+    getCategories()
+      .then((items) => {
+        if (mounted) setCategories(items);
+      })
+      .catch(() => {
+        if (mounted) setCategories([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const stockCounts = useMemo(() => ({
     tracked: state.items.filter((item) => item.trackInventory).length,
@@ -208,6 +225,7 @@ export function SellerProductsPageClient() {
         wbDescription: productForm.description.trim() || undefined,
         localDescription: productForm.description.trim() || undefined,
         brand: productForm.brand.trim() || undefined,
+        categoryId: productForm.categoryId ? Number(productForm.categoryId) : undefined,
         categoryName: productForm.categoryName.trim() || "Seller Created",
         wbVendorCode: `UI-${stamp}`,
         seoSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
@@ -228,6 +246,7 @@ export function SellerProductsPageClient() {
         title: "",
         description: "",
         brand: "",
+        categoryId: "",
         categoryName: "",
         price: "100",
         stockQuantity: "5",
@@ -294,6 +313,22 @@ export function SellerProductsPageClient() {
               <div className="mt-4 grid gap-4 lg:grid-cols-3">
                 <CreateInput label="Name" value={productForm.title} onChange={(value) => setProductForm((current) => ({ ...current, title: value }))} testId="create-product-name" />
                 <CreateInput label="Brand" value={productForm.brand} onChange={(value) => setProductForm((current) => ({ ...current, brand: value }))} testId="create-product-brand" />
+                <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+                  <span>Internal category</span>
+                  <select value={productForm.categoryId} onChange={(event) => {
+                    const selected = flattenCategories(categories).find((category) => category.id === event.target.value);
+                    setProductForm((current) => ({
+                      ...current,
+                      categoryId: event.target.value,
+                      categoryName: selected?.name ?? current.categoryName,
+                    }));
+                  }} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-product-category-id">
+                    <option value="">No internal category</option>
+                    {flattenCategories(categories).map((category) => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
+                    ))}
+                  </select>
+                </label>
                 <CreateInput label="Category" value={productForm.categoryName} onChange={(value) => setProductForm((current) => ({ ...current, categoryName: value }))} testId="create-product-category" />
                 <CreateInput label="Price" type="number" value={productForm.price} onChange={(value) => setProductForm((current) => ({ ...current, price: value }))} testId="create-product-price" />
                 <CreateInput label="Initial stock" type="number" value={productForm.stockQuantity} onChange={(value) => setProductForm((current) => ({ ...current, stockQuantity: value }))} testId="create-product-stock" />
@@ -407,6 +442,13 @@ function InventorySummaryCard({
       <p className={`mt-2 text-2xl font-semibold ${colorClass}`}>{value}</p>
     </div>
   );
+}
+
+function flattenCategories(categories: PublicCategory[]): PublicCategory[] {
+  return categories.flatMap((category) => [
+    category,
+    ...flattenCategories(category.children ?? []),
+  ]);
 }
 
 function CreateInput({

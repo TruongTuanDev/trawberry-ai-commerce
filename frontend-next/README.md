@@ -172,6 +172,14 @@ Current coverage:
 - imports one product by article/APT
 - verifies the imported product appears in `/seller/products`
 
+## Playwright Marketplace Search/Filter/Sort
+
+```bash
+npm run test:e2e:marketplace-search-filter-sort
+```
+
+The public `/products` page supports URL-persistent search, internal category filtering, brand/color/gender filters, stock filtering, sorting, and category/brand display on product detail.
+
 ## Playwright admin seller approval flow
 With Docker runtime already healthy and demo data seeded:
 

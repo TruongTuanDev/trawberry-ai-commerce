@@ -117,6 +117,8 @@ export class ProductsService {
         categoryId:
           dto.categoryId !== undefined ? BigInt(dto.categoryId) : undefined,
         categoryName: dto.categoryName,
+        sourceCategoryName: dto.categoryName,
+        sourceCategorySource: 'MANUAL',
         wbVendorCode: dto.wbVendorCode,
         wbVideoUrl: dto.wbVideoUrl,
         wbNeedKiz: dto.wbNeedKiz,
@@ -208,6 +210,11 @@ export class ProductsService {
           categoryId:
             dto.categoryId !== undefined ? BigInt(dto.categoryId) : undefined,
           categoryName: dto.categoryName,
+          sourceCategoryName: dto.categoryName,
+          sourceCategorySource:
+            dto.categoryName !== undefined || dto.categoryId !== undefined
+              ? 'MANUAL'
+              : undefined,
           wbVendorCode: dto.wbVendorCode,
           wbVideoUrl: dto.wbVideoUrl,
           wbNeedKiz: dto.wbNeedKiz,
@@ -414,9 +421,11 @@ export class ProductsService {
     visibility: string | null;
     seoSlug: string | null;
     categoryName: string | null;
+    sourceCategoryName: string | null;
+    sourceCategorySource: string | null;
     wbVendorCode: string | null;
     images: Array<{ wbUrl: string; localUrl: string | null }>;
-    category: { name: string } | null;
+    category: { id: bigint; name: string; slug: string | null } | null;
     variants: Array<{
       id: string;
       stockQuantity: number;
@@ -439,6 +448,10 @@ export class ProductsService {
       visibility: product.visibility,
       seoSlug: product.seoSlug,
       categoryName: product.category?.name ?? product.categoryName,
+      categoryId: product.category?.id.toString() ?? null,
+      categorySlug: product.category?.slug ?? null,
+      sourceCategoryName: product.sourceCategoryName,
+      sourceCategorySource: product.sourceCategorySource,
       wbVendorCode: product.wbVendorCode,
       mainImage: mainImage?.localUrl ?? mainImage?.wbUrl ?? null,
       inStock: inventory.inStock,
@@ -465,6 +478,8 @@ export class ProductsService {
     seoSlug: string | null;
     wbVendorCode: string | null;
     categoryName: string | null;
+    sourceCategoryName: string | null;
+    sourceCategorySource: string | null;
     category: { id: bigint; name: string } | null;
     shop: { id: string; name: string; slug: string };
     images: Array<{
@@ -503,6 +518,8 @@ export class ProductsService {
       seoSlug: product.seoSlug,
       wbVendorCode: product.wbVendorCode,
       categoryName: product.category?.name ?? product.categoryName,
+      sourceCategoryName: product.sourceCategoryName,
+      sourceCategorySource: product.sourceCategorySource,
       category: product.category
         ? {
             id: Number(product.category.id),

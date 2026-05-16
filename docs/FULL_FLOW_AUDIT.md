@@ -4,6 +4,13 @@ Date: 2026-05-13
 
 Scope: `frontend-next`, `backend-nest`, `ai-service`, and Docker runtime. Legacy apps `strawberry-frontend` and `strawberry-backend` were intentionally not modified.
 
+## Category Mapping + Search/Filter/Sort
+
+- Category mapping preserves WB source category while adding internal `categoryId`.
+- Unmapped categories produce `UNMAPPED_CATEGORY` warnings.
+- Public catalog search/filter/sort is verified by `smoke:marketplace-search` and `test:e2e:marketplace-search-filter-sort`.
+- Price sorting uses the minimum active variant price; checkout still recalculates totals.
+
 ## 1. Executive Summary
 
 Overall result: **PASS for the current MVP/demo flow; PARTIAL for production readiness**.

@@ -122,6 +122,13 @@ npm run start:dev
 - Real mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
 - Smoke: `npm run smoke:wb-api-sync`.
 
+## Category Mapping And Marketplace Search
+- `npm run seed:demo` seeds internal marketplace categories and baseline WB mappings.
+- Public category tree: `GET /api/categories`.
+- Public catalog: `GET /api/public/products?q=&categorySlug=&brand=&color=&gender=&inStock=&sort=`.
+- Smoke: `npm run smoke:marketplace-search`.
+- WB Excel/API imports map categories but do not sync WB price or stock.
+
 ## Admin operations dashboard
 - Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.
 - Supports optional `dateFrom`, `dateTo`, `shopId`, and `sellerId` filters.

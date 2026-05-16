@@ -1,5 +1,13 @@
 # Phase Report
 
+## Category Mapping + Marketplace Search/Filter/Sort
+
+- Added internal categories, source category mappings, and keyword fallback mapping.
+- Integrated category mapping into WB Excel import and WB API product sync.
+- Enhanced public `/products` with search, filters, sort, facets, and product detail category metadata.
+- Enhanced seller product creation/listing with internal category selector and source category display.
+- Added `smoke:marketplace-search` and `test:e2e:marketplace-search-filter-sort`.
+
 ## Wildberries Import To Checkout Verification
 
 - Scope:

@@ -42,10 +42,25 @@ export class PublicProductResponseDto {
   brand!: string | null;
 
   @ApiProperty({ nullable: true })
+  color!: string | null;
+
+  @ApiProperty({ nullable: true })
+  gender!: string | null;
+
+  @ApiProperty({ nullable: true })
   seoSlug!: string | null;
 
   @ApiProperty({ nullable: true })
+  categoryId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  categorySlug!: string | null;
+
+  @ApiProperty({ nullable: true })
   categoryName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sourceCategoryName!: string | null;
 
   @ApiProperty({ nullable: true })
   price!: string | null;

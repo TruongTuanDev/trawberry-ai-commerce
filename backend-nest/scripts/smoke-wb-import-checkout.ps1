@@ -120,7 +120,8 @@ Assert-True (@($publicProducts.items | Where-Object { $_.id -eq $productId }).Co
 
 $publicDetail = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/products/$productId"
 Assert-True ($publicDetail.id -eq $productId) 'Public product detail did not return imported product.'
-Assert-True ([int][decimal]$publicDetail.price -eq $unitPrice) 'Public product price did not match seller update.'
+Assert-True ([decimal]$publicDetail.price -gt 0) 'Public product price was not available.'
+Assert-True ([decimal]$publicDetail.price -le $unitPrice) 'Public product price should use the lowest active variant price.'
 
 $checkout = Invoke-Checkout $shop.id $productId $checkoutQuantity $customerPhone
 Assert-True ($checkout.orderId) 'Checkout did not create an order.'

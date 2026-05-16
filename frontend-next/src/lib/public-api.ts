@@ -6,8 +6,13 @@ export type PublicProduct = {
   name: string;
   description: string | null;
   brand: string | null;
+  color: string | null;
+  gender: string | null;
   seoSlug: string | null;
+  categoryId: string | null;
+  categorySlug: string | null;
   categoryName: string | null;
+  sourceCategoryName: string | null;
   price: string | null;
   inStock: boolean;
   availableQuantity: number;
@@ -32,6 +37,24 @@ export type PaginatedPublicProducts = {
     total: number;
     totalPages: number;
   };
+  filters?: {
+    categories: Array<{ id: string; name: string; slug: string | null; count: number }>;
+    brands: Array<{ value: string; count: number }>;
+    colors: Array<{ value: string; count: number }>;
+    genders: Array<{ value: string; count: number }>;
+    priceMin: string | null;
+    priceMax: string | null;
+  };
+};
+
+export type PublicCategory = {
+  id: string;
+  name: string;
+  slug: string | null;
+  parentId: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  children: PublicCategory[];
 };
 
 export type CheckoutOrderPayload = {
@@ -125,14 +148,44 @@ export type PublicTrackedOrder = {
   } | null;
 };
 
-export async function getPublicProducts(query?: { search?: string; page?: number; size?: number }) {
+export async function getPublicProducts(query?: {
+  search?: string;
+  q?: string;
+  categoryId?: string;
+  categorySlug?: string;
+  brand?: string;
+  color?: string;
+  gender?: string;
+  inStock?: boolean;
+  minPrice?: string;
+  maxPrice?: string;
+  sort?: string;
+  page?: number;
+  size?: number;
+}) {
   const params = new URLSearchParams();
   if (query?.search) params.set("search", query.search);
+  if (query?.q) params.set("q", query.q);
+  if (query?.categoryId) params.set("categoryId", query.categoryId);
+  if (query?.categorySlug) params.set("categorySlug", query.categorySlug);
+  if (query?.brand) params.set("brand", query.brand);
+  if (query?.color) params.set("color", query.color);
+  if (query?.gender) params.set("gender", query.gender);
+  if (query?.inStock !== undefined) params.set("inStock", String(query.inStock));
+  if (query?.minPrice) params.set("minPrice", query.minPrice);
+  if (query?.maxPrice) params.set("maxPrice", query.maxPrice);
+  if (query?.sort) params.set("sort", query.sort);
   if (query?.page) params.set("page", String(query.page));
   if (query?.size) params.set("size", String(query.size));
 
   const qs = params.toString();
   return apiRequest<PaginatedPublicProducts>(`/api/public/products${qs ? `?${qs}` : ""}`, {
+    method: "GET",
+  });
+}
+
+export async function getCategories() {
+  return apiRequest<PublicCategory[]>("/api/categories", {
     method: "GET",
   });
 }
