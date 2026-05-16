@@ -511,7 +511,7 @@ export type WbCredentialsStatus = {
   mode: "mock" | "real";
   lastVerifiedAt: string | null;
   lastVerificationStatus: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
-  lastError: string | null;
+  lastVerificationError: string | null;
 };
 
 export type WbConnectionVerifyResult = {
@@ -937,7 +937,16 @@ export async function deleteWbSyncCredentials(
   shopId: string,
   token?: string,
 ) {
-  return apiRequest<{ success: boolean; shopId: string; mode: "mock" | "real" }>(
+  return apiRequest<{
+    success: boolean;
+    shopId: string;
+    connected: boolean;
+    keyLast4: string | null;
+    lastVerifiedAt: string | null;
+    lastVerificationStatus: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+    lastVerificationError: string | null;
+    mode: "mock" | "real";
+  }>(
     `/api/shops/${shopId}/wb-sync/credentials`,
     {
       method: "DELETE",

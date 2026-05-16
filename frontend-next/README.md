@@ -90,6 +90,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - confirm import and result summary
 - Seller Wildberries API sync UI with:
   - explicit `MOCK` / `REAL` mode state
+  - per-shop credential management for the currently selected shop
   - credentials status with `keyLast4`
   - verify connection button
   - delete key action

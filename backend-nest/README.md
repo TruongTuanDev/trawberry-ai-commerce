@@ -123,6 +123,8 @@ npm run start:dev
   - `WB_SYNC_MODE=real`
   - `WB_API_BASE_URL=https://content-api.wildberries.ru`
   - `WB_CREDENTIAL_ENCRYPTION_KEY=...`
+- Runtime sync uses the selected shop's encrypted credential from DB.
+- `WB_REAL_API_KEY` is only a local smoke helper used to save a credential into a test shop.
 - Credential APIs:
   - `POST /api/shops/:shopId/wb-sync/credentials`
   - `GET /api/shops/:shopId/wb-sync/credentials/status`

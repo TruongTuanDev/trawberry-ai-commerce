@@ -1490,6 +1490,7 @@ Implemented:
 - explicit real-mode credential save, status, verify, and delete APIs
 - persisted WB credential verification metadata on `shop_wb_credentials`
 - AES-GCM credential encryption via `WB_CREDENTIAL_ENCRYPTION_KEY`
+- real runtime uses the selected shop's stored credential from DB, not a global `WB_REAL_API_KEY`
 - real-mode `POST /content/v2/get/cards/list` client with cursor pagination
 - no silent mock fallback when `WB_SYNC_MODE=real`
 - seller UI connection card with mode, key last4, verify status, and sanitized error

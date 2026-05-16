@@ -143,9 +143,9 @@ export default function WildberriesApiSyncPage() {
   const modeMessage =
     visibleCredentials?.mode === "real"
       ? visibleCredentials.connected
-        ? "Real mode active. Stored WB API key available."
-        : "Real mode active, API key required."
-      : "Mock mode active. Set WB_SYNC_MODE=real to call Wildberries.";
+        ? `Connected with key ending ****${visibleCredentials.keyLast4 ?? "----"}.`
+        : "Real mode active - this shop needs its own WB API key."
+      : "Mock mode active - API key is not required.";
 
   return (
     <div className="space-y-6" data-testid="wb-api-sync-page">
@@ -208,11 +208,11 @@ export default function WildberriesApiSyncPage() {
               <p><span className="font-semibold">Key last4:</span> {visibleCredentials?.keyLast4 ?? "--"}</p>
               <p><span className="font-semibold">Last verify:</span> {visibleCredentials?.lastVerificationStatus ?? "NOT_VERIFIED"}</p>
               <p><span className="font-semibold">Verified at:</span> {visibleCredentials?.lastVerifiedAt ?? "--"}</p>
-              {visibleCredentials?.lastError ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">Last error:</span> {visibleCredentials.lastError}</p> : null}
+              {visibleCredentials?.lastVerificationError ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">Last error:</span> {visibleCredentials.lastVerificationError}</p> : null}
             </div>
             <div className="mt-4 flex gap-2">
               <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="WB API key" type="password" data-testid="wb-api-key" className="min-w-0 flex-1 rounded-full border border-[var(--border)] px-4 py-2 text-sm" />
-              <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Save</button>
+              <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">{visibleCredentials?.connected ? "Update API key" : "Save API key"}</button>
             </div>
             <div className="mt-3 flex flex-wrap gap-3">
               <button type="button" onClick={() => void verifyConnection()} disabled={!currentShopId || !visibleCredentials?.connected || verifying} data-testid="wb-api-verify-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">

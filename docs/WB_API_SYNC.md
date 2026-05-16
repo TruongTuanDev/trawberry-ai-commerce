@@ -3,7 +3,7 @@
 WB API sync now has two explicit runtime modes:
 
 - `mock`: deterministic fixture for local CI/default smoke
-- `real`: calls Wildberries Content API with a seller's stored API key
+- `real`: calls Wildberries Content API with the selected shop's stored API key
 
 Excel import remains separate and unchanged.
 
@@ -41,6 +41,7 @@ Notes:
 - `WB_SYNC_MODE=real` is the only way to call Wildberries.
 - `WB_CREDENTIAL_ENCRYPTION_KEY` is required to save and read shop credentials.
 - The legacy `WB_CREDENTIALS_ENCRYPTION_KEY` name is still accepted as a compatibility fallback, but new setup should use `WB_CREDENTIAL_ENCRYPTION_KEY`.
+- `WB_REAL_API_KEY` is not a production runtime credential source. It is only a local smoke helper used to save a per-shop credential through the API.
 - Never commit real WB tokens to git.
 
 ## Credential Flow
@@ -58,7 +59,7 @@ Notes:
    - `keyLast4`
    - `lastVerifiedAt`
    - `lastVerificationStatus`
-   - `lastError`
+   - `lastVerificationError`
 
 Status response shape:
 
@@ -70,7 +71,7 @@ Status response shape:
   "mode": "real",
   "lastVerifiedAt": "2026-05-17T10:00:00.000Z",
   "lastVerificationStatus": "SUCCESS",
-  "lastError": null
+  "lastVerificationError": null
 }
 ```
 
@@ -122,7 +123,7 @@ Rules:
 - `mock` mode returns fixture data only when `WB_SYNC_MODE != real`
 - `real` mode never swaps to mock after an error
 - if `WB_SYNC_MODE=real` and the seller has no saved key, backend returns:
-  - `Real mode active, API key required.`
+  - `WB_CREDENTIAL_MISSING: Real mode active, this shop needs its own WB API key.`
 - if real WB call fails, sync returns a real safe error and the UI shows failure
 
 ## Sync All
@@ -200,10 +201,12 @@ Additional mapping:
 The WB API sync page must make mode and connection state explicit:
 
 - `MOCK` or `REAL` badge
-- `Mock mode active. Set WB_SYNC_MODE=real to call Wildberries.`
-- `Real mode active, API key required.`
+- `Mock mode active - API key is not required.`
+- `Real mode active - this shop needs its own WB API key.`
+- `Connected with key ending ****1234.`
 - connected status with `keyLast4`
 - last verification result and sanitized last error
+- save/update API key button
 - verify button
 - delete key button
 - result panel with:
@@ -256,12 +259,13 @@ Behavior of `smoke:wb-api-sync-real`:
 
 - skips with message if `WB_SYNC_MODE != real`
 - fails clearly if `WB_SYNC_MODE=real` but `WB_REAL_API_KEY` is missing
-- saves shop credential through backend API
+- uses `WB_REAL_API_KEY` only to save that key into the test shop through `POST /api/shops/:shopId/wb-sync/credentials`
 - verifies connection
 - previews all
 - imports all
 - optionally previews/imports by article
 - asserts `sourceMode=real`
+- asserts sync reads the shop credential from DB, not directly from env
 
 ## Troubleshooting
 
@@ -289,6 +293,11 @@ Article not found
 Credential save fails
 
 - `WB_CREDENTIAL_ENCRYPTION_KEY` missing in backend env
+
+Missing credential in real mode
+
+- save or update the selected shop's WB API key first
+- expected safe error: `WB_CREDENTIAL_MISSING`
 
 Page shows `MOCK`
 

@@ -36,8 +36,13 @@ type CredentialRecord = {
   keyLast4: string | null;
   lastVerifiedAt: Date | null;
   lastVerificationStatus: string;
-  lastError: string | null;
+  lastVerificationError: string | null;
   updatedAt: Date;
+};
+
+type LoadedCredential = {
+  apiKey: string;
+  keyLast4: string | null;
 };
 
 @Injectable()
@@ -71,21 +76,21 @@ export class WbProductSyncService {
         encryptedApiKey,
         keyLast4,
         lastVerificationStatus: 'NOT_VERIFIED',
-        lastError: null,
+        lastVerificationError: null,
       },
       update: {
         encryptedApiKey,
         keyLast4,
         lastVerifiedAt: null,
         lastVerificationStatus: 'NOT_VERIFIED',
-        lastError: null,
+        lastVerificationError: null,
       },
       select: {
         encryptedApiKey: true,
         keyLast4: true,
         lastVerifiedAt: true,
         lastVerificationStatus: true,
-        lastError: true,
+        lastVerificationError: true,
         updatedAt: true,
       },
     });
@@ -102,7 +107,7 @@ export class WbProductSyncService {
         keyLast4: true,
         lastVerifiedAt: true,
         lastVerificationStatus: true,
-        lastError: true,
+        lastVerificationError: true,
         updatedAt: true,
       },
     });
@@ -117,6 +122,11 @@ export class WbProductSyncService {
     return {
       success: true,
       shopId,
+      connected: false,
+      keyLast4: null,
+      lastVerifiedAt: null,
+      lastVerificationStatus: 'NOT_VERIFIED',
+      lastVerificationError: null,
       mode: this.syncMode(),
     };
   }
@@ -126,19 +136,16 @@ export class WbProductSyncService {
     user: AuthenticatedUser,
   ): Promise<WbConnectionVerifyResult> {
     await this.assertApprovedSellerForShop(shopId, user);
-    const apiKey = await this.getApiKey(shopId);
-    if (!apiKey) {
-      throw new BadRequestException('Real mode active, API key required.');
-    }
+    const credential = await this.loadStoredCredential(shopId);
 
     try {
-      const result = await this.apiClient.verifyConnection(apiKey);
+      const result = await this.apiClient.verifyConnection(credential.apiKey);
       await this.prisma.shopWbCredential.update({
         where: { shopId },
         data: {
           lastVerifiedAt: new Date(),
           lastVerificationStatus: 'SUCCESS',
-          lastError: null,
+          lastVerificationError: null,
         },
       });
       return result;
@@ -149,7 +156,7 @@ export class WbProductSyncService {
         data: {
           lastVerifiedAt: new Date(),
           lastVerificationStatus: 'FAILED',
-          lastError: safeError,
+          lastVerificationError: safeError,
         },
       });
       throw new BadRequestException(safeError);
@@ -215,7 +222,7 @@ export class WbProductSyncService {
     await this.assertApprovedSellerForShop(shopId, user);
     const startedAt = new Date();
     const sourceMode = this.syncMode();
-    const credentials = await this.getApiKey(shopId);
+    const credential = await this.getCredential(shopId);
 
     const run = await this.prisma.wbSyncRun.create({
       data: {
@@ -229,6 +236,7 @@ export class WbProductSyncService {
         errorsJson: [],
         rawSummaryJson: {
           sourceMode,
+          credentialKeyLast4: credential?.keyLast4 ?? null,
           imageMode: options.imageMode,
           publishMode: options.publishMode,
         },
@@ -238,7 +246,7 @@ export class WbProductSyncService {
 
     try {
       const cardsResponse = await this.apiClient.fetchCards({
-        apiKey: credentials,
+        apiKey: credential?.apiKey ?? null,
         limit: options.limit,
         article: options.article,
       });
@@ -306,6 +314,7 @@ export class WbProductSyncService {
           errorsJson: errors,
           rawSummaryJson: {
             sourceMode: cardsResponse.mode,
+            credentialKeyLast4: credential?.keyLast4 ?? null,
             fetchedCount: cardsResponse.fetchedCount,
             pagesFetched: cardsResponse.pagesFetched,
             cursor: cardsResponse.cursor ?? null,
@@ -345,6 +354,7 @@ export class WbProductSyncService {
           ],
           rawSummaryJson: {
             sourceMode,
+            credentialKeyLast4: credential?.keyLast4 ?? null,
             imageMode: options.imageMode,
             publishMode: options.publishMode,
           },
@@ -564,41 +574,60 @@ export class WbProductSyncService {
     });
   }
 
-  private async getApiKey(shopId: string) {
+  private async getCredential(
+    shopId: string,
+  ): Promise<LoadedCredential | null> {
     const mode = this.syncMode();
     if (mode === 'mock') {
       return null;
     }
 
+    return this.loadStoredCredential(shopId);
+  }
+
+  private async loadStoredCredential(
+    shopId: string,
+  ): Promise<LoadedCredential> {
     const credentials = await this.prisma.shopWbCredential.findUnique({
       where: { shopId },
-      select: { encryptedApiKey: true },
+      select: { encryptedApiKey: true, keyLast4: true },
     });
 
     if (!credentials) {
-      throw new BadRequestException('Real mode active, API key required.');
+      throw new BadRequestException(
+        'WB_CREDENTIAL_MISSING: Real mode active, this shop needs its own WB API key.',
+      );
     }
 
-    return this.decryptApiKey(credentials.encryptedApiKey);
+    return {
+      apiKey: this.decryptApiKey(credentials.encryptedApiKey),
+      keyLast4: credentials.keyLast4,
+    };
   }
 
   private async assertApprovedSellerForShop(
     shopId: string,
     user: AuthenticatedUser,
   ) {
-    if (user.role !== USER_ROLES.SELLER) {
+    if (user.role !== USER_ROLES.SELLER && user.role !== USER_ROLES.ADMIN) {
       throw new ForbiddenException(
-        'Only approved sellers can sync WB products.',
+        'Only sellers or admins can sync WB products.',
       );
     }
     const shop = await this.prisma.shop.findFirst({
-      where: { id: shopId, sellerProfile: { userId: user.userId } },
+      where:
+        user.role === USER_ROLES.ADMIN
+          ? { id: shopId }
+          : { id: shopId, sellerProfile: { userId: user.userId } },
       select: { id: true, sellerProfile: { select: { approvalStatus: true } } },
     });
     if (!shop) {
       throw new ForbiddenException('You do not have access to this shop.');
     }
-    if (shop.sellerProfile.approvalStatus !== 'APPROVED') {
+    if (
+      user.role === USER_ROLES.SELLER &&
+      shop.sellerProfile.approvalStatus !== 'APPROVED'
+    ) {
       throw new ForbiddenException(
         'Only APPROVED sellers can sync WB products.',
       );
@@ -645,6 +674,7 @@ export class WbProductSyncService {
       cursor?: unknown;
       imageMode?: string;
       publishMode?: string;
+      credentialKeyLast4?: string | null;
       products?: Array<{
         sellerSku: string | null;
         externalProductId: string | null;
@@ -695,7 +725,7 @@ export class WbProductSyncService {
       lastVerifiedAt: credentials?.lastVerifiedAt?.toISOString() ?? null,
       lastVerificationStatus:
         credentials?.lastVerificationStatus ?? 'NOT_VERIFIED',
-      lastError: credentials?.lastError ?? null,
+      lastVerificationError: credentials?.lastVerificationError ?? null,
     };
   }
 

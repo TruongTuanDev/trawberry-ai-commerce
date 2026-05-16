@@ -730,14 +730,14 @@ Implemented: seller-managed WB API product sync foundation.
 - Sync all and sync by article/APT/vendorCode work in mock mode.
 - Product, variant, and remote image upsert is idempotent.
 - Excel import remains unchanged and continues to use `/seller/import/wildberries`.
-- Real WB mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
+- Real WB mode requires per-shop credentials and `WB_CREDENTIAL_ENCRYPTION_KEY`.
 
 # Wildberries Real API Sync Hardening Status
 
 Implemented:
 
 - seller credential save/status/verify/delete flow
-- stored verification metadata: `lastVerifiedAt`, `lastVerificationStatus`, `lastError`
+- stored verification metadata: `lastVerifiedAt`, `lastVerificationStatus`, `lastVerificationError`
 - `WB_CREDENTIAL_ENCRYPTION_KEY` as the primary credential encryption env
 - real-mode cursor pagination and article filtering from real fetched cards
 - UI mode badge and connection diagnostics

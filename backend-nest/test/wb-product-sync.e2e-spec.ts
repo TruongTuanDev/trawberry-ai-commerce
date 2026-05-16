@@ -3,12 +3,17 @@ import { ConfigService } from '@nestjs/config';
 import { USER_ROLES } from '../src/common/constants/roles.constant';
 import { WbProductSyncService } from '../src/modules/wb-sync/wb-product-sync.service';
 
+jest.mock('@prisma/client', () => ({
+  PrismaClient: class PrismaClient {},
+  Prisma: {},
+}));
+
 type CredentialRecord = {
   encryptedApiKey: string;
   keyLast4: string | null;
   lastVerifiedAt: Date | null;
   lastVerificationStatus: string;
-  lastError: string | null;
+  lastVerificationError: string | null;
   updatedAt: Date;
 };
 
@@ -28,25 +33,67 @@ type UpdateArgs = {
   data: Partial<CredentialRecord>;
 };
 
+type WbSyncRunCreateArgs = {
+  data: Record<string, unknown>;
+};
+
+type WbSyncRunUpdateArgs = {
+  data: {
+    status?: string;
+    totalFetched?: number;
+    totalProducts?: number;
+    totalVariants?: number;
+    totalImages?: number;
+    createdProducts?: number;
+    updatedProducts?: number;
+    createdVariants?: number;
+    updatedVariants?: number;
+    warningsJson?: unknown[];
+    errorsJson?: unknown[];
+    rawSummaryJson?: Record<string, unknown> | null;
+  };
+};
+
 describe('WbProductSyncService credentials', () => {
   const user = {
     userId: 'seller-user-1',
     email: 'seller@example.com',
     role: USER_ROLES.SELLER,
   };
+  const adminUser = {
+    userId: 'admin-user-1',
+    email: 'admin@example.com',
+    role: USER_ROLES.ADMIN,
+  };
 
   function createService(options?: {
     mode?: 'mock' | 'real';
     encryptionKey?: string | null;
     verifyImpl?: (apiKey: string) => Promise<VerifyResult>;
+    shopOwnerUserId?: string;
   }) {
     let credentialStore: CredentialRecord | null = null;
 
     const shop = {
-      findFirst: jest.fn().mockResolvedValue({
-        id: 'shop-1',
-        sellerProfile: { approvalStatus: 'APPROVED' },
-      }),
+      findFirst: jest
+        .fn()
+        .mockImplementation(
+          ({
+            where,
+          }: {
+            where: { id: string; sellerProfile?: { userId: string } };
+          }) =>
+            Promise.resolve(
+              !where.sellerProfile ||
+                where.sellerProfile.userId ===
+                  (options?.shopOwnerUserId ?? user.userId)
+                ? {
+                    id: 'shop-1',
+                    sellerProfile: { approvalStatus: 'APPROVED' },
+                  }
+                : null,
+            ),
+        ),
     };
 
     const shopWbCredential = {
@@ -62,7 +109,10 @@ describe('WbProductSyncService credentials', () => {
             update.lastVerificationStatus ??
             create.lastVerificationStatus ??
             'NOT_VERIFIED',
-          lastError: update.lastError ?? create.lastError ?? null,
+          lastVerificationError:
+            update.lastVerificationError ??
+            create.lastVerificationError ??
+            null,
           updatedAt: now,
         };
         return Promise.resolve(credentialStore);
@@ -90,10 +140,48 @@ describe('WbProductSyncService credentials', () => {
     const prisma = {
       shop,
       shopWbCredential,
+      wbSyncRun: {
+        create: jest.fn().mockImplementation(({ data }: WbSyncRunCreateArgs) =>
+          Promise.resolve({
+            id: 'run-1',
+            ...data,
+          }),
+        ),
+        update: jest.fn().mockImplementation(({ data }: WbSyncRunUpdateArgs) =>
+          Promise.resolve({
+            id: 'run-1',
+            status: data.status ?? 'COMPLETED',
+            mode: 'PREVIEW',
+            syncType: 'ALL_PRODUCTS',
+            article: null,
+            totalFetched: data.totalFetched ?? 0,
+            totalProducts: data.totalProducts ?? 0,
+            totalVariants: data.totalVariants ?? 0,
+            totalImages: data.totalImages ?? 0,
+            createdProducts: data.createdProducts ?? 0,
+            updatedProducts: data.updatedProducts ?? 0,
+            createdVariants: data.createdVariants ?? 0,
+            updatedVariants: data.updatedVariants ?? 0,
+            warningsJson: data.warningsJson ?? [],
+            errorsJson: data.errorsJson ?? [],
+            rawSummaryJson: data.rawSummaryJson ?? null,
+            createdAt: new Date(),
+            startedAt: new Date(),
+            completedAt: new Date(),
+          }),
+        ),
+      },
     };
 
     const apiClient = {
       getMode: jest.fn().mockReturnValue(options?.mode ?? 'real'),
+      fetchCards: jest.fn().mockResolvedValue({
+        cards: [],
+        mode: options?.mode ?? 'real',
+        pagesFetched: 1,
+        fetchedCount: 0,
+        cursor: { total: 0 },
+      }),
       verifyConnection: jest.fn().mockImplementation(
         options?.verifyImpl ??
           ((apiKey: string) =>
@@ -127,7 +215,14 @@ describe('WbProductSyncService credentials', () => {
       prisma as never,
       apiClient as never,
       {} as never,
-      {} as never,
+      {
+        mapSourceCategory: jest.fn().mockResolvedValue({
+          sourceCategoryName: null,
+          categoryId: null,
+          categoryName: null,
+          warning: null,
+        }),
+      } as never,
       config,
     );
 
@@ -135,6 +230,7 @@ describe('WbProductSyncService credentials', () => {
       service,
       apiClient,
       credentialStore: () => credentialStore,
+      prisma,
     };
   }
 
@@ -155,15 +251,34 @@ describe('WbProductSyncService credentials', () => {
     expect(credentialStore()?.encryptedApiKey).not.toContain(
       'secret-api-key-1234',
     );
+    expect('apiKey' in result).toBe(false);
+  });
+
+  it('updates credentials and changes keyLast4 immediately', async () => {
+    const { service, credentialStore } = createService();
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+    const result = await service.saveCredentials(
+      'shop-1',
+      user,
+      'secret-api-key-9999',
+    );
+
+    expect(result.keyLast4).toBe('9999');
+    expect(result.lastVerificationStatus).toBe('NOT_VERIFIED');
+    expect(credentialStore()?.encryptedApiKey).not.toContain(
+      'secret-api-key-9999',
+    );
   });
 
   it('deletes credentials and returns disconnected status', async () => {
     const { service } = createService();
 
     await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
-    await service.deleteCredentials('shop-1', user);
+    const deleted = await service.deleteCredentials('shop-1', user);
     const status = await service.credentialsStatus('shop-1', user);
 
+    expect(deleted.connected).toBe(false);
     expect(status.connected).toBe(false);
     expect(status.keyLast4).toBeNull();
   });
@@ -181,7 +296,7 @@ describe('WbProductSyncService credentials', () => {
     );
     expect(credentialStore()?.lastVerificationStatus).toBe('SUCCESS');
     expect(credentialStore()?.lastVerifiedAt).toBeInstanceOf(Date);
-    expect(credentialStore()?.lastError).toBeNull();
+    expect(credentialStore()?.lastVerificationError).toBeNull();
   });
 
   it('stores a sanitized failure when verification fails', async () => {
@@ -200,10 +315,65 @@ describe('WbProductSyncService credentials', () => {
       BadRequestException,
     );
     expect(credentialStore()?.lastVerificationStatus).toBe('FAILED');
-    expect(credentialStore()?.lastError).toContain('Bearer ***');
-    expect(credentialStore()?.lastError).not.toContain(
+    expect(credentialStore()?.lastVerificationError).toContain('Bearer ***');
+    expect(credentialStore()?.lastVerificationError).not.toContain(
       'abcdefghijklmnopqrstuvwxyz123456',
     );
+  });
+
+  it('fails clearly in real mode when the shop has no credential', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.syncAll('shop-1', user, {
+        mode: 'PREVIEW',
+        limit: 5,
+        publishMode: 'DRAFT',
+        imageMode: 'REMOTE_URL',
+      }),
+    ).rejects.toThrow('WB_CREDENTIAL_MISSING');
+  });
+
+  it('uses the current shop credential for sync and records only keyLast4', async () => {
+    const { service, apiClient, prisma } = createService();
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+    const result = await service.syncAll('shop-1', user, {
+      mode: 'PREVIEW',
+      limit: 5,
+      publishMode: 'DRAFT',
+      imageMode: 'REMOTE_URL',
+    });
+
+    expect(apiClient.fetchCards).toHaveBeenCalledWith({
+      apiKey: 'secret-api-key-1234',
+      limit: 5,
+      article: undefined,
+    });
+    expect(prisma.wbSyncRun.create).toHaveBeenCalled();
+    expect(prisma.wbSyncRun.update).toHaveBeenCalled();
+    expect(result.sourceMode).toBe('real');
+    expect(result.rawSummary?.credentialKeyLast4).toBe('1234');
+    expect(JSON.stringify(result)).not.toContain('secret-api-key-1234');
+  });
+
+  it('forbids cross-shop seller credential access', async () => {
+    const { service } = createService({ shopOwnerUserId: 'seller-user-2' });
+
+    await expect(
+      service.saveCredentials('shop-1', user, 'secret-api-key-1234'),
+    ).rejects.toThrow('You do not have access to this shop.');
+  });
+
+  it('allows admin to read shop credential status without exposing the raw key', async () => {
+    const { service } = createService();
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+    const status = await service.credentialsStatus('shop-1', adminUser);
+
+    expect(status.connected).toBe(true);
+    expect(status.keyLast4).toBe('1234');
+    expect('apiKey' in status).toBe(false);
   });
 
   it('fails clearly when encryption key is missing', async () => {
