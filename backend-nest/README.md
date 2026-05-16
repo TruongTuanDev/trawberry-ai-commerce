@@ -156,3 +156,12 @@ npm run start:dev
 - Worker calls the separate `ai-service` over `POST /internal/ai-images/generate`.
 - Built-in retry and timeout handling are applied for the AI service call.
 - If `BULLMQ_DISABLED=true`, the task is still created and local asynchronous processing is triggered inside NestJS for bootstrap testing.
+# Cart Checkout Smoke
+
+Useful script:
+
+```bash
+npm run smoke:cart-checkout
+```
+
+The smoke creates one product with two variants, checks out both variants in one order, verifies seller/tracking item counts, verifies stock deduction, and confirms over-stock checkout fails.

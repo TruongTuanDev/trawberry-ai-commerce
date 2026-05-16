@@ -411,3 +411,12 @@ The current verified delivery mode is backend-driven mock mode. The frontend doe
 
 ## Legacy safety
 This project does not modify `strawberry-frontend`.
+# Cart Checkout
+
+Useful script:
+
+```bash
+npm run test:e2e:cart-checkout
+```
+
+The public cart is stored in browser localStorage and checkout submits `items[]` with `productId`, `variantId`, and `quantity`.

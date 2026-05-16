@@ -1412,3 +1412,19 @@ Delivered:
 - Playwright script `test:e2e:admin-dashboard`.
 
 Non-goals retained: no real OpenAI calls, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
+# Phase Report: Cart + Multi-item Checkout
+
+Implemented:
+
+- LocalStorage cart store.
+- Product variant selector and add-to-cart action.
+- Cart page.
+- Cart-backed checkout page with legacy single-product route compatibility.
+- Multi-item backend checkout validation, trusted totals, item snapshots, and stock deduction.
+- Seller/customer/payment order item rendering.
+- `smoke:cart-checkout` and `test:e2e:cart-checkout` scripts.
+
+Deferred:
+
+- Multi-shop checkout split.
+- Server-persisted customer carts.

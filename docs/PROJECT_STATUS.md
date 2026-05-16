@@ -730,3 +730,15 @@ Implemented: seller-managed WB API product sync foundation.
 - Product, variant, and remote image upsert is idempotent.
 - Excel import remains unchanged and continues to use `/seller/import/wildberries`.
 - Real WB mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
+# Project Status Update
+
+Cart + Multi-item Checkout MVP is in place:
+
+- Customer cart in `frontend-next` localStorage.
+- Variant selection on product detail.
+- `/cart` page with quantity update, remove, subtotal, and checkout entry.
+- `/checkout` creates one multi-item order for one shop.
+- Backend validates current price/stock and deducts stock by variant transactionally.
+- Order/tracking/payment/seller detail views show all order items.
+
+Known gap: multi-shop checkout is intentionally blocked and remains a future phase.

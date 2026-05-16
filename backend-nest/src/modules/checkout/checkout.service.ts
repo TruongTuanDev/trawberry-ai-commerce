@@ -18,6 +18,7 @@ type CheckoutProductRecord = {
   wbTitle: string;
   localTitle: string | null;
   seoSlug: string | null;
+  sellerSku: string | null;
   visibility: string | null;
   images: ProductImage[];
   variants: ProductVariant[];
@@ -31,6 +32,7 @@ type CheckoutProductRecord = {
 
 type NormalizedCheckoutItem = {
   productId: string;
+  variantId?: string;
   quantity: number;
 };
 
@@ -133,17 +135,19 @@ export class CheckoutService {
         );
       }
 
-      const variant = this.resolveVariant(product);
+      const variant = this.resolveVariant(product, item.variantId);
       if (!variant) {
         throw new BadRequestException(
-          `Product ${item.productId} is not purchasable because it has no active priced variant.`,
+          item.variantId
+            ? `Variant ${item.variantId} is not available for product ${item.productId}.`
+            : `Product ${item.productId} is not purchasable because it has no active priced variant.`,
         );
       }
 
-      const availableStock = Math.max(0, variant.stockQuantity);
-      if (availableStock < item.quantity) {
+      const availableStock = this.resolveAvailableStock(variant);
+      if (variant.trackInventory && availableStock < item.quantity) {
         throw new BadRequestException(
-          `Product ${item.productId} does not have enough stock.`,
+          `Product ${item.productId} variant ${variant.id} does not have enough stock. Requested ${item.quantity}, available ${availableStock}.`,
         );
       }
 
@@ -159,22 +163,22 @@ export class CheckoutService {
         product,
         variant,
         unitPrice,
+        lineTotal: new Prisma.Decimal(unitPrice.toString()).mul(item.quantity),
       };
     });
 
     const customerId = await this.resolveCustomerId(dto, user);
     const totalAmount = normalizedItems.reduce(
-      (sum, item) =>
-        sum.plus(
-          new Prisma.Decimal(item.unitPrice.toString()).mul(
-            item.input.quantity,
-          ),
-        ),
+      (sum, item) => sum.plus(item.lineTotal),
       new Prisma.Decimal(0),
     );
 
     const created = await this.prisma.$transaction(async (tx) => {
       for (const item of normalizedItems) {
+        if (!item.variant.trackInventory) {
+          continue;
+        }
+
         const updatedVariant = await tx.productVariant.updateMany({
           where: {
             id: item.variant.id,
@@ -218,16 +222,24 @@ export class CheckoutService {
           items: {
             create: normalizedItems.map((item) => ({
               id: randomUUID(),
+              productId: item.product.id,
               variantId: item.variant.id,
               quantity: item.input.quantity,
               priceAtPurchase: item.unitPrice,
+              unitPrice: item.unitPrice,
+              lineTotal: item.lineTotal,
               productTitleSnapshot:
                 item.product.localTitle ?? item.product.wbTitle,
               productSlugSnapshot: item.product.seoSlug ?? item.product.id,
+              variantNameSnapshot: this.buildVariantName(item.variant),
+              variantAttributesSnapshot: this.buildVariantName(item.variant),
               productImageSnapshot:
                 item.product.images[0]?.localUrl ??
                 item.product.images[0]?.wbUrl ??
                 null,
+              sellerSkuSnapshot:
+                item.variant.sellerSku ?? item.product.sellerSku ?? null,
+              barcodeSnapshot: item.variant.wbBarcode ?? null,
               wbNmIdSnapshot: item.product.wbNmId,
             })),
           },
@@ -302,29 +314,57 @@ export class CheckoutService {
     const quantityByProductId = new Map<string, number>();
 
     for (const item of items) {
+      const key = `${item.productId}:${item.variantId ?? ''}`;
       quantityByProductId.set(
-        item.productId,
-        (quantityByProductId.get(item.productId) ?? 0) + item.quantity,
+        key,
+        (quantityByProductId.get(key) ?? 0) + item.quantity,
       );
     }
 
-    return [...quantityByProductId.entries()].map(([productId, quantity]) => ({
-      productId,
-      quantity,
-    }));
+    return [...quantityByProductId.entries()].map(([key, quantity]) => {
+      const [productId, variantId] = key.split(':');
+      return {
+        productId,
+        variantId: variantId || undefined,
+        quantity,
+      };
+    });
   }
 
-  private resolveVariant(product: CheckoutProductRecord) {
+  private resolveVariant(product: CheckoutProductRecord, variantId?: string) {
+    if (variantId) {
+      const variant = product.variants.find((entry) => entry.id === variantId);
+      if (!variant) return null;
+      const price = this.resolveVariantPrice(variant);
+      return price !== null && price.gt(0) ? variant : null;
+    }
+
     return (
       product.variants.find((variant) => {
         const price = this.resolveVariantPrice(variant);
-        return price !== null && price.gt(0) && variant.stockQuantity > 0;
+        return (
+          price !== null &&
+          price.gt(0) &&
+          (!variant.trackInventory || this.resolveAvailableStock(variant) > 0)
+        );
       }) ?? null
     );
   }
 
   private resolveVariantPrice(variant: ProductVariant) {
     return variant.discountPrice ?? variant.basePrice ?? null;
+  }
+
+  private resolveAvailableStock(variant: ProductVariant) {
+    return Math.max(0, variant.stockQuantity);
+  }
+
+  private buildVariantName(variant: ProductVariant) {
+    return (
+      [variant.sizeName, variant.russianSize, variant.techSize, variant.wbSize]
+        .filter(Boolean)
+        .join(' / ') || null
+    );
   }
 
   private buildOrderNumber() {

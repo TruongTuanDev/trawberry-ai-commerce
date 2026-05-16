@@ -357,13 +357,39 @@ export class PublicProductsService {
         url: image.localUrl ?? image.wbUrl,
         isMain: image.isMain ?? false,
       })),
+      variants: product.variants.map((variant) => {
+        const variantPrice = this.resolveVariantPrice(variant);
+        const variantAvailableQuantity =
+          this.resolveVariantAvailableQuantity(variant);
+        return {
+          id: variant.id,
+          sizeName: variant.sizeName,
+          russianSize: variant.russianSize,
+          techSize: variant.techSize,
+          wbSize: variant.wbSize,
+          sellerSku: variant.sellerSku,
+          price: variantPrice?.toString() ?? null,
+          stockQuantity: variant.stockQuantity,
+          trackInventory: variant.trackInventory,
+          inStock: !variant.trackInventory || variantAvailableQuantity > 0,
+          availableQuantity: variantAvailableQuantity,
+        };
+      }),
       shop: product.shop,
     };
   }
 
+  private resolveVariantPrice(variant: ProductVariant) {
+    return variant.discountPrice ?? variant.basePrice ?? null;
+  }
+
+  private resolveVariantAvailableQuantity(variant: ProductVariant) {
+    return variant.trackInventory ? Math.max(0, variant.stockQuantity) : 999999;
+  }
+
   private resolvePrice(variants: ProductVariant[]) {
     const pricedVariants = variants
-      .map((variant) => variant.discountPrice ?? variant.basePrice)
+      .map((variant) => this.resolveVariantPrice(variant))
       .filter((value): value is Prisma.Decimal => value !== null);
 
     return pricedVariants.sort((a, b) => a.comparedTo(b))[0] ?? null;
@@ -371,7 +397,7 @@ export class PublicProductsService {
 
   private resolveAvailableQuantity(variants: ProductVariant[]) {
     return variants.reduce(
-      (sum, variant) => sum + Math.max(0, variant.stockQuantity),
+      (sum, variant) => sum + this.resolveVariantAvailableQuantity(variant),
       0,
     );
   }

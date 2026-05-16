@@ -158,3 +158,36 @@ npm run smoke:wb-import-checkout
 ```
 
 The smoke confirms imported WB products use `REMOTE_URL` images, seller-updated price/stock make the product public, `totalAmount` is calculated as `1990 * 2`, stock is deducted from `5` to `3`, insufficient stock is blocked, the customer can track by `orderCode + phone`, and the seller sees the pending payment.
+# Checkout API
+
+`POST /api/checkout/orders` now supports cart checkout with multiple items.
+
+```json
+{
+  "shopId": "shop-uuid",
+  "customer": {
+    "fullName": "Customer Name",
+    "phone": "+79990000001",
+    "email": "optional@example.com",
+    "address": "Delivery address",
+    "note": "Optional note"
+  },
+  "paymentMethod": "MANUAL_TRANSFER",
+  "items": [
+    {
+      "productId": "product-uuid",
+      "variantId": "variant-uuid",
+      "quantity": 2
+    }
+  ]
+}
+```
+
+Rules:
+
+- `items` is required and non-empty.
+- `quantity` must be at least 1.
+- `variantId` is supported and should be sent by the cart UI. Legacy single-product requests without `variantId` still resolve the first checkout-ready variant.
+- Frontend prices are ignored. The backend calculates `unitPrice`, `lineTotal`, and `totalAmount`.
+- If `trackInventory=true`, stock must be sufficient. Any invalid item fails the entire checkout.
+- MVP requires one shop per order.

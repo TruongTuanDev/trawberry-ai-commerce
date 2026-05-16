@@ -50,6 +50,12 @@ type StoredVariant = {
   id: string;
   productId: string;
   chrtId: bigint;
+  sellerSku?: string | null;
+  wbBarcode?: string | null;
+  sizeName?: string | null;
+  russianSize?: string | null;
+  techSize?: string | null;
+  wbSize?: string | null;
   isActive: boolean;
   basePrice: DecimalLike | null;
   discountPrice: DecimalLike | null;
@@ -108,12 +114,16 @@ type StoredOrder = {
   shop: { id: string; name: string };
   items: Array<{
     id: string;
+    productId: string | null;
     variantId: string | null;
     quantity: number;
     priceAtPurchase: DecimalLike;
+    unitPrice: DecimalLike | null;
+    lineTotal: DecimalLike | null;
     productTitleSnapshot: string;
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
   }>;
 };
 
@@ -233,11 +243,32 @@ describe('CheckoutController (e2e)', () => {
             id: 'variant-1',
             productId: 'product-1',
             chrtId: BigInt(1001),
+            sellerSku: 'SKU-1-S',
+            wbBarcode: 'BARCODE-1-S',
+            sizeName: 'S',
+            russianSize: '42',
             isActive: true,
             basePrice: decimal('120.00'),
             discountPrice: decimal('99.00'),
             stockQuantity: 10,
             reservedStock: 1,
+            lowStockThreshold: 5,
+            trackInventory: true,
+            createdAt: new Date(),
+          },
+          {
+            id: 'variant-1-m',
+            productId: 'product-1',
+            chrtId: BigInt(1002),
+            sellerSku: 'SKU-1-M',
+            wbBarcode: 'BARCODE-1-M',
+            sizeName: 'M',
+            russianSize: '44',
+            isActive: true,
+            basePrice: decimal('140.00'),
+            discountPrice: decimal('110.00'),
+            stockQuantity: 7,
+            reservedStock: 0,
             lowStockThreshold: 5,
             trackInventory: true,
             createdAt: new Date(),
@@ -453,12 +484,16 @@ describe('CheckoutController (e2e)', () => {
           items: {
             create: Array<{
               id: string;
+              productId?: string | null;
               variantId: string | null;
               quantity: number;
               priceAtPurchase: DecimalLike;
+              unitPrice?: DecimalLike | null;
+              lineTotal?: DecimalLike | null;
               productTitleSnapshot: string;
               productSlugSnapshot: string;
               productImageSnapshot: string | null;
+              variantNameSnapshot?: string | null;
               wbNmIdSnapshot: bigint | null;
             }>;
           };
@@ -494,12 +529,18 @@ describe('CheckoutController (e2e)', () => {
           },
           items: data.items.create.map((item) => ({
             id: item.id,
+            productId: item.productId ?? null,
             variantId: item.variantId,
             quantity: item.quantity,
             priceAtPurchase: item.priceAtPurchase,
+            unitPrice: item.unitPrice ?? item.priceAtPurchase,
+            lineTotal:
+              item.lineTotal ??
+              item.priceAtPurchase.mul(item.quantity as unknown as DecimalLike),
             productTitleSnapshot: item.productTitleSnapshot,
             productSlugSnapshot: item.productSlugSnapshot,
             productImageSnapshot: item.productImageSnapshot,
+            variantNameSnapshot: item.variantNameSnapshot ?? null,
           })),
         };
         orders.push(created);
@@ -621,6 +662,99 @@ describe('CheckoutController (e2e)', () => {
     expect(detailBody.items).toHaveLength(1);
     expect(detailBody.items[0].quantity).toBe(2);
     expect(detailBody.customer.phone).toBe('0123456789');
+  });
+
+  it('creates a multi-variant order, sums trusted line totals, and deducts each variant', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [
+          {
+            productId: 'product-1',
+            variantId: 'variant-1',
+            quantity: 2,
+          },
+          {
+            productId: 'product-1',
+            variantId: 'variant-1-m',
+            quantity: 3,
+          },
+        ],
+        customer: {
+          fullName: 'Multi Item Customer',
+          phone: '0123456789',
+          email: 'multi@example.com',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(201);
+
+    const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.totalAmount).toBe('528');
+    expect(products[0].variants[0].stockQuantity).toBe(8);
+    expect(products[0].variants[0].reservedStock).toBe(3);
+    expect(products[0].variants[1].stockQuantity).toBe(4);
+    expect(products[0].variants[1].reservedStock).toBe(3);
+
+    const token = await loginAndGetToken(app);
+    const detailResponse = await request(app.getHttpServer())
+      .get(`/api/shops/shop-1/orders/${createBody.orderId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const detailBody = readBody<OrderResponseDto>(detailResponse);
+
+    expect(detailBody.items).toHaveLength(2);
+    expect(detailBody.items.map((item) => item.variantId).sort()).toEqual([
+      'variant-1',
+      'variant-1-m',
+    ]);
+    expect(detailBody.items.map((item) => item.lineTotal).sort()).toEqual([
+      '198',
+      '330',
+    ]);
+  });
+
+  it('fails entire checkout when one variant has insufficient stock', async () => {
+    await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 2 },
+          { productId: 'product-1', variantId: 'variant-1-m', quantity: 8 },
+        ],
+        customer: {
+          fullName: 'Alice Checkout',
+          phone: '0123456789',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(400);
+
+    expect(orders).toHaveLength(0);
+    expect(products[0].variants[0].stockQuantity).toBe(10);
+    expect(products[0].variants[1].stockQuantity).toBe(7);
+  });
+
+  it('fails when requested variant does not belong to the product', async () => {
+    await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-2', quantity: 1 },
+        ],
+        customer: {
+          fullName: 'Alice Checkout',
+          phone: '0123456789',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(400);
   });
 
   it('fails when shop does not exist', async () => {

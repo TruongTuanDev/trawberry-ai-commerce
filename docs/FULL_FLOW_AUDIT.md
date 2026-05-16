@@ -285,3 +285,13 @@ No audit rows are created by report reads or exports.
 Legacy WB API code was audited read-only from `strawberry-backend/src/main/java/com/strawberry/ecommerce/wb`; no legacy files were changed.
 
 New WB API sync lives only in `backend-nest` and `frontend-next`. Tests and smoke use mock mode and do not call the real Wildberries API. WB API keys are shop-scoped, never returned to clients, never logged, and real credential storage requires `WB_CREDENTIALS_ENCRYPTION_KEY`.
+# Cart Checkout Audit Update
+
+Phase Cart + Multi-item Checkout is implemented in the new stack only:
+
+- `frontend-next` owns a localStorage cart and blocks multi-shop checkout for MVP.
+- `backend-nest` accepts multi-item checkout payloads and recalculates trusted totals.
+- Seller order detail, payment detail, and customer tracking render multiple order items.
+- Legacy `strawberry-backend` and `strawberry-frontend` were not modified.
+
+Future audit item: design a marketplace parent order or automatic per-shop split for multi-shop carts.

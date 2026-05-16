@@ -155,3 +155,17 @@ Orders are not coupled directly to a carrier. Delivery state is stored in the ge
 - `delivery_events`
 
 Seller delivery endpoints enforce that the order belongs to the shop and that shipment creation only happens after `paymentStatus=PAID`. Current selection strategy is Yandex-first for same-city orders and CDEK-first for inter-city orders, with mock mode as the default verification path.
+# Orders API Update
+
+Seller order list/detail responses expose multi-item checkout snapshots in `items[]`.
+
+Each item includes the legacy fields plus additive cart fields:
+
+- `productId`
+- `variantId`
+- `variantNameSnapshot`
+- `unitPrice`
+- `lineTotal`
+- `productImageSnapshot`
+
+Existing single-item orders remain compatible because the original snapshot fields are still returned.

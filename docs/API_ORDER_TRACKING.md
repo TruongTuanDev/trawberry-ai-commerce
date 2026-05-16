@@ -165,3 +165,18 @@ Public order tracking includes customer-safe delivery exception data:
 - `delivery.trackingUrl`, when applicable
 
 Internal seller/admin delivery comments are never returned by tracking endpoints. Failed deliveries render as a delivery issue; cancelled deliveries render as delivery cancelled.
+# Order Tracking API Update
+
+Public tracking responses now return every order item created by cart checkout.
+
+`items[]` includes:
+
+- product and variant ids when available
+- product title snapshot
+- variant name snapshot
+- image snapshot
+- quantity
+- unit price
+- line total
+
+Customers can track multi-item orders through the existing order id/code plus phone lookup routes.

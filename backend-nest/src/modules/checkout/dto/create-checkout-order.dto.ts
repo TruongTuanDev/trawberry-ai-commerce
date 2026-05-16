@@ -19,6 +19,12 @@ class CheckoutOrderItemDto {
   @IsNotEmpty()
   productId!: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  variantId?: string;
+
   @ApiProperty({ minimum: 1 })
   @Type(() => Number)
   @IsInt()

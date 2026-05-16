@@ -1,8 +1,22 @@
 import { apiRequest } from "@/lib/api";
 
-export type SellerOrderStatus = "PENDING" | "NEW" | "ASSEMBLING" | "SHIPPING" | "DELIVERED" | "CANCELLED";
-export type PaymentReviewAction = "MARK_PAID" | "REJECT_PAYMENT" | "ADD_NOTE" | "UPLOAD_PROOF";
-export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "NOT_TRACKED";
+export type SellerOrderStatus =
+  | "PENDING"
+  | "NEW"
+  | "ASSEMBLING"
+  | "SHIPPING"
+  | "DELIVERED"
+  | "CANCELLED";
+export type PaymentReviewAction =
+  | "MARK_PAID"
+  | "REJECT_PAYMENT"
+  | "ADD_NOTE"
+  | "UPLOAD_PROOF";
+export type StockStatus =
+  | "IN_STOCK"
+  | "LOW_STOCK"
+  | "OUT_OF_STOCK"
+  | "NOT_TRACKED";
 export type DeliveryProviderName = "CDEK" | "YANDEX" | "MANUAL";
 export type DeliveryExceptionReasonCode =
   | "CUSTOMER_UNAVAILABLE"
@@ -156,12 +170,16 @@ export type SellerOrderListItem = {
   delivery: SellerOrderDeliverySummary | null;
   items: Array<{
     id: string;
+    productId: string | null;
     variantId: string | null;
     quantity: number;
     priceAtPurchase: string;
+    unitPrice: string;
+    lineTotal: string;
     productTitleSnapshot: string;
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
   }>;
 };
 
@@ -207,11 +225,16 @@ export type SellerPaymentItem = {
   updatedAt: string;
   items: Array<{
     id: string;
+    productId: string | null;
+    variantId: string | null;
     quantity: number;
     priceAtPurchase: string;
+    unitPrice: string;
+    lineTotal: string;
     productTitleSnapshot: string;
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
   }>;
   paymentProof: {
     url: string;
@@ -457,16 +480,38 @@ export type ProductImage = {
   originalName: string | null;
   mimeType: string | null;
   size: number | null;
-  imageType: "ORIGINAL" | "AI_GENERATED" | "MODEL_REFERENCE" | "FRONT" | "BACK" | "DETAIL";
+  imageType:
+    | "ORIGINAL"
+    | "AI_GENERATED"
+    | "MODEL_REFERENCE"
+    | "FRONT"
+    | "BACK"
+    | "DETAIL";
   isMain: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
 };
 
-export type AiTaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED";
-export type AiTaskType = "PRODUCT_MODEL_IMAGE" | "TRY_ON" | "BACKGROUND_REPLACE" | "DETAIL_SHOT";
-export type AiStylePreset = "MAIN_COVER" | "STUDIO" | "LIFESTYLE" | "WALKING" | "BACK_VIEW" | "DETAIL" | "TRY_ON";
+export type AiTaskStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED"
+  | "CANCELLED";
+export type AiTaskType =
+  | "PRODUCT_MODEL_IMAGE"
+  | "TRY_ON"
+  | "BACKGROUND_REPLACE"
+  | "DETAIL_SHOT";
+export type AiStylePreset =
+  | "MAIN_COVER"
+  | "STUDIO"
+  | "LIFESTYLE"
+  | "WALKING"
+  | "BACK_VIEW"
+  | "DETAIL"
+  | "TRY_ON";
 
 export type AiGeneratedImage = {
   id: string;
@@ -603,7 +648,10 @@ export type UpdateProductPayload = Partial<{
   }>;
 }>;
 
-export async function createSellerShop(payload: CreateShopPayload, token?: string) {
+export async function createSellerShop(
+  payload: CreateShopPayload,
+  token?: string,
+) {
   return apiRequest<ShopSummary>("/api/shops", {
     method: "POST",
     token,
@@ -645,13 +693,20 @@ export async function getShopProducts(
     params.set("stockStatus", query.stockStatus);
   }
 
-  return apiRequest<ProductListResponse>(`/api/shops/${shopId}/products?${params.toString()}`, {
-    method: "GET",
-    token,
-  });
+  return apiRequest<ProductListResponse>(
+    `/api/shops/${shopId}/products?${params.toString()}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
-export async function createShopProduct(shopId: string, payload: CreateProductPayload, token?: string) {
+export async function createShopProduct(
+  shopId: string,
+  payload: CreateProductPayload,
+  token?: string,
+) {
   return apiRequest<ProductDetail>(`/api/shops/${shopId}/products`, {
     method: "POST",
     token,
@@ -659,11 +714,18 @@ export async function createShopProduct(shopId: string, payload: CreateProductPa
   });
 }
 
-export async function getShopProductById(shopId: string, productId: string, token?: string) {
-  return apiRequest<ProductDetail>(`/api/shops/${shopId}/products/${productId}`, {
-    method: "GET",
-    token,
-  });
+export async function getShopProductById(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductDetail>(
+    `/api/shops/${shopId}/products/${productId}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export async function updateShopProduct(
@@ -672,11 +734,14 @@ export async function updateShopProduct(
   payload: UpdateProductPayload,
   token?: string,
 ) {
-  return apiRequest<ProductDetail>(`/api/shops/${shopId}/products/${productId}`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return apiRequest<ProductDetail>(
+    `/api/shops/${shopId}/products/${productId}`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function getShopProductInventory(
@@ -726,48 +791,81 @@ export async function previewWildberriesImport(
 ) {
   const formData = new FormData();
   formData.append("file", input.file);
-  formData.append("defaultStockQuantity", String(input.defaultStockQuantity ?? 0));
+  formData.append(
+    "defaultStockQuantity",
+    String(input.defaultStockQuantity ?? 0),
+  );
   formData.append("publishMode", input.publishMode ?? "DRAFT");
   formData.append("imageMode", input.imageMode ?? "REMOTE_URL");
   if (input.priceFallback !== undefined) {
     formData.append("priceFallback", String(input.priceFallback));
   }
 
-  return apiRequest<WbImportPreview>(`/api/shops/${shopId}/imports/wildberries/preview`, {
-    method: "POST",
-    token,
-    body: formData,
-  });
+  return apiRequest<WbImportPreview>(
+    `/api/shops/${shopId}/imports/wildberries/preview`,
+    {
+      method: "POST",
+      token,
+      body: formData,
+    },
+  );
 }
 
-export async function confirmWildberriesImport(shopId: string, importId: string, token?: string) {
-  return apiRequest<WbImportConfirmResult>(`/api/shops/${shopId}/imports/wildberries/confirm`, {
-    method: "POST",
-    token,
-    body: JSON.stringify({ importId }),
-  });
+export async function confirmWildberriesImport(
+  shopId: string,
+  importId: string,
+  token?: string,
+) {
+  return apiRequest<WbImportConfirmResult>(
+    `/api/shops/${shopId}/imports/wildberries/confirm`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ importId }),
+    },
+  );
 }
 
-export async function getWildberriesImportStatus(shopId: string, importId: string, token?: string) {
-  return apiRequest<WbImportStatus>(`/api/shops/${shopId}/imports/wildberries/${importId}`, {
-    method: "GET",
-    token,
-  });
+export async function getWildberriesImportStatus(
+  shopId: string,
+  importId: string,
+  token?: string,
+) {
+  return apiRequest<WbImportStatus>(
+    `/api/shops/${shopId}/imports/wildberries/${importId}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
-export async function getWbSyncCredentialsStatus(shopId: string, token?: string) {
-  return apiRequest<WbCredentialsStatus>(`/api/shops/${shopId}/wb-sync/credentials/status`, {
-    method: "GET",
-    token,
-  });
+export async function getWbSyncCredentialsStatus(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<WbCredentialsStatus>(
+    `/api/shops/${shopId}/wb-sync/credentials/status`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
-export async function saveWbSyncCredentials(shopId: string, apiKey: string, token?: string) {
-  return apiRequest<WbCredentialsStatus>(`/api/shops/${shopId}/wb-sync/credentials`, {
-    method: "POST",
-    token,
-    body: JSON.stringify({ apiKey }),
-  });
+export async function saveWbSyncCredentials(
+  shopId: string,
+  apiKey: string,
+  token?: string,
+) {
+  return apiRequest<WbCredentialsStatus>(
+    `/api/shops/${shopId}/wb-sync/credentials`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({ apiKey }),
+    },
+  );
 }
 
 export async function syncWbProducts(
@@ -797,18 +895,28 @@ export async function syncWbProductByArticle(
   },
   token?: string,
 ) {
-  return apiRequest<WbSyncRun>(`/api/shops/${shopId}/wb-sync/products/by-article`, {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return apiRequest<WbSyncRun>(
+    `/api/shops/${shopId}/wb-sync/products/by-article`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
-export async function getShopProductImages(shopId: string, productId: string, token?: string) {
-  return apiRequest<ProductImage[]>(`/api/shops/${shopId}/products/${productId}/images`, {
-    method: "GET",
-    token,
-  });
+export async function getShopProductImages(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductImage[]>(
+    `/api/shops/${shopId}/products/${productId}/images`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export async function uploadShopProductImages(
@@ -822,11 +930,14 @@ export async function uploadShopProductImages(
     formData.append("files", file);
   }
 
-  return apiRequest<ProductImage[]>(`/api/shops/${shopId}/products/${productId}/images`, {
-    method: "POST",
-    token,
-    body: formData,
-  });
+  return apiRequest<ProductImage[]>(
+    `/api/shops/${shopId}/products/${productId}/images`,
+    {
+      method: "POST",
+      token,
+      body: formData,
+    },
+  );
 }
 
 export async function deleteShopProductImage(
@@ -835,10 +946,13 @@ export async function deleteShopProductImage(
   imageId: string,
   token?: string,
 ) {
-  return apiRequest<void>(`/api/shops/${shopId}/products/${productId}/images/${imageId}`, {
-    method: "DELETE",
-    token,
-  });
+  return apiRequest<void>(
+    `/api/shops/${shopId}/products/${productId}/images/${imageId}`,
+    {
+      method: "DELETE",
+      token,
+    },
+  );
 }
 
 export async function updateShopProductImage(
@@ -848,11 +962,14 @@ export async function updateShopProductImage(
   payload: Partial<Pick<ProductImage, "isMain" | "sortOrder" | "imageType">>,
   token?: string,
 ) {
-  return apiRequest<ProductImage>(`/api/shops/${shopId}/products/${productId}/images/${imageId}`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return apiRequest<ProductImage>(
+    `/api/shops/${shopId}/products/${productId}/images/${imageId}`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function createShopAiImageTask(
@@ -861,11 +978,14 @@ export async function createShopAiImageTask(
   payload: CreateAiImageTaskPayload,
   token?: string,
 ) {
-  return apiRequest<AiImageTask>(`/api/shops/${shopId}/products/${productId}/ai-images/tasks`, {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return apiRequest<AiImageTask>(
+    `/api/shops/${shopId}/products/${productId}/ai-images/tasks`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function getAiCredits(shopId: string, token?: string) {
@@ -893,17 +1013,27 @@ export async function getShopAiImageTasks(
     params.set("status", query.status);
   }
 
-  return apiRequest<AiImageTask[]>(`/api/shops/${shopId}/ai-images/tasks?${params.toString()}`, {
-    method: "GET",
-    token,
-  });
+  return apiRequest<AiImageTask[]>(
+    `/api/shops/${shopId}/ai-images/tasks?${params.toString()}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
-export async function getShopAiImageTaskById(shopId: string, taskId: string, token?: string) {
-  return apiRequest<AiImageTask>(`/api/shops/${shopId}/ai-images/tasks/${taskId}`, {
-    method: "GET",
-    token,
-  });
+export async function getShopAiImageTaskById(
+  shopId: string,
+  taskId: string,
+  token?: string,
+) {
+  return apiRequest<AiImageTask>(
+    `/api/shops/${shopId}/ai-images/tasks/${taskId}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export const getAiImageTask = getShopAiImageTaskById;
@@ -914,10 +1044,13 @@ export async function attachAiGeneratedImageToProduct(
   generatedImageId: string,
   token?: string,
 ) {
-  return apiRequest<ProductImage>(`/api/shops/${shopId}/products/${productId}/ai-images/${generatedImageId}/attach`, {
-    method: "POST",
-    token,
-  });
+  return apiRequest<ProductImage>(
+    `/api/shops/${shopId}/products/${productId}/ai-images/${generatedImageId}/attach`,
+    {
+      method: "POST",
+      token,
+    },
+  );
 }
 
 export const attachGeneratedImage = attachAiGeneratedImageToProduct;
@@ -952,17 +1085,27 @@ export async function getShopOrders(
     params.set("dateTo", query.dateTo);
   }
 
-  return apiRequest<SellerOrdersResponse>(`/api/shops/${shopId}/orders?${params.toString()}`, {
-    method: "GET",
-    token,
-  });
+  return apiRequest<SellerOrdersResponse>(
+    `/api/shops/${shopId}/orders?${params.toString()}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
-export async function getShopOrderById(shopId: string, orderId: string, token?: string) {
-  return apiRequest<SellerOrderListItem>(`/api/shops/${shopId}/orders/${orderId}`, {
-    method: "GET",
-    token,
-  });
+export async function getShopOrderById(
+  shopId: string,
+  orderId: string,
+  token?: string,
+) {
+  return apiRequest<SellerOrderListItem>(
+    `/api/shops/${shopId}/orders/${orderId}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export async function listPayments(
@@ -986,17 +1129,27 @@ export async function listPayments(
     params.set("status", query.status);
   }
 
-  return apiRequest<SellerPaymentsResponse>(`/api/shops/${shopId}/payments?${params.toString()}`, {
-    method: "GET",
-    token,
-  });
+  return apiRequest<SellerPaymentsResponse>(
+    `/api/shops/${shopId}/payments?${params.toString()}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
-export async function getPaymentDetail(shopId: string, orderId: string, token?: string) {
-  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}`, {
-    method: "GET",
-    token,
-  });
+export async function getPaymentDetail(
+  shopId: string,
+  orderId: string,
+  token?: string,
+) {
+  return apiRequest<SellerPaymentItem>(
+    `/api/shops/${shopId}/payments/${orderId}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export async function markPaymentPaid(
@@ -1005,11 +1158,14 @@ export async function markPaymentPaid(
   payload?: { note?: string },
   token?: string,
 ) {
-  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}/mark-paid`, {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload ?? {}),
-  });
+  return apiRequest<SellerPaymentItem>(
+    `/api/shops/${shopId}/payments/${orderId}/mark-paid`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
 }
 
 export async function rejectPayment(
@@ -1018,11 +1174,14 @@ export async function rejectPayment(
   payload?: { note?: string },
   token?: string,
 ) {
-  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}/reject`, {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload ?? {}),
-  });
+  return apiRequest<SellerPaymentItem>(
+    `/api/shops/${shopId}/payments/${orderId}/reject`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
 }
 
 export async function addPaymentNote(
@@ -1031,11 +1190,14 @@ export async function addPaymentNote(
   payload: { note: string },
   token?: string,
 ) {
-  return apiRequest<SellerPaymentItem>(`/api/shops/${shopId}/payments/${orderId}/notes`, {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return apiRequest<SellerPaymentItem>(
+    `/api/shops/${shopId}/payments/${orderId}/notes`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function updateShopOrderStatus(
@@ -1044,18 +1206,24 @@ export async function updateShopOrderStatus(
   status: SellerOrderStatus,
   token?: string,
 ) {
-  return apiRequest<SellerOrderListItem>(`/api/shops/${shopId}/orders/${orderId}/status`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify({ status }),
-  });
+  return apiRequest<SellerOrderListItem>(
+    `/api/shops/${shopId}/orders/${orderId}/status`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ status }),
+    },
+  );
 }
 
 export async function getDeliverySettings(shopId: string, token?: string) {
-  return apiRequest<DeliverySettings>(`/api/shops/${shopId}/delivery/settings`, {
-    method: "GET",
-    token,
-  });
+  return apiRequest<DeliverySettings>(
+    `/api/shops/${shopId}/delivery/settings`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export async function updateDeliverySettings(
@@ -1083,11 +1251,14 @@ export async function updateDeliverySettings(
   },
   token?: string,
 ) {
-  return apiRequest<DeliverySettings>(`/api/shops/${shopId}/delivery/settings`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return apiRequest<DeliverySettings>(
+    `/api/shops/${shopId}/delivery/settings`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function calculateDeliveryOffers(

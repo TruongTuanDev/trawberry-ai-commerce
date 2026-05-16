@@ -21,6 +21,19 @@ export type PublicProduct = {
     url: string;
     isMain: boolean;
   }>;
+  variants: Array<{
+    id: string;
+    sizeName: string | null;
+    russianSize: string | null;
+    techSize: string | null;
+    wbSize: string | null;
+    sellerSku: string | null;
+    price: string | null;
+    stockQuantity: number;
+    trackInventory: boolean;
+    inStock: boolean;
+    availableQuantity: number;
+  }>;
   shop: {
     id: string;
     name: string;
@@ -38,7 +51,12 @@ export type PaginatedPublicProducts = {
     totalPages: number;
   };
   filters?: {
-    categories: Array<{ id: string; name: string; slug: string | null; count: number }>;
+    categories: Array<{
+      id: string;
+      name: string;
+      slug: string | null;
+      count: number;
+    }>;
     brands: Array<{ value: string; count: number }>;
     colors: Array<{ value: string; count: number }>;
     genders: Array<{ value: string; count: number }>;
@@ -61,6 +79,7 @@ export type CheckoutOrderPayload = {
   shopId: string;
   items: Array<{
     productId: string;
+    variantId?: string;
     quantity: number;
   }>;
   customer: {
@@ -103,11 +122,16 @@ export type PublicTrackedOrder = {
   updatedAt: string;
   items: Array<{
     id: string;
+    productId: string | null;
+    variantId: string | null;
     quantity: number;
     priceAtPurchase: string;
+    unitPrice: string;
+    lineTotal: string;
     productTitleSnapshot: string;
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
   }>;
   paymentProof: {
     url: string;
@@ -171,7 +195,8 @@ export async function getPublicProducts(query?: {
   if (query?.brand) params.set("brand", query.brand);
   if (query?.color) params.set("color", query.color);
   if (query?.gender) params.set("gender", query.gender);
-  if (query?.inStock !== undefined) params.set("inStock", String(query.inStock));
+  if (query?.inStock !== undefined)
+    params.set("inStock", String(query.inStock));
   if (query?.minPrice) params.set("minPrice", query.minPrice);
   if (query?.maxPrice) params.set("maxPrice", query.maxPrice);
   if (query?.sort) params.set("sort", query.sort);
@@ -179,9 +204,12 @@ export async function getPublicProducts(query?: {
   if (query?.size) params.set("size", String(query.size));
 
   const qs = params.toString();
-  return apiRequest<PaginatedPublicProducts>(`/api/public/products${qs ? `?${qs}` : ""}`, {
-    method: "GET",
-  });
+  return apiRequest<PaginatedPublicProducts>(
+    `/api/public/products${qs ? `?${qs}` : ""}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function getCategories() {
@@ -209,9 +237,12 @@ export async function trackOrderByCode(orderCode: string, phone: string) {
     phone,
   });
 
-  return apiRequest<PublicTrackedOrder>(`/api/public/orders/track?${params.toString()}`, {
-    method: "GET",
-  });
+  return apiRequest<PublicTrackedOrder>(
+    `/api/public/orders/track?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function trackOrderById(orderId: string, phone: string) {
@@ -219,18 +250,28 @@ export async function trackOrderById(orderId: string, phone: string) {
     phone,
   });
 
-  return apiRequest<PublicTrackedOrder>(`/api/public/orders/${orderId}/track?${params.toString()}`, {
-    method: "GET",
-  });
+  return apiRequest<PublicTrackedOrder>(
+    `/api/public/orders/${orderId}/track?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
-export async function uploadPaymentProof(orderId: string, phone: string, file: File) {
+export async function uploadPaymentProof(
+  orderId: string,
+  phone: string,
+  file: File,
+) {
   const formData = new FormData();
   formData.append("phone", phone);
   formData.append("file", file);
 
-  return apiRequest<PublicTrackedOrder>(`/api/public/orders/${orderId}/payment-proof`, {
-    method: "POST",
-    body: formData,
-  });
+  return apiRequest<PublicTrackedOrder>(
+    `/api/public/orders/${orderId}/payment-proof`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
 }

@@ -25,6 +25,41 @@ class PublicProductShopDto {
   logoUrl!: string | null;
 }
 
+class PublicProductVariantDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty({ nullable: true })
+  sizeName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  russianSize!: string | null;
+
+  @ApiProperty({ nullable: true })
+  techSize!: string | null;
+
+  @ApiProperty({ nullable: true })
+  wbSize!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sellerSku!: string | null;
+
+  @ApiProperty({ nullable: true })
+  price!: string | null;
+
+  @ApiProperty()
+  stockQuantity!: number;
+
+  @ApiProperty()
+  trackInventory!: boolean;
+
+  @ApiProperty()
+  inStock!: boolean;
+
+  @ApiProperty()
+  availableQuantity!: number;
+}
+
 export class PublicProductResponseDto {
   @ApiProperty()
   id!: string;
@@ -73,6 +108,9 @@ export class PublicProductResponseDto {
 
   @ApiProperty({ type: PublicProductImageDto, isArray: true })
   images!: PublicProductImageDto[];
+
+  @ApiProperty({ type: PublicProductVariantDto, isArray: true })
+  variants!: PublicProductVariantDto[];
 
   @ApiProperty({ type: PublicProductShopDto })
   shop!: PublicProductShopDto;

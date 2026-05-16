@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { FilesService } from '../files/files.service';
 import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
@@ -64,11 +64,16 @@ type TrackableOrderRecord = {
   }>;
   items: Array<{
     id: string;
+    productId: string | null;
+    variantId: string | null;
     quantity: number;
     priceAtPurchase: Prisma.Decimal;
+    unitPrice: Prisma.Decimal | null;
+    lineTotal: Prisma.Decimal | null;
     productTitleSnapshot: string;
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
   }>;
   paymentReviewLogs: Array<{
     id: string;
@@ -262,11 +267,19 @@ export class OrderTrackingService {
       updatedAt: order.updatedAt.toISOString(),
       items: order.items.map((item) => ({
         id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
         quantity: item.quantity,
         priceAtPurchase: item.priceAtPurchase.toString(),
+        unitPrice: (item.unitPrice ?? item.priceAtPurchase).toString(),
+        lineTotal: (
+          item.lineTotal ??
+          new Prisma.Decimal(item.priceAtPurchase.toString()).mul(item.quantity)
+        ).toString(),
         productTitleSnapshot: item.productTitleSnapshot,
         productSlugSnapshot: item.productSlugSnapshot,
         productImageSnapshot: item.productImageSnapshot,
+        variantNameSnapshot: item.variantNameSnapshot,
       })),
       paymentProof: order.paymentProofUrl
         ? {

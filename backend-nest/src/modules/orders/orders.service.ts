@@ -312,12 +312,16 @@ export class OrdersService {
     }>;
     items: Array<{
       id: string;
+      productId: string | null;
       variantId: string | null;
       quantity: number;
       priceAtPurchase: Prisma.Decimal;
+      unitPrice: Prisma.Decimal | null;
+      lineTotal: Prisma.Decimal | null;
       productTitleSnapshot: string;
       productSlugSnapshot: string;
       productImageSnapshot: string | null;
+      variantNameSnapshot: string | null;
     }>;
   }) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
@@ -352,12 +356,19 @@ export class OrdersService {
         : null,
       items: order.items.map((item) => ({
         id: item.id,
+        productId: item.productId,
         variantId: item.variantId,
         quantity: item.quantity,
         priceAtPurchase: item.priceAtPurchase.toString(),
+        unitPrice: (item.unitPrice ?? item.priceAtPurchase).toString(),
+        lineTotal: (
+          item.lineTotal ??
+          new Prisma.Decimal(item.priceAtPurchase.toString()).mul(item.quantity)
+        ).toString(),
         productTitleSnapshot: item.productTitleSnapshot,
         productSlugSnapshot: item.productSlugSnapshot,
         productImageSnapshot: item.productImageSnapshot,
+        variantNameSnapshot: item.variantNameSnapshot,
       })),
     };
   }

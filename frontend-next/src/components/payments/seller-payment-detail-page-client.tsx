@@ -5,11 +5,21 @@ import { useEffect, useState } from "react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { SectionCard } from "@/components/seller/section-card";
-import { addPaymentNote, getPaymentDetail, markPaymentPaid, rejectPayment, type SellerPaymentItem } from "@/lib/seller-api";
+import {
+  addPaymentNote,
+  getPaymentDetail,
+  markPaymentPaid,
+  rejectPayment,
+  type SellerPaymentItem,
+} from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
-export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) {
+export function SellerPaymentDetailPageClient({
+  orderId,
+}: {
+  orderId: string;
+}) {
   const user = useAuthStore((state) => state.user);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [payment, setPayment] = useState<SellerPaymentItem | null>(null);
@@ -35,7 +45,11 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
         setError(null);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load payment detail.");
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load payment detail.",
+          );
         }
       } finally {
         if (mounted) {
@@ -57,7 +71,9 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
 
     if (action !== "note") {
       const confirmed = window.confirm(
-        action === "markPaid" ? "Mark this payment as paid?" : "Reject this payment?",
+        action === "markPaid"
+          ? "Mark this payment as paid?"
+          : "Reject this payment?",
       );
       if (!confirmed) {
         return;
@@ -71,13 +87,28 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
     try {
       let updated: SellerPaymentItem;
       if (action === "markPaid") {
-        updated = await markPaymentPaid(currentShopId, payment.id, note.trim() ? { note: note.trim() } : undefined, "");
+        updated = await markPaymentPaid(
+          currentShopId,
+          payment.id,
+          note.trim() ? { note: note.trim() } : undefined,
+          "",
+        );
         setSuccessMessage("Payment marked as paid.");
       } else if (action === "reject") {
-        updated = await rejectPayment(currentShopId, payment.id, note.trim() ? { note: note.trim() } : undefined, "");
+        updated = await rejectPayment(
+          currentShopId,
+          payment.id,
+          note.trim() ? { note: note.trim() } : undefined,
+          "",
+        );
         setSuccessMessage("Payment rejected.");
       } else {
-        updated = await addPaymentNote(currentShopId, payment.id, { note: note.trim() }, "");
+        updated = await addPaymentNote(
+          currentShopId,
+          payment.id,
+          { note: note.trim() },
+          "",
+        );
         setSuccessMessage("Payment note added.");
       }
 
@@ -94,7 +125,11 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
 
   if (loading) {
     return (
-      <SectionCard eyebrow="Payment detail" title="Loading payment" description="Fetching payment review detail from the NestJS API.">
+      <SectionCard
+        eyebrow="Payment detail"
+        title="Loading payment"
+        description="Fetching payment review detail from the NestJS API."
+      >
         <p className="text-sm text-[var(--muted)]">Loading...</p>
       </SectionCard>
     );
@@ -102,8 +137,14 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
 
   if (error || !payment) {
     return (
-      <SectionCard eyebrow="Payment detail" title="Unable to load payment" description="The selected payment record could not be loaded for the current shop.">
-        <p className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error ?? "Payment not found."}</p>
+      <SectionCard
+        eyebrow="Payment detail"
+        title="Unable to load payment"
+        description="The selected payment record could not be loaded for the current shop."
+      >
+        <p className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
+          {error ?? "Payment not found."}
+        </p>
       </SectionCard>
     );
   }
@@ -111,50 +152,98 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/seller/payments" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white">
+        <Link
+          href="/seller/payments"
+          className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+        >
           Back to payments
         </Link>
-        <Link href={`/seller/orders/${payment.id}`} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white">
+        <Link
+          href={`/seller/orders/${payment.id}`}
+          className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+        >
           Open order
         </Link>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]" data-testid="seller-payment-detail-page">
-        <SectionCard eyebrow="Payment" title={payment.orderNumber} description="Manual payment review state for the selected order.">
+      <div
+        className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]"
+        data-testid="seller-payment-detail-page"
+      >
+        <SectionCard
+          eyebrow="Payment"
+          title={payment.orderNumber}
+          description="Manual payment review state for the selected order."
+        >
           <div className="grid gap-4 md:grid-cols-2">
             <Metric label="Customer" value={payment.customer.name} />
             <Metric label="Phone" value={payment.customer.phone} />
-            <Metric label="Payment method" value={payment.paymentMethod ?? "Unknown"} />
+            <Metric
+              label="Payment method"
+              value={payment.paymentMethod ?? "Unknown"}
+            />
             <Metric label="Total" value={payment.totalAmount} />
-            <Metric label="Created" value={new Date(payment.createdAt).toLocaleString()} />
+            <Metric
+              label="Created"
+              value={new Date(payment.createdAt).toLocaleString()}
+            />
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Payment status</p>
-              <div className="mt-3"><PaymentStatusBadge status={payment.paymentStatus} testId="seller-payment-status" /></div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Payment status
+              </p>
+              <div className="mt-3">
+                <PaymentStatusBadge
+                  status={payment.paymentStatus}
+                  testId="seller-payment-status"
+                />
+              </div>
             </div>
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Order status</p>
-              <div className="mt-3"><OrderStatusBadge status={payment.status} /></div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Order status
+              </p>
+              <div className="mt-3">
+                <OrderStatusBadge status={payment.status} />
+              </div>
             </div>
           </div>
 
           <div className="mt-6 space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
             <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">Payment instructions</p>
-              <p className="mt-2 text-sm text-[var(--muted)]">{payment.paymentInstructions ?? "This shop did not set manual payment instructions."}</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                Payment instructions
+              </p>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {payment.paymentInstructions ??
+                  "This shop did not set manual payment instructions."}
+              </p>
             </div>
             <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">Shipping address</p>
-              <p className="mt-2 text-sm text-[var(--muted)]">{payment.shippingAddress}</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                Shipping address
+              </p>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {payment.shippingAddress}
+              </p>
             </div>
             {payment.customerNote ? (
-              <p className="text-sm text-[var(--muted)]">Customer note: {payment.customerNote}</p>
+              <p className="text-sm text-[var(--muted)]">
+                Customer note: {payment.customerNote}
+              </p>
             ) : null}
             {payment.paymentProof ? (
               <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
-                <p className="text-sm font-semibold text-[var(--foreground)]">Payment proof</p>
-                <p className="mt-2 text-sm text-[var(--muted)]">{payment.paymentProof.originalName ?? "Uploaded proof"}</p>
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                  Payment proof
+                </p>
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  {payment.paymentProof.originalName ?? "Uploaded proof"}
+                </p>
                 <p className="mt-1 text-xs text-[var(--muted)]">
-                  Uploaded: {payment.paymentProof.uploadedAt ? new Date(payment.paymentProof.uploadedAt).toLocaleString() : "Unknown"}
+                  Uploaded:{" "}
+                  {payment.paymentProof.uploadedAt
+                    ? new Date(payment.paymentProof.uploadedAt).toLocaleString()
+                    : "Unknown"}
                 </p>
                 <a
                   href={payment.paymentProof.url}
@@ -170,7 +259,11 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="Review actions" title="Seller review" description="Add notes, mark the payment as paid, or reject it when the transition is still valid.">
+        <SectionCard
+          eyebrow="Review actions"
+          title="Seller review"
+          description="Add notes, mark the payment as paid, or reject it when the transition is still valid."
+        >
           <div className="space-y-4">
             <textarea
               value={note}
@@ -206,34 +299,100 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
                 {saving ? "Saving..." : "Reject payment"}
               </button>
             </div>
-            {error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
-            {successMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{successMessage}</div> : null}
+            {error ? (
+              <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
+                {error}
+              </div>
+            ) : null}
+            {successMessage ? (
+              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {successMessage}
+              </div>
+            ) : null}
           </div>
         </SectionCard>
       </div>
 
-      <SectionCard eyebrow="Audit trail" title="Payment review logs" description="Every seller action is stored as a basic payment audit record.">
+      <SectionCard
+        eyebrow="Items"
+        title="Payment order items"
+        description="Line totals are based on checkout-time snapshots."
+      >
+        <div className="grid gap-4">
+          {payment.items.map((item) => (
+            <article
+              key={item.id}
+              className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[80px_1fr_160px]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={
+                  item.productImageSnapshot ??
+                  "https://placehold.co/160x160?text=No+Image"
+                }
+                alt={item.productTitleSnapshot}
+                className="h-20 w-20 rounded-2xl object-cover"
+              />
+              <div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                  {item.productTitleSnapshot}
+                </p>
+                {item.variantNameSnapshot ? (
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    Variant: {item.variantNameSnapshot}
+                  </p>
+                ) : null}
+              </div>
+              <div className="text-sm text-[var(--muted)] md:text-right">
+                <p>Qty: {item.quantity}</p>
+                <p className="mt-1">
+                  Unit: {item.unitPrice ?? item.priceAtPurchase}
+                </p>
+                <p className="mt-1">Line: {item.lineTotal}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Audit trail"
+        title="Payment review logs"
+        description="Every seller action is stored as a basic payment audit record."
+      >
         <div className="space-y-4">
           {payment.reviewLogs.length ? (
             payment.reviewLogs.map((log) => (
-              <article key={log.id} className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <article
+                key={log.id}
+                className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="rounded-full bg-[var(--panel-strong)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
                       {log.action}
                     </span>
                     <p className="text-sm text-[var(--muted)]">
-                      {log.fromStatus ?? "N/A"} {log.toStatus ? `-> ${log.toStatus}` : ""}
+                      {log.fromStatus ?? "N/A"}{" "}
+                      {log.toStatus ? `-> ${log.toStatus}` : ""}
                     </p>
                   </div>
-                  <p className="text-xs text-[var(--muted)]">{new Date(log.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    {new Date(log.createdAt).toLocaleString()}
+                  </p>
                 </div>
-                <p className="mt-3 text-sm text-[var(--foreground)]">{log.note ?? "No note attached."}</p>
-                <p className="mt-2 text-xs text-[var(--muted)]">Reviewer: {log.reviewerName ?? log.reviewerUserId}</p>
+                <p className="mt-3 text-sm text-[var(--foreground)]">
+                  {log.note ?? "No note attached."}
+                </p>
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  Reviewer: {log.reviewerName ?? log.reviewerUserId}
+                </p>
               </article>
             ))
           ) : (
-            <p className="text-sm text-[var(--muted)]">No payment review logs recorded yet.</p>
+            <p className="text-sm text-[var(--muted)]">
+              No payment review logs recorded yet.
+            </p>
           )}
         </div>
       </SectionCard>
@@ -244,8 +403,12 @@ export function SellerPaymentDetailPageClient({ orderId }: { orderId: string }) 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{value}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+        {value}
+      </p>
     </div>
   );
 }

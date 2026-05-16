@@ -11,6 +11,7 @@
     "test:e2e:admin-seller-approval": "playwright test admin-seller-approval",
     "test:e2e:auth": "playwright test auth-cookie",
     "test:e2e:full-commerce": "playwright test full-commerce-flow",
+    "test:e2e:cart-checkout": "playwright test cart-checkout",
     "test:e2e:manual-delivery": "playwright test manual-delivery",
     "test:e2e:delivery-exceptions": "playwright test delivery-exceptions",
     "test:e2e:admin-delivery-supervision": "playwright test admin-delivery-supervision",

@@ -18,11 +18,23 @@ class PublicOrderItemDto {
   @ApiProperty()
   id!: string;
 
+  @ApiProperty({ nullable: true })
+  productId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  variantId!: string | null;
+
   @ApiProperty()
   quantity!: number;
 
   @ApiProperty()
   priceAtPurchase!: string;
+
+  @ApiProperty()
+  unitPrice!: string;
+
+  @ApiProperty()
+  lineTotal!: string;
 
   @ApiProperty()
   productTitleSnapshot!: string;
@@ -32,6 +44,9 @@ class PublicOrderItemDto {
 
   @ApiProperty({ nullable: true })
   productImageSnapshot!: string | null;
+
+  @ApiProperty({ nullable: true })
+  variantNameSnapshot!: string | null;
 }
 
 class PublicOrderPaymentProofDto {
