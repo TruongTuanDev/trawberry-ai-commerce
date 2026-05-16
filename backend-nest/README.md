@@ -116,6 +116,7 @@ npm run start:dev
 - Full import-to-checkout smoke: `npm run smoke:wb-import-checkout`.
 
 ## Wildberries API sync
+- Legacy reference audit: `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`.
 - Seller endpoints under `POST /api/shops/:shopId/wb-sync/*`.
 - Supports sync all products and sync by article/vendorCode.
 - Default `WB_SYNC_MODE=mock` does not call WB.
@@ -123,14 +124,25 @@ npm run start:dev
   - `WB_SYNC_MODE=real`
   - `WB_API_BASE_URL=https://content-api.wildberries.ru`
   - `WB_CREDENTIAL_ENCRYPTION_KEY=...`
+- Runtime seller flow never reads `WB_REAL_API_KEY`.
+- Seller enters the API key in `/seller/import/wildberries-api`; backend stores it encrypted per `shopId`.
 - Runtime sync uses the selected shop's encrypted credential from DB.
 - `WB_REAL_API_KEY` is only a local smoke helper used to save a credential into a test shop.
 - Credential APIs:
   - `POST /api/shops/:shopId/wb-sync/credentials`
   - `GET /api/shops/:shopId/wb-sync/credentials/status`
+  - `GET /api/shops/:shopId/wb-sync/diagnostics`
   - `POST /api/shops/:shopId/wb-sync/credentials/verify`
   - `DELETE /api/shops/:shopId/wb-sync/credentials`
 - Real mode never silently falls back to mock after an error.
+- Mock mode never pretends to verify the real WB API. Verify returns `WB_MOCK_MODE_ACTIVE`.
+- Safe verify errors include `WB_CREDENTIAL_MISSING`, `WB_CREDENTIAL_DECRYPT_FAILED`, `WB_UNAUTHORIZED_401`, `WB_FORBIDDEN_403`, `WB_RATE_LIMIT_429`, `WB_BAD_REQUEST_400`, `WB_EMPTY_RESPONSE`, and `WB_NETWORK_TIMEOUT`.
+- Docker should not hide missing crypto config with a default fallback key.
+- Default real request is aligned with the legacy successful call:
+  - `Authorization: <apiKey>`
+  - `Content-Type: application/json`
+  - `settings.sort.ascending=true`
+  - `settings.filter.withPhoto=-1`
 - Smoke: `npm run smoke:wb-api-sync`.
 - Optional real smoke:
 
@@ -140,6 +152,28 @@ WB_REAL_API_KEY=...
 WB_REAL_TEST_ARTICLE=...
 npm run smoke:wb-api-sync-real
 ```
+
+- Stored-credential debug helper:
+
+```bash
+SHOP_ID=...
+npm run debug:wb-credential
+```
+
+If Docker runtime picked up old env, rebuild:
+
+```bash
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build backend-nest frontend-next
+```
+
+For manual real UI validation, do not set `WB_REAL_API_KEY`. Set only:
+
+```bash
+WB_SYNC_MODE=real
+WB_CREDENTIAL_ENCRYPTION_KEY=<local secret>
+```
+
+Then rebuild, login seller, open `/seller/import/wildberries-api`, select the target shop, save the key, and run Verify.
 
 ## Category Mapping And Marketplace Search
 - `npm run seed:demo` seeds internal marketplace categories and baseline WB mappings.

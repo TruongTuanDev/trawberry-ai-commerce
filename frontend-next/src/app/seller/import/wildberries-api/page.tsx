@@ -31,9 +31,15 @@ export default function WildberriesApiSyncPage() {
 
   const currentShop = useMemo(() => shops.find((shop) => shop.id === currentShopId) ?? null, [currentShopId, shops]);
   const visibleCredentials = currentShopId ? credentials : null;
+  const isMockMode = visibleCredentials?.mode !== "real";
+  const canAttemptRealVerify =
+    visibleCredentials?.mode === "real" &&
+    visibleCredentials?.connected &&
+    (visibleCredentials?.canAttemptRealVerify ?? true);
 
   const refreshStatus = async () => {
     if (!currentShopId) {
+      setCredentials(null);
       return;
     }
     setCredentials(await getWbSyncCredentialsStatus(currentShopId));
@@ -70,13 +76,26 @@ export default function WildberriesApiSyncPage() {
     setError(null);
     setVerifyResult(null);
     try {
-      setCredentials(await saveWbSyncCredentials(currentShopId, apiKey.trim()));
+      await saveWbSyncCredentials(currentShopId, apiKey.trim());
       setApiKey("");
+      await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save WB credentials.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const requireRealCredential = () => {
+    if (!currentShopId) {
+      setError("Select a seller shop before using Wildberries API sync.");
+      return true;
+    }
+    if (visibleCredentials?.mode === "real" && !visibleCredentials.connected) {
+      setError("This shop needs WB API key.");
+      return true;
+    }
+    return false;
   };
 
   const verifyConnection = async () => {
@@ -103,7 +122,6 @@ export default function WildberriesApiSyncPage() {
     setVerifyResult(null);
     try {
       await deleteWbSyncCredentials(currentShopId);
-      setCredentials(null);
       await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete WB credentials.");
@@ -113,11 +131,13 @@ export default function WildberriesApiSyncPage() {
   };
 
   const runAll = async (mode: "PREVIEW" | "IMPORT") => {
-    if (!currentShopId) return;
+    if (requireRealCredential()) return;
+    const shopId = currentShopId;
+    if (!shopId) return;
     setLoading(true);
     setError(null);
     try {
-      setResult(await syncWbProducts(currentShopId, { mode, limit: 100, publishMode, imageMode: "REMOTE_URL" }));
+      setResult(await syncWbProducts(shopId, { mode, limit: 100, publishMode, imageMode: "REMOTE_URL" }));
     } catch (err) {
       setResult(null);
       setError(err instanceof Error ? err.message : "Unable to sync WB products.");
@@ -127,11 +147,13 @@ export default function WildberriesApiSyncPage() {
   };
 
   const runArticle = async (mode: "PREVIEW" | "IMPORT") => {
-    if (!currentShopId || !article.trim()) return;
+    if (!article.trim() || requireRealCredential()) return;
+    const shopId = currentShopId;
+    if (!shopId) return;
     setLoading(true);
     setError(null);
     try {
-      setResult(await syncWbProductByArticle(currentShopId, { article: article.trim(), mode, publishMode, imageMode: "REMOTE_URL" }));
+      setResult(await syncWbProductByArticle(shopId, { article: article.trim(), mode, publishMode, imageMode: "REMOTE_URL" }));
     } catch (err) {
       setResult(null);
       setError(err instanceof Error ? err.message : "Unable to sync WB article.");
@@ -145,7 +167,7 @@ export default function WildberriesApiSyncPage() {
       ? visibleCredentials.connected
         ? `Connected with key ending ****${visibleCredentials.keyLast4 ?? "----"}.`
         : "Real mode active - this shop needs its own WB API key."
-      : "Mock mode active - API key is not required.";
+      : "Mock mode active; switch backend to real mode to verify real WB key.";
 
   return (
     <div className="space-y-6" data-testid="wb-api-sync-page">
@@ -208,6 +230,7 @@ export default function WildberriesApiSyncPage() {
               <p><span className="font-semibold">Key last4:</span> {visibleCredentials?.keyLast4 ?? "--"}</p>
               <p><span className="font-semibold">Last verify:</span> {visibleCredentials?.lastVerificationStatus ?? "NOT_VERIFIED"}</p>
               <p><span className="font-semibold">Verified at:</span> {visibleCredentials?.lastVerifiedAt ?? "--"}</p>
+              {visibleCredentials?.missingConfig?.length ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">Missing config:</span> {visibleCredentials.missingConfig.join(", ")}</p> : null}
               {visibleCredentials?.lastVerificationError ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">Last error:</span> {visibleCredentials.lastVerificationError}</p> : null}
             </div>
             <div className="mt-4 flex gap-2">
@@ -215,8 +238,8 @@ export default function WildberriesApiSyncPage() {
               <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">{visibleCredentials?.connected ? "Update API key" : "Save API key"}</button>
             </div>
             <div className="mt-3 flex flex-wrap gap-3">
-              <button type="button" onClick={() => void verifyConnection()} disabled={!currentShopId || !visibleCredentials?.connected || verifying} data-testid="wb-api-verify-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">
-                {verifying ? "Verifying..." : "Verify connection"}
+              <button type="button" onClick={() => void verifyConnection()} disabled={!currentShopId || !canAttemptRealVerify || verifying} data-testid="wb-api-verify-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">
+                {verifying ? "Verifying..." : isMockMode ? "Verify in real mode" : "Verify connection"}
               </button>
               <button type="button" onClick={() => void clearCredentials()} disabled={!currentShopId || !visibleCredentials?.connected || loading} data-testid="wb-api-delete-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">
                 Delete key

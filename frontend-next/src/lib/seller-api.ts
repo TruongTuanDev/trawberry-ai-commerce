@@ -512,6 +512,8 @@ export type WbCredentialsStatus = {
   lastVerifiedAt: string | null;
   lastVerificationStatus: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
   lastVerificationError: string | null;
+  canAttemptRealVerify?: boolean;
+  missingConfig?: string[];
 };
 
 export type WbConnectionVerifyResult = {
@@ -519,6 +521,19 @@ export type WbConnectionVerifyResult = {
   mode: "mock" | "real";
   fetched: number;
   message: string;
+};
+
+export type WbDiagnosticsResult = {
+  mode: "mock" | "real";
+  shopId: string;
+  hasCredential: boolean;
+  connected: boolean;
+  keyLast4: string | null;
+  lastVerifiedAt: string | null;
+  lastVerificationStatus: "SUCCESS" | "FAILED" | "NOT_VERIFIED";
+  lastVerificationError: string | null;
+  canAttemptRealVerify: boolean;
+  missingConfig: string[];
 };
 
 export type ProductImage = {
@@ -950,6 +965,19 @@ export async function deleteWbSyncCredentials(
     `/api/shops/${shopId}/wb-sync/credentials`,
     {
       method: "DELETE",
+      token,
+    },
+  );
+}
+
+export async function getWbSyncDiagnostics(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<WbDiagnosticsResult>(
+    `/api/shops/${shopId}/wb-sync/diagnostics`,
+    {
+      method: "GET",
       token,
     },
   );

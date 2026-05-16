@@ -85,6 +85,7 @@ describe('WB API sync foundation', () => {
       settings: {
         cursor: { limit: 5 },
         filter: { withPhoto: -1 },
+        sort: { ascending: true },
       },
     });
   });
@@ -155,6 +156,7 @@ describe('WB API sync foundation', () => {
           nmID: 2,
         },
         filter: { withPhoto: -1 },
+        sort: { ascending: true },
       },
     });
   });
@@ -167,8 +169,68 @@ describe('WB API sync foundation', () => {
     } as ConfigService);
 
     await expect(client.verifyConnection('bad-token')).rejects.toThrow(
-      'Wildberries API rejected the token or token scope.',
+      'WB_UNAUTHORIZED_401',
     );
+  });
+
+  it('verify connection does not pretend to verify in mock mode', async () => {
+    const client = new WbApiClientService({
+      get: (key: string) => (key === 'WB_SYNC_MODE' ? 'mock' : undefined),
+    } as ConfigService);
+
+    await expect(client.verifyConnection('mock-token')).rejects.toThrow(
+      'WB_MOCK_MODE_ACTIVE',
+    );
+  });
+
+  it('real client retries with sort body after a 400 response', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(responseWithJson({ error: 'bad request' }, 400))
+      .mockResolvedValueOnce(
+        responseWithJson({ error: 'still bad request' }, 400),
+      )
+      .mockResolvedValueOnce(
+        responseWithJson({ cards: [], cursor: { total: 0 } }, 200),
+      );
+
+    const client = new WbApiClientService({
+      get: (key: string) => {
+        switch (key) {
+          case 'WB_SYNC_MODE':
+            return 'real';
+          case 'WB_API_BASE_URL':
+            return 'https://content-api.wildberries.ru';
+          default:
+            return undefined;
+        }
+      },
+    } as ConfigService);
+
+    await client.fetchCards({ apiKey: 'secret-token', limit: 1 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const [, secondInit] = fetchMock.mock.calls[1] as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ];
+    expect(JSON.parse(getRequestBody(secondInit))).toEqual({
+      settings: {
+        cursor: { limit: 1 },
+        filter: { withPhoto: -1 },
+      },
+    });
+    const [, thirdInit] = fetchMock.mock.calls[2] as [
+      RequestInfo | URL,
+      RequestInit | undefined,
+    ];
+    expect(JSON.parse(getRequestBody(thirdInit))).toEqual({
+      settings: {
+        cursor: { limit: 1 },
+        filter: { withPhoto: -1 },
+        sort: { ascending: false },
+      },
+    });
   });
 
   it('mapper maps WB card to product, variants, images, and warnings', () => {

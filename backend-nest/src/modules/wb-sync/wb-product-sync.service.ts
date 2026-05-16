@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -27,6 +28,7 @@ import {
   WbMappedProduct,
   WbSyncIssue,
   WbSyncType,
+  WbDiagnosticsResult,
 } from './wb-sync.types';
 
 const SOURCE = 'WILDBERRIES_API';
@@ -35,7 +37,7 @@ type CredentialRecord = {
   encryptedApiKey: string;
   keyLast4: string | null;
   lastVerifiedAt: Date | null;
-  lastVerificationStatus: string;
+  lastVerificationStatus: 'SUCCESS' | 'FAILED' | 'NOT_VERIFIED';
   lastVerificationError: string | null;
   updatedAt: Date;
 };
@@ -47,6 +49,8 @@ type LoadedCredential = {
 
 @Injectable()
 export class WbProductSyncService {
+  private readonly logger = new Logger(WbProductSyncService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly apiClient: WbApiClientService,
@@ -95,7 +99,23 @@ export class WbProductSyncService {
       },
     });
 
-    return this.mapCredentialsStatus(shopId, credentials);
+    this.logger.log(
+      JSON.stringify({
+        event: 'wb_credentials_saved',
+        shopId,
+        userId: user.userId,
+        mode: this.syncMode(),
+        connected: true,
+        keyLast4,
+        encryptedLength: encryptedApiKey.length,
+        lastVerificationStatus: credentials.lastVerificationStatus,
+      }),
+    );
+
+    return this.mapCredentialsStatus(
+      shopId,
+      this.normalizeCredentialRecord(credentials),
+    );
   }
 
   async credentialsStatus(shopId: string, user: AuthenticatedUser) {
@@ -111,7 +131,33 @@ export class WbProductSyncService {
         updatedAt: true,
       },
     });
-    return this.mapCredentialsStatus(shopId, credentials);
+    return this.mapCredentialsStatus(
+      shopId,
+      this.normalizeCredentialRecord(credentials),
+    );
+  }
+
+  async diagnostics(
+    shopId: string,
+    user: AuthenticatedUser,
+  ): Promise<WbDiagnosticsResult> {
+    await this.assertApprovedSellerForShop(shopId, user);
+    const credentials = await this.prisma.shopWbCredential.findUnique({
+      where: { shopId },
+      select: {
+        encryptedApiKey: true,
+        keyLast4: true,
+        lastVerifiedAt: true,
+        lastVerificationStatus: true,
+        lastVerificationError: true,
+        updatedAt: true,
+      },
+    });
+
+    return this.mapDiagnostics(
+      shopId,
+      this.normalizeCredentialRecord(credentials),
+    );
   }
 
   async deleteCredentials(shopId: string, user: AuthenticatedUser) {
@@ -119,6 +165,15 @@ export class WbProductSyncService {
     await this.prisma.shopWbCredential.deleteMany({
       where: { shopId },
     });
+    this.logger.log(
+      JSON.stringify({
+        event: 'wb_credentials_deleted',
+        shopId,
+        userId: user.userId,
+        mode: this.syncMode(),
+        connected: false,
+      }),
+    );
     return {
       success: true,
       shopId,
@@ -136,7 +191,27 @@ export class WbProductSyncService {
     user: AuthenticatedUser,
   ): Promise<WbConnectionVerifyResult> {
     await this.assertApprovedSellerForShop(shopId, user);
-    const credential = await this.loadStoredCredential(shopId);
+    if (this.syncMode() !== 'real') {
+      const safeError =
+        'WB_MOCK_MODE_ACTIVE: Mock mode active. Real Wildberries verification is disabled.';
+      this.logger.warn(
+        JSON.stringify({
+          event: 'wb_credentials_verify_blocked',
+          shopId,
+          userId: user.userId,
+          mode: this.syncMode(),
+          status: 'FAILED',
+          errorCode: this.safeErrorCode(safeError),
+        }),
+      );
+      throw new BadRequestException(safeError);
+    }
+
+    const credentialRecord = await this.requireCredentialRecord(shopId);
+    const credential = await this.decryptStoredCredential(
+      shopId,
+      this.normalizeCredentialRecord(credentialRecord) as CredentialRecord,
+    );
 
     try {
       const result = await this.apiClient.verifyConnection(credential.apiKey);
@@ -148,6 +223,18 @@ export class WbProductSyncService {
           lastVerificationError: null,
         },
       });
+      this.logger.log(
+        JSON.stringify({
+          event: 'wb_credentials_verified',
+          shopId,
+          userId: user.userId,
+          mode: this.syncMode(),
+          connected: true,
+          keyLast4: credential.keyLast4,
+          status: 'SUCCESS',
+          fetched: result.fetched,
+        }),
+      );
       return result;
     } catch (error) {
       const safeError = this.safeErrorMessage(error);
@@ -159,6 +246,19 @@ export class WbProductSyncService {
           lastVerificationError: safeError,
         },
       });
+      this.logger.warn(
+        JSON.stringify({
+          event: 'wb_credentials_verify_failed',
+          shopId,
+          userId: user.userId,
+          mode: this.syncMode(),
+          connected: true,
+          keyLast4: credential.keyLast4,
+          status: 'FAILED',
+          errorCode: this.safeErrorCode(safeError),
+          httpStatus: this.safeHttpStatus(safeError),
+        }),
+      );
       throw new BadRequestException(safeError);
     }
   }
@@ -582,15 +682,26 @@ export class WbProductSyncService {
       return null;
     }
 
-    return this.loadStoredCredential(shopId);
+    const credentialRecord = await this.requireCredentialRecord(shopId);
+    return this.decryptStoredCredential(
+      shopId,
+      this.normalizeCredentialRecord(credentialRecord) as CredentialRecord,
+    );
   }
 
-  private async loadStoredCredential(
+  private async requireCredentialRecord(
     shopId: string,
-  ): Promise<LoadedCredential> {
+  ): Promise<CredentialRecord> {
     const credentials = await this.prisma.shopWbCredential.findUnique({
       where: { shopId },
-      select: { encryptedApiKey: true, keyLast4: true },
+      select: {
+        encryptedApiKey: true,
+        keyLast4: true,
+        lastVerifiedAt: true,
+        lastVerificationStatus: true,
+        lastVerificationError: true,
+        updatedAt: true,
+      },
     });
 
     if (!credentials) {
@@ -599,9 +710,51 @@ export class WbProductSyncService {
       );
     }
 
+    return this.normalizeCredentialRecord(credentials) as CredentialRecord;
+  }
+
+  private async decryptStoredCredential(
+    shopId: string,
+    credentials: CredentialRecord,
+  ): Promise<LoadedCredential> {
+    try {
+      return {
+        apiKey: this.decryptApiKey(credentials.encryptedApiKey),
+        keyLast4: credentials.keyLast4,
+      };
+    } catch (error) {
+      const safeError = this.safeCredentialDecryptError(error);
+      await this.prisma.shopWbCredential.update({
+        where: { shopId },
+        data: {
+          lastVerifiedAt: new Date(),
+          lastVerificationStatus: 'FAILED',
+          lastVerificationError: safeError,
+        },
+      });
+      this.logger.warn(
+        JSON.stringify({
+          event: 'wb_credentials_decrypt_failed',
+          shopId,
+          mode: this.syncMode(),
+          connected: true,
+          keyLast4: credentials.keyLast4,
+          encryptedLength: credentials.encryptedApiKey.length,
+          status: 'FAILED',
+          errorCode: this.safeErrorCode(safeError),
+        }),
+      );
+      throw new BadRequestException(safeError);
+    }
+  }
+
+  private async loadStoredCredential(
+    shopId: string,
+  ): Promise<LoadedCredential> {
+    const credentialRecord = await this.requireCredentialRecord(shopId);
     return {
-      apiKey: this.decryptApiKey(credentials.encryptedApiKey),
-      keyLast4: credentials.keyLast4,
+      apiKey: this.decryptApiKey(credentialRecord.encryptedApiKey),
+      keyLast4: credentialRecord.keyLast4,
     };
   }
 
@@ -715,17 +868,38 @@ export class WbProductSyncService {
     shopId: string,
     credentials: CredentialRecord | null,
   ) {
+    const mode = this.syncMode();
+    const missingConfig = this.missingConfig(mode);
     return {
       shopId,
       connected: Boolean(credentials),
       hasCredentials: Boolean(credentials),
       keyLast4: credentials?.keyLast4 ?? null,
       updatedAt: credentials?.updatedAt.toISOString() ?? null,
-      mode: this.syncMode(),
+      mode,
       lastVerifiedAt: credentials?.lastVerifiedAt?.toISOString() ?? null,
       lastVerificationStatus:
         credentials?.lastVerificationStatus ?? 'NOT_VERIFIED',
       lastVerificationError: credentials?.lastVerificationError ?? null,
+      canAttemptRealVerify:
+        mode === 'real' && Boolean(credentials) && missingConfig.length === 0,
+      missingConfig,
+    };
+  }
+
+  private mapDiagnostics(shopId: string, credentials: CredentialRecord | null) {
+    const status = this.mapCredentialsStatus(shopId, credentials);
+    return {
+      mode: status.mode,
+      shopId,
+      hasCredential: status.hasCredentials,
+      connected: status.connected,
+      keyLast4: status.keyLast4,
+      lastVerifiedAt: status.lastVerifiedAt,
+      lastVerificationStatus: status.lastVerificationStatus,
+      lastVerificationError: status.lastVerificationError,
+      canAttemptRealVerify: status.canAttemptRealVerify,
+      missingConfig: status.missingConfig,
     };
   }
 
@@ -792,9 +966,68 @@ export class WbProductSyncService {
 
   private safeErrorMessage(error: unknown) {
     if (error instanceof Error && error.message) {
-      return error.message.replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer ***');
+      return error.message
+        .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer ***')
+        .replace(/[A-Za-z0-9_-]{24,}/g, '***');
     }
     return 'WB sync failed.';
+  }
+
+  private safeCredentialDecryptError(error: unknown) {
+    const message = this.safeErrorMessage(error);
+    if (
+      message.includes(
+        'WB_CREDENTIAL_ENCRYPTION_KEY is required to read WB credentials.',
+      )
+    ) {
+      return 'WB_CONFIG_MISSING: WB_CREDENTIAL_ENCRYPTION_KEY is required to read WB credentials.';
+    }
+    return 'WB_CREDENTIAL_DECRYPT_FAILED: Stored Wildberries API key could not be decrypted. Check WB_CREDENTIAL_ENCRYPTION_KEY.';
+  }
+
+  private missingConfig(mode: WbApiSourceMode) {
+    const missing: string[] = [];
+    if (
+      mode === 'real' &&
+      !this.config.get<string>('WB_CREDENTIAL_ENCRYPTION_KEY') &&
+      !this.config.get<string>('WB_CREDENTIALS_ENCRYPTION_KEY')
+    ) {
+      missing.push('WB_CREDENTIAL_ENCRYPTION_KEY');
+    }
+    return missing;
+  }
+
+  private safeErrorCode(message: string) {
+    return message.split(':', 1)[0] ?? 'UNKNOWN';
+  }
+
+  private safeHttpStatus(message: string) {
+    const match = message.match(/_(\d{3})/);
+    return match ? Number(match[1]) : null;
+  }
+
+  private normalizeCredentialRecord(
+    credentials: {
+      encryptedApiKey: string;
+      keyLast4: string | null;
+      lastVerifiedAt: Date | null;
+      lastVerificationStatus: string;
+      lastVerificationError: string | null;
+      updatedAt: Date;
+    } | null,
+  ): CredentialRecord | null {
+    if (!credentials) {
+      return null;
+    }
+
+    return {
+      ...credentials,
+      lastVerificationStatus:
+        credentials.lastVerificationStatus === 'SUCCESS' ||
+        credentials.lastVerificationStatus === 'FAILED'
+          ? credentials.lastVerificationStatus
+          : 'NOT_VERIFIED',
+    };
   }
 
   private slug(value: string) {

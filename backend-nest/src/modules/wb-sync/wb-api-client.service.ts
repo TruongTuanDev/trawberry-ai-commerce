@@ -81,6 +81,18 @@ type WbCardsPageResult = {
   cursor?: WbCardsResponse['cursor'];
 };
 
+type FetchCardsPageAttempt = {
+  settings: {
+    cursor: {
+      limit: number;
+      updatedAt?: string;
+      nmID?: number;
+    };
+    filter: { withPhoto: number };
+    sort?: { ascending: boolean };
+  };
+};
+
 @Injectable()
 export class WbApiClientService {
   constructor(private readonly config: ConfigService) {}
@@ -151,6 +163,11 @@ export class WbApiClientService {
   }
 
   async verifyConnection(apiKey: string): Promise<WbConnectionVerifyResult> {
+    if (this.mode() !== 'real') {
+      throw new BadRequestException(
+        'WB_MOCK_MODE_ACTIVE: Mock mode active. Real Wildberries verification is disabled.',
+      );
+    }
     const response = await this.fetchCards({ apiKey, limit: 1 });
     return {
       success: true,
@@ -174,41 +191,61 @@ export class WbApiClientService {
   }): Promise<WbCardsPageResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs());
+    const attempts = this.requestBodies(options.limit, options.cursor);
 
     try {
-      const response = await fetch(
-        `${this.baseUrl()}/content/v2/get/cards/list`,
-        {
-          method: 'POST',
-          signal: controller.signal,
-          headers: {
-            Authorization: options.apiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            settings: {
-              cursor: this.cursor(options.limit, options.cursor),
-              filter: { withPhoto: -1 },
+      let finalFailure: BadGatewayException | null = null;
+
+      for (const requestBody of attempts) {
+        const response = await fetch(
+          `${this.baseUrl()}/content/v2/get/cards/list`,
+          {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              Authorization: options.apiKey,
+              'Content-Type': 'application/json',
             },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw this.mapHttpError(response.status);
-      }
-
-      const payload = (await response.json()) as WbCardsResponse | null;
-      if (!payload || !Array.isArray(payload.cards)) {
-        throw new BadGatewayException(
-          'Wildberries API returned a malformed cards response.',
+            body: JSON.stringify(requestBody),
+          },
         );
-      }
 
-      return {
-        cards: payload.cards,
-        cursor: payload.cursor,
-      };
+        if (!response.ok) {
+          finalFailure = await this.mapHttpError(response, requestBody);
+          if (
+            response.status === 400 &&
+            requestBody !== attempts[attempts.length - 1]
+          ) {
+            continue;
+          }
+          throw finalFailure;
+        }
+
+        const payload = (await response.json()) as WbCardsResponse | null;
+        if (!payload) {
+          throw new BadGatewayException(
+            'WB_EMPTY_RESPONSE: Wildberries API returned an empty response.',
+          );
+        }
+        if (!Array.isArray(payload.cards)) {
+          throw new BadGatewayException(
+            `WB_EMPTY_RESPONSE: Wildberries API returned a malformed cards response.${this.sanitizedSnippet(
+              payload,
+            )}`,
+          );
+        }
+
+        return {
+          cards: payload.cards,
+          cursor: payload.cursor,
+        };
+      }
+      throw (
+        finalFailure ??
+        new BadGatewayException(
+          'WB_EMPTY_RESPONSE: Wildberries API returned an empty response.',
+        )
+      );
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
@@ -218,10 +255,12 @@ export class WbApiClientService {
       }
       if (error instanceof Error && error.name === 'AbortError') {
         throw new BadGatewayException(
-          `Wildberries API timeout after ${this.timeoutMs()} ms.`,
+          `WB_NETWORK_TIMEOUT: Wildberries API timeout after ${this.timeoutMs()} ms.`,
         );
       }
-      throw new BadGatewayException('Wildberries API communication failed.');
+      throw new BadGatewayException(
+        'WB_NETWORK_ERROR: Wildberries API communication failed.',
+      );
     } finally {
       clearTimeout(timeout);
     }
@@ -250,26 +289,107 @@ export class WbApiClientService {
     };
   }
 
-  private mapHttpError(status: number) {
-    switch (status) {
+  private requestBodies(
+    limit: number,
+    cursor?: WbCardsResponse['cursor'],
+  ): FetchCardsPageAttempt[] {
+    const baseCursor = this.cursor(limit, cursor);
+    return [
+      {
+        settings: {
+          cursor: baseCursor,
+          filter: { withPhoto: -1 },
+          sort: { ascending: true },
+        },
+      },
+      {
+        settings: {
+          cursor: baseCursor,
+          filter: { withPhoto: -1 },
+        },
+      },
+      {
+        settings: {
+          cursor: baseCursor,
+          filter: { withPhoto: -1 },
+          sort: { ascending: false },
+        },
+      },
+    ];
+  }
+
+  private async mapHttpError(
+    response: Response,
+    requestBody: FetchCardsPageAttempt,
+  ) {
+    const snippet = this.sanitizedSnippet(
+      await this.parseResponseBody(response),
+    );
+    const requestVariant =
+      requestBody.settings.sort?.ascending === true
+        ? 'legacy-sort-ascending-body'
+        : requestBody.settings.sort?.ascending === false
+          ? 'sort-desc-body'
+          : 'no-sort-body';
+
+    switch (response.status) {
       case 400:
         return new BadGatewayException(
-          'Wildberries API rejected the cards list request.',
+          `WB_BAD_REQUEST_400: Wildberries API rejected the cards list request (${requestVariant}).${snippet}`,
         );
       case 401:
+        return new BadGatewayException(
+          `WB_UNAUTHORIZED_401: Wildberries API rejected the token.${snippet}`,
+        );
       case 403:
         return new BadGatewayException(
-          'Wildberries API rejected the token or token scope.',
+          `WB_FORBIDDEN_403: Wildberries API rejected the token scope or shop access.${snippet}`,
         );
       case 429:
         return new BadGatewayException(
-          'Wildberries API rate limit reached. Please retry later.',
+          `WB_RATE_LIMIT_429: Wildberries API rate limit reached. Please retry later.${snippet}`,
         );
       default:
         return new BadGatewayException(
-          `Wildberries API returned HTTP ${status}.`,
+          `WB_NETWORK_ERROR: Wildberries API returned HTTP ${response.status}.${snippet}`,
         );
     }
+  }
+
+  private async parseResponseBody(response: Response) {
+    try {
+      return (await response.json()) as unknown;
+    } catch {
+      try {
+        return await response.text();
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  private sanitizedSnippet(value: unknown) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    const text =
+      typeof value === 'string'
+        ? value
+        : JSON.stringify(value, (_key, entry: unknown) => {
+            if (typeof entry === 'string') {
+              return this.sanitize(entry);
+            }
+            return entry;
+          });
+    const sanitized = this.sanitize(text).slice(0, 200);
+    return sanitized ? ` Response snippet: ${sanitized}` : '';
+  }
+
+  private sanitize(value: string) {
+    return value
+      .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer ***')
+      .replace(/[A-Za-z0-9_-]{24,}/g, '***');
   }
 
   private mode(): WbApiSourceMode {

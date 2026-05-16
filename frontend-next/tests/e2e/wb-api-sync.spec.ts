@@ -99,9 +99,8 @@ test("seller previews and imports Wildberries API products in mock mode", async 
   await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Connected: Yes");
   await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Key last4: 1234");
   await expect(page.getByTestId("wb-api-save-credentials")).toContainText("Update API key");
-
-  await page.getByTestId("wb-api-verify-credentials").click();
-  await expect(page.getByTestId("wb-api-verify-result")).toContainText("verified");
+  await expect(page.getByTestId("wb-api-verify-credentials")).toBeDisabled();
+  await expect(page.getByTestId("wb-api-mode-message")).toContainText("switch backend to real mode");
 
   await page.getByTestId("wb-api-key").fill("mock-api-key-5678");
   await page.getByTestId("wb-api-save-credentials").click();
@@ -124,4 +123,57 @@ test("seller previews and imports Wildberries API products in mock mode", async 
 
   await page.goto("/seller/products");
   await expect(page.locator("article").filter({ hasText: "Mock WB Hoodie" })).toBeVisible();
+});
+
+test("seller sees safe verify failure returned by backend", async ({ page, request }) => {
+  test.setTimeout(120000);
+  const stamp = Date.now();
+  const email = `wb-api-sync-failure-${stamp}@example.com`;
+  const password = "password123";
+  const sellerToken = await createApprovedSeller(request, email, password);
+  const shop = await backendJson<{ id: string }>(request, "/api/shops", {
+    method: "POST",
+    token: sellerToken,
+    data: {
+      name: `WB API Sync Failure Shop ${stamp}`,
+      slug: `wb-api-sync-failure-shop-${stamp}`,
+      paymentInstructions: "Manual transfer.",
+    },
+  });
+
+  const statusPayload = {
+    shopId: shop.id,
+    connected: true,
+    hasCredentials: true,
+    keyLast4: "1234",
+    updatedAt: new Date().toISOString(),
+    mode: "real",
+    lastVerifiedAt: null,
+    lastVerificationStatus: "FAILED",
+    lastVerificationError: "WB_UNAUTHORIZED_401: Wildberries API rejected the token.",
+    canAttemptRealVerify: true,
+    missingConfig: [],
+  };
+
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/wb-sync/credentials/status`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(statusPayload),
+    });
+  });
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/wb-sync/credentials/verify`, async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "WB_UNAUTHORIZED_401: Wildberries API rejected the token." }),
+    });
+  });
+
+  await login(page, email, password);
+  await page.goto("/seller/import/wildberries-api");
+  await page.getByTestId("wb-api-verify-credentials").click();
+
+  await expect(page.locator("div").filter({ hasText: "WB_UNAUTHORIZED_401: Wildberries API rejected the token." }).last()).toBeVisible();
+  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Last verify: FAILED");
 });

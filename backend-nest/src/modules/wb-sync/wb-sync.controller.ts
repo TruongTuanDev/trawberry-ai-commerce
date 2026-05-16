@@ -38,6 +38,14 @@ export class WbSyncController {
     return this.syncService.credentialsStatus(shopId, user);
   }
 
+  @Get('diagnostics')
+  diagnostics(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.syncService.diagnostics(shopId, user);
+  }
+
   @Delete('credentials')
   deleteCredentials(
     @Param('shopId') shopId: string,

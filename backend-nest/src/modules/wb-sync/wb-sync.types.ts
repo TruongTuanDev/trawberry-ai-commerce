@@ -3,6 +3,18 @@ export type WbSyncType = 'ALL_PRODUCTS' | 'BY_ARTICLE';
 export type WbPublishMode = 'DRAFT' | 'ACTIVE_IF_VALID';
 export type WbImageMode = 'REMOTE_URL';
 export type WbApiSourceMode = 'mock' | 'real';
+export type WbSafeErrorCode =
+  | 'WB_BAD_REQUEST_400'
+  | 'WB_UNAUTHORIZED_401'
+  | 'WB_FORBIDDEN_403'
+  | 'WB_RATE_LIMIT_429'
+  | 'WB_EMPTY_RESPONSE'
+  | 'WB_NETWORK_TIMEOUT'
+  | 'WB_NETWORK_ERROR'
+  | 'WB_CREDENTIAL_MISSING'
+  | 'WB_CREDENTIAL_DECRYPT_FAILED'
+  | 'WB_MOCK_MODE_ACTIVE'
+  | 'WB_CONFIG_MISSING';
 
 export type WbSyncIssue = {
   level: 'WARNING' | 'ERROR';
@@ -85,6 +97,19 @@ export type WbConnectionVerifyResult = {
   mode: WbApiSourceMode;
   fetched: number;
   message: string;
+};
+
+export type WbDiagnosticsResult = {
+  mode: WbApiSourceMode;
+  shopId: string;
+  hasCredential: boolean;
+  connected: boolean;
+  keyLast4: string | null;
+  lastVerifiedAt: string | null;
+  lastVerificationStatus: 'SUCCESS' | 'FAILED' | 'NOT_VERIFIED';
+  lastVerificationError: string | null;
+  canAttemptRealVerify: boolean;
+  missingConfig: string[];
 };
 
 export type WbMappedVariant = {

@@ -9,6 +9,7 @@ Scope:
 - `frontend-next/src/lib/seller-api.ts`
 - runtime env examples and Docker wiring
 - legacy WB code read-only for comparison
+- see `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`
 
 ## Executive Summary
 
@@ -27,6 +28,9 @@ After this pass:
 - real sync uses the selected shop credential from DB
 - `WB_REAL_API_KEY` is only a smoke helper, not the runtime credential source
 - real mode does not fall back to mock
+- mock mode no longer pretends to verify the real WB API
+- runtime diagnostics now expose missing config and verify readiness without returning the raw key
+- the default real WB request body is now aligned to the working legacy request shape
 
 ## Audit Answers
 
@@ -56,6 +60,7 @@ After this pass:
 
 - yes, when `WB_SYNC_MODE=real`
 - endpoint used: `POST {WB_API_BASE_URL}/content/v2/get/cards/list`
+- auth header stays `Authorization: <wb-api-key>` with no forced `Bearer`
 
 6. If `WB_SYNC_MODE=real` but the shop has no credential, does the system fail clearly or fall back to mock?
 
@@ -82,6 +87,8 @@ After this pass:
 }
 ```
 
+- if WB returns `400` on the minimal body, the client retries once with `settings.sort.ascending=false`
+
 8. Is the `Authorization` header correct?
 
 - yes
@@ -103,12 +110,14 @@ After this pass:
 - no intentional raw-token logging remains in the hardened path
 - safe error sanitizer masks bearer-like strings
 - UI and API responses never return the raw key
+- debug-safe logs only include `shopId`, `userId`, `mode`, `keyLast4`, status, and safe error code
 
 12. Why might a user still see "disconnected" even though they have a real WB key?
 
 - backend is still running with `WB_SYNC_MODE=mock`
 - seller saved the key on a different selected shop
 - backend env lost `WB_CREDENTIAL_ENCRYPTION_KEY`, so stored credential cannot be read
+- backend container started with an empty `WB_CREDENTIAL_ENCRYPTION_KEY` after compose rebuild
 - seller never clicked Save after entering the key
 
 13. Checklist to save a key and run real sync
@@ -118,6 +127,8 @@ After this pass:
    - `WB_API_BASE_URL=https://content-api.wildberries.ru`
    - `WB_CREDENTIAL_ENCRYPTION_KEY=...`
 2. Restart backend
+   - if Docker uses stale env, rebuild:
+     - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build backend-nest frontend-next`
 3. Login as an approved seller
 4. Open `/seller/import/wildberries-api`
 5. Select the target shop
@@ -132,6 +143,8 @@ After this pass:
 
 - Mock mode remains the default for CI/default smoke.
 - Real mode is now explicit and shop-scoped.
+- Current local runtime on 2026-05-17 initially ran with `WB_SYNC_MODE=mock`.
+- Current local runtime on 2026-05-17 also omitted `WB_CREDENTIAL_ENCRYPTION_KEY` in `infra/.env`, which previously was masked by a docker-compose default.
 - Product import still does not sync WB price or stock.
 - Manual local price and stock remain preserved on re-sync.
 
@@ -148,3 +161,20 @@ After this pass:
 - add incremental sync with persisted per-shop cursor/watermark
 - add seller-facing sync history and diff preview
 - add richer per-card diagnostics for partial import failures
+
+## Manual User Validation
+
+The remaining real validation is manual and user-driven:
+
+1. Set local `infra/.env`:
+   - `WB_SYNC_MODE=real`
+   - `WB_CREDENTIAL_ENCRYPTION_KEY=<local secret>`
+2. Rebuild:
+   - `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build backend-nest frontend-next`
+3. Login seller.
+4. Open `/seller/import/wildberries-api`.
+5. Select the target shop.
+6. Save the real WB API key.
+7. Run Verify.
+8. If verify succeeds, run preview/import actions.
+9. If verify fails, inspect the safe error code shown in the UI.

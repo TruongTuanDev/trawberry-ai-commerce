@@ -1487,16 +1487,24 @@ Deferred:
 
 Implemented:
 
+- audited the working legacy WB integration and documented it in `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`
 - explicit real-mode credential save, status, verify, and delete APIs
+- added `GET /api/shops/:shopId/wb-sync/diagnostics` for seller-safe runtime checks
 - persisted WB credential verification metadata on `shop_wb_credentials`
 - AES-GCM credential encryption via `WB_CREDENTIAL_ENCRYPTION_KEY`
 - real runtime uses the selected shop's stored credential from DB, not a global `WB_REAL_API_KEY`
 - real-mode `POST /content/v2/get/cards/list` client with cursor pagination
+- real-mode verify retries once with a fallback request body when WB rejects the minimal body with `400`
 - no silent mock fallback when `WB_SYNC_MODE=real`
+- mock mode verify now fails explicitly with `WB_MOCK_MODE_ACTIVE` instead of pretending to verify WB
 - seller UI connection card with mode, key last4, verify status, and sanitized error
+- seller UI now refreshes status after save, verify, and delete, and clears the raw key input after save
+- seller UI now blocks real-mode sync actions early when the selected shop has no saved WB credential
 - real-mode sync result reporting with `sourceMode`
 - optional `smoke:wb-api-sync-real`
+- added `npm run debug:wb-credential` for stored-credential diagnostics without using `WB_REAL_API_KEY`
 - backend WB sync tests for credential lifecycle, verify failure sanitization, request body, and pagination
+- aligned default real WB request body to the legacy successful `cards/list` shape with `sort.ascending=true`
 
 Retained non-goals:
 
@@ -1504,3 +1512,9 @@ Retained non-goals:
 - no WB stock sync
 - no real WB calls in default CI smoke/E2E
 - no legacy app changes
+
+Runtime audit note on 2026-05-17:
+
+- local Docker backend was running with `WB_SYNC_MODE=mock`
+- local Docker backend inherited a hidden fallback `WB_CREDENTIAL_ENCRYPTION_KEY=dev-wb-credential-key`
+- after removing that fallback from compose, the same local runtime exposed the true missing-config state until a local non-committed test key was injected for verification

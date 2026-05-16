@@ -230,6 +230,9 @@ describe('WbProductSyncService credentials', () => {
       service,
       apiClient,
       credentialStore: () => credentialStore,
+      setCredentialStore: (next: CredentialRecord | null) => {
+        credentialStore = next;
+      },
       prisma,
     };
   }
@@ -299,6 +302,17 @@ describe('WbProductSyncService credentials', () => {
     expect(credentialStore()?.lastVerificationError).toBeNull();
   });
 
+  it('fails clearly when verify is requested in mock mode', async () => {
+    const { service, credentialStore } = createService({ mode: 'mock' });
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+
+    await expect(service.verifyCredentials('shop-1', user)).rejects.toThrow(
+      'WB_MOCK_MODE_ACTIVE',
+    );
+    expect(credentialStore()?.lastVerificationStatus).toBe('NOT_VERIFIED');
+  });
+
   it('stores a sanitized failure when verification fails', async () => {
     const { service, credentialStore } = createService({
       verifyImpl: (apiKey: string) =>
@@ -318,6 +332,20 @@ describe('WbProductSyncService credentials', () => {
     expect(credentialStore()?.lastVerificationError).toContain('Bearer ***');
     expect(credentialStore()?.lastVerificationError).not.toContain(
       'abcdefghijklmnopqrstuvwxyz123456',
+    );
+  });
+
+  it('fails clearly when stored credentials cannot be decrypted', async () => {
+    const { service, credentialStore, setCredentialStore } = createService();
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+    setCredentialStore({
+      ...(credentialStore() as CredentialRecord),
+      encryptedApiKey: 'v1:broken:payload',
+    });
+
+    await expect(service.verifyCredentials('shop-1', user)).rejects.toThrow(
+      'WB_CREDENTIAL_DECRYPT_FAILED',
     );
   });
 
@@ -374,6 +402,18 @@ describe('WbProductSyncService credentials', () => {
     expect(status.connected).toBe(true);
     expect(status.keyLast4).toBe('1234');
     expect('apiKey' in status).toBe(false);
+  });
+
+  it('returns diagnostics with config and verify readiness', async () => {
+    const { service } = createService({ mode: 'real' });
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+    const diagnostics = await service.diagnostics('shop-1', user);
+
+    expect(diagnostics.connected).toBe(true);
+    expect(diagnostics.keyLast4).toBe('1234');
+    expect(diagnostics.canAttemptRealVerify).toBe(true);
+    expect(diagnostics.missingConfig).toEqual([]);
   });
 
   it('fails clearly when encryption key is missing', async () => {

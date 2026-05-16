@@ -92,9 +92,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - explicit `MOCK` / `REAL` mode state
   - per-shop credential management for the currently selected shop
   - credentials status with `keyLast4`
-  - verify connection button
+  - verify connection button for real mode only
   - delete key action
   - last verification status and sanitized error
+  - safe missing-config / diagnostics visibility
+  - early real-mode guard when the selected shop has no saved WB key
   - preview/import all products
   - preview/import by article/APT/vendorCode
   - sync result summary
@@ -172,9 +174,12 @@ npm run test:e2e:wb-api-sync
 Current coverage:
 - creates an approved seller and shop through the API
 - opens `/seller/import/wildberries-api`
+- verifies mock mode messaging disables real verify
+- saves and deletes a per-shop credential
 - previews all mock WB API products
 - imports all mock WB API products
 - imports one product by article/APT
+- verifies a safe backend verify failure is shown in the UI
 - verifies the imported product appears in `/seller/products`
 
 Real runtime note:
@@ -182,6 +187,8 @@ Real runtime note:
 - default Playwright stays in mock mode
 - real WB verification is done through backend smoke, not default browser CI
 - seller page now shows explicit mode and connection diagnostics so real-mode issues are visible in the UI
+- runtime seller flow does not use `WB_REAL_API_KEY`; the seller must save the key through the UI for the selected shop
+- request/verify behavior is aligned with the legacy successful backend call documented in `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`
 
 ## Playwright Marketplace Search/Filter/Sort
 
