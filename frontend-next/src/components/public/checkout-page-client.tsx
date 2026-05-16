@@ -8,7 +8,7 @@ import {
   getPublicProduct,
   type CheckoutOrderResponse,
 } from "@/lib/public-api";
-import { useCartStore } from "@/stores/cart-store";
+import { type CartItem, useCartStore } from "@/stores/cart-store";
 
 const initialCustomer = {
   fullName: "",
@@ -17,6 +17,29 @@ const initialCustomer = {
   address: "",
   note: "",
 };
+
+type ShopCheckoutGroup = {
+  shopId: string;
+  shopName: string;
+  items: CartItem[];
+  subtotal: number;
+};
+
+function groupItemsByShop(items: CartItem[]): ShopCheckoutGroup[] {
+  const groups = new Map<string, ShopCheckoutGroup>();
+  for (const item of items) {
+    const existing = groups.get(item.shopId) ?? {
+      shopId: item.shopId,
+      shopName: item.shopName,
+      items: [],
+      subtotal: 0,
+    };
+    existing.items.push(item);
+    existing.subtotal += Number(item.unitPrice || 0) * item.quantity;
+    groups.set(item.shopId, existing);
+  }
+  return [...groups.values()];
+}
 
 export function CheckoutPageClient({
   initialProductId,
@@ -39,16 +62,13 @@ export function CheckoutPageClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CheckoutOrderResponse | null>(null);
+  const shopGroups = useMemo(() => groupItemsByShop(items), [items]);
   const subtotal = useMemo(
     () =>
       items.reduce(
         (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
         0,
       ),
-    [items],
-  );
-  const shopIds = useMemo(
-    () => [...new Set(items.map((item) => item.shopId))],
     [items],
   );
 
@@ -95,12 +115,6 @@ export function CheckoutPageClient({
   const handleSubmit = async () => {
     if (!items.length) {
       setError("Cart is empty.");
-      return;
-    }
-    if (shopIds.length > 1) {
-      setError(
-        "Multi-shop checkout is coming soon. Please checkout one shop at a time.",
-      );
       return;
     }
     if (
@@ -154,47 +168,56 @@ export function CheckoutPageClient({
               data-testid="checkout-confirmation"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                Order created
+                Orders created
               </p>
               <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)]">
                 Confirmation
               </h1>
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Metric label="Order code" value={order.orderCode} />
-                <Metric label="Order id" value={order.orderId} />
+                <Metric label="Orders" value={String(order.orders.length)} />
+                <Metric label="Grand total" value={order.grandTotal} />
+                <Metric label="First order" value={order.orderCode} />
                 <Metric label="Status" value={order.status} />
-                <Metric label="Total" value={order.totalAmount} />
               </div>
-              <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-[1fr_auto]">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    Payment instructions
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                    {order.paymentInstructions ??
-                      "The shop did not provide additional payment instructions."}
-                  </p>
-                  <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-                    Keep the order code{" "}
-                    <span className="font-semibold text-[var(--foreground)]">
-                      {order.orderCode}
-                    </span>{" "}
-                    and phone{" "}
-                    <span className="font-semibold text-[var(--foreground)]">
-                      {order.customerPhone}
-                    </span>{" "}
-                    for future tracking.
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <Link
-                    href={`${order.trackingPath}?phone=${encodeURIComponent(order.customerPhone)}`}
-                    className="public-button-primary inline-flex px-5 py-3 text-sm"
-                    data-testid="confirmation-track-link"
+              <div className="mt-6 grid gap-4" data-testid="checkout-orders">
+                {order.orders.map((splitOrder, index) => (
+                  <article
+                    key={splitOrder.orderId}
+                    className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-[1fr_auto]"
+                    data-testid="checkout-order-card"
                   >
-                    Open tracking
-                  </Link>
-                </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {splitOrder.shopName}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        Order code{" "}
+                        <span className="font-semibold text-[var(--foreground)]">
+                          {splitOrder.orderCode}
+                        </span>{" "}
+                        · ID {splitOrder.orderId} · {splitOrder.itemsCount} item(s) ·{" "}
+                        {splitOrder.totalAmount}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        {splitOrder.paymentInstructions ??
+                          "This shop did not provide additional payment instructions."}
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <Link
+                        href={`${splitOrder.trackingPath}?phone=${encodeURIComponent(order.customerPhone)}`}
+                        className="public-button-primary inline-flex px-5 py-3 text-sm"
+                        data-testid={
+                          index === 0
+                            ? "confirmation-track-link"
+                            : "confirmation-track-link-extra"
+                        }
+                      >
+                        Open tracking
+                      </Link>
+                    </div>
+                  </article>
+                ))}
               </div>
             </section>
           ) : !items.length ? (
@@ -307,33 +330,49 @@ export function CheckoutPageClient({
                     className="mt-5 space-y-4"
                     data-testid="checkout-order-items"
                   >
-                    {items.map((item) => (
-                      <article
-                        key={`${item.productId}:${item.variantId}`}
-                        className="grid grid-cols-[64px_1fr] gap-3 rounded-[1.25rem] border border-[var(--border)] bg-white p-3"
+                    {shopGroups.map((group) => (
+                      <section
+                        key={group.shopId}
+                        className="space-y-3 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-3"
+                        data-testid="checkout-shop-group"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={
-                            item.imageUrl ??
-                            "https://placehold.co/120x120?text=No+Image"
-                          }
-                          alt={item.productName}
-                          className="h-16 w-16 rounded-xl object-cover"
-                        />
-                        <div className="min-w-0 text-sm">
-                          <p className="font-semibold text-[var(--foreground)]">
-                            {item.productName}
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            {group.shopName}
                           </p>
-                          <p className="mt-1 text-[var(--muted)]">
-                            {item.variantName}
-                          </p>
-                          <p className="mt-1 text-[var(--muted)]">
-                            Qty {item.quantity} x{" "}
-                            {Number(item.unitPrice || 0).toFixed(2)}
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            {group.subtotal.toFixed(2)}
                           </p>
                         </div>
-                      </article>
+                        {group.items.map((item) => (
+                          <article
+                            key={`${item.productId}:${item.variantId}`}
+                            className="grid grid-cols-[64px_1fr] gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={
+                                item.imageUrl ??
+                                "https://placehold.co/120x120?text=No+Image"
+                              }
+                              alt={item.productName}
+                              className="h-16 w-16 rounded-xl object-cover"
+                            />
+                            <div className="min-w-0 text-sm">
+                              <p className="font-semibold text-[var(--foreground)]">
+                                {item.productName}
+                              </p>
+                              <p className="mt-1 text-[var(--muted)]">
+                                {item.variantName}
+                              </p>
+                              <p className="mt-1 text-[var(--muted)]">
+                                Qty {item.quantity} x{" "}
+                                {Number(item.unitPrice || 0).toFixed(2)}
+                              </p>
+                            </div>
+                          </article>
+                        ))}
+                      </section>
                     ))}
                   </div>
                   <div className="mt-5 flex items-center justify-between text-sm">
@@ -342,12 +381,6 @@ export function CheckoutPageClient({
                       {subtotal.toFixed(2)}
                     </span>
                   </div>
-                  {shopIds.length > 1 ? (
-                    <p className="mt-4 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
-                      Multi-shop checkout is coming soon. Please checkout one
-                      shop at a time.
-                    </p>
-                  ) : null}
                 </section>
 
                 <section className="card-panel rounded-[2rem] px-6 py-6">
@@ -370,7 +403,7 @@ export function CheckoutPageClient({
                   </div>
                   <button
                     type="button"
-                    disabled={submitting || shopIds.length > 1}
+                    disabled={submitting}
                     onClick={() => void handleSubmit()}
                     className="public-button-primary mt-5 w-full px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     data-testid="checkout-submit"

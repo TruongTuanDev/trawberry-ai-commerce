@@ -86,6 +86,9 @@ type StoredProduct = {
   }>;
   variants: StoredVariant[];
   shop: {
+    id: string;
+    name: string;
+    paymentInstructions: string | null;
     status: string;
     sellerProfile: {
       approvalStatus: string;
@@ -197,6 +200,22 @@ describe('CheckoutController (e2e)', () => {
           currentShopId: 'shop-1',
         },
       },
+      {
+        id: 'seller-user-2',
+        email: 'seller-two@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        fullName: 'Seller Two',
+        phone: null,
+        role: 'SELLER',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: {
+          id: 'seller-profile-2',
+          userId: 'seller-user-2',
+          approvalStatus: 'APPROVED',
+          currentShopId: 'shop-2',
+        },
+      },
     ];
 
     shops = [
@@ -208,6 +227,15 @@ describe('CheckoutController (e2e)', () => {
         status: 'ACTIVE',
         paymentInstructions: 'Transfer to bank account 123.',
         sellerProfile: { userId: 'seller-user-1', approvalStatus: 'APPROVED' },
+      },
+      {
+        id: 'shop-2',
+        sellerProfileId: 'seller-profile-2',
+        name: 'Shop Two',
+        slug: 'shop-two',
+        status: 'ACTIVE',
+        paymentInstructions: 'Transfer to bank account 456.',
+        sellerProfile: { userId: 'seller-user-2', approvalStatus: 'APPROVED' },
       },
     ];
 
@@ -233,6 +261,9 @@ describe('CheckoutController (e2e)', () => {
           },
         ],
         shop: {
+          id: 'shop-1',
+          name: 'Shop One',
+          paymentInstructions: 'Transfer to bank account 123.',
           status: 'ACTIVE',
           sellerProfile: {
             approvalStatus: 'APPROVED',
@@ -286,8 +317,19 @@ describe('CheckoutController (e2e)', () => {
         seoSlug: null,
         brand: null,
         visibility: 'ACTIVE',
-        images: [],
+        images: [
+          {
+            id: 'image-2',
+            wbUrl: 'https://example.com/product-2.jpg',
+            localUrl: null,
+            isMain: true,
+            sortOrder: 0,
+          },
+        ],
         shop: {
+          id: 'shop-2',
+          name: 'Shop Two',
+          paymentInstructions: 'Transfer to bank account 456.',
           status: 'ACTIVE',
           sellerProfile: {
             approvalStatus: 'APPROVED',
@@ -299,9 +341,9 @@ describe('CheckoutController (e2e)', () => {
             productId: 'product-2',
             chrtId: BigInt(2002),
             isActive: true,
-            basePrice: decimal('50.00'),
+            basePrice: decimal('200.00'),
             discountPrice: null,
-            stockQuantity: 5,
+            stockQuantity: 7,
             reservedStock: 0,
             lowStockThreshold: 5,
             trackInventory: true,
@@ -553,6 +595,8 @@ describe('CheckoutController (e2e)', () => {
             paymentStatus: created.paymentStatus,
             totalAmount: created.totalAmount,
             shop: {
+              id: shop.id,
+              name: shop.name,
               paymentInstructions: shop.paymentInstructions,
             },
           };
@@ -716,6 +760,68 @@ describe('CheckoutController (e2e)', () => {
     ]);
   });
 
+  it('splits multi-shop checkout into one order per shop', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 2 },
+          { productId: 'product-2', variantId: 'variant-2', quantity: 3 },
+        ],
+        customer: {
+          fullName: 'Multi Shop Customer',
+          phone: '0123456789',
+          email: 'multi-shop@example.com',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(201);
+
+    const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.orders).toHaveLength(2);
+    expect(createBody.grandTotal).toBe('798');
+    expect(createBody.orderCodes).toHaveLength(2);
+    expect(createBody.orderId).toBe(createBody.orders[0].orderId);
+
+    const shopOneOrder = createBody.orders.find(
+      (order) => order.shopId === 'shop-1',
+    );
+    const shopTwoOrder = createBody.orders.find(
+      (order) => order.shopId === 'shop-2',
+    );
+    expect(shopOneOrder?.totalAmount).toBe('198');
+    expect(shopOneOrder?.itemsCount).toBe(2);
+    expect(shopTwoOrder?.totalAmount).toBe('600');
+    expect(shopTwoOrder?.itemsCount).toBe(3);
+    expect(products[0].variants[0].stockQuantity).toBe(8);
+    expect(products[1].variants[0].stockQuantity).toBe(4);
+
+    const sellerOneToken = await loginAndGetToken(app);
+    const sellerTwoToken = await loginAndGetToken(
+      app,
+      'seller-two@example.com',
+    );
+
+    const shopOneDetail = await request(app.getHttpServer())
+      .get(`/api/shops/shop-1/orders/${shopOneOrder!.orderId}`)
+      .set('Authorization', `Bearer ${sellerOneToken}`)
+      .expect(200);
+    expect(readBody<OrderResponseDto>(shopOneDetail).items).toHaveLength(1);
+
+    const shopTwoDetail = await request(app.getHttpServer())
+      .get(`/api/shops/shop-2/orders/${shopTwoOrder!.orderId}`)
+      .set('Authorization', `Bearer ${sellerTwoToken}`)
+      .expect(200);
+    expect(readBody<OrderResponseDto>(shopTwoDetail).items).toHaveLength(1);
+
+    await request(app.getHttpServer())
+      .get(`/api/shops/shop-1/orders/${shopTwoOrder!.orderId}`)
+      .set('Authorization', `Bearer ${sellerOneToken}`)
+      .expect(404);
+  });
+
   it('fails entire checkout when one variant has insufficient stock', async () => {
     await request(app.getHttpServer())
       .post('/api/checkout/orders')
@@ -757,12 +863,15 @@ describe('CheckoutController (e2e)', () => {
       .expect(400);
   });
 
-  it('fails when shop does not exist', async () => {
+  it('fails when one product does not exist and does not create partial orders', async () => {
     await request(app.getHttpServer())
       .post('/api/checkout/orders')
       .send({
-        shopId: '41c7fc54-9600-4ba1-bac3-2f98cf2aaf01',
-        items: [{ productId: 'product-1', quantity: 1 }],
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', quantity: 1 },
+          { productId: 'missing-product', quantity: 1 },
+        ],
         customer: {
           fullName: 'Alice Checkout',
           phone: '0123456789',
@@ -771,22 +880,9 @@ describe('CheckoutController (e2e)', () => {
         paymentMethod: 'MANUAL_TRANSFER',
       })
       .expect(404);
-  });
 
-  it('fails when product does not belong to shop', async () => {
-    await request(app.getHttpServer())
-      .post('/api/checkout/orders')
-      .send({
-        shopId: 'shop-1',
-        items: [{ productId: 'product-2', quantity: 1 }],
-        customer: {
-          fullName: 'Alice Checkout',
-          phone: '0123456789',
-          address: '123 Main St',
-        },
-        paymentMethod: 'CASH_ON_DELIVERY',
-      })
-      .expect(400);
+    expect(orders).toHaveLength(0);
+    expect(products[0].variants[0].stockQuantity).toBe(10);
   });
 
   it('fails when quantity is invalid', async () => {
@@ -841,11 +937,14 @@ describe('CheckoutController (e2e)', () => {
   });
 });
 
-async function loginAndGetToken(app: INestApplication<App>) {
+async function loginAndGetToken(
+  app: INestApplication<App>,
+  email = 'seller@example.com',
+) {
   const response = await request(app.getHttpServer())
     .post('/api/auth/login')
     .send({
-      email: 'seller@example.com',
+      email,
       password: 'password123',
     })
     .expect(200);

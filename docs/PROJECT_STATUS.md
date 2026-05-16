@@ -732,13 +732,15 @@ Implemented: seller-managed WB API product sync foundation.
 - Real WB mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
 # Project Status Update
 
-Cart + Multi-item Checkout MVP is in place:
+Cart, multi-item checkout, and multi-shop split orders are in place:
 
 - Customer cart in `frontend-next` localStorage.
 - Variant selection on product detail.
-- `/cart` page with quantity update, remove, subtotal, and checkout entry.
-- `/checkout` creates one multi-item order for one shop.
+- `/cart` page with quantity update, remove, shop grouping, shop subtotal, grand total, and checkout entry.
+- `/checkout` creates one order per shop when the cart contains multiple shops.
 - Backend validates current price/stock and deducts stock by variant transactionally.
+- If any item is invalid or out of stock, the entire checkout fails without partial orders.
 - Order/tracking/payment/seller detail views show all order items.
+- Payment proof and delivery remain per split shop order.
 
-Known gap: multi-shop checkout is intentionally blocked and remains a future phase.
+Known gap: there is no parent marketplace order code for combined receipt/support workflows yet.

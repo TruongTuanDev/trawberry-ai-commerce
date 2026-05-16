@@ -1428,3 +1428,22 @@ Deferred:
 
 - Multi-shop checkout split.
 - Server-persisted customer carts.
+
+# Phase Report: Multi-shop Checkout Split Orders
+
+Implemented:
+
+- Backend checkout groups validated cart items by `product.shopId`.
+- One checkout request can create multiple shop orders in one transaction.
+- Response keeps legacy first-order fields and adds `orders[]`, `orderCodes[]`, and `grandTotal`.
+- Frontend cart and checkout summaries group items by shop and show grand total.
+- Checkout confirmation shows one order card and tracking link per shop order.
+- Seller order visibility remains shop-scoped.
+- Payment proof and delivery remain per order/shop.
+- Added `smoke:multi-shop-checkout` and `test:e2e:multi-shop-checkout` scripts.
+
+Deferred:
+
+- Parent marketplace order id/code.
+- Combined multi-shop payment orchestration.
+- Combined customer tracking page.

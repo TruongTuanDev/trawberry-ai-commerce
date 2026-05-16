@@ -4,8 +4,8 @@
 
 - Cart persistence is frontend `localStorage` in `frontend-next`.
 - Backend checkout remains the source of truth for price, stock, totals, and order item snapshots.
-- MVP supports one shop per order. Frontend blocks carts with multiple `shopId` values and shows: `Multi-shop checkout is coming soon. Please checkout one shop at a time.`
-- Future phase: split a multi-shop cart into one order per shop or introduce a marketplace parent order.
+- Cart supports products from multiple shops.
+- Checkout splits a multi-shop cart into one order per shop. There is no parent marketplace order in this phase.
 
 ## Customer flow
 
@@ -14,7 +14,7 @@
 3. `Add to cart` stores/merges the item by `productId + variantId`.
 4. `/cart` supports quantity update, remove, clear, subtotal, and checkout.
 5. `/checkout` submits cart items to `POST /api/checkout/orders`.
-6. Backend validates every item, creates a multi-item order, deducts variant stock transactionally, and returns order tracking data.
+6. Backend validates every item, groups valid items by shop, creates one order per shop, deducts variant stock transactionally, and returns all order codes.
 
 ## Backend guarantees
 
@@ -24,8 +24,12 @@
 - `trackInventory=true` variants require enough `stockQuantity`.
 - All stock deductions happen in one transaction. Any failed item blocks the whole checkout.
 - Order items snapshot product name, variant label, seller SKU, barcode, image, unit price, quantity, and line total.
+- Multi-shop carts fail atomically: if one shop item is invalid or out of stock, no shop order is created and no stock is deducted.
+- Payment proof, seller review, delivery, and customer tracking remain per shop order.
 
 ## Verification
 
 - Backend: `npm run smoke:cart-checkout`
+- Backend multi-shop: `npm run smoke:multi-shop-checkout`
 - Frontend: `npm run test:e2e:cart-checkout`
+- Frontend multi-shop: `npm run test:e2e:multi-shop-checkout`

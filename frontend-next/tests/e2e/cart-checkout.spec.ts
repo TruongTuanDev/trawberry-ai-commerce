@@ -3,59 +3,199 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
-async function backendJson<T>(request: APIRequestContext, path: string) {
-  const response = await request.fetch(`${backendBaseUrl}${path}`);
-  expect(response.ok(), `GET ${path} -> ${response.status()}`).toBeTruthy();
+async function backendJson<T>(
+  request: APIRequestContext,
+  url: string,
+  options?: Parameters<APIRequestContext["fetch"]>[1],
+) {
+  const response = await request.fetch(`${backendBaseUrl}${url}`, options);
+  expect(
+    response.ok(),
+    `${options?.method ?? "GET"} ${url} -> ${response.status()}: ${await response.text()}`,
+  ).toBeTruthy();
   return (await response.json()) as T;
+}
+
+async function approveSeller(request: APIRequestContext, email: string) {
+  const password = "password123";
+  const register = await backendJson<{ userId: string }>(
+    request,
+    "/api/auth/register",
+    {
+      method: "POST",
+      data: {
+        email,
+        password,
+        fullName: "Cart Checkout Seller",
+        role: "SELLER",
+      },
+    },
+  );
+  const sellerLogin = await backendJson<{ accessToken: string }>(
+    request,
+    "/api/auth/login",
+    {
+      method: "POST",
+      data: { email, password },
+    },
+  );
+  await backendJson(request, "/api/seller/onboarding/profile", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
+    data: {
+      legalType: "IP",
+      legalName: "Cart Checkout Seller IP",
+      inn: "123456789012",
+      ogrn: "1234567890123",
+      legalAddress: "Moscow, Cart Checkout Street 1",
+      contactName: "Cart Checkout Seller",
+      contactPhone: "+79990000007",
+      contactEmail: email,
+    },
+  });
+  const document = await backendJson<{ id: string }>(
+    request,
+    "/api/seller/onboarding/documents",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
+      multipart: {
+        documentType: "INN",
+        file: {
+          name: "seller-inn.pdf",
+          mimeType: "application/pdf",
+          buffer: Buffer.from("%PDF-1.4\n% cart checkout e2e\n"),
+        },
+      },
+    },
+  );
+  const adminLogin = await backendJson<{ accessToken: string }>(
+    request,
+    "/api/auth/login",
+    {
+      method: "POST",
+      data: {
+        email: "demo-admin@trawberry.local",
+        password: "DemoAdmin123!",
+      },
+    },
+  );
+  await backendJson(
+    request,
+    `/api/admin/sellers/${register.userId}/documents/${document.id}/approve`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
+      data: {},
+    },
+  );
+  await backendJson(request, `/api/admin/sellers/${register.userId}/approve`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
+    data: {},
+  });
+
+  return { token: sellerLogin.accessToken, password };
+}
+
+async function createTwoVariantProduct(
+  request: APIRequestContext,
+  input: {
+    token: string;
+    stamp: number;
+  },
+) {
+  const shop = await backendJson<{ id: string; name: string }>(
+    request,
+    "/api/shops",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+      data: {
+        name: `E2E Cart Shop ${input.stamp}`,
+        slug: `e2e-cart-shop-${input.stamp}`,
+        paymentInstructions: "Manual transfer for cart checkout",
+      },
+    },
+  );
+  const wbNmId = 7100000 + (input.stamp % 100000);
+  const product = await backendJson<{
+    id: string;
+    variants: Array<{ id: string }>;
+  }>(request, `/api/shops/${shop.id}/products`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {
+      wbNmId,
+      wbTitle: `E2E Cart Product ${input.stamp}`,
+      localTitle: `E2E Cart Product ${input.stamp}`,
+      localDescription: "E2E cart product with two variants",
+      visibility: "ACTIVE",
+      variants: [
+        {
+          chrtId: wbNmId + 10,
+          techSize: "S",
+          basePrice: 120,
+          stockQuantity: 8,
+          trackInventory: true,
+          isActive: true,
+        },
+        {
+          chrtId: wbNmId + 20,
+          techSize: "M",
+          basePrice: 144,
+          stockQuantity: 6,
+          trackInventory: true,
+          isActive: true,
+        },
+      ],
+    },
+  });
+
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/images`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    multipart: {
+      files: {
+        name: `cart-product-${input.stamp}.png`,
+        mimeType: "image/png",
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      },
+    },
+  });
+
+  return { shop, product };
 }
 
 test("customer can cart checkout multiple items and track them", async ({
   page,
   request,
 }) => {
-  test.setTimeout(90000);
+  test.setTimeout(120000);
 
-  const products = await backendJson<{
-    items: Array<{
-      id: string;
-      shopId: string;
-      name: string;
-      availableQuantity: number;
-    }>;
-  }>(request, "/api/public/products?inStock=true&size=12");
-  const first = products.items.find((item) => item.availableQuantity >= 2);
-  expect(first?.id).toBeTruthy();
-  const second = products.items.find(
-    (item) => item.shopId === first?.shopId && item.id !== first.id,
-  );
-  const firstDetail = await backendJson<{
-    variants: Array<{ id: string; inStock: boolean }>;
-  }>(request, `/api/public/products/${first!.id}`);
-  const secondVariant = firstDetail.variants.filter(
-    (variant) => variant.inStock,
-  )[1];
-  expect(
-    second?.id || secondVariant?.id,
-    "Need two same-shop products or two in-stock variants on one product for cart checkout E2E",
-  ).toBeTruthy();
+  const stamp = Date.now();
+  const seller = await approveSeller(request, `cart-checkout-${stamp}@example.com`);
+  const created = await createTwoVariantProduct(request, {
+    token: seller.token,
+    stamp,
+  });
 
-  await page.goto(`/products/${first!.id}`);
-  await expect(page.getByRole("heading")).toBeVisible();
+  await page.goto(`/products/${created.product.id}`);
+  await expect(
+    page.getByRole("heading", { name: `E2E Cart Product ${stamp}` }),
+  ).toBeVisible();
   await page.getByTestId("product-quantity-input").fill("1");
   await page.getByTestId("add-to-cart").click();
   await expect(page.getByText("Item added to cart.")).toBeVisible();
 
-  if (second) {
-    await page.goto(`/products/${second.id}`);
-    await page.getByTestId("product-quantity-input").fill("1");
-    await page.getByTestId("add-to-cart").click();
-  } else {
-    await page
-      .getByTestId("product-variant-select")
-      .selectOption(secondVariant!.id);
-    await page.getByTestId("product-quantity-input").fill("1");
-    await page.getByTestId("add-to-cart").click();
-  }
+  await page
+    .getByTestId("product-variant-select")
+    .selectOption(created.product.variants[1].id);
+  await page.getByTestId("product-quantity-input").fill("1");
+  await page.getByTestId("add-to-cart").click();
 
   await page.goto("/cart");
   await expect(page.getByTestId("cart-items")).toBeVisible();

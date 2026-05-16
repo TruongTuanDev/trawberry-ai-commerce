@@ -180,3 +180,5 @@ Public tracking responses now return every order item created by cart checkout.
 - line total
 
 Customers can track multi-item orders through the existing order id/code plus phone lookup routes.
+
+Multi-shop checkout returns multiple shop orders. Customers track each order separately with that order's `orderCode + phone`; there is no combined tracking endpoint or parent marketplace order in this phase.

@@ -162,6 +162,9 @@ Useful script:
 
 ```bash
 npm run smoke:cart-checkout
+npm run smoke:multi-shop-checkout
 ```
 
 The smoke creates one product with two variants, checks out both variants in one order, verifies seller/tracking item counts, verifies stock deduction, and confirms over-stock checkout fails.
+
+The multi-shop smoke creates two approved sellers, two shops, and two products, then submits one cart checkout that creates one order per shop. It verifies grand total, per-shop totals, stock deduction for both variants, seller isolation, tracking for both order codes, payment queue isolation, and atomic failure on insufficient stock.

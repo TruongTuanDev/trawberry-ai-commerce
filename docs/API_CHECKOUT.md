@@ -73,13 +73,13 @@ Request body:
 ```
 
 Validation:
-- `shopId` is required
+- `shopId` is retained for backward compatibility with single-shop callers; split-order checkout groups by each product's current shop
 - `items` must contain at least one item
 - `quantity >= 1`
 - shop must exist and be `ACTIVE`
 - seller approval must be `APPROVED`
 - every product must exist
-- every product must belong to the requested shop
+- products may belong to different shops; each shop receives its own order
 - inactive products are rejected when `visibility !== ACTIVE`
 - products without at least one image are rejected
 - active checkout variant price must be greater than `0`
@@ -99,6 +99,8 @@ Order creation behavior:
 - variant stock is deducted immediately by decreasing `stockQuantity`
 - variant stock is reserved by increasing `reservedStock`
 - deduction and reservation are executed atomically inside the checkout transaction to prevent oversell
+- multi-shop cart checkout creates one order per `product.shopId`
+- any validation or stock failure blocks the entire checkout and prevents partial order creation
 
 Response:
 
@@ -111,9 +113,29 @@ Response:
   "totalAmount": "198",
   "paymentInstructions": "Transfer to bank account 123.",
   "trackingPath": "/orders/<orderId>",
-  "customerPhone": "0123456789"
+  "customerPhone": "0123456789",
+  "orders": [
+    {
+      "orderId": "uuid",
+      "orderCode": "ORD-1715512345678-123",
+      "shopId": "shop-uuid",
+      "shopName": "Shop One",
+      "status": "PENDING",
+      "paymentStatus": "PENDING",
+      "totalAmount": "198",
+      "paymentInstructions": "Transfer to bank account 123.",
+      "trackingPath": "/orders/<orderId>",
+      "itemsCount": 2
+    }
+  ],
+  "orderCodes": ["ORD-1715512345678-123"],
+  "grandTotal": "198"
 }
 ```
+
+Compatibility:
+- `orderId`, `orderCode`, `status`, `paymentStatus`, `totalAmount`, `paymentInstructions`, and `trackingPath` describe the first created order for legacy single-order consumers.
+- New cart consumers should read `orders[]`, `orderCodes[]`, and `grandTotal`.
 
 Tracking follow-up:
 - customer can continue directly to `/orders/:orderId`
@@ -144,9 +166,9 @@ Coverage currently includes:
 ## Known Limitations
 
 - Payment flow is still manual and informational only.
-- Checkout currently chooses the first active priced variant for a product.
+- Checkout chooses the requested `variantId` when provided, otherwise it falls back to the first active priced variant for legacy callers.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
-- Inventory is tracked at the variant layer, but the current customer checkout MVP still selects the first active priced variant for each product.
+- Multi-shop checkout has no parent marketplace order code yet; tracking and payment proof are per created shop order.
 
 ## WB Import Checkout Verification
 
@@ -190,4 +212,4 @@ Rules:
 - `variantId` is supported and should be sent by the cart UI. Legacy single-product requests without `variantId` still resolve the first checkout-ready variant.
 - Frontend prices are ignored. The backend calculates `unitPrice`, `lineTotal`, and `totalAmount`.
 - If `trackInventory=true`, stock must be sufficient. Any invalid item fails the entire checkout.
-- MVP requires one shop per order.
+- One checkout request can contain multiple shops. The backend creates one order per shop and returns `orders[]` plus `grandTotal`.

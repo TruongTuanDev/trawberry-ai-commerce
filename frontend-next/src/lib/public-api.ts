@@ -101,6 +101,20 @@ export type CheckoutOrderResponse = {
   paymentInstructions: string | null;
   trackingPath: string;
   customerPhone: string;
+  orders: Array<{
+    orderId: string;
+    orderCode: string;
+    shopId: string;
+    shopName: string;
+    status: string;
+    paymentStatus: string;
+    totalAmount: string;
+    paymentInstructions: string | null;
+    trackingPath: string;
+    itemsCount: number;
+  }>;
+  orderCodes: string[];
+  grandTotal: string;
 };
 
 export type PublicTrackedOrder = {

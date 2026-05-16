@@ -8,6 +8,7 @@ Current scope is limited to seller order management:
 - get order detail
 - update fulfillment status
 - read new orders created by the Checkout MVP
+- read split orders created by multi-shop checkout, scoped to the seller's shop only
 - read latest delivery shipment summary created by the delivery foundation
 
 This is not yet a full payments module and does not include:
@@ -169,3 +170,5 @@ Each item includes the legacy fields plus additive cart fields:
 - `productImageSnapshot`
 
 Existing single-item orders remain compatible because the original snapshot fields are still returned.
+
+Multi-shop checkout creates separate orders per shop. Seller order list/detail endpoints do not expose sibling shop orders; each seller sees only the order whose `shopId` matches the active seller shop.

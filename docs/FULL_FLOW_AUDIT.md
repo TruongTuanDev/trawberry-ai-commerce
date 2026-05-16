@@ -289,9 +289,17 @@ New WB API sync lives only in `backend-nest` and `frontend-next`. Tests and smok
 
 Phase Cart + Multi-item Checkout is implemented in the new stack only:
 
-- `frontend-next` owns a localStorage cart and blocks multi-shop checkout for MVP.
+- `frontend-next` owns a localStorage cart, groups cart/checkout summary by shop, and submits multi-shop carts for split-order checkout.
 - `backend-nest` accepts multi-item checkout payloads and recalculates trusted totals.
 - Seller order detail, payment detail, and customer tracking render multiple order items.
 - Legacy `strawberry-backend` and `strawberry-frontend` were not modified.
 
-Future audit item: design a marketplace parent order or automatic per-shop split for multi-shop carts.
+Future audit item: design an optional marketplace parent order for combined receipts/support. Current behavior automatically splits multi-shop carts into per-shop orders.
+
+# Multi-shop Checkout Audit Update
+
+- Backend `POST /api/checkout/orders` accepts items from multiple shops, validates all items before writes, creates one order per shop in one transaction, and returns `orders[]`, `orderCodes[]`, and `grandTotal`.
+- Existing single-order fields remain in the checkout response for backward compatibility.
+- Seller order/payment queues remain shop-scoped, so sellers only see their own split order.
+- Customer tracking remains per order code plus phone.
+- Verification targets: `backend-nest npm run smoke:multi-shop-checkout` and `frontend-next npm run test:e2e:multi-shop-checkout`.

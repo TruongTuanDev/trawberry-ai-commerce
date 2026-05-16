@@ -417,6 +417,9 @@ Useful script:
 
 ```bash
 npm run test:e2e:cart-checkout
+npm run test:e2e:multi-shop-checkout
 ```
 
 The public cart is stored in browser localStorage and checkout submits `items[]` with `productId`, `variantId`, and `quantity`.
+
+The cart and checkout pages group multi-shop carts by shop, show shop subtotals plus a grand total, and render one confirmation card per split shop order. Customers track each created order separately.

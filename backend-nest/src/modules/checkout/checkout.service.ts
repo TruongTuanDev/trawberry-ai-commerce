@@ -23,6 +23,9 @@ type CheckoutProductRecord = {
   images: ProductImage[];
   variants: ProductVariant[];
   shop: {
+    id: string;
+    name: string;
+    paymentInstructions: string | null;
     status: string;
     sellerProfile: {
       approvalStatus: string;
@@ -36,6 +39,28 @@ type NormalizedCheckoutItem = {
   quantity: number;
 };
 
+type ValidatedCheckoutItem = {
+  input: NormalizedCheckoutItem;
+  product: CheckoutProductRecord;
+  variant: ProductVariant;
+  unitPrice: Prisma.Decimal;
+  lineTotal: Prisma.Decimal;
+};
+
+type CreatedCheckoutOrder = {
+  id: string;
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: Prisma.Decimal;
+  shop: {
+    id: string;
+    name: string;
+    paymentInstructions: string | null;
+  };
+  itemsCount: number;
+};
+
 @Injectable()
 export class CheckoutService {
   constructor(private readonly prisma: PrismaService) {}
@@ -44,34 +69,6 @@ export class CheckoutService {
     dto: CreateCheckoutOrderDto,
     user?: AuthenticatedUser | null,
   ) {
-    const shop = await this.prisma.shop.findUnique({
-      where: { id: dto.shopId },
-      select: {
-        id: true,
-        name: true,
-        paymentInstructions: true,
-        status: true,
-        sellerProfile: {
-          select: {
-            approvalStatus: true,
-          },
-        },
-      },
-    });
-
-    if (!shop) {
-      throw new NotFoundException(`Shop ${dto.shopId} was not found.`);
-    }
-
-    if (
-      shop.status !== 'ACTIVE' ||
-      shop.sellerProfile.approvalStatus !== 'APPROVED'
-    ) {
-      throw new BadRequestException(
-        `Shop ${dto.shopId} is not available for checkout.`,
-      );
-    }
-
     const normalizedRequestItems = this.normalizeItems(dto.items);
     const distinctProductIds = [
       ...new Set(normalizedRequestItems.map((item) => item.productId)),
@@ -94,6 +91,9 @@ export class CheckoutService {
         },
         shop: {
           select: {
+            id: true,
+            name: true,
+            paymentInstructions: true,
             status: true,
             sellerProfile: {
               select: {
@@ -116,12 +116,6 @@ export class CheckoutService {
       const product = productMap.get(item.productId);
       if (!product) {
         throw new NotFoundException(`Product ${item.productId} was not found.`);
-      }
-
-      if (product.shopId !== dto.shopId) {
-        throw new BadRequestException(
-          `Product ${item.productId} does not belong to shop ${dto.shopId}.`,
-        );
       }
 
       if (
@@ -168,10 +162,7 @@ export class CheckoutService {
     });
 
     const customerId = await this.resolveCustomerId(dto, user);
-    const totalAmount = normalizedItems.reduce(
-      (sum, item) => sum.plus(item.lineTotal),
-      new Prisma.Decimal(0),
-    );
+    const itemsByShop = this.groupItemsByShop(normalizedItems);
 
     const created = await this.prisma.$transaction(async (tx) => {
       for (const item of normalizedItems) {
@@ -202,72 +193,89 @@ export class CheckoutService {
         }
       }
 
-      return tx.order.create({
-        data: {
-          id: randomUUID(),
-          customerId,
-          shopId: dto.shopId,
-          orderNumber: this.buildOrderNumber(),
-          status: 'PENDING',
-          paymentStatus:
-            dto.paymentMethod === 'CASH_ON_DELIVERY' ? 'UNPAID' : 'PENDING',
-          totalAmount,
-          shippingAddress: dto.customer.address,
-          customerName: dto.customer.fullName.trim(),
-          customerPhone: dto.customer.phone.trim(),
-          customerEmail: dto.customer.email?.trim() || null,
-          customerNote: dto.customer.note?.trim() || null,
-          shippingCost: new Prisma.Decimal(0),
-          shippingMethodName: dto.paymentMethod,
-          items: {
-            create: normalizedItems.map((item) => ({
-              id: randomUUID(),
-              productId: item.product.id,
-              variantId: item.variant.id,
-              quantity: item.input.quantity,
-              priceAtPurchase: item.unitPrice,
-              unitPrice: item.unitPrice,
-              lineTotal: item.lineTotal,
-              productTitleSnapshot:
-                item.product.localTitle ?? item.product.wbTitle,
-              productSlugSnapshot: item.product.seoSlug ?? item.product.id,
-              variantNameSnapshot: this.buildVariantName(item.variant),
-              variantAttributesSnapshot: this.buildVariantName(item.variant),
-              productImageSnapshot:
-                item.product.images[0]?.localUrl ??
-                item.product.images[0]?.wbUrl ??
-                null,
-              sellerSkuSnapshot:
-                item.variant.sellerSku ?? item.product.sellerSku ?? null,
-              barcodeSnapshot: item.variant.wbBarcode ?? null,
-              wbNmIdSnapshot: item.product.wbNmId,
-            })),
-          },
-        },
-        select: {
-          id: true,
-          orderNumber: true,
-          status: true,
-          paymentStatus: true,
-          totalAmount: true,
-          shop: {
-            select: {
-              paymentInstructions: true,
+      const createdOrders: CreatedCheckoutOrder[] = [];
+      for (const [, shopItems] of itemsByShop) {
+        const shop = shopItems[0].product.shop;
+        const totalAmount = this.sumLineTotals(shopItems);
+
+        const order = await tx.order.create({
+          data: {
+            id: randomUUID(),
+            customerId,
+            shopId: shop.id,
+            orderNumber: this.buildOrderNumber(),
+            status: 'PENDING',
+            paymentStatus:
+              dto.paymentMethod === 'CASH_ON_DELIVERY' ? 'UNPAID' : 'PENDING',
+            totalAmount,
+            shippingAddress: dto.customer.address,
+            customerName: dto.customer.fullName.trim(),
+            customerPhone: dto.customer.phone.trim(),
+            customerEmail: dto.customer.email?.trim() || null,
+            customerNote: dto.customer.note?.trim() || null,
+            shippingCost: new Prisma.Decimal(0),
+            shippingMethodName: dto.paymentMethod,
+            items: {
+              create: shopItems.map((item) => this.buildOrderItemCreate(item)),
             },
           },
-        },
-      });
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            paymentStatus: true,
+            totalAmount: true,
+            shop: {
+              select: {
+                id: true,
+                name: true,
+                paymentInstructions: true,
+              },
+            },
+          },
+        });
+        createdOrders.push({
+          ...order,
+          itemsCount: shopItems.reduce(
+            (sum, item) => sum + item.input.quantity,
+            0,
+          ),
+        });
+      }
+
+      return createdOrders;
     });
 
+    const firstOrder = created[0];
+    const grandTotal = created.reduce(
+      (sum, order) => sum.plus(order.totalAmount),
+      new Prisma.Decimal(0),
+    );
+    const orders = created.map((order) => ({
+      orderId: order.id,
+      orderCode: order.orderNumber,
+      shopId: order.shop.id,
+      shopName: order.shop.name,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalAmount: order.totalAmount.toString(),
+      paymentInstructions: order.shop.paymentInstructions,
+      trackingPath: `/orders/${order.id}`,
+      itemsCount: order.itemsCount,
+    }));
+
     return {
-      orderId: created.id,
-      orderCode: created.orderNumber,
-      status: created.status,
-      paymentStatus: created.paymentStatus,
-      totalAmount: created.totalAmount.toString(),
-      paymentInstructions: created.shop.paymentInstructions,
-      trackingPath: `/orders/${created.id}`,
+      orderId: firstOrder.id,
+      orderCode: firstOrder.orderNumber,
+      status: firstOrder.status,
+      paymentStatus: firstOrder.paymentStatus,
+      totalAmount: firstOrder.totalAmount.toString(),
+      paymentInstructions: firstOrder.shop.paymentInstructions,
+      trackingPath: `/orders/${firstOrder.id}`,
       customerPhone: dto.customer.phone.trim(),
+      orders,
+      orderCodes: orders.map((order) => order.orderCode),
+      grandTotal: grandTotal.toString(),
     };
   }
 
@@ -357,6 +365,47 @@ export class CheckoutService {
 
   private resolveAvailableStock(variant: ProductVariant) {
     return Math.max(0, variant.stockQuantity);
+  }
+
+  private groupItemsByShop(items: ValidatedCheckoutItem[]) {
+    const byShop = new Map<string, ValidatedCheckoutItem[]>();
+    for (const item of items) {
+      const shopItems = byShop.get(item.product.shopId) ?? [];
+      shopItems.push(item);
+      byShop.set(item.product.shopId, shopItems);
+    }
+    return byShop;
+  }
+
+  private sumLineTotals(items: ValidatedCheckoutItem[]) {
+    return items.reduce(
+      (sum, item) => sum.plus(item.lineTotal),
+      new Prisma.Decimal(0),
+    );
+  }
+
+  private buildOrderItemCreate(item: ValidatedCheckoutItem) {
+    return {
+      id: randomUUID(),
+      productId: item.product.id,
+      variantId: item.variant.id,
+      quantity: item.input.quantity,
+      priceAtPurchase: item.unitPrice,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+      productTitleSnapshot: item.product.localTitle ?? item.product.wbTitle,
+      productSlugSnapshot: item.product.seoSlug ?? item.product.id,
+      variantNameSnapshot: this.buildVariantName(item.variant),
+      variantAttributesSnapshot: this.buildVariantName(item.variant),
+      productImageSnapshot:
+        item.product.images[0]?.localUrl ??
+        item.product.images[0]?.wbUrl ??
+        null,
+      sellerSkuSnapshot:
+        item.variant.sellerSku ?? item.product.sellerSku ?? null,
+      barcodeSnapshot: item.variant.wbBarcode ?? null,
+      wbNmIdSnapshot: item.product.wbNmId,
+    };
   }
 
   private buildVariantName(variant: ProductVariant) {

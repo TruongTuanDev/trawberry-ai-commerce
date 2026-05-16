@@ -3,7 +3,30 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { PublicShell } from "@/components/public/public-shell";
-import { useCartStore } from "@/stores/cart-store";
+import { type CartItem, useCartStore } from "@/stores/cart-store";
+
+type ShopCartGroup = {
+  shopId: string;
+  shopName: string;
+  items: CartItem[];
+  subtotal: number;
+};
+
+function groupItemsByShop(items: CartItem[]): ShopCartGroup[] {
+  const groups = new Map<string, ShopCartGroup>();
+  for (const item of items) {
+    const existing = groups.get(item.shopId) ?? {
+      shopId: item.shopId,
+      shopName: item.shopName,
+      items: [],
+      subtotal: 0,
+    };
+    existing.items.push(item);
+    existing.subtotal += Number(item.unitPrice || 0) * item.quantity;
+    groups.set(item.shopId, existing);
+  }
+  return [...groups.values()];
+}
 
 export function CartPageClient() {
   const items = useCartStore((state) => state.items);
@@ -19,7 +42,7 @@ export function CartPageClient() {
       ),
     [items],
   );
-  const shopCount = new Set(items.map((item) => item.shopId)).size;
+  const shopGroups = useMemo(() => groupItemsByShop(items), [items]);
 
   useEffect(() => {
     hydrate();
@@ -69,107 +92,128 @@ export function CartPageClient() {
           ) : (
             <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
               <section className="space-y-4" data-testid="cart-items">
-                {items.map((item) => (
-                  <article
-                    key={`${item.productId}:${item.variantId}`}
-                    className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[96px_1fr_180px_120px]"
+                {shopGroups.map((group) => (
+                  <section
+                    key={group.shopId}
+                    className="space-y-4 rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] p-4"
+                    data-testid="cart-shop-group"
                   >
-                    <div className="overflow-hidden rounded-2xl bg-[var(--panel)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={
-                          item.imageUrl ??
-                          "https://placehold.co/160x160?text=No+Image"
-                        }
-                        alt={item.productName}
-                        className="h-24 w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {item.productName}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
-                        {item.variantName}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        {item.shopName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                        Quantity
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateQuantity(
-                              item.productId,
-                              item.variantId,
-                              item.quantity - 1,
-                            )
-                          }
-                          className="public-button-secondary h-10 w-10"
-                          aria-label="Decrease quantity"
-                        >
-                          -
-                        </button>
-                        <input
-                          value={item.quantity}
-                          min={1}
-                          max={
-                            item.trackInventory
-                              ? item.availableQuantity
-                              : undefined
-                          }
-                          type="number"
-                          onChange={(event) =>
-                            updateQuantity(
-                              item.productId,
-                              item.variantId,
-                              Number(event.target.value),
-                            )
-                          }
-                          className="public-input w-20 text-center"
-                          data-testid="cart-quantity-input"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateQuantity(
-                              item.productId,
-                              item.variantId,
-                              item.quantity + 1,
-                            )
-                          }
-                          className="public-button-secondary h-10 w-10"
-                          aria-label="Increase quantity"
-                        >
-                          +
-                        </button>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          Shop
+                        </p>
+                        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+                          {group.shopName}
+                        </h2>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeItem(item.productId, item.variantId)
-                        }
-                        className="mt-3 text-sm font-semibold text-[var(--accent)]"
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {group.subtotal.toFixed(2)}
+                      </p>
+                    </div>
+                    {group.items.map((item) => (
+                      <article
+                        key={`${item.productId}:${item.variantId}`}
+                        className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[96px_1fr_180px_120px]"
                       >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="text-sm md:text-right">
-                      <p className="text-[var(--muted)]">
-                        Unit {Number(item.unitPrice || 0).toFixed(2)}
-                      </p>
-                      <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
-                        {(Number(item.unitPrice || 0) * item.quantity).toFixed(
-                          2,
-                        )}
-                      </p>
-                    </div>
-                  </article>
+                        <div className="overflow-hidden rounded-2xl bg-[var(--panel)]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={
+                              item.imageUrl ??
+                              "https://placehold.co/160x160?text=No+Image"
+                            }
+                            alt={item.productName}
+                            className="h-24 w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            {item.productName}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--muted)]">
+                            {item.variantName}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            {item.shopName}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                            Quantity
+                          </p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateQuantity(
+                                  item.productId,
+                                  item.variantId,
+                                  item.quantity - 1,
+                                )
+                              }
+                              className="public-button-secondary h-10 w-10"
+                              aria-label="Decrease quantity"
+                            >
+                              -
+                            </button>
+                            <input
+                              value={item.quantity}
+                              min={1}
+                              max={
+                                item.trackInventory
+                                  ? item.availableQuantity
+                                  : undefined
+                              }
+                              type="number"
+                              onChange={(event) =>
+                                updateQuantity(
+                                  item.productId,
+                                  item.variantId,
+                                  Number(event.target.value),
+                                )
+                              }
+                              className="public-input w-20 text-center"
+                              data-testid="cart-quantity-input"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateQuantity(
+                                  item.productId,
+                                  item.variantId,
+                                  item.quantity + 1,
+                                )
+                              }
+                              className="public-button-secondary h-10 w-10"
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeItem(item.productId, item.variantId)
+                            }
+                            className="mt-3 text-sm font-semibold text-[var(--accent)]"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="text-sm md:text-right">
+                          <p className="text-[var(--muted)]">
+                            Unit {Number(item.unitPrice || 0).toFixed(2)}
+                          </p>
+                          <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
+                            {(
+                              Number(item.unitPrice || 0) * item.quantity
+                            ).toFixed(2)}
+                          </p>
+                        </div>
+                      </article>
+                    ))}
+                  </section>
                 ))}
               </section>
 
@@ -178,21 +222,14 @@ export function CartPageClient() {
                   Summary
                 </p>
                 <div className="mt-5 flex items-center justify-between text-sm">
-                  <span className="text-[var(--muted)]">Subtotal</span>
+                  <span className="text-[var(--muted)]">Grand total</span>
                   <span className="font-semibold text-[var(--foreground)]">
                     {subtotal.toFixed(2)}
                   </span>
                 </div>
-                {shopCount > 1 ? (
-                  <p className="mt-5 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
-                    Multi-shop checkout is coming soon. Please checkout one shop
-                    at a time.
-                  </p>
-                ) : null}
                 <Link
                   href="/checkout"
-                  aria-disabled={shopCount > 1}
-                  className={`mt-5 inline-flex w-full justify-center px-5 py-3 text-sm ${shopCount > 1 ? "pointer-events-none rounded-full bg-slate-200 font-semibold text-slate-500" : "public-button-primary"}`}
+                  className="public-button-primary mt-5 inline-flex w-full justify-center px-5 py-3 text-sm"
                   data-testid="cart-checkout"
                 >
                   Checkout
