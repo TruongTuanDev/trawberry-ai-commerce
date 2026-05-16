@@ -18,6 +18,7 @@
     "smoke:cart-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-cart-checkout.ps1",
     "smoke:multi-shop-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-multi-shop-checkout.ps1",
     "smoke:customer-order-history": "powershell -ExecutionPolicy Bypass -File scripts/smoke-customer-order-history.ps1",
+    "smoke:support-cases": "powershell -ExecutionPolicy Bypass -File scripts/smoke-support-cases.ps1",
     "smoke:delivery": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery.ps1",
     "smoke:manual-delivery": "powershell -ExecutionPolicy Bypass -File scripts/smoke-manual-delivery.ps1",
     "smoke:delivery-exceptions": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-exceptions.ps1",

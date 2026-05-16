@@ -58,3 +58,13 @@ The receipt page shows all child shop orders, order codes, items, payment status
 
 - Backend: `npm run smoke:customer-order-history`
 - Frontend: `npm run test:e2e:customer-order-history`
+
+## Support Addendum
+
+Customer receipt detail now includes support workflow:
+
+- checkout-level support case creation
+- child-order support case creation
+- support case summary on receipt detail
+- public thread replies for customer
+- internal admin messages remain hidden from customer responses

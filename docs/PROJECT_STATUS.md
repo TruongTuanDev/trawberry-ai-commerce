@@ -747,3 +747,24 @@ Cart, multi-item checkout, multi-shop split orders, customer accounts, and paren
 - Payment proof and delivery remain per split shop order.
 
 Known gap: parent receipts do not yet orchestrate combined payment routing, refunds, or support case management.
+
+# Support Cases Phase Status
+
+Implemented:
+
+- parent receipt support cases in backend NestJS
+- customer support workflow on `/customer/orders/[checkoutCode]`
+- admin support queue on `/admin/support-cases`
+- seller support queue on `/seller/support-cases`
+- internal admin message filtering for customer and seller responses
+
+Verification:
+
+- `backend-nest/test/support-cases.e2e-spec.ts`: pass
+- `npm run smoke:support-cases`: pass
+- `npm run test:e2e:support-cases`: pass
+
+Updated gap:
+
+- support case management is now covered
+- parent-level combined payment routing and refund orchestration are still future work

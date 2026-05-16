@@ -168,6 +168,13 @@ export type SellerOrderListItem = {
   updatedAt: string;
   customerCompletedAt: string | null;
   delivery: SellerOrderDeliverySummary | null;
+  supportCases: Array<{
+    id: string;
+    issueType: string;
+    status: string;
+    subject: string;
+    createdAt: string;
+  }>;
   items: Array<{
     id: string;
     productId: string | null;
@@ -180,6 +187,38 @@ export type SellerOrderListItem = {
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
     variantNameSnapshot: string | null;
+  }>;
+};
+
+export type SellerSupportCase = {
+  id: string;
+  checkoutId: string;
+  checkoutCode: string;
+  orderId: string | null;
+  shopId: string | null;
+  shopName: string | null;
+  issueType: string;
+  status: string;
+  priority: string;
+  subject: string;
+  description: string;
+  resolutionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order: {
+    id: string;
+    orderCode: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  messages: Array<{
+    id: string;
+    senderUserId: string | null;
+    senderRole: string;
+    senderName: string | null;
+    message: string;
+    isInternal: boolean;
+    createdAt: string;
   }>;
 };
 
@@ -1489,4 +1528,26 @@ export async function addDeliveryComment(
       body: JSON.stringify(payload),
     },
   );
+}
+
+export async function listShopSupportCases(shopId: string, token?: string) {
+  return apiRequest<{ items: SellerSupportCase[] }>(`/api/shops/${shopId}/support-cases`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getShopSupportCase(shopId: string, caseId: string, token?: string) {
+  return apiRequest<SellerSupportCase>(`/api/shops/${shopId}/support-cases/${encodeURIComponent(caseId)}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function addShopSupportCaseMessage(shopId: string, caseId: string, message: string, token?: string) {
+  return apiRequest<SellerSupportCase>(`/api/shops/${shopId}/support-cases/${encodeURIComponent(caseId)}/messages`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ message }),
+  });
 }

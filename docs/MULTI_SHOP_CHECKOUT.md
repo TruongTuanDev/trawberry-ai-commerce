@@ -78,3 +78,11 @@ Seller order and payment APIs remain shop-scoped through existing guards. Seller
 ## Future Phase
 
 Future work can add combined payment routing or marketplace-level support workflows on top of the existing parent receipt.
+
+## Support Addendum
+
+Marketplace-level support is now layered on top of the parent receipt:
+
+- customer can open one checkout-wide case on the parent `checkoutCode`
+- customer can also open one case tied to a specific child shop order
+- seller visibility remains shop-scoped, so sellers only see cases linked to their own order/shop

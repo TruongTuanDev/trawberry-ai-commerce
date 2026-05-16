@@ -16,6 +16,7 @@ const navigation = [
   { href: "/seller/import/wildberries-api", label: "WB Sync" },
   { href: "/seller/ai-images", label: "AI Images" },
   { href: "/seller/orders", label: "Orders" },
+  { href: "/seller/support-cases", label: "Support" },
   { href: "/seller/payments", label: "Payments" },
   { href: "/seller/onboarding", label: "Onboarding" },
   { href: "/seller/settings", label: "Settings" },

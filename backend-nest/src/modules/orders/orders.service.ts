@@ -39,6 +39,16 @@ export class OrdersService {
           items: {
             orderBy: { productTitleSnapshot: 'asc' },
           },
+          supportCases: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              issueType: true,
+              status: true,
+              subject: true,
+              createdAt: true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -83,6 +93,16 @@ export class OrdersService {
         },
         items: {
           orderBy: { productTitleSnapshot: 'asc' },
+        },
+        supportCases: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            issueType: true,
+            status: true,
+            subject: true,
+            createdAt: true,
+          },
         },
       },
     });
@@ -182,6 +202,16 @@ export class OrdersService {
           },
           items: {
             orderBy: { productTitleSnapshot: 'asc' },
+          },
+          supportCases: {
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              issueType: true,
+              status: true,
+              subject: true,
+              createdAt: true,
+            },
           },
         },
       });
@@ -323,6 +353,13 @@ export class OrdersService {
       productImageSnapshot: string | null;
       variantNameSnapshot: string | null;
     }>;
+    supportCases?: Array<{
+      id: string;
+      issueType: string;
+      status: string;
+      subject: string;
+      createdAt: Date;
+    }>;
   }) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
     return {
@@ -370,6 +407,14 @@ export class OrdersService {
         productImageSnapshot: item.productImageSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
       })),
+      supportCases:
+        order.supportCases?.map((supportCase) => ({
+          id: supportCase.id,
+          issueType: supportCase.issueType,
+          status: supportCase.status,
+          subject: supportCase.subject,
+          createdAt: supportCase.createdAt.toISOString(),
+        })) ?? [],
     };
   }
 }

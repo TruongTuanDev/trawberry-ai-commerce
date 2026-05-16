@@ -8,10 +8,14 @@ import { Prisma } from '@prisma/client';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { SupportCasesService } from '../support-cases/support-cases.service';
 
 @Injectable()
 export class CustomerOrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supportCasesService: SupportCasesService,
+  ) {}
 
   async listForCustomer(user: AuthenticatedUser) {
     this.assertCustomer(user);
@@ -115,6 +119,9 @@ export class CustomerOrdersService {
       updatedAt: checkout.updatedAt.toISOString(),
       orders,
       orderCodes: orders.map((order) => order.orderCode),
+      supportCases: (checkout.supportCases ?? []).map((supportCase) =>
+        this.supportCasesService.buildSummary(supportCase),
+      ),
     };
   }
 
@@ -157,6 +164,17 @@ export class CustomerOrdersService {
               internalStatus: true,
             },
           },
+        },
+      },
+      supportCases: {
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          issueType: true,
+          status: true,
+          subject: true,
+          orderId: true,
+          createdAt: true,
         },
       },
     };

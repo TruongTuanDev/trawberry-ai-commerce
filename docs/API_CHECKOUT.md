@@ -222,3 +222,8 @@ Rules:
 - Frontend prices are ignored. The backend calculates `unitPrice`, `lineTotal`, and `totalAmount`.
 - If `trackInventory=true`, stock must be sufficient. Any invalid item fails the entire checkout.
 - One checkout request can contain multiple shops. The backend creates one order per shop and returns `orders[]` plus `grandTotal`.
+
+Support addendum:
+
+- customer receipt detail built on top of checkout now includes `supportCases[]` summary
+- support workflow starts from the parent `checkoutCode`, not from checkout creation itself

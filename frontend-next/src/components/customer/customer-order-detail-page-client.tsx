@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckoutReceiptView } from "@/components/customer/checkout-receipt-view";
+import { CustomerSupportSection } from "@/components/customer/customer-support-section";
 import { PublicShell } from "@/components/public/public-shell";
 import { getCustomerOrderReceipt, type CustomerCheckoutReceipt } from "@/lib/customer-api";
 import { useAuthStore } from "@/stores/auth-store";
@@ -57,6 +58,7 @@ export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: 
           {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
           {loading ? <section className="card-panel rounded-[2rem] px-6 py-8 text-sm text-[var(--muted)]">Loading receipt...</section> : null}
           {receipt ? <CheckoutReceiptView receipt={receipt} phone={receipt.customer.phone} /> : null}
+          {receipt ? <CustomerSupportSection receipt={receipt} /> : null}
         </div>
       </main>
     </PublicShell>

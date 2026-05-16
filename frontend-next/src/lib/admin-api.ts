@@ -328,6 +328,55 @@ export type AdminWorkloadReportRow = {
   averageResolutionHours: number;
 };
 
+export type SupportCaseMessage = {
+  id: string;
+  senderUserId: string | null;
+  senderRole: string;
+  senderName: string | null;
+  message: string;
+  isInternal: boolean;
+  createdAt: string;
+};
+
+export type SupportCaseDetail = {
+  id: string;
+  checkoutId: string;
+  checkoutCode: string;
+  orderId: string | null;
+  shopId: string | null;
+  shopName: string | null;
+  customerUserId: string | null;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  issueType: string;
+  status: string;
+  priority: string;
+  subject: string;
+  description: string;
+  resolutionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  order: {
+    id: string;
+    orderCode: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  messages: SupportCaseMessage[];
+  events?: Array<{
+    id: string;
+    actorUserId: string | null;
+    action: string;
+    fromStatus: string | null;
+    toStatus: string | null;
+    note: string | null;
+    createdAt: string;
+  }>;
+};
+
 export type AdminDeliveryExceptionReportRow = {
   id: string;
   orderNumber: string;
@@ -669,6 +718,55 @@ export async function adminAddDeliveryComment(
   payload: { visibility: DeliveryCommentVisibility; message: string },
 ) {
   return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/comments`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listAdminSupportCases(query?: {
+  status?: string;
+  issueType?: string;
+  priority?: string;
+  checkoutCode?: string;
+  shopId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.issueType) params.set("issueType", query.issueType);
+  if (query?.priority) params.set("priority", query.priority);
+  if (query?.checkoutCode) params.set("checkoutCode", query.checkoutCode);
+  if (query?.shopId) params.set("shopId", query.shopId);
+  if (query?.page) params.set("page", String(query.page));
+  if (query?.limit) params.set("limit", String(query.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<{ items: SupportCaseDetail[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(`/api/admin/support-cases${suffix}`, {
+    method: "GET",
+  });
+}
+
+export async function getAdminSupportCase(caseId: string) {
+  return apiRequest<SupportCaseDetail>(`/api/admin/support-cases/${encodeURIComponent(caseId)}`, {
+    method: "GET",
+  });
+}
+
+export async function updateAdminSupportCase(
+  caseId: string,
+  payload: { status?: string; priority?: string; resolutionNote?: string | null },
+) {
+  return apiRequest<SupportCaseDetail>(`/api/admin/support-cases/${encodeURIComponent(caseId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function addAdminSupportCaseMessage(
+  caseId: string,
+  payload: { message: string; isInternal?: boolean },
+) {
+  return apiRequest<SupportCaseDetail>(`/api/admin/support-cases/${encodeURIComponent(caseId)}/messages`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

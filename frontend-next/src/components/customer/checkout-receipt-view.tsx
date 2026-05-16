@@ -67,6 +67,27 @@ export function CheckoutReceiptView({
           </article>
         ))}
       </div>
+      {receipt.supportCases.length ? (
+        <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5" data-testid="receipt-support-summary">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Support</p>
+              <h2 className="mt-2 text-lg font-bold text-[var(--foreground)]">{receipt.supportCases.length} case(s)</h2>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {receipt.supportCases.map((supportCase) => (
+              <article key={supportCase.id} className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">{supportCase.subject}</p>
+                  <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{supportCase.status}</span>
+                </div>
+                <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">{supportCase.issueType}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

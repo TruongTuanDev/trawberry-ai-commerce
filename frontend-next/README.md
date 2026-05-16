@@ -419,6 +419,7 @@ Useful script:
 npm run test:e2e:cart-checkout
 npm run test:e2e:multi-shop-checkout
 npm run test:e2e:customer-order-history
+npm run test:e2e:support-cases
 ```
 
 The public cart is stored in browser localStorage and checkout submits `items[]` with `productId`, `variantId`, and `quantity`.
@@ -426,3 +427,11 @@ The public cart is stored in browser localStorage and checkout submits `items[]`
 The cart and checkout pages group multi-shop carts by shop, show shop subtotals plus a grand total, and render one confirmation card per split shop order. Customers track each created order separately.
 
 Customer account routes are `/customer/register`, `/customer/login`, `/customer/orders`, and `/customer/orders/[checkoutCode]`. Anonymous/customer receipt lookup is available at `/orders/receipt/[checkoutCode]`.
+
+Support case coverage verifies:
+
+- customer creates checkout-level and order-level support cases from receipt detail
+- admin opens `/admin/support-cases` and sends a public reply
+- internal admin note remains hidden from customer and seller
+- seller opens `/seller/support-cases` and replies to a linked shop case
+- unrelated seller does not see another shop's case

@@ -304,3 +304,12 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Customer tracking remains per order code plus phone, while receipt lookup is available by checkout code plus phone.
 - Logged-in customers can access `/customer/orders` and `/customer/orders/[checkoutCode]`.
 - Verification targets: `backend-nest npm run smoke:customer-order-history`, `backend-nest npm run smoke:multi-shop-checkout`, `frontend-next npm run test:e2e:customer-order-history`, and `frontend-next npm run test:e2e:multi-shop-checkout`.
+
+# Support Cases Audit Addendum
+
+- Customer can open checkout-level and order-level support cases from `/customer/orders/[checkoutCode]`.
+- Admin triages and replies from `/admin/support-cases`.
+- Seller reads and replies from `/seller/support-cases`.
+- Internal admin notes are never returned to customer or seller responses.
+- Seller visibility remains constrained to the linked shop/order.
+- Verification targets: `backend-nest/test/support-cases.e2e-spec.ts`, `backend-nest npm run smoke:support-cases`, and `frontend-next npm run test:e2e:support-cases`.

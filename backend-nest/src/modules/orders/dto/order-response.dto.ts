@@ -63,6 +63,23 @@ class OrderDeliveryResponseDto {
   trackingUrl!: string | null;
 }
 
+class OrderSupportCaseSummaryDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  issueType!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty()
+  subject!: string;
+
+  @ApiProperty()
+  createdAt!: string;
+}
+
 export class OrderResponseDto {
   @ApiProperty()
   id!: string;
@@ -114,4 +131,7 @@ export class OrderResponseDto {
 
   @ApiProperty({ type: OrderDeliveryResponseDto, nullable: true })
   delivery!: OrderDeliveryResponseDto | null;
+
+  @ApiProperty({ type: OrderSupportCaseSummaryDto, isArray: true })
+  supportCases!: OrderSupportCaseSummaryDto[];
 }

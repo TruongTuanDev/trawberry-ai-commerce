@@ -164,6 +164,7 @@ Useful script:
 npm run smoke:cart-checkout
 npm run smoke:multi-shop-checkout
 npm run smoke:customer-order-history
+npm run smoke:support-cases
 ```
 
 The smoke creates one product with two variants, checks out both variants in one order, verifies seller/tracking item counts, verifies stock deduction, and confirms over-stock checkout fails.
@@ -171,3 +172,5 @@ The smoke creates one product with two variants, checks out both variants in one
 The multi-shop smoke creates two approved sellers, two shops, and two products, then submits one cart checkout that creates one order per shop. It verifies grand total, per-shop totals, stock deduction for both variants, seller isolation, tracking for both order codes, payment queue isolation, and atomic failure on insufficient stock.
 
 The customer history smoke creates a logged-in customer checkout, verifies the parent `checkoutCode`, customer history/detail, public receipt lookup by phone, wrong-phone rejection, and individual order tracking.
+
+The support cases smoke creates checkout-level and order-level support cases, verifies admin public/internal messaging, verifies customer cannot see internal notes, verifies seller can reply on linked order cases, and verifies another seller is blocked.

@@ -172,3 +172,8 @@ Each item includes the legacy fields plus additive cart fields:
 Existing single-item orders remain compatible because the original snapshot fields are still returned.
 
 Multi-shop checkout creates separate orders per shop. Seller order list/detail endpoints do not expose sibling shop orders; each seller sees only the order whose `shopId` matches the active seller shop.
+
+Support addendum:
+
+- seller order detail now includes `supportCases[]` summary for support cases linked to that order
+- checkout-wide cases without a linked order remain admin/customer-only and do not appear in seller order detail

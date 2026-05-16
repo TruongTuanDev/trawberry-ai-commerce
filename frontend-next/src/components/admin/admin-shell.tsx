@@ -66,6 +66,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               Operational queues
             </Link>
             <Link
+              href="/admin/support-cases"
+              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                pathname.startsWith("/admin/support-cases") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+              }`}
+            >
+              Support cases
+            </Link>
+            <Link
               href="/admin/reports"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
                 pathname.startsWith("/admin/reports") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"

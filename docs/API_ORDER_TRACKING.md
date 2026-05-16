@@ -182,3 +182,7 @@ Public tracking responses now return every order item created by cart checkout.
 Customers can track multi-item orders through the existing order id/code plus phone lookup routes.
 
 Multi-shop checkout returns a parent `checkoutCode` and multiple shop orders. Customers can open the combined receipt through `/api/public/checkouts/:checkoutCode?phone=...`, then track each child order separately with that order's `orderCode + phone` or order id plus phone.
+
+## Support Cases Addendum
+
+Order tracking remains per child order. Support workflow starts from the parent receipt or customer receipt detail and does not replace payment proof upload or delivery status endpoints.

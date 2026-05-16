@@ -88,5 +88,5 @@ test("admin approves a pending seller from the admin UI", async ({ page, request
   await expect(page.getByTestId("admin-seller-row").filter({ hasText: sellerEmail })).toHaveCount(0);
 
   await page.getByTestId("seller-status-tab-APPROVED").click();
-  await expect(page.getByText(sellerEmail)).toBeVisible();
+  await expect(page.getByTestId("admin-seller-row").filter({ hasText: sellerEmail })).toHaveCount(1);
 });

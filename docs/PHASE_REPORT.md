@@ -8,6 +8,23 @@
 - Enhanced seller product creation/listing with internal category selector and source category display.
 - Added `smoke:marketplace-search` and `test:e2e:marketplace-search-filter-sort`.
 
+## Parent-Level Payment + Support Workflow
+
+- Added backend support models:
+  - `support_cases`
+  - `support_case_messages`
+  - `support_case_events`
+- Added customer support APIs on top of parent receipt `checkoutCode`
+- Added admin support queue endpoints and UI
+- Added seller shop-scoped support queue endpoints and UI
+- Added support case summary to customer receipt detail and seller order detail
+- Preserved payment and delivery flows per child shop order
+- Enforced that internal admin messages are hidden from customer and seller views
+- Added verification:
+  - `backend-nest/test/support-cases.e2e-spec.ts`
+  - `npm run smoke:support-cases`
+  - `npm run test:e2e:support-cases`
+
 ## Wildberries Import To Checkout Verification
 
 - Scope:
