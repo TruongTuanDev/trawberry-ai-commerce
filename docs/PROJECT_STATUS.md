@@ -711,3 +711,15 @@ Implemented: admin-only operations reporting and CSV exports.
 - CSV exports are available for SLA breaches, workload, delivery exceptions, and payment aging.
 - `/admin/reports` provides date filters, tabs, report tables, and CSV export buttons.
 - Report reads and exports are read-only; notification email remains a future phase.
+
+# Wildberries API Sync Phase Status
+
+Implemented: seller-managed WB API product sync foundation.
+
+- Legacy WB code was audited in read-only mode and documented in `docs/WB_LEGACY_API_AUDIT.md`.
+- Backend sync APIs are under `POST /api/shops/:shopId/wb-sync/*`.
+- Frontend page is `/seller/import/wildberries-api`.
+- Sync all and sync by article/APT/vendorCode work in mock mode.
+- Product, variant, and remote image upsert is idempotent.
+- Excel import remains unchanged and continues to use `/seller/import/wildberries`.
+- Real WB mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.

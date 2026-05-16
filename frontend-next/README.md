@@ -30,6 +30,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/products/[id]`
 - `/seller/products/[id]/images`
 - `/seller/import/wildberries`
+- `/seller/import/wildberries-api`
 - `/seller/ai-images`
 - `/seller/orders`
 - `/seller/orders/[id]`
@@ -87,6 +88,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - preview counts, warnings, and errors
   - Wildberries remote image links as the default MVP image mode
   - confirm import and result summary
+- Seller Wildberries API sync UI with:
+  - credentials status
+  - preview/import all products
+  - preview/import by article/APT/vendorCode
+  - sync result summary
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages
 - Product images page with:
@@ -149,6 +155,22 @@ Optional overrides:
 PLAYWRIGHT_BASE_URL=http://localhost:3000
 PLAYWRIGHT_BACKEND_URL=http://localhost:3001
 ```
+
+## Playwright WB API Sync Flow
+
+With Docker runtime and demo seed available:
+
+```bash
+npm run test:e2e:wb-api-sync
+```
+
+Current coverage:
+- creates an approved seller and shop through the API
+- opens `/seller/import/wildberries-api`
+- previews all mock WB API products
+- imports all mock WB API products
+- imports one product by article/APT
+- verifies the imported product appears in `/seller/products`
 
 ## Playwright admin seller approval flow
 With Docker runtime already healthy and demo data seeded:

@@ -1,5 +1,12 @@
 # API Products
 
+Wildberries product ingestion has two paths:
+
+- Excel import: `POST /api/shops/:shopId/imports/wildberries/*`
+- API sync: `POST /api/shops/:shopId/wb-sync/products` and `/by-article`
+
+Both paths upsert into the same product, variant, and image schema. WB API sync uses Content API card data; price/stock may require separate WB APIs in a later phase.
+
 ## Wildberries Excel Import
 
 Seller WB import endpoints live under shop scope:

@@ -397,6 +397,46 @@ export type WbImportStatus = {
   completedAt: string | null;
 };
 
+export type WbSyncRun = {
+  syncRunId: string;
+  status: string;
+  mode: string;
+  syncType: string;
+  article: string | null;
+  totalFetched: number;
+  totalProducts: number;
+  totalVariants: number;
+  totalImages: number;
+  createdProducts: number;
+  updatedProducts: number;
+  createdVariants: number;
+  updatedVariants: number;
+  warnings: WbImportIssue[];
+  errors: WbImportIssue[];
+  rawSummary: {
+    products?: Array<{
+      sellerSku: string | null;
+      externalProductId: string | null;
+      name: string;
+      variantsCount: number;
+      imagesCount: number;
+      warnings: WbImportIssue[];
+      errors: WbImportIssue[];
+    }>;
+  } | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+export type WbCredentialsStatus = {
+  shopId: string;
+  hasCredentials: boolean;
+  keyLast4: string | null;
+  updatedAt: string | null;
+  mode: "mock" | "real";
+};
+
 export type ProductImage = {
   id: string;
   shopId: string;
@@ -702,6 +742,55 @@ export async function getWildberriesImportStatus(shopId: string, importId: strin
   return apiRequest<WbImportStatus>(`/api/shops/${shopId}/imports/wildberries/${importId}`, {
     method: "GET",
     token,
+  });
+}
+
+export async function getWbSyncCredentialsStatus(shopId: string, token?: string) {
+  return apiRequest<WbCredentialsStatus>(`/api/shops/${shopId}/wb-sync/credentials/status`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function saveWbSyncCredentials(shopId: string, apiKey: string, token?: string) {
+  return apiRequest<WbCredentialsStatus>(`/api/shops/${shopId}/wb-sync/credentials`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ apiKey }),
+  });
+}
+
+export async function syncWbProducts(
+  shopId: string,
+  payload: {
+    mode: "PREVIEW" | "IMPORT";
+    limit?: number;
+    publishMode?: "DRAFT" | "ACTIVE_IF_VALID";
+    imageMode?: "REMOTE_URL";
+  },
+  token?: string,
+) {
+  return apiRequest<WbSyncRun>(`/api/shops/${shopId}/wb-sync/products`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function syncWbProductByArticle(
+  shopId: string,
+  payload: {
+    article: string;
+    mode: "PREVIEW" | "IMPORT";
+    publishMode?: "DRAFT" | "ACTIVE_IF_VALID";
+    imageMode?: "REMOTE_URL";
+  },
+  token?: string,
+) {
+  return apiRequest<WbSyncRun>(`/api/shops/${shopId}/wb-sync/products/by-article`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
   });
 }
 

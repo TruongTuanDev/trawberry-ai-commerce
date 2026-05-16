@@ -115,6 +115,13 @@ npm run start:dev
 - Smoke: `npm run smoke:wb-import`.
 - Full import-to-checkout smoke: `npm run smoke:wb-import-checkout`.
 
+## Wildberries API sync
+- Seller endpoints under `POST /api/shops/:shopId/wb-sync/*`.
+- Supports sync all products and sync by article/vendorCode.
+- Default `WB_SYNC_MODE=mock` does not call WB.
+- Real mode requires shop credentials and `WB_CREDENTIALS_ENCRYPTION_KEY`.
+- Smoke: `npm run smoke:wb-api-sync`.
+
 ## Admin operations dashboard
 - Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.
 - Supports optional `dateFrom`, `dateTo`, `shopId`, and `sellerId` filters.

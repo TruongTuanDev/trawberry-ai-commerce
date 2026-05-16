@@ -27,6 +27,7 @@ model User {
   customerOrders          Order[]                @relation("CustomerOrders")
   paymentReviewLogs       PaymentReviewLog[]     @relation("PaymentReviewerLogs")
   productImportSessions   ProductImportSession[]
+  wbSyncRuns              WbSyncRun[]            @relation("WbSyncRunSeller")
 
   @@map("users")
 }
@@ -179,6 +180,8 @@ model Shop {
   deliveryShipments     DeliveryShipment[]
   deliveryEvents        DeliveryEvent[]
   productImportSessions ProductImportSession[]
+  wbCredentials         ShopWbCredential?
+  wbSyncRuns            WbSyncRun[]
 
   @@map("shops")
 }
@@ -321,6 +324,49 @@ model ProductImportSession {
   @@index([shopId, createdAt])
   @@index([sellerId, createdAt])
   @@map("product_import_sessions")
+}
+
+model ShopWbCredential {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId          String   @unique @map("shop_id") @db.Uuid
+  encryptedApiKey String   @map("encrypted_api_key")
+  keyLast4        String?  @map("key_last4") @db.VarChar(10)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@map("shop_wb_credentials")
+}
+
+model WbSyncRun {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  sellerId        String    @map("seller_id") @db.Uuid
+  source          String    @default("WILDBERRIES_API") @db.VarChar(100)
+  mode            String    @db.VarChar(50)
+  status          String    @db.VarChar(50)
+  syncType        String    @map("sync_type") @db.VarChar(50)
+  article         String?   @db.VarChar(255)
+  totalFetched    Int       @default(0) @map("total_fetched")
+  totalProducts   Int       @default(0) @map("total_products")
+  totalVariants   Int       @default(0) @map("total_variants")
+  totalImages     Int       @default(0) @map("total_images")
+  createdProducts Int       @default(0) @map("created_products")
+  updatedProducts Int       @default(0) @map("updated_products")
+  createdVariants Int       @default(0) @map("created_variants")
+  updatedVariants Int       @default(0) @map("updated_variants")
+  warningsJson    Json      @map("warnings_json")
+  errorsJson      Json      @map("errors_json")
+  rawSummaryJson  Json?     @map("raw_summary_json")
+  startedAt       DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seller          User      @relation("WbSyncRunSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
+  @@index([sellerId, createdAt])
+  @@map("wb_sync_runs")
 }
 
 model Order {

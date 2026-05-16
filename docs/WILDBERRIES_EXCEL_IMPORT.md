@@ -2,6 +2,10 @@
 
 Seller product import from a Wildberries `.xlsx` export.
 
+API-based product sync is documented separately in `docs/WB_API_SYNC.md`.
+
+Use Excel import when the seller has an `.xlsx` export with price/stock columns. Use WB API sync when the seller wants to pull Content API cards directly from Wildberries.
+
 ## Scope
 - Source sheet: `Товары`.
 - Header row: `3`.

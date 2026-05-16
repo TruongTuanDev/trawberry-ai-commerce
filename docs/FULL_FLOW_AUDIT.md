@@ -272,3 +272,9 @@ Admin Ops Reporting is read-only and admin-only. It exposes operational aggregat
 CSV exports use explicit column allowlists and do not include secrets, tokens, raw provider payloads, internal private files, or customer-invisible internal comments. CSV values are escaped for commas, quotes, and newlines and are capped at 5000 rows per export.
 
 No audit rows are created by report reads or exports.
+
+# Wildberries API Sync Audit Addendum
+
+Legacy WB API code was audited read-only from `strawberry-backend/src/main/java/com/strawberry/ecommerce/wb`; no legacy files were changed.
+
+New WB API sync lives only in `backend-nest` and `frontend-next`. Tests and smoke use mock mode and do not call the real Wildberries API. WB API keys are shop-scoped, never returned to clients, never logged, and real credential storage requires `WB_CREDENTIALS_ENCRYPTION_KEY`.

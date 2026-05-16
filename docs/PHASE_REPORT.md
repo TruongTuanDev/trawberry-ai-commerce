@@ -1375,6 +1375,21 @@ Implemented admin-only operational reporting and CSV export.
 
 Non-goals retained: no notification email, no scheduled report delivery, no real Yandex/CDEK API calls, and no changes to legacy `strawberry-frontend` or `strawberry-backend`.
 
+# Phase Report: Wildberries API Product Sync
+
+Implemented WB Content API product sync foundation.
+
+- Audited legacy WB integration code and documented endpoint/DTO/mapping.
+- Added `backend-nest/src/modules/wb-sync`.
+- Added mock/real WB API client foundation.
+- Added seller APIs for credentials status, sync all, sync by article, and sync run lookup.
+- Added `wb_sync_runs` and `shop_wb_credentials`.
+- Added idempotent upsert for products, variants, and remote images.
+- Added `/seller/import/wildberries-api`.
+- Added `smoke:wb-api-sync` and `test:e2e:wb-api-sync`.
+
+Non-goals retained: no real WB API call in default tests, no price/stock WB API integration, no image download-to-storage, and no changes to legacy apps.
+
 # Phase Report: Admin Operations Dashboard
 
 Added admin-only marketplace operations dashboard.

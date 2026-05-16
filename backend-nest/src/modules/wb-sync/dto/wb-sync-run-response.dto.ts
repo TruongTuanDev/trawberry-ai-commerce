@@ -1,0 +1,21 @@
+export type WbSyncRunResponseDto = {
+  syncRunId: string;
+  status: string;
+  mode: string;
+  syncType: string;
+  article: string | null;
+  totalFetched: number;
+  totalProducts: number;
+  totalVariants: number;
+  totalImages: number;
+  createdProducts: number;
+  updatedProducts: number;
+  createdVariants: number;
+  updatedVariants: number;
+  warnings: unknown;
+  errors: unknown;
+  rawSummary: unknown;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+};
