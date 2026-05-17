@@ -85,3 +85,11 @@ Target UX verification currently passes with:
 - `frontend-next npm run test:e2e:cart-checkout`
 - `frontend-next npm run test:e2e:multi-shop-checkout`
 - `frontend-next npm run test:e2e:marketplace-search-filter-sort`
+
+## Public Marketplace Contract Hardening Addendum
+
+- public detail keeps disabled out-of-stock variants visible only when the product still has at least one sellable in-stock variant
+- products with every tracked variant out of stock fail readiness and are hidden from public list/detail
+- public header search now preserves `q` in the visible input after navigation
+- mobile product detail now includes a sticky bottom CTA so add-to-cart and buy-now remain reachable on small screens
+- cart badge, search navigation, and mobile CTA are covered by `npm run test:e2e:public-marketplace-contract`

@@ -82,7 +82,9 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - Wildberries-inspired product detail layout
   - size selector pills and quantity stepper
   - sticky purchase card with add-to-cart and buy-now
+  - mobile sticky bottom CTA on product detail
   - cart badge in the public header
+  - header search that keeps the current `q` value visible after navigation
   - order tracking and payment proof upload UI
 - Seller delivery operations with:
   - delivery settings form
@@ -218,6 +220,20 @@ Coverage:
 - bulk stock update
 - publish-if-ready result
 - public product visibility
+
+## Playwright Public Marketplace Contract
+
+```bash
+npm run test:e2e:public-marketplace-contract
+```
+
+Coverage:
+
+- header search redirects to `/products?q=...`
+- out-of-stock variant is disabled on public detail
+- cart badge updates after add and quantity changes
+- buy-now still lands on `/checkout`
+- mobile sticky CTA stays accessible on product detail
 - checkout success after bulk edit and publish
 
 ## Playwright Marketplace Search/Filter/Sort

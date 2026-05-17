@@ -1548,3 +1548,22 @@ Runtime audit note on 2026-05-17:
 - local Docker backend was running with `WB_SYNC_MODE=mock`
 - local Docker backend inherited a hidden fallback `WB_CREDENTIAL_ENCRYPTION_KEY=dev-wb-credential-key`
 - after removing that fallback from compose, the same local runtime exposed the true missing-config state until a local non-committed test key was injected for verification
+
+# Phase Report: Public Marketplace Contract Hardening
+
+Implemented:
+
+- added `backend-nest/test/public-products.e2e-spec.ts`
+- verified public list/detail contract for published, readiness-passing products only
+- verified mixed-stock detail shape and disabled out-of-stock variants
+- verified checkout rejects out-of-stock, unpublished, archived, invalid-variant, missing-price, and over-stock requests
+- added mobile sticky CTA to `frontend-next` public product detail without changing desktop sticky purchase card
+- added `frontend-next/tests/e2e/public-marketplace-contract.spec.ts`
+- hardened public header search and cart badge regression coverage
+- documented contract in `docs/PUBLIC_MARKETPLACE_CONTRACT.md`
+
+Retained non-goals:
+
+- no legacy app changes
+- no real external provider calls in default tests
+- no change to server-side checkout authority

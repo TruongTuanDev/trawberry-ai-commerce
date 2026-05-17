@@ -21,7 +21,8 @@ Additional public response fields now used by `frontend-next`:
 Visibility rules remain unchanged:
 
 - public list/detail still require approved seller, active shop/product, `catalogStatus=PUBLISHED`, readiness pass, at least one image, and at least one active priced variant
-- detail pages now remain viewable even when all variants are currently out of stock; purchase controls are disabled in that case
+- readiness still requires at least one sellable in-stock variant for tracked inventory products
+- result: products with all tracked variants out of stock are hidden from public list and detail
 
 Wildberries product ingestion has two paths:
 
@@ -212,9 +213,19 @@ Rules:
 - seller approved
 - shop active
 - readiness-passing
-- `inStock`
 - `stockStatus`
 - `categoryId`
+
+Mixed-stock detail rule:
+
+- a public product may expose both in-stock and out-of-stock variants in `variants[]`
+- out-of-stock variants return `inStock=false` and `availableQuantity=0`
+- frontend must disable those variants for add-to-cart and buy-now
+
+Contract verification:
+
+- backend E2E: `backend-nest/test/public-products.e2e-spec.ts`
+- frontend E2E: `frontend-next/tests/e2e/public-marketplace-contract.spec.ts`
 
 `status` is treated as an alias of `visibility`.
 `stockStatus` supports `IN_STOCK`, `LOW_STOCK`, and `OUT_OF_STOCK`.

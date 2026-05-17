@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect } from "react";
 import clsx from "clsx";
 import { useAuthStore } from "@/stores/auth-store";
@@ -18,6 +18,7 @@ const links = [
 export function PublicHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const hydrateCart = useCartStore((state) => state.hydrate);
   const cartCount = useCartStore((state) =>
     state.items.reduce((sum, item) => sum + item.quantity, 0),
@@ -64,8 +65,10 @@ export function PublicHeader() {
               Search products
             </label>
             <input
+              key={searchParams.get("q") ?? ""}
               id="public-header-search"
               name="q"
+              defaultValue={searchParams.get("q") ?? ""}
               placeholder="Search products, brand, article, category"
               className="public-input rounded-full px-5 py-3"
               data-testid="public-header-search"
@@ -79,7 +82,10 @@ export function PublicHeader() {
           >
             <span>Cart</span>
             {cartCount > 0 ? (
-              <span className="absolute -right-1 -top-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-xs font-bold text-white">
+              <span
+                className="absolute -right-1 -top-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-xs font-bold text-white"
+                data-testid="public-cart-count"
+              >
                 {cartCount}
               </span>
             ) : null}

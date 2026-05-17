@@ -93,3 +93,9 @@ Marketplace-level support is now layered on top of the parent receipt:
 - customer can open one checkout-wide case on the parent `checkoutCode`
 - customer can also open one case tied to a specific child shop order
 - seller visibility remains shop-scoped, so sellers only see cases linked to their own order/shop
+
+## Public Marketplace Contract Hardening Addendum
+
+- public `Купить сейчас` still writes through the same shared cart first
+- mobile sticky CTA uses the same checkout path as desktop
+- multi-shop split-order behavior is unchanged by public marketplace UX hardening

@@ -50,6 +50,7 @@ export function PublicProductDetailPageClient({
     return Math.min(normalized, maxQuantity);
   }, [maxQuantity, quantity]);
   const displayQuantity = cartItem?.quantity ?? safeQuantity;
+  const selectedVariantLabel = selectedVariant ? getVariantLabel(selectedVariant) : "No variant available";
 
   useEffect(() => {
     hydrateCart();
@@ -127,6 +128,20 @@ export function PublicProductDetailPageClient({
 
   const hasReadyVariant = Boolean(selectedVariant?.inStock && currentPrice);
 
+  const handleQuantityChange = (nextValue: number) => {
+    if (!product || !selectedVariant) {
+      setQuantity(nextValue);
+      return;
+    }
+
+    if (cartItem) {
+      updateQuantity(product.id, selectedVariant.id, nextValue);
+      return;
+    }
+
+    setQuantity(nextValue);
+  };
+
   const handleAddToCart = () => {
     if (!product || !selectedVariant || !hasReadyVariant) return;
 
@@ -152,7 +167,7 @@ export function PublicProductDetailPageClient({
 
   return (
     <PublicShell>
-      <main className="px-4 py-8 sm:px-6 sm:py-10">
+      <main className="px-4 py-8 pb-32 sm:px-6 sm:py-10 lg:pb-10">
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="flex flex-wrap gap-3">
             <Link
@@ -275,7 +290,7 @@ export function PublicProductDetailPageClient({
                         <StockBadge label={stockLabel} tone={stockTone} />
                       </div>
                       <p className="mt-3 text-sm text-[var(--muted)]">
-                        {selectedVariant ? getVariantLabel(selectedVariant) : "No variant available"}
+                        {selectedVariantLabel}
                       </p>
                     </div>
 
@@ -320,7 +335,7 @@ export function PublicProductDetailPageClient({
                           ) : null}
                         </div>
                         <p className="text-sm text-[var(--muted)]">
-                          {selectedVariant ? `Size ${getVariantLabel(selectedVariant)}` : "Select a size"}
+                          {selectedVariant ? `Size ${selectedVariantLabel}` : "Select a size"}
                         </p>
                       </div>
 
@@ -334,19 +349,7 @@ export function PublicProductDetailPageClient({
                               value={displayQuantity}
                               max={maxQuantity}
                               disabled={!selectedVariant?.inStock}
-                              onChange={(nextValue) => {
-                                if (!product || !selectedVariant) {
-                                  setQuantity(nextValue);
-                                  return;
-                                }
-
-                                if (cartItem) {
-                                  updateQuantity(product.id, selectedVariant.id, nextValue);
-                                  return;
-                                }
-
-                                setQuantity(nextValue);
-                              }}
+                              onChange={handleQuantityChange}
                               testId="product-quantity-stepper"
                             />
                           </div>
@@ -393,6 +396,59 @@ export function PublicProductDetailPageClient({
                   </aside>
                 </div>
               </section>
+
+              <div
+                className="fixed inset-x-3 bottom-3 z-40 lg:hidden"
+                data-testid="mobile-product-cta"
+              >
+                <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_24px_60px_rgba(69,35,26,0.16)] backdrop-blur">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xl font-bold text-[var(--accent-strong)]">
+                        {formatMoney(currentPrice) ?? "Contact shop"}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {selectedVariant ? selectedVariantLabel : "Select a size"}
+                      </p>
+                    </div>
+                    <div className="min-w-0 text-right">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                        Qty
+                      </p>
+                      <div className="mt-2">
+                        <QuantityStepper
+                          size="sm"
+                          value={displayQuantity}
+                          max={maxQuantity}
+                          disabled={!selectedVariant?.inStock}
+                          onChange={handleQuantityChange}
+                          testId="mobile-product-quantity-stepper"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddToCart}
+                      disabled={!hasReadyVariant}
+                      className="public-button-primary min-w-0 flex-1 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="mobile-add-to-cart"
+                    >
+                      {cartItem ? "В корзине" : "Добавить в корзину"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBuyNow}
+                      disabled={!hasReadyVariant}
+                      className="min-w-0 flex-1 rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)]/35 px-4 py-3 text-sm font-semibold text-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="mobile-buy-now"
+                    >
+                      Купить сейчас
+                    </button>
+                  </div>
+                </div>
+              </div>
 
             </>
           )}

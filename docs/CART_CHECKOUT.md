@@ -50,3 +50,10 @@
 - Frontend: `npm run test:e2e:cart-checkout`
 - Frontend multi-shop: `npm run test:e2e:multi-shop-checkout`
 - Frontend customer history: `npm run test:e2e:customer-order-history`
+
+## Contract Hardening Addendum
+
+- public header cart badge is now covered as a contract, not just a visual detail
+- product detail stepper updates the same shared cart count used by `/cart` and `/checkout`
+- mobile sticky CTA reuses the same add-to-cart and buy-now handlers as the desktop purchase card
+- checkout backend still revalidates product publication, variant ownership, stock, and price before any stock deduction

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
 
@@ -20,7 +21,9 @@ export function PublicShell({
       }}
     >
       <div className="relative z-10 flex min-h-screen flex-col">
-        <PublicHeader />
+        <Suspense fallback={<div className="h-[105px] sm:h-[117px]" />}>
+          <PublicHeader />
+        </Suspense>
         <div className="flex-1">{children}</div>
         <PublicFooter />
       </div>

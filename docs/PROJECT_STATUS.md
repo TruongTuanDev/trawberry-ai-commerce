@@ -823,3 +823,17 @@ Updated gap:
 
 - support case management is now covered
 - parent-level combined payment routing and refund orchestration are still future work
+
+# Public Marketplace Contract Hardening Status
+
+Implemented:
+
+- backend public-products contract E2E for list/detail/checkout guards
+- explicit documentation of out-of-stock visibility rules
+- mobile sticky CTA on public product detail
+- header search persistence and cart badge regression coverage
+- dedicated `test:e2e:public-marketplace-contract`
+
+Current gap:
+
+- the full unrelated smoke matrix still depends on runtime time budget and should continue to be run periodically outside this focused hardening phase

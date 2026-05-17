@@ -352,3 +352,11 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Real mode does not fall back to mock data after credential or API failure.
 - Seller UI at `/seller/import/wildberries-api` now shows mode, connection state, `keyLast4`, verify status, and last sanitized error.
 - Optional runtime verification is `backend-nest npm run smoke:wb-api-sync-real` with local env `WB_REAL_API_KEY`.
+
+# Public Marketplace Contract Hardening Audit Addendum
+
+- public visibility remains gated by `PUBLISHED` plus readiness
+- fully out-of-stock tracked products are hidden from public list/detail
+- mixed-stock products expose disabled out-of-stock variants safely in public detail
+- checkout continues to reject invalid variant, unpublished, archived, missing-price, and over-stock requests
+- header search, cart badge, and mobile sticky CTA now have dedicated regression coverage

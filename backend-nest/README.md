@@ -197,6 +197,15 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
 - Smoke: `npm run smoke:marketplace-search`.
 - WB Excel/API imports map categories but do not sync WB price or stock.
 
+## Public Marketplace Contract
+
+- Public list/detail remain limited to `PUBLISHED`, `ACTIVE`, readiness-passing products.
+- Readiness still requires at least one sellable in-stock variant for tracked inventory products.
+- Mixed-stock products can expose disabled out-of-stock variants in public detail.
+- Fully out-of-stock tracked products are hidden from public list/detail.
+- Checkout remains the source of truth and rejects unpublished, archived, invalid-variant, missing-price, and over-stock requests.
+- Contract test: `npm test -- --runInBand public-products.e2e-spec.ts`.
+
 ## Admin operations dashboard
 - Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.
 - Supports optional `dateFrom`, `dateTo`, `shopId`, and `sellerId` filters.
