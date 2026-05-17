@@ -496,6 +496,7 @@ This project does not modify `strawberry-frontend`.
 Useful script:
 
 ```bash
+npm run test:e2e:public-empty-fallbacks
 npm run test:e2e:cart-checkout
 npm run test:e2e:multi-shop-checkout
 npm run test:e2e:customer-order-history
@@ -505,6 +506,14 @@ npm run test:e2e:support-cases
 The public cart is stored in browser localStorage and checkout submits `items[]` with `productId`, `variantId`, and `quantity`.
 
 The cart and checkout pages group multi-shop carts by shop, show shop subtotals plus a grand total, and render one confirmation card per split shop order. Customers track each created order separately.
+
+Public marketplace hardening now also covers:
+
+- distinct empty and no-result states on `/products`
+- search/filter summary chips in no-result state
+- local image fallback placeholders for public cards, detail gallery, and cart items
+- explicit empty cart state
+- explicit unavailable product state on `/products/[id]`
 
 Customer account routes are `/customer/register`, `/customer/login`, `/customer/orders`, and `/customer/orders/[checkoutCode]`. Anonymous/customer receipt lookup is available at `/orders/receipt/[checkoutCode]`.
 

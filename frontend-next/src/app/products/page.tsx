@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
@@ -16,6 +17,20 @@ type ProductsMeta = {
 
 const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 };
 
+function readFilters(searchParams: { get(name: string): string | null }) {
+  return {
+    q: searchParams.get("q") ?? searchParams.get("search") ?? "",
+    categorySlug: searchParams.get("categorySlug") ?? "",
+    brand: searchParams.get("brand") ?? "",
+    color: searchParams.get("color") ?? "",
+    gender: searchParams.get("gender") ?? "",
+    inStock: searchParams.get("inStock") ?? "",
+    minPrice: searchParams.get("minPrice") ?? "",
+    maxPrice: searchParams.get("maxPrice") ?? "",
+    sort: searchParams.get("sort") ?? "newest",
+  };
+}
+
 export default function ProductsPage() {
   return (
     <Suspense fallback={<PublicShell><main className="px-4 py-8 sm:px-6 sm:py-10"><div className="mx-auto max-w-7xl">Loading products...</div></main></PublicShell>}>
@@ -27,25 +42,67 @@ export default function ProductsPage() {
 function ProductsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  return (
+    <ProductsPageContent
+      key={searchParams.toString()}
+      searchParams={searchParams}
+      router={router}
+    />
+  );
+}
+
+function ProductsPageContent({
+  searchParams,
+  router,
+}: {
+  searchParams: ReturnType<typeof useSearchParams>;
+  router: ReturnType<typeof useRouter>;
+}) {
   const hydrateCart = useCartStore((state) => state.hydrate);
   const [items, setItems] = useState<PublicProduct[]>([]);
   const [meta, setMeta] = useState<ProductsMeta>(initialMeta);
-  const [filters, setFilters] = useState({
-    q: searchParams.get("q") ?? searchParams.get("search") ?? "",
-    categorySlug: searchParams.get("categorySlug") ?? "",
-    brand: searchParams.get("brand") ?? "",
-    color: searchParams.get("color") ?? "",
-    gender: searchParams.get("gender") ?? "",
-    inStock: searchParams.get("inStock") ?? "",
-    minPrice: searchParams.get("minPrice") ?? "",
-    maxPrice: searchParams.get("maxPrice") ?? "",
-    sort: searchParams.get("sort") ?? "newest",
-  });
+  const [filters, setFilters] = useState(() => readFilters(searchParams));
   const [facets, setFacets] = useState<PaginatedPublicProducts["filters"]>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requestKey, setRequestKey] = useState(0);
 
   const page = Number(searchParams.get("page") ?? "1");
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        filters.q.trim() ||
+          filters.categorySlug ||
+          filters.brand.trim() ||
+          filters.color.trim() ||
+          filters.gender.trim() ||
+          filters.inStock ||
+          filters.minPrice ||
+          filters.maxPrice ||
+          filters.sort !== "newest",
+      ),
+    [filters],
+  );
+  const activeFilterSummary = useMemo(
+    () =>
+      [
+        filters.q.trim() ? `Search: ${filters.q.trim()}` : null,
+        filters.categorySlug ? `Category: ${filters.categorySlug}` : null,
+        filters.brand.trim() ? `Brand: ${filters.brand.trim()}` : null,
+        filters.color.trim() ? `Color: ${filters.color.trim()}` : null,
+        filters.gender.trim() ? `Gender: ${filters.gender.trim()}` : null,
+        filters.inStock === "true"
+          ? "In stock only"
+          : filters.inStock === "false"
+            ? "Out of stock only"
+            : null,
+        filters.minPrice ? `Min: ${filters.minPrice}` : null,
+        filters.maxPrice ? `Max: ${filters.maxPrice}` : null,
+        filters.sort !== "newest" ? `Sort: ${filters.sort}` : null,
+      ].filter(Boolean) as string[],
+    [filters],
+  );
 
   useEffect(() => {
     hydrateCart();
@@ -91,7 +148,7 @@ function ProductsPageClient() {
     return () => {
       mounted = false;
     };
-  }, [filters, meta.size, page]);
+  }, [filters, meta.size, page, requestKey]);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -110,17 +167,11 @@ function ProductsPageClient() {
   };
 
   const clearFilters = () => {
-    setFilters({
-      q: "",
-      categorySlug: "",
-      brand: "",
-      color: "",
-      gender: "",
-      inStock: "",
-      minPrice: "",
-      maxPrice: "",
-      sort: "newest",
-    });
+    setFilters(readFilters(new URLSearchParams()));
+    if (typeof window !== "undefined") {
+      window.location.assign("/products");
+      return;
+    }
     router.replace("/products");
   };
 
@@ -194,8 +245,29 @@ function ProductsPageClient() {
           </section>
 
           {error ? (
-            <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
-              {error}
+            <div
+              className="rounded-[1.75rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-5 py-5 text-sm text-[var(--accent-strong)]"
+              data-testid="products-error-state"
+            >
+              <p className="font-semibold">Unable to load public products.</p>
+              <p className="mt-2 text-[var(--muted)]">{error}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRequestKey((current) => current + 1)}
+                  className="public-button-primary px-5 py-3 text-sm"
+                  data-testid="products-error-retry"
+                >
+                  Retry
+                </button>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="public-button-secondary px-5 py-3 text-sm"
+                >
+                  Clear filters
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -220,15 +292,50 @@ function ProductsPageClient() {
               ))}
             </section>
           ) : (
-            <section className="card-panel rounded-[2rem] px-6 py-10 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">No products found</p>
-              <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-                No products found for these filters.
-              </h2>
-              <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-                Try a different keyword or publish more products from the seller workspace.
+            <section
+              className="card-panel rounded-[2rem] px-6 py-10 text-center sm:px-10"
+              data-testid={hasActiveFilters ? "products-no-results-state" : "products-empty-state"}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                {hasActiveFilters ? "Search results" : "Marketplace"}
               </p>
-              <button type="button" onClick={clearFilters} className="public-button-primary mt-5 px-5 py-3 text-sm">Clear filters</button>
+              <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
+                {hasActiveFilters ? "Không tìm thấy sản phẩm phù hợp" : "Пока нет товаров"}
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
+                {hasActiveFilters
+                  ? "Try another keyword, relax a filter, or return to the full public catalog."
+                  : "Public products will appear here after a seller publishes marketplace-ready items."}
+              </p>
+              {activeFilterSummary.length ? (
+                <div className="mt-5 flex flex-wrap justify-center gap-2" data-testid="products-filter-summary">
+                  {activeFilterSummary.map((summary) => (
+                    <span
+                      key={summary}
+                      className="inline-flex rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
+                    >
+                      {summary}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/products"
+                  onClick={() => clearFilters()}
+                  className="public-button-primary inline-flex px-5 py-3 text-sm"
+                  data-testid="products-empty-clear"
+                >
+                  Clear filters
+                </Link>
+                <Link
+                  href="/"
+                  className="public-button-secondary inline-flex px-5 py-3 text-sm"
+                  data-testid="products-empty-home"
+                >
+                  Back home
+                </Link>
+              </div>
             </section>
           )}
 

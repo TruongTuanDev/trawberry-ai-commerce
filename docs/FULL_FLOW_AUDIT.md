@@ -360,3 +360,11 @@ Future audit item: design an optional marketplace parent order for combined rece
 - mixed-stock products expose disabled out-of-stock variants safely in public detail
 - checkout continues to reject invalid variant, unpublished, archived, missing-price, and over-stock requests
 - header search, cart badge, and mobile sticky CTA now have dedicated regression coverage
+
+# Public Marketplace Empty / Fallback Audit Addendum
+
+- `/products` now distinguishes catalog-empty from search/filter no-result states
+- no-result state exposes current filter summary and clear-filters action
+- public and cart image fallback no longer depends on a remote placeholder provider
+- product detail unavailable state is explicit for hidden/unpublished/nonexistent products
+- mobile sticky CTA remains reachable without masking the fallback states above it

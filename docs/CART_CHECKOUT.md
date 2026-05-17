@@ -57,3 +57,10 @@
 - product detail stepper updates the same shared cart count used by `/cart` and `/checkout`
 - mobile sticky CTA reuses the same add-to-cart and buy-now handlers as the desktop purchase card
 - checkout backend still revalidates product publication, variant ownership, stock, and price before any stock deduction
+
+## Empty State Addendum
+
+- `/cart` now has an explicit empty state with `Continue shopping`
+- empty cart no longer renders checkout CTA
+- cart image thumbnails now use the same safe local fallback used by public product cards and detail pages
+- future work: surface a dedicated warning when a stale cart item becomes unavailable before checkout

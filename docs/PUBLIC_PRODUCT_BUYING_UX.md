@@ -93,3 +93,11 @@ Target UX verification currently passes with:
 - public header search now preserves `q` in the visible input after navigation
 - mobile product detail now includes a sticky bottom CTA so add-to-cart and buy-now remain reachable on small screens
 - cart badge, search navigation, and mobile CTA are covered by `npm run test:e2e:public-marketplace-contract`
+
+## Empty And Fallback Addendum
+
+- `/products` now separates true empty catalog state from search/filter no-result state
+- no-result state shows current search/filter summary and clear-filters action
+- broken or missing product media now falls back to a local placeholder without breaking layout
+- product detail unavailable state is now friendlier for hidden/unpublished/nonexistent products
+- coverage: `npm run test:e2e:public-empty-fallbacks`

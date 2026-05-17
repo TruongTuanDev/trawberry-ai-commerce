@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { PublicShell } from "@/components/public/public-shell";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import { type CartItem, useCartStore } from "@/stores/cart-store";
 
 type ShopCartGroup = {
@@ -80,13 +81,26 @@ export function CartPageClient() {
           </section>
 
           {!items.length ? (
-            <section className="card-panel rounded-[2rem] px-6 py-10 text-center">
-              <p className="text-sm text-[var(--muted)]">Your cart is empty.</p>
+            <section
+              className="card-panel rounded-[2rem] px-6 py-10 text-center sm:px-10"
+              data-testid="cart-empty-state"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                Cart
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
+                Your cart is empty
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
+                Add products from the marketplace to start checkout. Prices and stock
+                will still be validated again on the server during checkout.
+              </p>
               <Link
                 href="/products"
-                className="public-button-primary mt-5 inline-flex px-5 py-3 text-sm"
+                className="public-button-primary mt-6 inline-flex px-5 py-3 text-sm"
+                data-testid="cart-empty-continue-shopping"
               >
-                Open marketplace
+                Continue shopping
               </Link>
             </section>
           ) : (
@@ -117,14 +131,11 @@ export function CartPageClient() {
                         className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[96px_1fr_180px_120px]"
                       >
                         <div className="overflow-hidden rounded-2xl bg-[var(--panel)]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={
-                              item.imageUrl ??
-                              "https://placehold.co/160x160?text=No+Image"
-                            }
+                          <FallbackImage
+                            src={item.imageUrl}
                             alt={item.productName}
                             className="h-24 w-full object-cover"
+                            testId={`cart-item-image-${item.productId}-${item.variantId}`}
                           />
                         </div>
                         <div className="min-w-0">

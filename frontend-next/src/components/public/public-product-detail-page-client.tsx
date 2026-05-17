@@ -14,6 +14,7 @@ import {
 import { PublicShell } from "@/components/public/public-shell";
 import { QuantityStepper } from "@/components/public/quantity-stepper";
 import { StockBadge } from "@/components/public/stock-badge";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import { getPublicProduct, type PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -26,6 +27,7 @@ export function PublicProductDetailPageClient({
   const [product, setProduct] = useState<PublicProduct | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
+  const [requestKey, setRequestKey] = useState(0);
   const items = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
@@ -38,6 +40,7 @@ export function PublicProductDetailPageClient({
   const cartItem = product && selectedVariant ? getCartItem(items, product.id, selectedVariant.id) : null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const normalizedError = error?.toLowerCase() ?? "";
   const maxQuantity =
     selectedVariant?.trackInventory && selectedVariant.availableQuantity > 0
       ? selectedVariant.availableQuantity
@@ -51,6 +54,10 @@ export function PublicProductDetailPageClient({
   }, [maxQuantity, quantity]);
   const displayQuantity = cartItem?.quantity ?? safeQuantity;
   const selectedVariantLabel = selectedVariant ? getVariantLabel(selectedVariant) : "No variant available";
+  const isUnavailableState =
+    normalizedError.includes("not found") ||
+    normalizedError.includes("no longer") ||
+    normalizedError.includes("hidden");
 
   useEffect(() => {
     hydrateCart();
@@ -88,7 +95,7 @@ export function PublicProductDetailPageClient({
     return () => {
       mounted = false;
     };
-  }, [productId]);
+  }, [productId, requestKey]);
 
   const currentPrice = selectedVariant?.price ?? product?.price ?? null;
   const oldPrice = getComparableOldPrice(
@@ -127,6 +134,9 @@ export function PublicProductDetailPageClient({
       : "text-emerald-700 bg-emerald-50 border-emerald-200";
 
   const hasReadyVariant = Boolean(selectedVariant?.inStock && currentPrice);
+  const hasSelectableInStockVariant = Boolean(
+    product?.variants.some((variant) => variant.inStock),
+  );
 
   const handleQuantityChange = (nextValue: number) => {
     if (!product || !selectedVariant) {
@@ -189,8 +199,40 @@ export function PublicProductDetailPageClient({
               Loading product...
             </section>
           ) : error || !product ? (
-            <section className="rounded-[2rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/40 px-6 py-8 text-sm text-[var(--accent-strong)]">
-              {error ?? "Product not found."}
+            <section
+              className={`rounded-[2rem] px-6 py-8 sm:px-8 ${isUnavailableState ? "border border-[var(--border)] bg-white text-[var(--foreground)]" : "border border-[var(--accent-soft)] bg-[var(--accent-soft)]/40 text-[var(--accent-strong)]"}`}
+              data-testid={isUnavailableState ? "product-unavailable-state" : "product-detail-error"}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                {isUnavailableState ? "Unavailable" : "Load error"}
+              </p>
+              <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
+                {isUnavailableState
+                  ? "Sản phẩm không còn bán hoặc đã bị ẩn"
+                  : "Unable to load this product right now"}
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
+                {isUnavailableState
+                  ? "Product is no longer public, has been unpublished, or does not exist in the marketplace."
+                  : error ?? "Please try again in a moment."}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/products"
+                  className="public-button-primary inline-flex px-5 py-3 text-sm"
+                >
+                  Back to products
+                </Link>
+                {!isUnavailableState ? (
+                  <button
+                    type="button"
+                    onClick={() => setRequestKey((current) => current + 1)}
+                    className="public-button-secondary px-5 py-3 text-sm"
+                  >
+                    Retry
+                  </button>
+                ) : null}
+              </div>
             </section>
           ) : (
             <>
@@ -231,11 +273,11 @@ export function PublicProductDetailPageClient({
                               key={image.id}
                               className="h-16 w-16 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
                             >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
+                              <FallbackImage
                                 src={image.url}
                                 alt={`${product.name} preview ${index + 1}`}
                                 className="h-full w-full object-cover"
+                                testId={index === 0 ? "product-preview-image" : undefined}
                               />
                             </div>
                           ))}
@@ -292,6 +334,14 @@ export function PublicProductDetailPageClient({
                       <p className="mt-3 text-sm text-[var(--muted)]">
                         {selectedVariantLabel}
                       </p>
+                      {!hasSelectableInStockVariant ? (
+                        <p
+                          className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
+                          data-testid="product-out-of-stock-state"
+                        >
+                          This product is currently out of stock for all visible variants.
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="space-y-3">

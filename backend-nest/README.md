@@ -205,6 +205,7 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
 - Fully out-of-stock tracked products are hidden from public list/detail.
 - Checkout remains the source of truth and rejects unpublished, archived, invalid-variant, missing-price, and over-stock requests.
 - Contract test: `npm test -- --runInBand public-products.e2e-spec.ts`.
+- Runtime smoke: `npm run smoke:public-marketplace-contract`.
 
 ## Admin operations dashboard
 - Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.

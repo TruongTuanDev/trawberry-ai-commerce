@@ -837,3 +837,18 @@ Implemented:
 Current gap:
 
 - the full unrelated smoke matrix still depends on runtime time budget and should continue to be run periodically outside this focused hardening phase
+
+# Public Marketplace Empty / Fallback Hardening Status
+
+Implemented:
+
+- distinct empty and no-result states on `/products`
+- retryable products load error state
+- local image fallback for public cards, gallery, and cart
+- explicit empty cart state
+- explicit product unavailable state for no-longer-public detail pages
+- optional backend smoke wrapper `smoke:public-marketplace-contract`
+
+Current gap:
+
+- stale cart item availability warning is still a future enhancement and is not yet resolved proactively before checkout

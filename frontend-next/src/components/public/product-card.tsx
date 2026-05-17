@@ -62,6 +62,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
             src={product.images[0]?.url}
             alt={product.name}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+            testId={`product-card-image-${product.id}`}
           />
         </div>
       </Link>

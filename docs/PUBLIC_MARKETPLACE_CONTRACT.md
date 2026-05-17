@@ -45,6 +45,7 @@ Scope: public marketplace contract in `backend-nest` and `frontend-next`. Legacy
 ## Header And Mobile UX Contract
 
 - public header search submits to `/products?q=...`
+- header search input keeps the current `q` visible after navigation
 - public header cart badge reflects the shared cart store and only renders when count is positive
 - product detail keeps the desktop sticky purchase card
 - mobile product detail adds a sticky bottom CTA with:
@@ -54,10 +55,21 @@ Scope: public marketplace contract in `backend-nest` and `frontend-next`. Legacy
   - add-to-cart
   - buy-now
 
+## Empty And Fallback UX
+
+- `/products` distinguishes between:
+  - no public catalog items
+  - no matching result for the current search/filter state
+- no-result states expose active filter summary plus `Clear filters`
+- `/cart` has a dedicated empty state and hides checkout CTA when empty
+- public detail renders a friendly unavailable state when a product is no longer public
+- image fallbacks are local and safe for card, gallery, and cart rendering
+
 ## Verification Targets
 
 - backend: `backend-nest/test/public-products.e2e-spec.ts`
 - frontend: `frontend-next/tests/e2e/public-marketplace-contract.spec.ts`
+- frontend empty/fallback: `frontend-next/tests/e2e/public-empty-fallbacks.spec.ts`
 - regressions:
   - header search navigation
   - cart badge updates

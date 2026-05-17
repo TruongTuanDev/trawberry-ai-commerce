@@ -16,7 +16,7 @@ export function ProductGallery({
 }) {
   const normalizedImages = images.length
     ? images
-    : [{ id: "placeholder", url: "https://placehold.co/960x1200?text=No+Image", isMain: true }];
+    : [{ id: "placeholder", url: "", isMain: true }];
   const mainIndex = Math.max(0, normalizedImages.findIndex((image) => image.isMain));
   const [selectedIndex, setSelectedIndex] = useState(mainIndex);
   const selectedImage = normalizedImages[selectedIndex] ?? normalizedImages[0];
@@ -40,6 +40,7 @@ export function ProductGallery({
               src={image.url}
               alt={`${name} thumbnail ${index + 1}`}
               className="aspect-square w-full rounded-[0.95rem] object-cover"
+              testId={index === 0 ? "product-gallery-thumbnail-image" : undefined}
             />
           </button>
         ))}
@@ -50,6 +51,7 @@ export function ProductGallery({
             src={selectedImage.url}
             alt={name}
             className="aspect-[4/5] w-full object-cover"
+            testId="product-gallery-main-image"
           />
         </div>
       </div>

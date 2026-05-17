@@ -1567,3 +1567,21 @@ Retained non-goals:
 - no legacy app changes
 - no real external provider calls in default tests
 - no change to server-side checkout authority
+
+# Phase Report: Public Marketplace Empty / Fallback / Search State Hardening
+
+Implemented:
+
+- improved `/products` empty, no-result, and retryable error states
+- aligned products page search/filter state with URL-driven navigation
+- added local image fallback handling for public cards, detail gallery, previews, and cart items
+- added explicit empty cart UX
+- added explicit unavailable product detail state with back-to-products and retry behavior
+- added `frontend-next/tests/e2e/public-empty-fallbacks.spec.ts`
+- added backend runtime smoke wrapper `npm run smoke:public-marketplace-contract`
+
+Retained non-goals:
+
+- no visibility rule changes
+- no proactive stale-cart server validation before checkout submit
+- no legacy app changes
