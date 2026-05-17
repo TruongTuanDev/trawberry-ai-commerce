@@ -103,6 +103,12 @@ Order creation behavior:
 - every checkout creates one parent marketplace receipt in `marketplace_checkouts`
 - any validation or stock failure blocks the entire checkout and prevents partial order creation
 
+### Preflight companion
+
+- `POST /api/public/cart/validate` is the read-only companion endpoint for stale-cart detection.
+- It is intended for `/cart` and `/checkout` UI preflight only.
+- `POST /api/checkout/orders` still performs the final authoritative validation even if preflight already passed.
+
 Response:
 
 ```json

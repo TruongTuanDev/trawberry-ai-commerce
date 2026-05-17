@@ -207,6 +207,22 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
 - Contract test: `npm test -- --runInBand public-products.e2e-spec.ts`.
 - Runtime smoke: `npm run smoke:public-marketplace-contract`.
 
+## Cart Validation Preflight
+
+- Public cart preflight endpoint: `POST /api/public/cart/validate`.
+- Shared backend validation service now powers both:
+  - cart preflight
+  - final checkout validation
+- Customer-facing statuses include:
+  - `PRODUCT_NOT_PUBLIC`
+  - `PRODUCT_ARCHIVED`
+  - `VARIANT_NOT_FOUND`
+  - `OUT_OF_STOCK`
+  - `QUANTITY_EXCEEDS_STOCK`
+  - `MISSING_PRICE`
+  - `PRICE_CHANGED`
+- Smoke: `npm run smoke:cart-validation`.
+
 ## Admin operations dashboard
 - Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.
 - Supports optional `dateFrom`, `dateTo`, `shopId`, and `sellerId` filters.

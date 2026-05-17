@@ -64,3 +64,11 @@
 - empty cart no longer renders checkout CTA
 - cart image thumbnails now use the same safe local fallback used by public product cards and detail pages
 - future work: surface a dedicated warning when a stale cart item becomes unavailable before checkout
+
+## Stale Cart Validation Addendum
+
+- `/cart` now calls `POST /api/public/cart/validate` against every local cart line.
+- Blocking statuses disable checkout until the customer resolves the problem.
+- `PRICE_CHANGED` is surfaced as a warning and can be accepted without bypassing server validation.
+- `/checkout` now reruns the same preflight before submit.
+- Final order creation still validates again server-side inside `POST /api/checkout/orders`.

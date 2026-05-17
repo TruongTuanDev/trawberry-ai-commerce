@@ -1,5 +1,17 @@
 # Project Status
 
+## Cart Validation + Checkout Preflight
+
+- Status: Done for the current public marketplace/cart reliability phase
+- Scope:
+  - backend cart validation endpoint
+  - stale cart warnings on `/cart`
+  - checkout preflight before submit
+  - customer actions for remove/set-max/accept-price
+- Verification entry points:
+  - `npm run smoke:cart-validation`
+  - `npm run test:e2e:cart-validation`
+
 ## Public Product Buying UX
 
 - Status: Done for current marketplace MVP

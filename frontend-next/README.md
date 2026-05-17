@@ -85,6 +85,8 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - mobile sticky bottom CTA on product detail
   - cart badge in the public header
   - header search that keeps the current `q` value visible after navigation
+  - stale cart validation warnings for stock, price, and availability drift
+  - checkout preflight before submit
   - order tracking and payment proof upload UI
 - Seller delivery operations with:
   - delivery settings form
@@ -218,6 +220,19 @@ Coverage:
 - bulk category update
 - bulk price update
 - bulk stock update
+
+## Playwright Cart Validation
+
+```bash
+npm run test:e2e:cart-validation
+```
+
+Coverage:
+
+- stale cart quantity exceeds stock
+- `Set to max` reconciliation
+- unavailable unpublished item warning
+- checkout preflight blocking before submit
 - publish-if-ready result
 - public product visibility
 

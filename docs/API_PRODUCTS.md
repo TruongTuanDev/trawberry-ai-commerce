@@ -18,6 +18,18 @@ Additional public response fields now used by `frontend-next`:
 - shop:
   - `paymentInstructions`
 
+Cart validation preflight now also consumes trusted server-side product snapshot data:
+
+- `product.name`
+- primary image URL
+- `shop.id`
+- `shop.name`
+- `variants[].id`
+- `variants[].price`
+- `variants[].trackInventory`
+- `variants[].stockQuantity`
+- `variants[].availableQuantity`
+
 Visibility rules remain unchanged:
 
 - public list/detail still require approved seller, active shop/product, `catalogStatus=PUBLISHED`, readiness pass, at least one image, and at least one active priced variant

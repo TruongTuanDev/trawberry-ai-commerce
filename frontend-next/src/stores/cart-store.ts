@@ -11,9 +11,12 @@ export type CartItem = {
   shopId: string;
   shopName: string;
   productName: string;
+  productNameSnapshot: string;
   imageUrl: string | null;
+  imageUrlSnapshot: string | null;
   variantName: string;
   unitPrice: string;
+  unitPriceSnapshot: string;
   quantity: number;
   availableQuantity: number;
   trackInventory: boolean;
@@ -32,6 +35,11 @@ type CartState = {
     productId: string,
     variantId: string,
     quantity: number,
+  ) => void;
+  patchItem: (
+    productId: string,
+    variantId: string,
+    patch: Partial<CartItem>,
   ) => void;
   removeItem: (productId: string, variantId: string) => void;
   clearCart: () => void;
@@ -74,7 +82,16 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
     try {
       const parsed = JSON.parse(raw) as { items?: CartItem[] };
-      set({ items: parsed.items ?? [], hydrated: true });
+      const items = (parsed.items ?? []).map((item) => ({
+        ...item,
+        productNameSnapshot: item.productNameSnapshot ?? item.productName,
+        imageUrlSnapshot:
+          item.imageUrlSnapshot === undefined
+            ? item.imageUrl
+            : item.imageUrlSnapshot,
+        unitPriceSnapshot: item.unitPriceSnapshot ?? item.unitPrice,
+      }));
+      set({ items, hydrated: true });
     } catch {
       window.localStorage.removeItem(CART_STORAGE_KEY);
       set({ items: [], hydrated: true });
@@ -87,9 +104,12 @@ export const useCartStore = create<CartState>((set, get) => ({
       shopId: product.shop.id,
       shopName: product.shop.name,
       productName: product.name,
+      productNameSnapshot: product.name,
       imageUrl: product.images[0]?.url ?? null,
+      imageUrlSnapshot: product.images[0]?.url ?? null,
       variantName: variantLabel(variant),
       unitPrice: variant.price ?? product.price ?? "0",
+      unitPriceSnapshot: variant.price ?? product.price ?? "0",
       quantity: Math.max(1, quantity),
       availableQuantity: variant.availableQuantity,
       trackInventory: variant.trackInventory,
@@ -101,8 +121,15 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (existingIndex >= 0) {
       const existing = items[existingIndex];
       items[existingIndex] = {
-        ...existing,
         ...nextItem,
+        productNameSnapshot:
+          existing.productNameSnapshot ?? nextItem.productNameSnapshot,
+        imageUrlSnapshot:
+          existing.imageUrlSnapshot === undefined
+            ? nextItem.imageUrlSnapshot
+            : existing.imageUrlSnapshot,
+        unitPriceSnapshot:
+          existing.unitPriceSnapshot ?? nextItem.unitPriceSnapshot,
         quantity: clampQuantity(existing.quantity + quantity, nextItem),
       };
     } else {
@@ -118,6 +145,29 @@ export const useCartStore = create<CartState>((set, get) => ({
         ? { ...item, quantity: clampQuantity(quantity, item) }
         : item,
     );
+    save(items);
+    set({ items });
+  },
+  patchItem: (productId, variantId, patch) => {
+    const items = [...get().items];
+    const index = items.findIndex(
+      (item) => item.productId === productId && item.variantId === variantId,
+    );
+    if (index < 0) {
+      return;
+    }
+    const current = items[index];
+    const changed = Object.entries(patch).some(([key, value]) => {
+      const field = key as keyof CartItem;
+      return current[field] !== value;
+    });
+    if (!changed) {
+      return;
+    }
+    items[index] = {
+      ...current,
+      ...patch,
+    };
     save(items);
     set({ items });
   },

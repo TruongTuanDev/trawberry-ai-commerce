@@ -1,5 +1,12 @@
 # Full Commerce Flow Audit
 
+## Cart Reliability Addendum
+
+- Added backend preflight endpoint `POST /api/public/cart/validate`.
+- `/cart` now catches stale items before customer enters final checkout submit.
+- `/checkout` reruns preflight immediately before order creation.
+- Final checkout validation remains server-side and authoritative.
+
 ## Public Buying UX Addendum
 
 Date: 2026-05-17

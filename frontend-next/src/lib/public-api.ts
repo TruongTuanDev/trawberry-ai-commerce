@@ -127,6 +127,52 @@ export type CheckoutOrderResponse = {
   grandTotal: string;
 };
 
+export type CartValidationStatus =
+  | "OK"
+  | "PRODUCT_NOT_FOUND"
+  | "PRODUCT_NOT_PUBLIC"
+  | "PRODUCT_ARCHIVED"
+  | "VARIANT_NOT_FOUND"
+  | "OUT_OF_STOCK"
+  | "QUANTITY_EXCEEDS_STOCK"
+  | "MISSING_PRICE"
+  | "PRICE_CHANGED";
+
+export type ValidatePublicCartPayload = {
+  items: Array<{
+    productId: string;
+    variantId?: string;
+    quantity: number;
+    clientUnitPrice?: number;
+  }>;
+};
+
+export type PublicCartValidationResponse = {
+  valid: boolean;
+  items: Array<{
+    productId: string;
+    variantId: string | null;
+    requestedQuantity: number;
+    available: boolean;
+    status: CartValidationStatus;
+    productName: string | null;
+    variantName: string | null;
+    imageUrl: string | null;
+    unitPrice: number | null;
+    currentStock: number;
+    maxQuantity: number;
+    trackInventory: boolean;
+    lineTotal: number;
+    shopId: string | null;
+    shopName: string | null;
+  }>;
+  summary: {
+    subtotal: number;
+    invalidCount: number;
+    changedCount: number;
+  };
+};
+
 export type PublicTrackedOrder = {
   orderId: string;
   orderCode: string;
@@ -250,6 +296,13 @@ export async function getPublicProduct(productId: string) {
 
 export async function createCheckoutOrder(payload: CheckoutOrderPayload) {
   return apiRequest<CheckoutOrderResponse>("/api/checkout/orders", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function validatePublicCart(payload: ValidatePublicCartPayload) {
+  return apiRequest<PublicCartValidationResponse>("/api/public/cart/validate", {
     method: "POST",
     body: JSON.stringify(payload),
   });

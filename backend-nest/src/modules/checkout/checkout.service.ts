@@ -5,46 +5,24 @@ import {
 } from '@nestjs/common';
 import { randomBytes, randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { Prisma, type ProductImage, type ProductVariant } from '@prisma/client';
+import { Prisma, type ProductVariant } from '@prisma/client';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import { CreateCheckoutOrderDto } from './dto/create-checkout-order.dto';
-import { ProductReadinessService } from '../products/product-readiness.service';
-
-type CheckoutProductRecord = {
-  id: string;
-  shopId: string;
-  wbNmId: bigint;
-  wbTitle: string;
-  localTitle: string | null;
-  seoSlug: string | null;
-  sellerSku: string | null;
-  visibility: string | null;
-  catalogStatus: string;
-  categoryId: bigint | null;
-  images: ProductImage[];
-  variants: ProductVariant[];
-  shop: {
-    id: string;
-    name: string;
-    paymentInstructions: string | null;
-    status: string;
-    sellerProfile: {
-      approvalStatus: string;
-    };
-  };
-};
-
-type NormalizedCheckoutItem = {
-  productId: string;
-  variantId?: string;
-  quantity: number;
-};
+import {
+  CartValidationLine,
+  CartValidationProductRecord,
+  CartValidationService,
+} from './cart-validation.service';
 
 type ValidatedCheckoutItem = {
-  input: NormalizedCheckoutItem;
-  product: CheckoutProductRecord;
+  input: {
+    productId: string;
+    variantId?: string;
+    quantity: number;
+  };
+  product: CartValidationProductRecord;
   variant: ProductVariant;
   unitPrice: Prisma.Decimal;
   lineTotal: Prisma.Decimal;
@@ -68,106 +46,31 @@ type CreatedCheckoutOrder = {
 export class CheckoutService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly productReadiness: ProductReadinessService,
+    private readonly cartValidationService: CartValidationService,
   ) {}
 
   async createOrder(
     dto: CreateCheckoutOrderDto,
     user?: AuthenticatedUser | null,
   ) {
-    const normalizedRequestItems = this.normalizeItems(dto.items);
-    const distinctProductIds = [
-      ...new Set(normalizedRequestItems.map((item) => item.productId)),
-    ];
-    const products = await this.prisma.product.findMany({
-      where: {
-        id: {
-          in: distinctProductIds,
-        },
-      },
-      include: {
-        images: {
-          orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
-        },
-        variants: {
-          where: {
-            isActive: true,
-          },
-          orderBy: { createdAt: 'asc' },
-        },
-        shop: {
-          select: {
-            id: true,
-            name: true,
-            paymentInstructions: true,
-            status: true,
-            sellerProfile: {
-              select: {
-                approvalStatus: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (products.length !== distinctProductIds.length) {
-      throw new NotFoundException('One or more products were not found.');
+    const validation = await this.cartValidationService.validateItems(
+      dto.items,
+    );
+    const firstInvalid = validation.items.find((item) => !item.available);
+    if (firstInvalid) {
+      if (firstInvalid.status === 'PRODUCT_NOT_FOUND') {
+        throw new NotFoundException(
+          this.buildValidationErrorMessage(firstInvalid),
+        );
+      }
+      throw new BadRequestException(
+        this.buildValidationErrorMessage(firstInvalid),
+      );
     }
 
-    const productMap = new Map(
-      products.map((product) => [product.id, product]),
+    const normalizedItems = validation.items.map((item) =>
+      this.toValidatedCheckoutItem(item),
     );
-    const normalizedItems = normalizedRequestItems.map((item) => {
-      const product = productMap.get(item.productId);
-      if (!product) {
-        throw new NotFoundException(`Product ${item.productId} was not found.`);
-      }
-
-      if (
-        (product.catalogStatus ?? 'PUBLISHED') !== 'PUBLISHED' ||
-        product.visibility !== 'ACTIVE' ||
-        product.shop.status !== 'ACTIVE' ||
-        product.shop.sellerProfile.approvalStatus !== 'APPROVED' ||
-        product.images.length < 1 ||
-        !this.productReadiness.getReadiness(product).ready
-      ) {
-        throw new BadRequestException(
-          `Product ${item.productId} is not available for checkout.`,
-        );
-      }
-
-      const variant = this.resolveVariant(product, item.variantId);
-      if (!variant) {
-        throw new BadRequestException(
-          item.variantId
-            ? `Variant ${item.variantId} is not available for product ${item.productId}.`
-            : `Product ${item.productId} is not purchasable because it has no active priced variant.`,
-        );
-      }
-
-      const availableStock = this.resolveAvailableStock(variant);
-      if (variant.trackInventory && availableStock < item.quantity) {
-        throw new BadRequestException(
-          `Product ${item.productId} variant ${variant.id} does not have enough stock. Requested ${item.quantity}, available ${availableStock}.`,
-        );
-      }
-
-      const unitPrice = this.resolveVariantPrice(variant);
-      if (!unitPrice || unitPrice.lte(0)) {
-        throw new BadRequestException(
-          `Product ${item.productId} is not purchasable because its price is missing.`,
-        );
-      }
-
-      return {
-        input: item,
-        product,
-        variant,
-        unitPrice,
-        lineTotal: new Prisma.Decimal(unitPrice.toString()).mul(item.quantity),
-      };
-    });
 
     const customerId = await this.resolveCustomerId(dto, user);
     const itemsByShop = this.groupItemsByShop(normalizedItems);
@@ -343,55 +246,26 @@ export class CheckoutService {
     return created.id;
   }
 
-  private normalizeItems(
-    items: CreateCheckoutOrderDto['items'],
-  ): NormalizedCheckoutItem[] {
-    const quantityByProductId = new Map<string, number>();
-
-    for (const item of items) {
-      const key = `${item.productId}:${item.variantId ?? ''}`;
-      quantityByProductId.set(
-        key,
-        (quantityByProductId.get(key) ?? 0) + item.quantity,
+  private toValidatedCheckoutItem(
+    item: CartValidationLine,
+  ): ValidatedCheckoutItem {
+    if (!item.product || !item.variant || !item.unitPrice) {
+      throw new BadRequestException(
+        `Product ${item.input.productId} is not available for checkout.`,
       );
     }
 
-    return [...quantityByProductId.entries()].map(([key, quantity]) => {
-      const [productId, variantId] = key.split(':');
-      return {
-        productId,
-        variantId: variantId || undefined,
-        quantity,
-      };
-    });
-  }
-
-  private resolveVariant(product: CheckoutProductRecord, variantId?: string) {
-    if (variantId) {
-      const variant = product.variants.find((entry) => entry.id === variantId);
-      if (!variant) return null;
-      const price = this.resolveVariantPrice(variant);
-      return price !== null && price.gt(0) ? variant : null;
-    }
-
-    return (
-      product.variants.find((variant) => {
-        const price = this.resolveVariantPrice(variant);
-        return (
-          price !== null &&
-          price.gt(0) &&
-          (!variant.trackInventory || this.resolveAvailableStock(variant) > 0)
-        );
-      }) ?? null
-    );
-  }
-
-  private resolveVariantPrice(variant: ProductVariant) {
-    return variant.discountPrice ?? variant.basePrice ?? null;
-  }
-
-  private resolveAvailableStock(variant: ProductVariant) {
-    return Math.max(0, variant.stockQuantity);
+    return {
+      input: {
+        productId: item.input.productId,
+        variantId: item.variant.id,
+        quantity: item.input.quantity,
+      },
+      product: item.product,
+      variant: item.variant,
+      unitPrice: item.unitPrice,
+      lineTotal: item.unitPrice.mul(item.input.quantity),
+    };
   }
 
   private groupItemsByShop(items: ValidatedCheckoutItem[]) {
@@ -449,5 +323,28 @@ export class CheckoutService {
 
   private buildCheckoutCode() {
     return `CHK-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+  }
+
+  private buildValidationErrorMessage(item: CartValidationLine) {
+    const variantId = item.variant?.id ?? item.input.variantId ?? 'unknown';
+
+    switch (item.status) {
+      case 'PRODUCT_NOT_FOUND':
+        return `Product ${item.input.productId} was not found.`;
+      case 'PRODUCT_ARCHIVED':
+        return `Product ${item.input.productId} is archived and no longer available for checkout.`;
+      case 'PRODUCT_NOT_PUBLIC':
+        return `Product ${item.input.productId} is not available for checkout.`;
+      case 'VARIANT_NOT_FOUND':
+        return `Variant ${variantId} is not available for product ${item.input.productId}.`;
+      case 'OUT_OF_STOCK':
+        return `Product ${item.input.productId} variant ${variantId} is out of stock.`;
+      case 'QUANTITY_EXCEEDS_STOCK':
+        return `Product ${item.input.productId} variant ${variantId} does not have enough stock. Requested ${item.input.quantity}, available ${item.maxQuantity}.`;
+      case 'MISSING_PRICE':
+        return `Product ${item.input.productId} is not purchasable because its price is missing.`;
+      default:
+        return `Product ${item.input.productId} is not available for checkout.`;
+    }
   }
 }

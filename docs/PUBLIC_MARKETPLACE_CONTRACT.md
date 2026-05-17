@@ -42,6 +42,17 @@ Scope: public marketplace contract in `backend-nest` and `frontend-next`. Legacy
   - missing-price variants
   - quantities above available stock
 
+## Cart Preflight Contract
+
+- Public cart preflight endpoint: `POST /api/public/cart/validate`
+- It uses the same visibility and stock/price rules as final checkout.
+- It returns:
+  - per-item status
+  - current server unit price
+  - current stock and `maxQuantity`
+  - trusted subtotal for currently available items
+- `PRICE_CHANGED` is non-mutating and does not create or reserve orders.
+
 ## Header And Mobile UX Contract
 
 - public header search submits to `/products?q=...`

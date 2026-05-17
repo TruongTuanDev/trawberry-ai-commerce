@@ -12,6 +12,7 @@
     "test:e2e:auth": "playwright test auth-cookie",
     "test:e2e:full-commerce": "playwright test full-commerce-flow",
     "test:e2e:cart-checkout": "playwright test cart-checkout",
+    "test:e2e:cart-validation": "playwright test cart-validation",
     "test:e2e:product-buying-ux": "playwright test product-buying-ux",
     "test:e2e:public-marketplace-contract": "playwright test public-marketplace-contract",
     "test:e2e:public-empty-fallbacks": "playwright test public-empty-fallbacks",

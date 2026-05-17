@@ -1,5 +1,15 @@
 # Phase Report
 
+## Stale Cart Validation + Checkout Preflight
+
+- Added `POST /api/public/cart/validate`.
+- Shared backend validation rules between cart preflight and checkout submit.
+- Added stale-item warnings and reconciliation actions on `/cart`.
+- Added checkout preflight block before final order creation.
+- Added verification:
+  - `npm run smoke:cart-validation`
+  - `npm run test:e2e:cart-validation`
+
 ## Public Buying UX Phase
 
 - Added quick add vs select-size product cards on `/products`.

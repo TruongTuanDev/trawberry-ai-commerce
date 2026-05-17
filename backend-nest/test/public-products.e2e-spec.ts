@@ -354,6 +354,38 @@ describe('PublicProductsController contract (e2e)', () => {
           }),
         ],
       }),
+      buildProduct({
+        id: 'product-price-changed',
+        title: 'Price Change Jacket',
+        variants: [
+          buildVariant({
+            id: 'variant-price-changed',
+            productId: 'product-price-changed',
+            sizeName: 'L',
+            russianSize: '48',
+            techSize: 'L',
+            sellerSku: 'PRICE-L',
+            basePrice: decimal(2100),
+            stockQuantity: 5,
+          }),
+        ],
+      }),
+      buildProduct({
+        id: 'product-limited',
+        title: 'Limited Stock Jacket',
+        variants: [
+          buildVariant({
+            id: 'variant-limited',
+            productId: 'product-limited',
+            sizeName: 'M',
+            russianSize: '46',
+            techSize: 'M',
+            sellerSku: 'LIMIT-M',
+            basePrice: decimal(900),
+            stockQuantity: 1,
+          }),
+        ],
+      }),
     ];
 
     prismaMock.user.findUnique.mockReset();
@@ -506,8 +538,12 @@ describe('PublicProductsController contract (e2e)', () => {
       .expect(200);
 
     const body = readBody<PaginatedPublicProductsResponseDto>(response);
-    expect(body.items.map((item) => item.id)).toEqual(['product-ready']);
-    expect(body.meta.total).toBe(1);
+    expect(body.items.map((item) => item.id)).toEqual([
+      'product-ready',
+      'product-price-changed',
+      'product-limited',
+    ]);
+    expect(body.meta.total).toBe(3);
   });
 
   it('returns public detail fields and variant availability contract', async () => {
@@ -567,6 +603,175 @@ describe('PublicProductsController contract (e2e)', () => {
     await request(app.getHttpServer())
       .get('/api/public/products/product-no-stock')
       .expect(404);
+  });
+
+  it('validates public cart items against current server stock, price, and visibility', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/public/cart/validate')
+      .send({
+        items: [
+          {
+            productId: 'product-ready',
+            variantId: 'variant-in-stock',
+            quantity: 2,
+            clientUnitPrice: 1788,
+          },
+          {
+            productId: 'product-price-changed',
+            variantId: 'variant-price-changed',
+            quantity: 1,
+            clientUnitPrice: 1999,
+          },
+          {
+            productId: 'product-ready',
+            variantId: 'variant-out-of-stock',
+            quantity: 1,
+            clientUnitPrice: 1825,
+          },
+          {
+            productId: 'product-limited',
+            variantId: 'variant-limited',
+            quantity: 2,
+            clientUnitPrice: 900,
+          },
+          {
+            productId: 'product-unpublished',
+            variantId: 'variant-unpublished',
+            quantity: 1,
+            clientUnitPrice: 1999,
+          },
+          {
+            productId: 'product-archived',
+            variantId: 'variant-archived',
+            quantity: 1,
+            clientUnitPrice: 1499,
+          },
+          {
+            productId: 'product-missing-price',
+            variantId: 'variant-no-price',
+            quantity: 1,
+            clientUnitPrice: 1,
+          },
+          {
+            productId: 'product-ready',
+            variantId: 'variant-does-not-exist',
+            quantity: 1,
+            clientUnitPrice: 1788,
+          },
+          {
+            productId: 'product-does-not-exist',
+            variantId: 'variant-nowhere',
+            quantity: 1,
+            clientUnitPrice: 123,
+          },
+        ],
+      })
+      .expect(200);
+
+    const body = readBody<{
+      valid: boolean;
+      items: Array<{
+        productId: string;
+        variantId: string | null;
+        status: string;
+        available: boolean;
+        unitPrice: number | null;
+        currentStock: number;
+        maxQuantity: number;
+        requestedQuantity: number;
+        lineTotal: number;
+        shopName: string | null;
+      }>;
+      summary: {
+        subtotal: number;
+        invalidCount: number;
+        changedCount: number;
+      };
+    }>(response);
+
+    expect(body.valid).toBe(false);
+    expect(body.summary.invalidCount).toBe(7);
+    expect(body.summary.changedCount).toBe(1);
+    expect(body.summary.subtotal).toBe(5676);
+
+    expect(body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          productId: 'product-ready',
+          variantId: 'variant-in-stock',
+          status: 'OK',
+          available: true,
+          unitPrice: 1788,
+          currentStock: 3,
+          maxQuantity: 3,
+          requestedQuantity: 2,
+          lineTotal: 3576,
+          shopName: 'Ready Shop',
+        }),
+        expect.objectContaining({
+          productId: 'product-price-changed',
+          variantId: 'variant-price-changed',
+          status: 'PRICE_CHANGED',
+          available: true,
+          unitPrice: 2100,
+          currentStock: 5,
+          maxQuantity: 5,
+          requestedQuantity: 1,
+          lineTotal: 2100,
+        }),
+        expect.objectContaining({
+          productId: 'product-ready',
+          variantId: 'variant-out-of-stock',
+          status: 'OUT_OF_STOCK',
+          available: false,
+          unitPrice: 1825,
+          currentStock: 0,
+          maxQuantity: 0,
+        }),
+        expect.objectContaining({
+          productId: 'product-limited',
+          variantId: 'variant-limited',
+          status: 'QUANTITY_EXCEEDS_STOCK',
+          available: false,
+          unitPrice: 900,
+          currentStock: 1,
+          maxQuantity: 1,
+          requestedQuantity: 2,
+          lineTotal: 900,
+        }),
+        expect.objectContaining({
+          productId: 'product-unpublished',
+          variantId: 'variant-unpublished',
+          status: 'PRODUCT_NOT_PUBLIC',
+          available: false,
+        }),
+        expect.objectContaining({
+          productId: 'product-archived',
+          variantId: 'variant-archived',
+          status: 'PRODUCT_ARCHIVED',
+          available: false,
+        }),
+        expect.objectContaining({
+          productId: 'product-missing-price',
+          variantId: 'variant-no-price',
+          status: 'MISSING_PRICE',
+          available: false,
+          unitPrice: null,
+        }),
+        expect.objectContaining({
+          productId: 'product-ready',
+          variantId: 'variant-does-not-exist',
+          status: 'VARIANT_NOT_FOUND',
+          available: false,
+        }),
+        expect.objectContaining({
+          productId: 'product-does-not-exist',
+          variantId: 'variant-nowhere',
+          status: 'PRODUCT_NOT_FOUND',
+          available: false,
+        }),
+      ]),
+    );
   });
 
   it('checks checkout contract for stock, publication, variant, and price guards', async () => {
@@ -725,6 +930,7 @@ describe('PublicProductsController contract (e2e)', () => {
 
     await request(app.getHttpServer())
       .get('/api/public/products')
+      .query({ q: 'Public Contract Jacket' })
       .expect(200)
       .expect((response) => {
         const body = readBody<PaginatedPublicProductsResponseDto>(response);

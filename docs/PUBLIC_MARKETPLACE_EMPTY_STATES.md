@@ -39,6 +39,7 @@ Scope: `frontend-next` public marketplace fallback UX only.
   - short checkout-safe explanation
   - `Continue shopping`
 - checkout CTA is not rendered when the cart is empty
+- stale cart items no longer wait until final submit to surface issues; cart preflight now warns inline
 
 ## Product Unavailable State
 

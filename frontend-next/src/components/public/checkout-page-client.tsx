@@ -3,10 +3,22 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
+import { FallbackImage } from "@/components/ui/fallback-image";
+import {
+  buildCartValidationPayload,
+  buildValidationMap,
+  cartItemKey,
+  formatMoneyNumber,
+  getValidationMessage,
+  getValidationTone,
+  isBlockingCartStatus,
+} from "@/lib/cart-validation";
 import {
   createCheckoutOrder,
   getPublicProduct,
+  validatePublicCart,
   type CheckoutOrderResponse,
+  type PublicCartValidationResponse,
 } from "@/lib/public-api";
 import { type CartItem, useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -26,17 +38,22 @@ type ShopCheckoutGroup = {
   subtotal: number;
 };
 
-function groupItemsByShop(items: CartItem[]): ShopCheckoutGroup[] {
+function groupItemsByShop(
+  items: CartItem[],
+  lineTotals: Map<string, number>,
+  shopNames: Map<string, string>,
+): ShopCheckoutGroup[] {
   const groups = new Map<string, ShopCheckoutGroup>();
   for (const item of items) {
     const existing = groups.get(item.shopId) ?? {
       shopId: item.shopId,
-      shopName: item.shopName,
+      shopName: shopNames.get(item.shopId) ?? item.shopName,
       items: [],
       subtotal: 0,
     };
     existing.items.push(item);
-    existing.subtotal += Number(item.unitPrice || 0) * item.quantity;
+    existing.subtotal += lineTotals.get(cartItemKey(item.productId, item.variantId)) ??
+      Number(item.unitPrice || 0) * item.quantity;
     groups.set(item.shopId, existing);
   }
   return [...groups.values()];
@@ -52,8 +69,10 @@ export function CheckoutPageClient({
   initialQuantity: number;
 }) {
   const items = useCartStore((state) => state.items);
+  const hydrated = useCartStore((state) => state.hydrated);
   const hydrateCart = useCartStore((state) => state.hydrate);
   const addItem = useCartStore((state) => state.addItem);
+  const patchItem = useCartStore((state) => state.patchItem);
   const clearCart = useCartStore((state) => state.clearCart);
   const authUser = useAuthStore((state) => state.user);
   const hydrateAuth = useAuthStore((state) => state.hydrate);
@@ -66,15 +85,12 @@ export function CheckoutPageClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CheckoutOrderResponse | null>(null);
-  const shopGroups = useMemo(() => groupItemsByShop(items), [items]);
-  const subtotal = useMemo(
-    () =>
-      items.reduce(
-        (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
-        0,
-      ),
-    [items],
+  const [validation, setValidation] = useState<PublicCartValidationResponse | null>(
+    null,
   );
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationRequestKey, setValidationRequestKey] = useState(0);
 
   useEffect(() => {
     hydrateCart();
@@ -87,9 +103,13 @@ export function CheckoutPageClient({
 
   const customerForm = {
     fullName:
-      customer.fullName || (authUser?.role === "CUSTOMER" ? authUser.fullName ?? "" : ""),
-    phone: customer.phone || (authUser?.role === "CUSTOMER" ? authUser.phone ?? "" : ""),
-    email: customer.email || (authUser?.role === "CUSTOMER" ? authUser.email : ""),
+      customer.fullName ||
+      (authUser?.role === "CUSTOMER" ? authUser.fullName ?? "" : ""),
+    phone:
+      customer.phone ||
+      (authUser?.role === "CUSTOMER" ? authUser.phone ?? "" : ""),
+    email:
+      customer.email || (authUser?.role === "CUSTOMER" ? authUser.email : ""),
     address: customer.address,
     note: customer.note,
   };
@@ -114,14 +134,17 @@ export function CheckoutPageClient({
         }
         setError(null);
       } catch (err) {
-        if (mounted)
+        if (mounted) {
           setError(
             err instanceof Error
               ? err.message
               : "Unable to load checkout product.",
           );
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
     void run();
@@ -129,6 +152,95 @@ export function CheckoutPageClient({
       mounted = false;
     };
   }, [addItem, initialProductId, initialQuantity, initialVariantId]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    if (!items.length) {
+      return;
+    }
+
+    let mounted = true;
+
+    const run = async () => {
+      setValidationLoading(true);
+      try {
+        const result = await validatePublicCart(buildCartValidationPayload(items));
+        if (!mounted) {
+          return;
+        }
+        setValidation(result);
+        setValidationError(null);
+      } catch (validationIssue) {
+        if (!mounted) {
+          return;
+        }
+        setValidation(null);
+        setValidationError(
+          validationIssue instanceof Error
+            ? validationIssue.message
+            : "Unable to validate checkout items right now.",
+        );
+      } finally {
+        if (mounted) {
+          setValidationLoading(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [hydrated, items, validationRequestKey]);
+
+  const activeValidation = items.length ? validation : null;
+  const activeValidationError = items.length ? validationError : null;
+  const activeValidationLoading = items.length ? validationLoading : false;
+
+  const validationMap = useMemo(
+    () => buildValidationMap(activeValidation),
+    [activeValidation],
+  );
+  const lineTotals = useMemo(() => {
+    return new Map(
+      items.map((item) => {
+        const validated = validationMap.get(cartItemKey(item.productId, item.variantId));
+        return [
+          cartItemKey(item.productId, item.variantId),
+          validated?.lineTotal ?? Number(item.unitPrice || 0) * item.quantity,
+        ] as const;
+      }),
+    );
+  }, [items, validationMap]);
+  const shopNames = useMemo(() => {
+    return new Map(
+      items.map((item) => {
+        const validated = validationMap.get(cartItemKey(item.productId, item.variantId));
+        return [item.shopId, validated?.shopName ?? item.shopName] as const;
+      }),
+    );
+  }, [items, validationMap]);
+  const shopGroups = useMemo(
+    () => groupItemsByShop(items, lineTotals, shopNames),
+    [items, lineTotals, shopNames],
+  );
+  const subtotal =
+    activeValidation?.summary.subtotal ??
+    items.reduce(
+      (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
+      0,
+    );
+  const hasBlockingIssues =
+    activeValidation?.items.some((item) => isBlockingCartStatus(item.status)) ?? false;
+  const hasPriceChanges = (activeValidation?.summary.changedCount ?? 0) > 0;
+  const submitDisabled =
+    submitting ||
+    activeValidationLoading ||
+    Boolean(activeValidationError) ||
+    hasBlockingIssues;
 
   const handleSubmit = async () => {
     if (!items.length) {
@@ -146,7 +258,69 @@ export function CheckoutPageClient({
 
     setSubmitting(true);
     setError(null);
+
     try {
+      const latestValidation = await validatePublicCart(
+        buildCartValidationPayload(items),
+      );
+      setValidation(latestValidation);
+      setValidationError(null);
+
+      if (latestValidation.summary.invalidCount > 0) {
+        setError(
+          "Some cart items changed on the server. Review the validation panel or go back to cart before submitting checkout.",
+        );
+        return;
+      }
+
+      const changedItems = latestValidation.items.filter(
+        (item) => item.status === "PRICE_CHANGED" && item.unitPrice !== null,
+      );
+      if (changedItems.length > 0) {
+        for (const item of changedItems) {
+          if (!item.variantId || item.unitPrice === null) {
+            continue;
+          }
+          patchItem(item.productId, item.variantId, {
+            unitPrice: String(item.unitPrice),
+            availableQuantity: item.maxQuantity,
+            trackInventory: item.trackInventory,
+            productName:
+              item.productName ??
+              items.find(
+                (entry) =>
+                  entry.productId === item.productId &&
+                  entry.variantId === item.variantId,
+              )?.productName,
+            imageUrl:
+              item.imageUrl ??
+              items.find(
+                (entry) =>
+                  entry.productId === item.productId &&
+                  entry.variantId === item.variantId,
+              )?.imageUrl,
+            variantName:
+              item.variantName ??
+              items.find(
+                (entry) =>
+                  entry.productId === item.productId &&
+                  entry.variantId === item.variantId,
+              )?.variantName,
+            shopName:
+              item.shopName ??
+              items.find(
+                (entry) =>
+                  entry.productId === item.productId &&
+                  entry.variantId === item.variantId,
+              )?.shopName,
+          });
+        }
+        setError(
+          "Server prices changed. The checkout summary was refreshed with the latest price. Review the total and submit again.",
+        );
+        return;
+      }
+
       const created = await createCheckoutOrder({
         shopId: items[0].shopId,
         items: items.map((item) => ({
@@ -165,8 +339,12 @@ export function CheckoutPageClient({
       });
       clearCart();
       setOrder(created);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create order.");
+    } catch (submitIssue) {
+      setError(
+        submitIssue instanceof Error
+          ? submitIssue.message
+          : "Unable to create order.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -276,6 +454,72 @@ export function CheckoutPageClient({
                     {error}
                   </div>
                 ) : null}
+
+                {activeValidationError || hasBlockingIssues || hasPriceChanges ? (
+                  <section
+                    className={`rounded-[2rem] border px-5 py-5 ${activeValidationError || hasBlockingIssues ? "border-rose-200 bg-rose-50" : "border-amber-200 bg-amber-50"}`}
+                    data-testid="checkout-validation-panel"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          Checkout preflight
+                        </p>
+                        <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
+                          Review server-side cart changes before submitting
+                        </h2>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setValidationRequestKey((current) => current + 1)}
+                          className="public-button-secondary px-4 py-2 text-sm"
+                        >
+                          Retry preflight
+                        </button>
+                        <Link
+                          href="/cart"
+                          className="public-button-secondary inline-flex px-4 py-2 text-sm"
+                          data-testid="checkout-validation-back-to-cart"
+                        >
+                          Back to cart
+                        </Link>
+                      </div>
+                    </div>
+                    {activeValidationError ? (
+                      <p className="mt-4 text-sm text-rose-700">{activeValidationError}</p>
+                    ) : (
+                      <div className="mt-4 space-y-3">
+                        {activeValidation?.items
+                          .filter((item) => item.status !== "OK")
+                          .map((item) => (
+                            <div
+                              key={cartItemKey(item.productId, item.variantId)}
+                              className={`rounded-2xl border px-3 py-3 text-sm ${getValidationTone(item.status)}`}
+                            >
+                              {getValidationMessage({
+                                status: item.status,
+                                productName: item.productName,
+                                variantName: item.variantName,
+                                currentStock: item.currentStock,
+                                maxQuantity: item.maxQuantity,
+                                requestedQuantity: item.requestedQuantity,
+                                unitPrice: item.unitPrice,
+                                localUnitPrice: Number(
+                                  items.find(
+                                    (entry) =>
+                                      entry.productId === item.productId &&
+                                      entry.variantId === item.variantId,
+                                  )?.unitPrice ?? 0,
+                                ),
+                              })}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </section>
+                ) : null}
+
                 <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                     Customer info
@@ -362,6 +606,11 @@ export function CheckoutPageClient({
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     Order summary
                   </p>
+                  {activeValidationLoading ? (
+                    <p className="mt-4 text-sm text-[var(--muted)]">
+                      Checking latest marketplace price and stock...
+                    </p>
+                  ) : null}
                   <div
                     className="mt-5 space-y-4"
                     data-testid="checkout-order-items"
@@ -380,34 +629,42 @@ export function CheckoutPageClient({
                             {group.subtotal.toFixed(2)}
                           </p>
                         </div>
-                        {group.items.map((item) => (
-                          <article
-                            key={`${item.productId}:${item.variantId}`}
-                            className="grid grid-cols-[64px_1fr] gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={
-                                item.imageUrl ??
-                                "https://placehold.co/120x120?text=No+Image"
-                              }
-                              alt={item.productName}
-                              className="h-16 w-16 rounded-xl object-cover"
-                            />
-                            <div className="min-w-0 text-sm">
-                              <p className="font-semibold text-[var(--foreground)]">
-                                {item.productName}
-                              </p>
-                              <p className="mt-1 text-[var(--muted)]">
-                                {item.variantName}
-                              </p>
-                              <p className="mt-1 text-[var(--muted)]">
-                                Qty {item.quantity} x{" "}
-                                {Number(item.unitPrice || 0).toFixed(2)}
-                              </p>
-                            </div>
-                          </article>
-                        ))}
+                        {group.items.map((item) => {
+                          const validated = validationMap.get(
+                            cartItemKey(item.productId, item.variantId),
+                          );
+                          const displayUnitPrice =
+                            validated?.unitPrice ?? Number(item.unitPrice || 0);
+                          const localUnitPrice = Number(item.unitPrice || 0);
+                          return (
+                            <article
+                              key={`${item.productId}:${item.variantId}`}
+                              className="grid grid-cols-[64px_1fr] gap-3 rounded-[1rem] border border-[var(--border)] bg-white p-3"
+                            >
+                              <FallbackImage
+                                src={validated?.imageUrl ?? item.imageUrl}
+                                alt={validated?.productName ?? item.productName}
+                                className="h-16 w-16 rounded-xl object-cover"
+                              />
+                              <div className="min-w-0 text-sm">
+                                <p className="font-semibold text-[var(--foreground)]">
+                                  {validated?.productName ?? item.productName}
+                                </p>
+                                <p className="mt-1 text-[var(--muted)]">
+                                  {validated?.variantName ?? item.variantName}
+                                </p>
+                                <p className="mt-1 text-[var(--muted)]">
+                                  Qty {item.quantity} x {formatMoneyNumber(displayUnitPrice)}
+                                </p>
+                                {validated?.status === "PRICE_CHANGED" ? (
+                                  <p className="mt-1 text-xs text-amber-700">
+                                    Old snapshot {formatMoneyNumber(localUnitPrice)}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </article>
+                          );
+                        })}
                       </section>
                     ))}
                   </div>
@@ -439,16 +696,21 @@ export function CheckoutPageClient({
                   </div>
                   <button
                     type="button"
-                    disabled={submitting}
+                    disabled={submitDisabled}
                     onClick={() => void handleSubmit()}
                     className="public-button-primary mt-5 w-full px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     data-testid="checkout-submit"
                   >
-                    {submitting ? "Creating order..." : "Create order"}
+                    {submitting
+                      ? "Creating order..."
+                      : hasBlockingIssues
+                        ? "Resolve cart issues first"
+                        : "Create order"}
                   </button>
                   <p className="mt-4 text-xs leading-6 text-[var(--muted)]">
-                    The backend recalculates trusted totals from current variant
-                    prices and stock before creating the order.
+                    Checkout runs a preflight validation first, then the backend
+                    recalculates trusted totals from current variant prices and stock
+                    again before creating the order.
                   </p>
                 </section>
               </section>

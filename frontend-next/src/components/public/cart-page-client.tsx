@@ -1,9 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import {
+  buildCartValidationPayload,
+  buildValidationMap,
+  canAdjustValidatedQuantity,
+  cartItemKey,
+  formatMoneyNumber,
+  getValidationMessage,
+  getValidationTone,
+  isBlockingCartStatus,
+} from "@/lib/cart-validation";
+import {
+  validatePublicCart,
+  type PublicCartValidationResponse,
+} from "@/lib/public-api";
 import { type CartItem, useCartStore } from "@/stores/cart-store";
 
 type ShopCartGroup = {
@@ -13,41 +28,148 @@ type ShopCartGroup = {
   subtotal: number;
 };
 
-function groupItemsByShop(items: CartItem[]): ShopCartGroup[] {
+function groupItemsByShop(
+  items: CartItem[],
+  lineTotals: Map<string, number>,
+  shopNames: Map<string, string>,
+): ShopCartGroup[] {
   const groups = new Map<string, ShopCartGroup>();
   for (const item of items) {
     const existing = groups.get(item.shopId) ?? {
       shopId: item.shopId,
-      shopName: item.shopName,
+      shopName: shopNames.get(item.shopId) ?? item.shopName,
       items: [],
       subtotal: 0,
     };
     existing.items.push(item);
-    existing.subtotal += Number(item.unitPrice || 0) * item.quantity;
+    existing.subtotal += lineTotals.get(cartItemKey(item.productId, item.variantId)) ??
+      Number(item.unitPrice || 0) * item.quantity;
     groups.set(item.shopId, existing);
   }
   return [...groups.values()];
 }
 
 export function CartPageClient() {
+  const router = useRouter();
   const items = useCartStore((state) => state.items);
+  const hydrated = useCartStore((state) => state.hydrated);
   const hydrate = useCartStore((state) => state.hydrate);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const patchItem = useCartStore((state) => state.patchItem);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
-  const subtotal = useMemo(
-    () =>
-      items.reduce(
-        (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
-        0,
-      ),
-    [items],
+  const [validation, setValidation] = useState<PublicCartValidationResponse | null>(
+    null,
   );
-  const shopGroups = useMemo(() => groupItemsByShop(items), [items]);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationRequestKey, setValidationRequestKey] = useState(0);
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    if (!items.length) {
+      return;
+    }
+
+    let mounted = true;
+
+    const run = async () => {
+      setValidationLoading(true);
+      try {
+        const result = await validatePublicCart(buildCartValidationPayload(items));
+        if (!mounted) {
+          return;
+        }
+        setValidation(result);
+        setValidationError(null);
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+        setValidation(null);
+        setValidationError(
+          error instanceof Error
+            ? error.message
+            : "Unable to validate cart right now.",
+        );
+      } finally {
+        if (mounted) {
+          setValidationLoading(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [hydrated, items, validationRequestKey]);
+
+  const activeValidation = items.length ? validation : null;
+  const activeValidationError = items.length ? validationError : null;
+  const activeValidationLoading = items.length ? validationLoading : false;
+
+  const validationMap = useMemo(
+    () => buildValidationMap(activeValidation),
+    [activeValidation],
+  );
+  const lineTotals = useMemo(() => {
+    return new Map(
+      items.map((item) => {
+        const validated = validationMap.get(cartItemKey(item.productId, item.variantId));
+        return [
+          cartItemKey(item.productId, item.variantId),
+          validated?.lineTotal ?? Number(item.unitPrice || 0) * item.quantity,
+        ] as const;
+      }),
+    );
+  }, [items, validationMap]);
+  const shopNames = useMemo(() => {
+    return new Map(
+      items.map((item) => {
+        const validated = validationMap.get(cartItemKey(item.productId, item.variantId));
+        return [item.shopId, validated?.shopName ?? item.shopName] as const;
+      }),
+    );
+  }, [items, validationMap]);
+  const subtotal = activeValidation?.summary.subtotal ?? items.reduce(
+    (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
+    0,
+  );
+  const shopGroups = useMemo(
+    () => groupItemsByShop(items, lineTotals, shopNames),
+    [items, lineTotals, shopNames],
+  );
+  const hasBlockingIssues =
+    activeValidation?.items.some((item) => isBlockingCartStatus(item.status)) ?? false;
+  const hasPriceChanges = (activeValidation?.summary.changedCount ?? 0) > 0;
+  const checkoutDisabled =
+    activeValidationLoading || Boolean(activeValidationError) || hasBlockingIssues;
+
+  const acceptNewPrice = (
+    item: CartItem,
+    validated: NonNullable<PublicCartValidationResponse["items"][number]>,
+  ) => {
+    if (validated.unitPrice === null) {
+      return;
+    }
+    patchItem(item.productId, item.variantId, {
+      unitPrice: String(validated.unitPrice),
+      availableQuantity: validated.maxQuantity,
+      trackInventory: validated.trackInventory,
+      productName: validated.productName ?? item.productName,
+      imageUrl: validated.imageUrl ?? item.imageUrl,
+      variantName: validated.variantName ?? item.variantName,
+      shopName: validated.shopName ?? item.shopName,
+    });
+  };
 
   return (
     <PublicShell>
@@ -106,6 +228,43 @@ export function CartPageClient() {
           ) : (
             <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
               <section className="space-y-4" data-testid="cart-items">
+                {activeValidationLoading ? (
+                  <section className="rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-4 text-sm text-[var(--muted)]">
+                    Checking latest stock and price...
+                  </section>
+                ) : null}
+
+                {activeValidationError ? (
+                  <section className="rounded-[1.75rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+                    <p>{activeValidationError}</p>
+                    <button
+                      type="button"
+                      onClick={() => setValidationRequestKey((current) => current + 1)}
+                      className="public-button-secondary mt-3 px-4 py-2 text-sm"
+                      data-testid="cart-validation-retry"
+                    >
+                      Retry validation
+                    </button>
+                  </section>
+                ) : null}
+
+                {hasBlockingIssues ? (
+                  <section
+                    className="rounded-[1.75rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700"
+                    data-testid="cart-validation-banner"
+                  >
+                    Some items need attention before checkout. Remove unavailable
+                    products or adjust quantities to continue.
+                  </section>
+                ) : null}
+
+                {hasPriceChanges ? (
+                  <section className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+                    One or more items have a new server price. Review and accept the
+                    updated price before you continue.
+                  </section>
+                ) : null}
+
                 {shopGroups.map((group) => (
                   <section
                     key={group.shopId}
@@ -125,105 +284,193 @@ export function CartPageClient() {
                         {group.subtotal.toFixed(2)}
                       </p>
                     </div>
-                    {group.items.map((item) => (
-                      <article
-                        key={`${item.productId}:${item.variantId}`}
-                        className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[96px_1fr_180px_120px]"
-                      >
-                        <div className="overflow-hidden rounded-2xl bg-[var(--panel)]">
-                          <FallbackImage
-                            src={item.imageUrl}
-                            alt={item.productName}
-                            className="h-24 w-full object-cover"
-                            testId={`cart-item-image-${item.productId}-${item.variantId}`}
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[var(--foreground)]">
-                            {item.productName}
-                          </p>
-                          <p className="mt-1 text-sm text-[var(--muted)]">
-                            {item.variantName}
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--muted)]">
-                            {item.shopName}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                            Quantity
-                          </p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.productId,
-                                  item.variantId,
-                                  item.quantity - 1,
-                                )
-                              }
-                              className="public-button-secondary h-10 w-10"
-                              aria-label="Decrease quantity"
-                            >
-                              -
-                            </button>
-                            <input
-                              value={item.quantity}
-                              min={1}
-                              max={
-                                item.trackInventory
-                                  ? item.availableQuantity
-                                  : undefined
-                              }
-                              type="number"
-                              onChange={(event) =>
-                                updateQuantity(
-                                  item.productId,
-                                  item.variantId,
-                                  Number(event.target.value),
-                                )
-                              }
-                              className="public-input w-20 text-center"
-                              data-testid="cart-quantity-input"
+                    {group.items.map((item) => {
+                      const key = cartItemKey(item.productId, item.variantId);
+                      const validated = validationMap.get(key);
+                      const status = validated?.status ?? "OK";
+                      const canAdjust = canAdjustValidatedQuantity(status);
+                      const resolvedMax =
+                        validated?.trackInventory && validated.maxQuantity > 0
+                          ? validated.maxQuantity
+                          : item.trackInventory
+                            ? item.availableQuantity
+                            : undefined;
+                      const blocking = validated
+                        ? isBlockingCartStatus(validated.status)
+                        : false;
+                      const displayUnitPrice =
+                        validated?.unitPrice ?? Number(item.unitPrice || 0);
+                      const localUnitPrice = Number(item.unitPrice || 0);
+                      const displayLineTotal =
+                        validated?.lineTotal ?? localUnitPrice * item.quantity;
+
+                      return (
+                        <article
+                          key={key}
+                          className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[96px_1fr_220px_120px]"
+                        >
+                          <div className="overflow-hidden rounded-2xl bg-[var(--panel)]">
+                            <FallbackImage
+                              src={validated?.imageUrl ?? item.imageUrl}
+                              alt={validated?.productName ?? item.productName}
+                              className="h-24 w-full object-cover"
+                              testId={`cart-item-image-${item.productId}-${item.variantId}`}
                             />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[var(--foreground)]">
+                              {validated?.productName ?? item.productName}
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--muted)]">
+                              {validated?.variantName ?? item.variantName}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--muted)]">
+                              {validated?.shopName ?? item.shopName}
+                            </p>
+                            {validated ? (
+                              <div
+                                className={`mt-3 rounded-2xl border px-3 py-2 text-sm ${getValidationTone(validated.status)}`}
+                                data-testid={`cart-item-validation-${item.productId}-${item.variantId}`}
+                              >
+                                <p>
+                                  {getValidationMessage({
+                                    status: validated.status,
+                                    productName: validated.productName,
+                                    variantName: validated.variantName,
+                                    currentStock: validated.currentStock,
+                                    maxQuantity: validated.maxQuantity,
+                                    requestedQuantity: validated.requestedQuantity,
+                                    unitPrice: validated.unitPrice,
+                                    localUnitPrice,
+                                  })}
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {validated.status === "QUANTITY_EXCEEDS_STOCK" &&
+                                  validated.maxQuantity > 0 ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        patchItem(item.productId, item.variantId, {
+                                          availableQuantity: validated.maxQuantity,
+                                          trackInventory: validated.trackInventory,
+                                        });
+                                        updateQuantity(
+                                          item.productId,
+                                          item.variantId,
+                                          validated.maxQuantity,
+                                        );
+                                      }}
+                                      className="public-button-secondary px-3 py-2 text-xs"
+                                      data-testid={`cart-validation-set-max-${item.productId}-${item.variantId}`}
+                                    >
+                                      Set to max
+                                    </button>
+                                  ) : null}
+                                  {validated.status === "PRICE_CHANGED" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => acceptNewPrice(item, validated)}
+                                      className="public-button-secondary px-3 py-2 text-xs"
+                                      data-testid={`cart-validation-accept-price-${item.productId}-${item.variantId}`}
+                                    >
+                                      Accept new price
+                                    </button>
+                                  ) : null}
+                                  {validated.status !== "OK" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeItem(item.productId, item.variantId)}
+                                      className="public-button-secondary px-3 py-2 text-xs"
+                                      data-testid={`cart-validation-remove-${item.productId}-${item.variantId}`}
+                                    >
+                                      Remove
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                              Quantity
+                            </p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.productId,
+                                    item.variantId,
+                                    item.quantity - 1,
+                                  )
+                                }
+                                className="public-button-secondary h-10 w-10"
+                                aria-label="Decrease quantity"
+                                disabled={!canAdjust}
+                              >
+                                -
+                              </button>
+                              <input
+                                value={item.quantity}
+                                min={1}
+                                max={resolvedMax}
+                                type="number"
+                                onChange={(event) =>
+                                  updateQuantity(
+                                    item.productId,
+                                    item.variantId,
+                                    Number(event.target.value),
+                                  )
+                                }
+                                className="public-input w-20 text-center"
+                                data-testid="cart-quantity-input"
+                                disabled={!canAdjust}
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.productId,
+                                    item.variantId,
+                                    item.quantity + 1,
+                                  )
+                                }
+                                className="public-button-secondary h-10 w-10"
+                                aria-label="Increase quantity"
+                                disabled={!canAdjust}
+                              >
+                                +
+                              </button>
+                            </div>
                             <button
                               type="button"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.productId,
-                                  item.variantId,
-                                  item.quantity + 1,
-                                )
-                              }
-                              className="public-button-secondary h-10 w-10"
-                              aria-label="Increase quantity"
+                              onClick={() => removeItem(item.productId, item.variantId)}
+                              className="mt-3 text-sm font-semibold text-[var(--accent)]"
                             >
-                              +
+                              Remove
                             </button>
+                            {blocking ? (
+                              <p className="mt-2 text-xs text-rose-700">
+                                Checkout is blocked until this item is fixed.
+                              </p>
+                            ) : null}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeItem(item.productId, item.variantId)
-                            }
-                            className="mt-3 text-sm font-semibold text-[var(--accent)]"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div className="text-sm md:text-right">
-                          <p className="text-[var(--muted)]">
-                            Unit {Number(item.unitPrice || 0).toFixed(2)}
-                          </p>
-                          <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
-                            {(
-                              Number(item.unitPrice || 0) * item.quantity
-                            ).toFixed(2)}
-                          </p>
-                        </div>
-                      </article>
-                    ))}
+                          <div className="text-sm md:text-right">
+                            <p className="text-[var(--muted)]">
+                              Unit {formatMoneyNumber(displayUnitPrice)}
+                            </p>
+                            {validated?.status === "PRICE_CHANGED" ? (
+                              <p className="mt-1 text-xs text-[var(--muted)] line-through">
+                                Was {formatMoneyNumber(localUnitPrice)}
+                              </p>
+                            ) : null}
+                            <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
+                              {displayLineTotal.toFixed(2)}
+                            </p>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </section>
                 ))}
               </section>
@@ -238,13 +485,19 @@ export function CartPageClient() {
                     {subtotal.toFixed(2)}
                   </span>
                 </div>
-                <Link
-                  href="/checkout"
-                  className="public-button-primary mt-5 inline-flex w-full justify-center px-5 py-3 text-sm"
+                <p className="mt-4 text-xs leading-6 text-[var(--muted)]">
+                  Local cart data is only a snapshot. Stock, price, and public
+                  visibility are revalidated against the backend before checkout.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/checkout")}
+                  disabled={checkoutDisabled}
+                  className="public-button-primary mt-5 inline-flex w-full justify-center px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="cart-checkout"
                 >
-                  Checkout
-                </Link>
+                  {checkoutDisabled ? "Resolve cart issues first" : "Checkout"}
+                </button>
               </aside>
             </div>
           )}
