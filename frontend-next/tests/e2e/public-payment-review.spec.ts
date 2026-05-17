@@ -20,10 +20,9 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
   await seededCard.getByRole("link", { name: "View" }).click();
 
   await expect(customerPage).toHaveURL(/\/products\/.+/);
-  await customerPage.getByTestId("product-quantity-input").fill("1");
   await customerPage.getByTestId("continue-to-checkout").click();
 
-  await customerPage.waitForURL(/\/checkout\?/);
+  await customerPage.waitForURL(/\/checkout/);
   await customerPage.getByTestId("checkout-full-name").fill("Demo Customer");
   await customerPage.getByTestId("checkout-phone").fill(phone);
   await customerPage.getByTestId("checkout-email").fill("demo-customer@example.com");

@@ -1,5 +1,25 @@
 # Full Commerce Flow Audit
 
+## Public Buying UX Addendum
+
+Date: 2026-05-17
+
+- public marketplace card/detail UX was upgraded to a Wildberries-inspired marketplace layout without copying assets
+- `/products` now exposes clear quick-cart vs select-size behavior
+- `/products/[id]` now uses:
+  - gallery thumbnails
+  - size pills with disabled out-of-stock variants
+  - quantity stepper
+  - sticky purchase card
+  - `Добавить в корзину`
+  - `Купить сейчас`
+- cart and checkout domain flow stayed the same; only public buying ergonomics changed
+- focused verification pass:
+  - `npm run test:e2e:product-buying-ux`
+  - `npm run test:e2e:cart-checkout`
+  - `npm run test:e2e:multi-shop-checkout`
+  - `npm run test:e2e:marketplace-search-filter-sort`
+
 Date: 2026-05-13
 
 Scope: `frontend-next`, `backend-nest`, `ai-service`, and Docker runtime. Legacy apps `strawberry-frontend` and `strawberry-backend` were intentionally not modified.

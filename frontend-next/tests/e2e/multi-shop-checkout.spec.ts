@@ -207,14 +207,15 @@ test("customer checks out products from two shops into split orders", async ({
   });
 
   await page.goto(`/products/${productA.product.id}`);
-  await page.getByTestId("product-quantity-input").fill("2");
+  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
   await page.getByTestId("add-to-cart").click();
-  await expect(page.getByText("Item added to cart.")).toBeVisible();
+  await expect(page.getByTestId("add-to-cart")).toHaveText("В корзине");
 
   await page.goto(`/products/${productB.product.id}`);
-  await page.getByTestId("product-quantity-input").fill("3");
+  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
+  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
   await page.getByTestId("add-to-cart").click();
-  await expect(page.getByText("Item added to cart.")).toBeVisible();
+  await expect(page.getByTestId("add-to-cart")).toHaveText("В корзине");
 
   await page.goto("/cart");
   await expect(page.getByTestId("cart-shop-group")).toHaveCount(2);

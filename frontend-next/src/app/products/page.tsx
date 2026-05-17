@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
 import { PublicShell } from "@/components/public/public-shell";
 import { getPublicProducts, type PaginatedPublicProducts, type PublicProduct } from "@/lib/public-api";
+import { useCartStore } from "@/stores/cart-store";
 
 type ProductsMeta = {
   page: number;
@@ -26,6 +27,7 @@ export default function ProductsPage() {
 function ProductsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const hydrateCart = useCartStore((state) => state.hydrate);
   const [items, setItems] = useState<PublicProduct[]>([]);
   const [meta, setMeta] = useState<ProductsMeta>(initialMeta);
   const [filters, setFilters] = useState({
@@ -44,6 +46,10 @@ function ProductsPageClient() {
   const [error, setError] = useState<string | null>(null);
 
   const page = Number(searchParams.get("page") ?? "1");
+
+  useEffect(() => {
+    hydrateCart();
+  }, [hydrateCart]);
 
   useEffect(() => {
     let mounted = true;

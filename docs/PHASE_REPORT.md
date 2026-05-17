@@ -1,5 +1,14 @@
 # Phase Report
 
+## Public Buying UX Phase
+
+- Added quick add vs select-size product cards on `/products`.
+- Added marketplace-style public product detail layout on `/products/[id]`.
+- Added variant pills with disabled out-of-stock state.
+- Added quantity stepper with cart-aware selected variant quantity.
+- Added sticky desktop purchase card and header cart badge updates.
+- Added dedicated browser verification at `npm run test:e2e:product-buying-ux`.
+
 ## Seller Bulk Product Editing
 
 - Added `POST /api/shops/:shopId/products/bulk-update` for category, price, stock, and track-inventory updates.

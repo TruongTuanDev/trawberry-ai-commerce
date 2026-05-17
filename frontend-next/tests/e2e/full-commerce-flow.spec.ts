@@ -82,10 +82,9 @@ test("full seller-to-customer commerce flow covers payment, delivery, and fulfil
   await productCard.getByRole("link", { name: "View" }).click();
 
   await expect(customerPage.getByRole("heading", { name: "Studio Canvas Jacket" })).toBeVisible();
-  await customerPage.getByTestId("product-quantity-input").fill("1");
   await customerPage.getByTestId("continue-to-checkout").click();
 
-  await customerPage.waitForURL(/\/checkout\?/);
+  await customerPage.waitForURL(/\/checkout/);
   await customerPage.getByTestId("checkout-full-name").fill("Full Flow Customer");
   await customerPage.getByTestId("checkout-phone").fill(phone);
   await customerPage.getByTestId("checkout-email").fill("full-flow-customer@example.com");

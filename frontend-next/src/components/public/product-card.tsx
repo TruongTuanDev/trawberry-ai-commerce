@@ -1,54 +1,149 @@
+"use client";
+
 import Link from "next/link";
-import type { PublicProduct } from "@/lib/public-api";
+import { useRouter } from "next/navigation";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import { QuantityStepper } from "@/components/public/quantity-stepper";
+import {
+  formatMoney,
+  getCartQuantity,
+  getComparableOldPrice,
+  getProductPrimaryVariant,
+  getStockState,
+  getVariantLabel,
+  hasSelectableVariants,
+} from "@/components/public/public-product-utils";
+import { StockBadge } from "@/components/public/stock-badge";
+import type { PublicProduct } from "@/lib/public-api";
+import { useCartStore } from "@/stores/cart-store";
 
 export function ProductCard({ product }: { product: PublicProduct }) {
+  const router = useRouter();
+  const items = useCartStore((state) => state.items);
+  const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const primaryVariant = getProductPrimaryVariant(product);
+  const inCartQuantity = getCartQuantity(items, product.id, primaryVariant?.id);
+  const stockState = getStockState(product);
+  const formattedPrice = formatMoney(product.price);
+  const oldPrice = getComparableOldPrice(product.price, product.oldPrice);
+  const formattedOldPrice = formatMoney(oldPrice);
+  const requiresSelection = hasSelectableVariants(product);
+
+  const handleQuickAdd = () => {
+    if (!primaryVariant?.inStock) {
+      return;
+    }
+
+    if (requiresSelection) {
+      router.push(`/products/${product.id}`);
+      return;
+    }
+
+    addItem(product, primaryVariant, 1);
+  };
+
   return (
-    <article className="card-panel group flex h-full flex-col overflow-hidden rounded-[1.75rem]" data-testid="product-card">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(180deg,#efe0ce,#e2c7aa)]">
-        <FallbackImage
-          src={product.images[0]?.url}
-          alt={product.name}
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-        />
-        <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(35,24,20,0.78))] px-5 pb-5 pt-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/72">{product.shop.name ?? "Marketplace shop"}</p>
-          <p className="mt-2 text-xl font-semibold text-white">{product.name}</p>
+    <article
+      className="card-panel group flex h-full flex-col overflow-hidden rounded-[1.9rem] bg-white"
+      data-testid="product-card"
+    >
+      <Link href={`/products/${product.id}`} className="relative block overflow-hidden">
+        <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
+          <StockBadge label={stockState.label} tone={stockState.tone} />
+          {inCartQuantity > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white">
+              In cart {inCartQuantity}
+            </span>
+          ) : null}
         </div>
-        {!product.inStock ? (
-          <div className="absolute right-4 top-4 rounded-full bg-[rgba(125,37,17,0.92)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">
-            Out of stock
-          </div>
-        ) : null}
-      </div>
-      <div className="flex flex-1 flex-col gap-4 px-5 py-5">
-        <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-          {product.categoryName ? <span>{product.categoryName}</span> : null}
-          {product.brand ? <span>{product.brand}</span> : null}
+        <div className="aspect-[4/5] overflow-hidden bg-[linear-gradient(180deg,#f4ecdf,#eadbc5)]">
+          <FallbackImage
+            src={product.images[0]?.url}
+            alt={product.name}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+          />
         </div>
-        <p className="line-clamp-3 text-sm leading-6 text-[var(--muted)]">{product.description ?? "No description yet."}</p>
-        <div className="mt-auto flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">From</p>
-            <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">{product.price ?? "Contact shop"}</p>
-            <p className={`mt-2 text-xs font-semibold uppercase tracking-[0.14em] ${product.inStock ? "text-emerald-700" : "text-[var(--accent)]"}`}>
-              {product.inStock ? `${product.availableQuantity} ready to order` : "Unavailable"}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Link href={`/products/${product.id}`} className="public-button-secondary px-4 py-2 text-sm" data-testid={`product-view-${product.id}`}>
-              View
-            </Link>
-            {product.inStock ? (
-              <Link href={`/checkout?productId=${product.id}&quantity=1`} className="public-button-primary px-4 py-2 text-sm" data-testid={`product-checkout-${product.id}`}>
-                Checkout
+      </Link>
+
+      <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-4">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                {product.shop.name ?? "Marketplace shop"}
+              </p>
+              <Link
+                href={`/products/${product.id}`}
+                className="mt-2 line-clamp-2 block text-base font-semibold text-[var(--foreground)]"
+                data-testid={`product-view-${product.id}`}
+              >
+                {product.name}
               </Link>
-            ) : (
-              <span className="inline-flex cursor-not-allowed rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500">
-                Sold out
-              </span>
-            )}
+            </div>
           </div>
+          <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+            {product.brand ? <span>{product.brand}</span> : null}
+            {product.categoryName ? <span>{product.categoryName}</span> : null}
+          </div>
+        </div>
+
+        <div className="mt-auto space-y-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-2xl font-bold text-[var(--foreground)]">
+                {formattedPrice ?? "Contact shop"}
+              </p>
+              {formattedOldPrice ? (
+                <p className="mt-1 text-sm text-[var(--muted)] line-through">
+                  {formattedOldPrice}
+                </p>
+              ) : null}
+            </div>
+            {primaryVariant ? (
+              <p className="text-right text-xs text-[var(--muted)]">
+                {getVariantLabel(primaryVariant)}
+              </p>
+            ) : null}
+          </div>
+
+          {inCartQuantity > 0 && primaryVariant ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-[var(--accent-strong)]">
+                In cart
+              </span>
+              <QuantityStepper
+                size="sm"
+                value={inCartQuantity}
+                max={primaryVariant.trackInventory ? primaryVariant.availableQuantity : undefined}
+                onChange={(nextValue) =>
+                  updateQuantity(product.id, primaryVariant.id, nextValue)
+                }
+                testId={`product-card-stepper-${product.id}`}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleQuickAdd}
+              disabled={!primaryVariant?.inStock}
+              className="public-button-primary w-full px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid={`product-primary-action-${product.id}`}
+            >
+              {requiresSelection
+                ? "Выбрать размер"
+                : primaryVariant?.inStock
+                  ? "В корзину"
+                  : "Нет в наличии"}
+            </button>
+          )}
+
+          <Link
+            href={`/products/${product.id}`}
+            className="public-button-secondary inline-flex w-full justify-center px-4 py-3 text-sm"
+          >
+            View
+          </Link>
         </div>
       </div>
     </article>

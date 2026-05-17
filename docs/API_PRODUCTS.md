@@ -1,5 +1,28 @@
 # API Products
 
+## Public Buying UX Addendum
+
+Public marketplace buying pages now consume richer public product fields for marketplace-style detail and quick cart UI.
+
+Additional public response fields now used by `frontend-next`:
+
+- product:
+  - `composition`
+  - `sellerSku`
+  - `oldPrice`
+  - `averageRating`
+  - `feedbackCount`
+- variants:
+  - `originalPrice`
+  - `lowStockThreshold`
+- shop:
+  - `paymentInstructions`
+
+Visibility rules remain unchanged:
+
+- public list/detail still require approved seller, active shop/product, `catalogStatus=PUBLISHED`, readiness pass, at least one image, and at least one active priced variant
+- detail pages now remain viewable even when all variants are currently out of stock; purchase controls are disabled in that case
+
 Wildberries product ingestion has two paths:
 
 - Excel import: `POST /api/shops/:shopId/imports/wildberries/*`

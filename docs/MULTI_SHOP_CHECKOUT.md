@@ -1,5 +1,12 @@
 # Multi-shop Checkout Split Orders
 
+## Public Buying UX Addendum
+
+- product detail `Купить сейчас` does not bypass multi-shop rules
+- selected item is added to the same shared cart first, then checkout opens
+- order splitting by shop is unchanged
+- the UX change is limited to selection, quantity, and in-cart presentation
+
 ## Decision
 
 Multi-shop cart checkout now creates one independent order per shop. There is no parent marketplace order in this phase.

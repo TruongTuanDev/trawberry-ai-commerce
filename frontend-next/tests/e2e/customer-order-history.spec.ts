@@ -173,10 +173,11 @@ test("customer sees parent receipt and order history for multi-shop checkout", a
   await page.waitForURL("**/customer/orders");
 
   await page.goto(`/products/${productA.product.id}`);
-  await page.getByTestId("product-quantity-input").fill("2");
+  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
   await page.getByTestId("add-to-cart").click();
   await page.goto(`/products/${productB.product.id}`);
-  await page.getByTestId("product-quantity-input").fill("3");
+  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
+  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
   await page.getByTestId("add-to-cart").click();
 
   await page.goto("/cart");

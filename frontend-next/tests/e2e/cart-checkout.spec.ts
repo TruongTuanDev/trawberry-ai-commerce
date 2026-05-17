@@ -193,14 +193,10 @@ test("customer can cart checkout multiple items and track them", async ({
   await expect(
     page.getByRole("heading", { name: `E2E Cart Product ${stamp}` }),
   ).toBeVisible();
-  await page.getByTestId("product-quantity-input").fill("1");
   await page.getByTestId("add-to-cart").click();
-  await expect(page.getByText("Item added to cart.")).toBeVisible();
+  await expect(page.getByTestId("add-to-cart")).toHaveText("В корзине");
 
-  await page
-    .getByTestId("product-variant-select")
-    .selectOption(created.product.variants[1].id);
-  await page.getByTestId("product-quantity-input").fill("1");
+  await page.getByTestId(`product-size-${created.product.variants[1].id}`).click();
   await page.getByTestId("add-to-cart").click();
 
   await page.goto("/cart");

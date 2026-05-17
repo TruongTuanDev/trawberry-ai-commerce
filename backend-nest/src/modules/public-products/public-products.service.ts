@@ -14,11 +14,15 @@ type PublicProductRecord = {
   brand: string | null;
   color: string | null;
   gender: string | null;
+  composition: string | null;
+  sellerSku: string | null;
   seoSlug: string | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
   visibility: string | null;
   catalogStatus: string;
+  averageRating: Prisma.Decimal | null;
+  feedbackCount: number | null;
   categoryId: bigint | null;
   updatedAt: Date;
   images: ProductImage[];
@@ -28,6 +32,7 @@ type PublicProductRecord = {
     name: string;
     slug: string;
     logoUrl: string | null;
+    paymentInstructions: string | null;
     status: string;
     sellerProfile: {
       approvalStatus: string;
@@ -224,6 +229,7 @@ export class PublicProductsService {
               name: true,
               slug: true,
               logoUrl: true,
+              paymentInstructions: true,
               status: true,
               sellerProfile: {
                 select: {
@@ -299,9 +305,6 @@ export class PublicProductsService {
         variants: {
           some: {
             isActive: true,
-            stockQuantity: {
-              gt: 0,
-            },
             OR: [
               {
                 discountPrice: {
@@ -346,6 +349,7 @@ export class PublicProductsService {
             name: true,
             slug: true,
             logoUrl: true,
+            paymentInstructions: true,
             status: true,
             sellerProfile: {
               select: {
@@ -376,14 +380,19 @@ export class PublicProductsService {
       brand: product.brand,
       color: product.color,
       gender: product.gender,
+      composition: product.composition,
+      sellerSku: product.sellerSku,
       seoSlug: product.seoSlug,
       categoryId: product.category?.id.toString() ?? null,
       categorySlug: product.category?.slug ?? null,
       categoryName: product.category?.name ?? product.categoryName,
       sourceCategoryName: product.sourceCategoryName,
       price: price?.toString() ?? null,
+      oldPrice: this.resolveOriginalPrice(product.variants)?.toString() ?? null,
       inStock: availableQuantity > 0,
       availableQuantity,
+      averageRating: product.averageRating?.toString() ?? null,
+      feedbackCount: product.feedbackCount ?? 0,
       images: product.images.map((image) => ({
         id: image.id,
         url: image.localUrl ?? image.wbUrl,
@@ -401,7 +410,10 @@ export class PublicProductsService {
           wbSize: variant.wbSize,
           sellerSku: variant.sellerSku,
           price: variantPrice?.toString() ?? null,
+          originalPrice:
+            (variant.basePrice ?? variant.discountPrice)?.toString() ?? null,
           stockQuantity: variant.stockQuantity,
+          lowStockThreshold: variant.lowStockThreshold,
           trackInventory: variant.trackInventory,
           inStock: !variant.trackInventory || variantAvailableQuantity > 0,
           availableQuantity: variantAvailableQuantity,
@@ -412,6 +424,7 @@ export class PublicProductsService {
         name: product.shop.name,
         slug: product.shop.slug,
         logoUrl: product.shop.logoUrl,
+        paymentInstructions: product.shop.paymentInstructions,
       },
     };
   }
@@ -430,6 +443,14 @@ export class PublicProductsService {
       .filter((value): value is Prisma.Decimal => value !== null);
 
     return pricedVariants.sort((a, b) => a.comparedTo(b))[0] ?? null;
+  }
+
+  private resolveOriginalPrice(variants: ProductVariant[]) {
+    const prices = variants
+      .map((variant) => variant.basePrice ?? variant.discountPrice)
+      .filter((value): value is Prisma.Decimal => value !== null);
+
+    return prices.sort((a, b) => a.comparedTo(b))[0] ?? null;
   }
 
   private resolveAvailableQuantity(variants: ProductVariant[]) {

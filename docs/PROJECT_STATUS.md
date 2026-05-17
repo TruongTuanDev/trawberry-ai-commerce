@@ -1,5 +1,24 @@
 # Project Status
 
+## Public Product Buying UX
+
+- Status: Done for current marketplace MVP
+- Scope:
+  - upgraded public product cards
+  - upgraded public product detail page
+  - clearer variant/size selection
+  - quantity stepper and in-cart state
+  - header cart badge and search-centric marketplace header
+- Guardrails preserved:
+  - only `PUBLISHED` + readiness-pass products remain public
+  - cart and multi-shop checkout logic remain intact
+  - backend still validates stock and price on checkout
+- Verification entry points:
+  - `npm run test:e2e:product-buying-ux`
+  - `npm run test:e2e:cart-checkout`
+  - `npm run test:e2e:multi-shop-checkout`
+  - `npm run test:e2e:marketplace-search-filter-sort`
+
 ## Seller Product Curation + Publishing
 
 - WB Excel import and WB API sync now create seller-catalog products as `IMPORTED` instead of auto-publishing them.

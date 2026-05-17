@@ -78,7 +78,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - Public marketplace UI with:
   - polished home page
   - responsive product grid
-  - product gallery and checkout CTA
+  - quick add vs select-size product cards
+  - Wildberries-inspired product detail layout
+  - size selector pills and quantity stepper
+  - sticky purchase card with add-to-cart and buy-now
+  - cart badge in the public header
   - order tracking and payment proof upload UI
 - Seller delivery operations with:
   - delivery settings form
@@ -223,6 +227,22 @@ npm run test:e2e:marketplace-search-filter-sort
 ```
 
 The public `/products` page supports URL-persistent search, internal category filtering, brand/color/gender filters, stock filtering, sorting, and category/brand display on product detail.
+
+## Playwright Product Buying UX
+
+```bash
+npm run test:e2e:product-buying-ux
+```
+
+Coverage:
+
+- product card shows price and cart/select-size CTA
+- product detail shows gallery, thumbnails, size selector, and sticky purchase card
+- out-of-stock variant is disabled
+- quantity stepper respects variant stock
+- add to cart updates in-cart state and header cart count
+- buy now opens `/checkout`
+- checkout still completes with backend stock deduction
 
 ## Playwright admin seller approval flow
 With Docker runtime already healthy and demo data seeded:

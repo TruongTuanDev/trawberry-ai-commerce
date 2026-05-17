@@ -145,10 +145,9 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   await expect(productCard).toHaveCount(1);
   await productCard.getByRole("link", { name: "View" }).click();
   await expect(customerPage.getByRole("heading", { name: productName })).toBeVisible();
-  await customerPage.getByTestId("product-quantity-input").fill("1");
   await customerPage.getByTestId("continue-to-checkout").click();
 
-  await customerPage.waitForURL(/\/checkout\?/);
+  await customerPage.waitForURL(/\/checkout/);
   await customerPage.getByTestId("checkout-full-name").fill("Lifecycle Customer");
   await customerPage.getByTestId("checkout-phone").fill(phone);
   await customerPage.getByTestId("checkout-email").fill("lifecycle-customer@example.com");

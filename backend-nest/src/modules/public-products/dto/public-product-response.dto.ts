@@ -23,6 +23,9 @@ class PublicProductShopDto {
 
   @ApiProperty({ nullable: true })
   logoUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  paymentInstructions!: string | null;
 }
 
 class PublicProductVariantDto {
@@ -47,8 +50,14 @@ class PublicProductVariantDto {
   @ApiProperty({ nullable: true })
   price!: string | null;
 
+  @ApiProperty({ nullable: true })
+  originalPrice!: string | null;
+
   @ApiProperty()
   stockQuantity!: number;
+
+  @ApiProperty()
+  lowStockThreshold!: number;
 
   @ApiProperty()
   trackInventory!: boolean;
@@ -83,6 +92,12 @@ export class PublicProductResponseDto {
   gender!: string | null;
 
   @ApiProperty({ nullable: true })
+  composition!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sellerSku!: string | null;
+
+  @ApiProperty({ nullable: true })
   seoSlug!: string | null;
 
   @ApiProperty({ nullable: true })
@@ -100,11 +115,20 @@ export class PublicProductResponseDto {
   @ApiProperty({ nullable: true })
   price!: string | null;
 
+  @ApiProperty({ nullable: true })
+  oldPrice!: string | null;
+
   @ApiProperty()
   inStock!: boolean;
 
   @ApiProperty()
   availableQuantity!: number;
+
+  @ApiProperty({ nullable: true })
+  averageRating!: string | null;
+
+  @ApiProperty()
+  feedbackCount!: number;
 
   @ApiProperty({ type: PublicProductImageDto, isArray: true })
   images!: PublicProductImageDto[];

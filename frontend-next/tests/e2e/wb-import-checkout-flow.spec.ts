@@ -167,10 +167,10 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
   await expect(customerPage.getByTestId(`product-view-${importedProduct!.id}`)).toBeVisible();
   await customerPage.getByTestId(`product-view-${importedProduct!.id}`).click();
   await expect(customerPage.getByRole("heading", { name: productName })).toBeVisible();
-  await customerPage.getByTestId("product-quantity-input").fill("2");
+  await customerPage.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
   await customerPage.getByTestId("continue-to-checkout").click();
 
-  await customerPage.waitForURL(/\/checkout\?/);
+  await customerPage.waitForURL(/\/checkout/);
   await customerPage.getByTestId("checkout-full-name").fill("WB Checkout Customer");
   await customerPage.getByTestId("checkout-phone").fill(customerPhone);
   await customerPage.getByTestId("checkout-email").fill(`wb-customer-${stamp}@example.com`);

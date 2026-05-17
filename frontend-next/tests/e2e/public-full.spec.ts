@@ -15,10 +15,9 @@ test("seeded public customer flow completes checkout, tracking, and proof upload
 
   await expect(page).toHaveURL(/\/products\/.+/);
   await expect(page.getByRole("heading", { name: "Linen Bloom Dress" })).toBeVisible();
-  await page.getByTestId("product-quantity-input").fill("1");
   await page.getByTestId("continue-to-checkout").click();
 
-  await page.waitForURL(/\/checkout\?/);
+  await page.waitForURL(/\/checkout/);
   await page.getByTestId("checkout-full-name").fill("Demo Customer");
   await page.getByTestId("checkout-phone").fill("+79990000001");
   await page.getByTestId("checkout-email").fill("demo-customer@example.com");

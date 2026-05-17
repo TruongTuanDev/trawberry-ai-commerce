@@ -1,5 +1,17 @@
 # Cart + Multi-item Checkout
 
+## Public Buying UX Addendum
+
+- `/products` now supports quick cart UX:
+  - single-variant products add directly from the card
+  - multi-variant products route to detail with `Выбрать размер`
+- `/products/[id]` now drives cart state from explicit variant pills plus a quantity stepper
+- detail and product cards show `В корзине` state for the selected variant
+- quantity rules stay checkout-safe:
+  - minimum `1`
+  - maximum `availableQuantity` when `trackInventory=true`
+- checkout API contract is unchanged; cart still submits `productId`, `variantId`, and `quantity`
+
 ## MVP decision
 
 - Cart persistence is frontend `localStorage` in `frontend-next`.
@@ -28,6 +40,7 @@
 - Payment proof, seller review, delivery, and customer tracking remain per shop order.
 - Logged-in customers can view receipt history under `/customer/orders`; anonymous customers can lookup `/orders/receipt/:checkoutCode` with checkout phone.
 - Imported, draft, unpublished, or archived seller-catalog products are rejected at checkout.
+- backend still recalculates trusted price and stock before order creation.
 
 ## Verification
 

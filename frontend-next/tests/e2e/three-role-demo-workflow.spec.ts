@@ -156,11 +156,10 @@ test("three role demo workflow video", async ({ page, request }) => {
   await expect(productCard).toHaveCount(1);
   await productCard.getByRole("link", { name: "View" }).click();
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
-  await page.getByTestId("product-quantity-input").fill("1");
   await addCaption(page, "CUSTOMER: add quantity and continue to checkout.");
   await page.getByTestId("continue-to-checkout").click();
 
-  await page.waitForURL(/\/checkout\?/);
+  await page.waitForURL(/\/checkout/);
   await addCaption(page, "CUSTOMER: complete checkout with backend-calculated totals.");
   await page.getByTestId("checkout-full-name").fill("Demo Customer");
   await page.getByTestId("checkout-phone").fill(phone);

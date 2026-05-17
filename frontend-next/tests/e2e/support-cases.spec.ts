@@ -182,10 +182,8 @@ test("customer, admin, and seller work a support case from checkout receipt", as
   await page.waitForURL("**/customer/orders");
 
   await page.goto(`/products/${productA.product.id}`);
-  await page.getByTestId("product-quantity-input").fill("1");
   await page.getByTestId("add-to-cart").click();
   await page.goto(`/products/${productB.product.id}`);
-  await page.getByTestId("product-quantity-input").fill("1");
   await page.getByTestId("add-to-cart").click();
   await page.goto("/cart");
   await page.getByTestId("cart-checkout").click();

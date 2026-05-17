@@ -8,14 +8,19 @@ export type PublicProduct = {
   brand: string | null;
   color: string | null;
   gender: string | null;
+  composition: string | null;
+  sellerSku: string | null;
   seoSlug: string | null;
   categoryId: string | null;
   categorySlug: string | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
   price: string | null;
+  oldPrice: string | null;
   inStock: boolean;
   availableQuantity: number;
+  averageRating: string | null;
+  feedbackCount: number;
   images: Array<{
     id: string;
     url: string;
@@ -29,7 +34,9 @@ export type PublicProduct = {
     wbSize: string | null;
     sellerSku: string | null;
     price: string | null;
+    originalPrice: string | null;
     stockQuantity: number;
+    lowStockThreshold: number;
     trackInventory: boolean;
     inStock: boolean;
     availableQuantity: number;
@@ -39,6 +46,7 @@ export type PublicProduct = {
     name: string;
     slug: string;
     logoUrl: string | null;
+    paymentInstructions: string | null;
   };
 };
 
