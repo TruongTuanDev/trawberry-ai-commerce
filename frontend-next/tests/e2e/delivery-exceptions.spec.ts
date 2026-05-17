@@ -81,10 +81,16 @@ async function createPaidOrder(request: APIRequestContext, sellerToken: string, 
       wbTitle: `Delivery Exception Product ${stamp}`,
       localTitle: `Delivery Exception Product ${stamp}`,
       localDescription: "Delivery exception E2E product",
+      categoryName: "Delivery Exception Category",
       visibility: "ACTIVE",
       variants: [{ chrtId: 8400000 + (stamp % 100000), basePrice: 199, discountPrice: 199, stockQuantity: 5 }],
       images: [{ wbUrl: "https://example.com/delivery-exception.jpg", localUrl: "https://example.com/delivery-exception.jpg", isMain: true, sortOrder: 0 }],
     },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    token: sellerToken,
+    data: {},
   });
   const checkout = await backendJson<{ orderId: string; orderCode: string; trackingPath: string }>(request, "/api/checkout/orders", {
     method: "POST",
@@ -109,12 +115,17 @@ async function createPaidOrder(request: APIRequestContext, sellerToken: string, 
   return { shop, checkout };
 }
 
-async function login(page: Page, email: string, password: string) {
+async function login(
+  page: Page,
+  email: string,
+  password: string,
+  expectedUrl: string | RegExp = "**/seller/dashboard",
+) {
   await page.goto("/login");
   await page.getByTestId("login-email").fill(email);
   await page.getByTestId("login-password").fill(password);
   await page.getByTestId("login-submit").click();
-  await page.waitForURL("**/seller/dashboard");
+  await page.waitForURL(expectedUrl);
 }
 
 test("seller and admin handle delivery exception without leaking internal notes", async ({ page, request }) => {
@@ -144,7 +155,7 @@ test("seller and admin handle delivery exception without leaking internal notes"
   await expect(page.getByTestId("tracked-delivery-status")).toHaveText("FAILED");
   await expect(page.getByTestId("tracked-delivery-message")).toContainText("Courier could not reach you.");
 
-  await login(page, "demo-admin@trawberry.local", "DemoAdmin123!");
+  await login(page, "demo-admin@trawberry.local", "DemoAdmin123!", /\/admin\/dashboard/);
   await page.goto("/admin/deliveries");
   await page.getByTestId("admin-delivery-filter-EXCEPTIONS").click();
   await expect(page.getByTestId("admin-delivery-row").first()).toBeVisible();

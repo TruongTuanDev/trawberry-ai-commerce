@@ -10,8 +10,14 @@ export type WbSyncRunResponseDto = {
   totalImages: number;
   createdProducts: number;
   updatedProducts: number;
+  importedProducts: number;
   createdVariants: number;
   updatedVariants: number;
+  alreadyPublished: number;
+  needsReview: number;
+  missingPrice: number;
+  missingStock: number;
+  missingCategory: number;
   warnings: unknown;
   errors: unknown;
   rawSummary: unknown;

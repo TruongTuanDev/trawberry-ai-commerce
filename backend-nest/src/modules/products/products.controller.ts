@@ -22,10 +22,12 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import { CreateProductDto } from './dto/create-product.dto';
+import { BulkProductActionDto } from './dto/bulk-product-action.dto';
 import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { PaginatedProductsResponseDto } from './dto/paginated-products-response.dto';
 import { ProductDetailResponseDto } from './dto/product-detail-response.dto';
 import { ProductInventoryResponseDto } from './dto/product-inventory-response.dto';
+import { ProductReadinessResponseDto } from './dto/product-readiness-response.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductInventoryDto } from './dto/update-product-inventory.dto';
 import { ProductsService } from './products.service';
@@ -67,6 +69,16 @@ export class ProductsController {
     return this.productsService.findOneByShop(shopId, productId);
   }
 
+  @Get(':productId/readiness')
+  @ApiOperation({ summary: 'Get publish readiness for a seller product.' })
+  @ApiOkResponse({ type: ProductReadinessResponseDto })
+  getReadiness(
+    @Param('shopId') shopId: string,
+    @Param('productId') productId: string,
+  ) {
+    return this.productsService.getReadiness(shopId, productId);
+  }
+
   @Patch(':productId')
   @ApiOperation({ summary: 'Update a product in a seller shop.' })
   @ApiOkResponse({ type: ProductDetailResponseDto })
@@ -102,6 +114,49 @@ export class ProductsController {
     @Body() dto: UpdateProductInventoryDto,
   ) {
     return this.productsService.updateInventory(shopId, productId, dto);
+  }
+
+  @Post(':productId/publish')
+  @ApiOperation({ summary: 'Publish a seller product when it is ready.' })
+  @ApiOkResponse({ type: ProductDetailResponseDto })
+  publish(
+    @Param('shopId') shopId: string,
+    @Param('productId') productId: string,
+  ) {
+    return this.productsService.publish(shopId, productId);
+  }
+
+  @Post(':productId/unpublish')
+  @ApiOperation({
+    summary: 'Unpublish a seller product from the public marketplace.',
+  })
+  @ApiOkResponse({ type: ProductDetailResponseDto })
+  unpublish(
+    @Param('shopId') shopId: string,
+    @Param('productId') productId: string,
+  ) {
+    return this.productsService.unpublish(shopId, productId);
+  }
+
+  @Post(':productId/archive')
+  @ApiOperation({ summary: 'Archive a seller product.' })
+  @ApiOkResponse({ type: ProductDetailResponseDto })
+  archive(
+    @Param('shopId') shopId: string,
+    @Param('productId') productId: string,
+  ) {
+    return this.productsService.archive(shopId, productId);
+  }
+
+  @Post('bulk')
+  @ApiOperation({
+    summary: 'Bulk publish, unpublish, or archive seller products.',
+  })
+  bulkAction(
+    @Param('shopId') shopId: string,
+    @Body() dto: BulkProductActionDto,
+  ) {
+    return this.productsService.bulkAction(shopId, dto);
   }
 
   @Delete(':productId')

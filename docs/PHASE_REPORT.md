@@ -1,5 +1,16 @@
 # Phase Report
 
+## Seller Product Curation + Publishing
+
+- Added seller-catalog lifecycle fields and readiness checks for `IMPORTED`, `DRAFT`, `READY`, `PUBLISHED`, `UNPUBLISHED`, and `ARCHIVED`.
+- WB Excel import and WB API sync now create private seller-catalog products first instead of auto-publishing them.
+- Added seller publish, unpublish, archive, readiness, and bulk action APIs.
+- Updated public marketplace and checkout to allow only `PUBLISHED` and readiness-passing products.
+- Updated seller UI with catalog tabs, warning badges, bulk actions, and publish controls.
+- Added dedicated verification targets:
+  - `npm run smoke:product-curation`
+  - `npm run test:e2e:product-curation`
+
 ## Category Mapping + Marketplace Search/Filter/Sort
 
 - Added internal categories, source category mappings, and keyword fallback mapping.

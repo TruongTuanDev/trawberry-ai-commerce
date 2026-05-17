@@ -77,6 +77,10 @@ type StoredProduct = {
   seoSlug: string | null;
   brand: string | null;
   visibility: string | null;
+  catalogStatus: string;
+  categoryId: bigint | null;
+  categoryName?: string | null;
+  source?: string | null;
   images: Array<{
     id: string;
     wbUrl: string;
@@ -282,6 +286,10 @@ describe('CheckoutController (e2e)', () => {
         seoSlug: 'checkout-product',
         brand: 'Strawberry',
         visibility: 'ACTIVE',
+        catalogStatus: 'PUBLISHED',
+        categoryId: BigInt(10),
+        categoryName: 'Sneakers',
+        source: 'MANUAL',
         images: [
           {
             id: 'image-1',
@@ -348,6 +356,10 @@ describe('CheckoutController (e2e)', () => {
         seoSlug: null,
         brand: null,
         visibility: 'ACTIVE',
+        catalogStatus: 'PUBLISHED',
+        categoryId: BigInt(10),
+        categoryName: 'Sneakers',
+        source: 'MANUAL',
         images: [
           {
             id: 'image-2',
@@ -1099,6 +1111,24 @@ describe('CheckoutController (e2e)', () => {
       .send({
         shopId: 'shop-1',
         items: [{ productId: 'product-1', quantity: 2 }],
+        customer: {
+          fullName: 'Alice Checkout',
+          phone: '0123456789',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(400);
+  });
+
+  it('rejects checkout for unpublished products', async () => {
+    products[0].catalogStatus = 'UNPUBLISHED';
+
+    await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [{ productId: 'product-1', quantity: 1 }],
         customer: {
           fullName: 'Alice Checkout',
           phone: '0123456789',

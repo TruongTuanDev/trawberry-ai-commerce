@@ -183,14 +183,21 @@ export class WildberriesImportsService {
     payload: WbImportNormalizedPayload,
     options: ReturnType<typeof this.resolveOptions>,
   ): Promise<WbImportConfirmResult> {
+    void options;
     const result: WbImportConfirmResult = {
       importId,
       createdProducts: 0,
       updatedProducts: 0,
+      importedProducts: 0,
       createdVariants: 0,
       updatedVariants: 0,
       addedImages: 0,
       skippedImages: 0,
+      alreadyPublished: 0,
+      needsReview: 0,
+      missingPrice: 0,
+      missingStock: 0,
+      missingCategory: 0,
     };
 
     for (const normalizedProduct of payload.products) {
@@ -199,7 +206,6 @@ export class WildberriesImportsService {
         shopId,
         normalizedProduct,
       );
-      const visibility = this.resolveVisibility(normalizedProduct, options);
       const productData = {
         externalSource: SOURCE,
         externalProductId: normalizedProduct.externalProductId,
@@ -234,7 +240,8 @@ export class WildberriesImportsService {
           normalizedProduct.packageHeightCm !== null &&
           normalizedProduct.packageLengthCm !== null &&
           normalizedProduct.packageWidthCm !== null,
-        visibility,
+        visibility: existing ? undefined : 'DRAFT',
+        source: SOURCE,
         seoSlug: this.slug(
           `${normalizedProduct.sellerSku ?? normalizedProduct.externalProductId ?? normalizedProduct.name}-${normalizedProduct.name}`,
         ),
@@ -249,14 +256,19 @@ export class WildberriesImportsService {
             data: {
               id: randomUUID(),
               shopId,
+              catalogStatus: 'IMPORTED',
               ...productData,
             },
           });
 
       if (existing) {
         result.updatedProducts += 1;
+        if (existing.catalogStatus === 'PUBLISHED') {
+          result.alreadyPublished += 1;
+        }
       } else {
         result.createdProducts += 1;
+        result.importedProducts += 1;
       }
 
       for (const variant of normalizedProduct.variants) {
@@ -300,6 +312,26 @@ export class WildberriesImportsService {
         });
         result.addedImages += 1;
       }
+
+      const hasMissingCategory = !normalizedProduct.categoryId;
+      const hasMissingPrice = normalizedProduct.variants.every(
+        (variant) => !(variant.price && variant.price > 0),
+      );
+      const hasMissingStock = normalizedProduct.variants.every(
+        (variant) => variant.stockQuantity <= 0,
+      );
+      if (hasMissingCategory) {
+        result.missingCategory += 1;
+      }
+      if (hasMissingPrice) {
+        result.missingPrice += 1;
+      }
+      if (hasMissingStock) {
+        result.missingStock += 1;
+      }
+      if (hasMissingCategory || hasMissingPrice || hasMissingStock) {
+        result.needsReview += 1;
+      }
     }
 
     return result;
@@ -337,7 +369,7 @@ export class WildberriesImportsService {
       russianSize: variant.russianSize,
       techSize: variant.sizeName,
       wbSize: variant.russianSize ?? variant.sizeName,
-      isActive: Boolean(variant.price && variant.price > 0),
+      isActive: true,
       basePrice: variant.price ?? 0,
       discountPrice: variant.price ?? 0,
       stockQuantity: variant.stockQuantity,
@@ -401,25 +433,8 @@ export class WildberriesImportsService {
         shopId,
         OR: predicates,
       },
-      select: { id: true },
+      select: { id: true, catalogStatus: true },
     });
-  }
-
-  private resolveVisibility(
-    product: WbImportProduct,
-    options: ReturnType<typeof this.resolveOptions>,
-  ) {
-    if (options.publishMode === 'DRAFT') {
-      return 'DRAFT';
-    }
-
-    const hasPrice = product.variants.some(
-      (variant) => variant.price && variant.price > 0,
-    );
-    const hasImages = product.images.length > 0;
-    const hasVariants = product.variants.length > 0;
-
-    return hasPrice && hasImages && hasVariants ? 'ACTIVE' : 'DRAFT';
   }
 
   private resolveWbNmId(product: WbImportProduct) {

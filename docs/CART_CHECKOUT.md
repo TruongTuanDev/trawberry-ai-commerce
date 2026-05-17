@@ -19,7 +19,7 @@
 ## Backend guarantees
 
 - Request prices are ignored.
-- Each item must reference an active checkout-ready product and an active priced variant.
+- Each item must reference a `PUBLISHED`, active, checkout-ready product and an active priced variant.
 - Variant must belong to the product.
 - `trackInventory=true` variants require enough `stockQuantity`.
 - All stock deductions happen in one transaction. Any failed item blocks the whole checkout.
@@ -27,6 +27,7 @@
 - Multi-shop carts fail atomically: if one shop item is invalid or out of stock, no shop order is created and no stock is deducted.
 - Payment proof, seller review, delivery, and customer tracking remain per shop order.
 - Logged-in customers can view receipt history under `/customer/orders`; anonymous customers can lookup `/orders/receipt/:checkoutCode` with checkout phone.
+- Imported, draft, unpublished, or archived seller-catalog products are rejected at checkout.
 
 ## Verification
 

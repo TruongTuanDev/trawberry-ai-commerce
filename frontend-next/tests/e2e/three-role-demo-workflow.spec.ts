@@ -44,13 +44,27 @@ async function addCaption(page: import("@playwright/test").Page, text: string) {
   await page.waitForTimeout(900);
 }
 
-async function login(page: import("@playwright/test").Page, email: string, password: string, caption: string) {
-  await page.goto("/login");
+async function login(
+  page: import("@playwright/test").Page,
+  email: string,
+  password: string,
+  caption: string,
+  expectedUrl: string | RegExp = "**/seller/dashboard",
+  loginPath = "/login",
+) {
+  await page.goto(loginPath);
   await addCaption(page, caption);
-  await page.getByTestId("login-email").fill(email);
-  await page.getByTestId("login-password").fill(password);
-  await page.getByTestId("login-submit").click();
-  await page.waitForURL("**/seller/dashboard");
+  const isCustomerLogin = loginPath.startsWith("/customer");
+  await page
+    .getByTestId(isCustomerLogin ? "customer-login-email" : "login-email")
+    .fill(email);
+  await page
+    .getByTestId(isCustomerLogin ? "customer-login-password" : "login-password")
+    .fill(password);
+  await page
+    .getByTestId(isCustomerLogin ? "customer-login-submit" : "login-submit")
+    .click();
+  await page.waitForURL(expectedUrl);
   await page.waitForLoadState("networkidle");
 }
 
@@ -81,7 +95,7 @@ test("three role demo workflow video", async ({ page, request }) => {
 
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await login(page, demoAccounts.admin.email, demoAccounts.admin.password, "ADMIN: sign in with the demo admin account.");
+  await login(page, demoAccounts.admin.email, demoAccounts.admin.password, "ADMIN: sign in with the demo admin account.", /\/admin\/dashboard/);
   await page.goto(`/admin/sellers/${sellerLogin.userId}`);
   await expect(page.getByTestId("admin-shell")).toBeVisible();
   await addCaption(page, "ADMIN: review the approved demo seller account.");
@@ -118,12 +132,22 @@ test("three role demo workflow video", async ({ page, request }) => {
   });
   await page.getByTestId("product-image-upload").click();
   await expect(page.getByText("Uploaded 1 image.")).toBeVisible();
+  await page.goto(new URL(page.url()).pathname.replace(/\/images$/, ""));
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
   await addCaption(page, "SELLER: product is live and ready for customer checkout.");
   await page.waitForTimeout(1200);
   await page.getByTestId("logout-button").click();
-  await page.waitForURL(/\/login/);
+  await page.waitForURL(/\/seller-login|\/login/);
 
-  await login(page, demoAccounts.customer.email, demoAccounts.customer.password, "CUSTOMER: sign in with the demo customer account.");
+  await login(
+    page,
+    demoAccounts.customer.email,
+    demoAccounts.customer.password,
+    "CUSTOMER: sign in with the demo customer account.",
+    /\/customer\/orders/,
+    "/customer/login",
+  );
   await addCaption(page, "CUSTOMER: browse the public catalog and find the seller's new product.");
   await page.goto("/products");
   await page.getByLabel("Search catalog").fill(productName);

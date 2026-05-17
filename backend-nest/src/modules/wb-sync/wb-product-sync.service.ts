@@ -32,6 +32,8 @@ import {
 } from './wb-sync.types';
 
 const SOURCE = 'WILDBERRIES_API';
+const WB_IMPORT_TRANSACTION_MAX_WAIT_MS = 10_000;
+const WB_IMPORT_TRANSACTION_TIMEOUT_MS = 60_000;
 
 type CredentialRecord = {
   encryptedApiKey: string;
@@ -385,8 +387,13 @@ export class WbProductSyncService {
 
       const importResult =
         options.mode === 'IMPORT'
-          ? await this.prisma.$transaction((tx) =>
-              this.importProducts(tx, shopId, mapped, options.publishMode),
+          ? await this.prisma.$transaction(
+              (tx) =>
+                this.importProducts(tx, shopId, mapped, options.publishMode),
+              {
+                maxWait: WB_IMPORT_TRANSACTION_MAX_WAIT_MS,
+                timeout: WB_IMPORT_TRANSACTION_TIMEOUT_MS,
+              },
             )
           : {
               createdProducts: 0,
@@ -476,11 +483,18 @@ export class WbProductSyncService {
     products: WbMappedProduct[],
     publishMode: 'DRAFT' | 'ACTIVE_IF_VALID',
   ) {
+    void publishMode;
     const result = {
       createdProducts: 0,
       updatedProducts: 0,
+      importedProducts: 0,
       createdVariants: 0,
       updatedVariants: 0,
+      alreadyPublished: 0,
+      needsReview: 0,
+      missingPrice: 0,
+      missingStock: 0,
+      missingCategory: 0,
     };
 
     for (const mapped of products) {
@@ -513,7 +527,8 @@ export class WbProductSyncService {
         length: mapped.dimensions.length,
         width: mapped.dimensions.width,
         dimensionsValid: mapped.dimensions.isValid ?? false,
-        visibility: this.visibility(mapped, publishMode),
+        visibility: existing ? undefined : 'DRAFT',
+        source: SOURCE,
         seoSlug: this.slug(
           `${mapped.sellerSku ?? mapped.externalProductId ?? mapped.name}-${mapped.name}`,
         ),
@@ -525,13 +540,22 @@ export class WbProductSyncService {
             data: productData,
           })
         : await tx.product.create({
-            data: { id: randomUUID(), shopId, ...productData },
+            data: {
+              id: randomUUID(),
+              shopId,
+              catalogStatus: 'IMPORTED',
+              ...productData,
+            },
           });
 
       if (existing) {
         result.updatedProducts += 1;
+        if (existing.catalogStatus === 'PUBLISHED') {
+          result.alreadyPublished += 1;
+        }
       } else {
         result.createdProducts += 1;
+        result.importedProducts += 1;
       }
 
       for (const variant of mapped.variants) {
@@ -567,6 +591,20 @@ export class WbProductSyncService {
           });
         }
       }
+
+      const hasMissingCategory = !mapped.categoryId;
+      const hasMissingPrice = true;
+      const hasMissingStock = true;
+      if (hasMissingCategory) {
+        result.missingCategory += 1;
+      }
+      if (hasMissingPrice) {
+        result.missingPrice += 1;
+      }
+      if (hasMissingStock) {
+        result.missingStock += 1;
+      }
+      result.needsReview += 1;
     }
 
     return result;
@@ -593,6 +631,7 @@ export class WbProductSyncService {
       },
       select: {
         id: true,
+        isActive: true,
         basePrice: true,
         discountPrice: true,
         stockQuantity: true,
@@ -613,7 +652,7 @@ export class WbProductSyncService {
           russianSize: variant.russianSize,
           techSize: variant.sizeName,
           wbSize: variant.russianSize ?? variant.sizeName,
-          isActive: false,
+          isActive: existing.isActive,
           basePrice: existing.basePrice,
           discountPrice: existing.discountPrice,
           stockQuantity: existing.stockQuantity,
@@ -637,7 +676,7 @@ export class WbProductSyncService {
         russianSize: variant.russianSize,
         techSize: variant.sizeName,
         wbSize: variant.russianSize ?? variant.sizeName,
-        isActive: false,
+        isActive: true,
         basePrice: 0,
         discountPrice: 0,
         stockQuantity: 0,
@@ -670,7 +709,7 @@ export class WbProductSyncService {
             : []),
         ],
       },
-      select: { id: true },
+      select: { id: true, catalogStatus: true },
     });
   }
 
@@ -787,18 +826,6 @@ export class WbProductSyncService {
     }
   }
 
-  private visibility(
-    product: WbMappedProduct,
-    publishMode: 'DRAFT' | 'ACTIVE_IF_VALID',
-  ) {
-    if (publishMode === 'DRAFT') {
-      return 'DRAFT';
-    }
-    return product.images.length > 0 && product.variants.length > 0
-      ? 'ACTIVE'
-      : 'DRAFT';
-  }
-
   private mapRun(run: {
     id: string;
     status: string;
@@ -811,8 +838,14 @@ export class WbProductSyncService {
     totalImages: number;
     createdProducts: number;
     updatedProducts: number;
+    importedProducts: number;
     createdVariants: number;
     updatedVariants: number;
+    alreadyPublished: number;
+    needsReview: number;
+    missingPrice: number;
+    missingStock: number;
+    missingCategory: number;
     warningsJson: Prisma.JsonValue;
     errorsJson: Prisma.JsonValue;
     rawSummaryJson: Prisma.JsonValue | null;
@@ -853,8 +886,14 @@ export class WbProductSyncService {
       totalImages: run.totalImages,
       createdProducts: run.createdProducts,
       updatedProducts: run.updatedProducts,
+      importedProducts: run.importedProducts,
       createdVariants: run.createdVariants,
       updatedVariants: run.updatedVariants,
+      alreadyPublished: run.alreadyPublished,
+      needsReview: run.needsReview,
+      missingPrice: run.missingPrice,
+      missingStock: run.missingStock,
+      missingCategory: run.missingCategory,
       warnings: run.warningsJson,
       errors: run.errorsJson,
       rawSummary,

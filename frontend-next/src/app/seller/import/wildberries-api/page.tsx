@@ -258,7 +258,11 @@ export default function WildberriesApiSyncPage() {
       </SectionCard>
 
       {result ? (
-        <SectionCard eyebrow="WB API result" title={`${result.syncType} ${result.mode}`} description={`Run status: ${result.status}`}>
+        <SectionCard
+          eyebrow="WB API result"
+          title={`${result.syncType} ${result.mode}`}
+          description={`Run status: ${result.status}. Imported products stay private until you review and publish them.`}
+        >
           <div className="grid gap-3 sm:grid-cols-4" data-testid="wb-api-result">
             <Metric label="Source mode" value={result.sourceMode.toUpperCase()} />
             <Metric label="Fetched" value={String(result.totalFetched)} />
@@ -299,9 +303,17 @@ export default function WildberriesApiSyncPage() {
               ))}
             </div>
           ) : null}
-          <Link href="/seller/products" className="mt-5 inline-flex rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white">
-            Open products
-          </Link>
+          <p className="mt-4 text-sm text-[var(--muted)]">
+            Products synced from Wildberries were added to Seller Catalog for review. Publish only the products that are ready for marketplace checkout.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/seller/products?tab=IMPORTED" className="inline-flex rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white">
+              View imported products
+            </Link>
+            <Link href="/seller/products?tab=NEEDS_REVIEW" className="inline-flex rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)]">
+              View needs review
+            </Link>
+          </div>
         </SectionCard>
       ) : null}
     </div>

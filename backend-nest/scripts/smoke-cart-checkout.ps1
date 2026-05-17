@@ -48,6 +48,7 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
   wbTitle = 'Smoke Cart Product'
   localTitle = 'Smoke Cart Product'
   localDescription = 'Cart checkout-ready product'
+  categoryName = 'Smoke Category'
   visibility = 'ACTIVE'
 } | ConvertTo-Json)
 
@@ -107,6 +108,11 @@ const prisma = new PrismaClient();
 '@ | node - | Set-Variable -Name variantJson
 Remove-Item Env:TARGET_PRODUCT_ID
 $variants = $variantJson | ConvertFrom-Json
+
+$published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $headers -ContentType 'application/json' -Body '{}'
+if ($published.catalogStatus -ne 'PUBLISHED') {
+  throw 'Cart checkout smoke product was not published.'
+}
 
 $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -ContentType 'application/json' -Body (@{
   shopId = $shop.id

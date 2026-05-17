@@ -62,8 +62,14 @@ export type WbImportConfirmResult = {
   importId: string;
   createdProducts: number;
   updatedProducts: number;
+  importedProducts: number;
   createdVariants: number;
   updatedVariants: number;
   addedImages: number;
   skippedImages: number;
+  alreadyPublished: number;
+  needsReview: number;
+  missingPrice: number;
+  missingStock: number;
+  missingCategory: number;
 };

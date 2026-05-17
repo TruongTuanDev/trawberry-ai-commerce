@@ -54,6 +54,7 @@ const prisma = new PrismaClient();
     wbTitle = 'Smoke Order Tracking Product'
     localTitle = 'Smoke Order Tracking Product'
     localDescription = 'Payment proof ready product'
+    categoryName = 'Smoke Category'
     visibility = 'ACTIVE'
   } | ConvertTo-Json)
 
@@ -93,6 +94,9 @@ const prisma = new PrismaClient();
 });
 '@ | node -
   Remove-Item Env:TARGET_PRODUCT_ID
+
+  $published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $headers -ContentType 'application/json' -Body '{}'
+  if ($published.catalogStatus -ne 'PUBLISHED') { throw 'Order tracking smoke product was not published.' }
 
   $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -ContentType 'application/json' -Body (@{
     shopId = $shop.id

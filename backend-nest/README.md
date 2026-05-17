@@ -34,7 +34,12 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `GET /api/shops/:shopId/products`
 - `POST /api/shops/:shopId/products`
 - `GET /api/shops/:shopId/products/:productId`
+- `GET /api/shops/:shopId/products/:productId/readiness`
 - `PATCH /api/shops/:shopId/products/:productId`
+- `POST /api/shops/:shopId/products/:productId/publish`
+- `POST /api/shops/:shopId/products/:productId/unpublish`
+- `POST /api/shops/:shopId/products/:productId/archive`
+- `POST /api/shops/:shopId/products/bulk`
 - `DELETE /api/shops/:shopId/products/:productId`
 - `GET /api/shops/:shopId/products/:productId/images`
 - `POST /api/shops/:shopId/products/:productId/images`
@@ -51,6 +56,12 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `POST /api/shops/:shopId/imports/wildberries/confirm`
 - `GET /api/shops/:shopId/imports/wildberries/:importId`
 - `GET /api/admin/dashboard/summary`
+
+## Seller Catalog Lifecycle
+
+- WB Excel import and WB API sync create seller-catalog products first.
+- Public marketplace and checkout require `catalogStatus=PUBLISHED`.
+- Use readiness, publish, unpublish, archive, and bulk endpoints to curate imported products before they become public.
 
 ## Local run
 

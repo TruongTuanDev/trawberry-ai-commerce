@@ -7,6 +7,8 @@ Wildberries product ingestion has two paths:
 
 Both paths upsert into the same product, variant, and image schema. WB API sync uses Content API card data; price/stock may require separate WB APIs in a later phase.
 
+All WB-imported products now enter the seller catalog first. Public marketplace visibility is controlled by `catalogStatus`, not by import alone.
+
 ## Public Marketplace Search
 
 `GET /api/public/products` supports `q`, `search`, `categoryId`, `categorySlug`, `brand`, `color`, `gender`, `minPrice`, `maxPrice`, `inStock`, `sort`, `page`, and `size`.
@@ -118,6 +120,44 @@ List products for a shop.
 - `search`
 - `status`
 - `visibility`
+- `catalogStatus`
+- `source`
+- `missingPrice`
+- `missingStock`
+- `missingCategory`
+- `needsReview`
+- `readyToPublish`
+- `published`
+- `sort`
+
+## Seller Catalog Lifecycle APIs
+
+- `GET /api/shops/:shopId/products/:productId/readiness`
+- `POST /api/shops/:shopId/products/:productId/publish`
+- `POST /api/shops/:shopId/products/:productId/unpublish`
+- `POST /api/shops/:shopId/products/:productId/archive`
+- `POST /api/shops/:shopId/products/bulk`
+
+Bulk body:
+
+```json
+{
+  "productIds": ["..."],
+  "action": "PUBLISH"
+}
+```
+
+Bulk publish returns per-product success/failure and blocking reasons for products that are not ready.
+
+## Public Marketplace Rules
+
+`GET /api/public/products` and `GET /api/public/products/:productId` only return products that are:
+
+- `catalogStatus=PUBLISHED`
+- `visibility=ACTIVE`
+- seller approved
+- shop active
+- readiness-passing
 - `inStock`
 - `stockStatus`
 - `categoryId`

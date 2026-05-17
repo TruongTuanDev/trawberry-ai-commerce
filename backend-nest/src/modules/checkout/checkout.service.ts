@@ -10,6 +10,7 @@ import type { AuthenticatedUser } from '../../common/types/authenticated-user.ty
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import { CreateCheckoutOrderDto } from './dto/create-checkout-order.dto';
+import { ProductReadinessService } from '../products/product-readiness.service';
 
 type CheckoutProductRecord = {
   id: string;
@@ -20,6 +21,8 @@ type CheckoutProductRecord = {
   seoSlug: string | null;
   sellerSku: string | null;
   visibility: string | null;
+  catalogStatus: string;
+  categoryId: bigint | null;
   images: ProductImage[];
   variants: ProductVariant[];
   shop: {
@@ -63,7 +66,10 @@ type CreatedCheckoutOrder = {
 
 @Injectable()
 export class CheckoutService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly productReadiness: ProductReadinessService,
+  ) {}
 
   async createOrder(
     dto: CreateCheckoutOrderDto,
@@ -119,10 +125,12 @@ export class CheckoutService {
       }
 
       if (
+        (product.catalogStatus ?? 'PUBLISHED') !== 'PUBLISHED' ||
         product.visibility !== 'ACTIVE' ||
         product.shop.status !== 'ACTIVE' ||
         product.shop.sellerProfile.approvalStatus !== 'APPROVED' ||
-        product.images.length < 1
+        product.images.length < 1 ||
+        !this.productReadiness.getReadiness(product).ready
       ) {
         throw new BadRequestException(
           `Product ${item.productId} is not available for checkout.`,

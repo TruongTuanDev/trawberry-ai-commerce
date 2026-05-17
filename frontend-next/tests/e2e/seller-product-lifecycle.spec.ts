@@ -116,7 +116,7 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   await expect(page.getByTestId("product-local-title")).toHaveValue(productName);
 
   await page.getByTestId("product-stock-input").first().fill("9");
-  await page.getByTestId("product-stock-save").first().click();
+  await page.getByTestId("product-variant-save").first().click();
   await expect(page.getByText("9 available")).toBeVisible();
 
   await page.getByRole("link", { name: "Manage images" }).click();
@@ -132,6 +132,9 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   await page.getByTestId("product-image-upload").click();
   await expect(page.getByText("Uploaded 1 image.")).toBeVisible();
   await expect(page.getByTestId("product-image-card")).toHaveCount(1);
+  await page.goto(new URL(page.url()).pathname.replace(/\/images$/, ""));
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();

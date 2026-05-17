@@ -14,7 +14,43 @@ export class ListShopProductsQueryDto {
   @ApiPropertyOptional({ example: 'shoe' })
   @IsOptional()
   @IsString()
+  q?: string;
+
+  @ApiPropertyOptional({ example: 'shoe' })
+  @IsOptional()
+  @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    example: 'IMPORTED',
+    enum: [
+      'IMPORTED',
+      'DRAFT',
+      'READY',
+      'PUBLISHED',
+      'UNPUBLISHED',
+      'ARCHIVED',
+    ],
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['IMPORTED', 'DRAFT', 'READY', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'])
+  catalogStatus?:
+    | 'IMPORTED'
+    | 'DRAFT'
+    | 'READY'
+    | 'PUBLISHED'
+    | 'UNPUBLISHED'
+    | 'ARCHIVED';
+
+  @ApiPropertyOptional({
+    example: 'WILDBERRIES_API',
+    enum: ['MANUAL', 'WILDBERRIES_EXCEL', 'WILDBERRIES_API'],
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['MANUAL', 'WILDBERRIES_EXCEL', 'WILDBERRIES_API'])
+  source?: 'MANUAL' | 'WILDBERRIES_EXCEL' | 'WILDBERRIES_API';
 
   @ApiPropertyOptional({ example: 'ACTIVE' })
   @IsOptional()
@@ -31,6 +67,42 @@ export class ListShopProductsQueryDto {
   @Type(() => Boolean)
   @IsBoolean()
   inStock?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  missingPrice?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  missingStock?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  missingCategory?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  readyToPublish?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  needsReview?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  published?: boolean;
 
   @ApiPropertyOptional({
     example: 'LOW_STOCK',
@@ -55,6 +127,12 @@ export class ListShopProductsQueryDto {
   @Min(1)
   page = 1;
 
+  @ApiPropertyOptional({ example: 'updatedAt_desc' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['updatedAt_desc', 'updatedAt_asc', 'title_asc', 'title_desc'])
+  sort?: 'updatedAt_desc' | 'updatedAt_asc' | 'title_asc' | 'title_desc';
+
   @ApiPropertyOptional({ example: 20, default: 20 })
   @IsOptional()
   @Type(() => Number)
@@ -62,4 +140,12 @@ export class ListShopProductsQueryDto {
   @Min(1)
   @Max(100)
   size = 20;
+
+  @ApiPropertyOptional({ example: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

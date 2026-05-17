@@ -61,6 +61,7 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
   wbNmId = $productNmId
   wbTitle = 'Smoke Delivery Exception Product'
   localTitle = 'Smoke Delivery Exception Product'
+  categoryName = 'Smoke Category'
   visibility = 'ACTIVE'
 } | ConvertTo-Json)
 
@@ -100,6 +101,9 @@ const prisma = new PrismaClient();
 });
 '@ | node -
 Remove-Item Env:TARGET_PRODUCT_ID
+
+$published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $sellerHeaders -ContentType 'application/json' -Body '{}'
+Assert-True ($published.catalogStatus -eq 'PUBLISHED') 'Delivery exception smoke product was not published.'
 
 $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -ContentType 'application/json' -Body (@{
   shopId = $shop.id

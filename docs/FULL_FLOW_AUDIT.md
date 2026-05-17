@@ -4,6 +4,13 @@ Date: 2026-05-13
 
 Scope: `frontend-next`, `backend-nest`, `ai-service`, and Docker runtime. Legacy apps `strawberry-frontend` and `strawberry-backend` were intentionally not modified.
 
+## Seller Catalog Curation Addendum
+
+- WB import and WB API sync no longer publish products directly to the public marketplace.
+- Imported products now land in seller catalog status `IMPORTED`.
+- Seller must review readiness and explicitly publish products before they appear on `/products` or become checkout-eligible.
+- Unpublish and archive remove products from public listing and checkout immediately.
+
 ## Category Mapping + Search/Filter/Sort
 
 - Category mapping preserves WB source category while adding internal `categoryId`.

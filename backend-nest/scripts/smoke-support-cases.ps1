@@ -59,6 +59,7 @@ function Create-ShopProduct {
     wbTitle = $ProductName
     localTitle = $ProductName
     localDescription = "$ProductName support-ready"
+    categoryName = 'Smoke Category'
     visibility = 'ACTIVE'
   } | ConvertTo-Json)
 
@@ -107,7 +108,9 @@ const prisma = new PrismaClient();
   Remove-Item Env:TARGET_STOCK
   Remove-Item Env:TARGET_SIZE
 
+  $published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $headers -ContentType 'application/json' -Body '{}'
   $variant = $variantJson | ConvertFrom-Json
+  if ($published.catalogStatus -ne 'PUBLISHED') { throw 'Support smoke product was not published.' }
   return @{ shop = $shop; product = $product; variantId = $variant.variantId; headers = $headers }
 }
 

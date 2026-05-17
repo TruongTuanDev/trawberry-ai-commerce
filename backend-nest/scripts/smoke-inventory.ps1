@@ -50,6 +50,7 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
   wbTitle = 'Smoke Inventory Product'
   localTitle = 'Smoke Inventory Product'
   localDescription = 'Inventory smoke product'
+  categoryName = 'Smoke Category'
   visibility = 'ACTIVE'
 } | ConvertTo-Json)
 
@@ -88,6 +89,11 @@ const prisma = new PrismaClient();
 });
 '@ | node -
 Remove-Item Env:TARGET_PRODUCT_ID
+
+$published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $headers -ContentType 'application/json' -Body '{}'
+if ($published.catalogStatus -ne 'PUBLISHED') {
+  throw 'Inventory smoke product was not published.'
+}
 
 $inventoryBefore = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/inventory" -Headers $headers
 $variantId = $inventoryBefore.variants[0].id

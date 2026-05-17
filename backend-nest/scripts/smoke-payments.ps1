@@ -60,6 +60,7 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
   wbTitle = 'Smoke Payments Product'
   localTitle = 'Smoke Payments Product'
   localDescription = 'Payment review product'
+  categoryName = 'Smoke Category'
   visibility = 'ACTIVE'
 } | ConvertTo-Json)
 
@@ -99,6 +100,11 @@ const prisma = new PrismaClient();
 });
 '@ | node -
 Remove-Item Env:TARGET_PRODUCT_ID
+
+$published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $headers -ContentType 'application/json' -Body '{}'
+if ($published.catalogStatus -ne 'PUBLISHED') {
+  throw 'Payments smoke product was not published.'
+}
 
 $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -ContentType 'application/json' -Body (@{
   shopId = $shop.id

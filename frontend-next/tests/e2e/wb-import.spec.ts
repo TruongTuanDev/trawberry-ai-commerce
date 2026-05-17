@@ -25,9 +25,10 @@ test("seller previews and confirms Wildberries Excel import", async ({ page }) =
 
   await page.getByTestId("wb-import-confirm").click();
   await expect(page.getByTestId("wb-import-result")).toBeVisible();
+  await expect(page.getByText("Products were imported to Seller Catalog. They are not public until you review and publish them.")).toBeVisible();
 
-  await page.getByRole("link", { name: "Open products" }).click();
-  await page.getByPlaceholder("Search by product name, WB ID, brand or vendor code...").fill("WB Linen Shorts");
-  await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page.getByTestId("seller-product-row").filter({ hasText: "WB Linen Shorts" })).toBeVisible();
+  await page.getByRole("link", { name: "View imported products" }).click();
+  await expect(page).toHaveURL(/\/seller\/products/);
+  await expect(page.getByTestId("seller-products-page")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Imported" })).toBeVisible();
 });

@@ -7,6 +7,8 @@ WB API sync now has two explicit runtime modes:
 
 Excel import remains separate and unchanged.
 
+WB API sync follows the same catalog curation workflow as Excel import: new products are stored in the seller catalog as `IMPORTED`, remain private, and require manual publish before they appear on `/products`.
+
 ## Routes and APIs
 
 Reference audit:
@@ -72,6 +74,21 @@ Notes:
    - `lastVerificationStatus`
    - `lastVerificationError`
 10. Frontend clears the password input after save and re-fetches status after save, verify, and delete
+
+## Catalog Curation After Sync
+
+- `POST /api/shops/:shopId/wb-sync/products`
+- `POST /api/shops/:shopId/wb-sync/products/by-article`
+
+Both endpoints now:
+
+- use the selected shop's encrypted DB credential in real mode
+- keep mock mode only for CI/default tests
+- create new products as `source=WILDBERRIES_API`, `catalogStatus=IMPORTED`, `visibility=DRAFT`
+- preserve already published products on re-sync instead of forcing unpublish
+- avoid overwriting manual seller price and stock
+
+Seller must review and publish products from `/seller/products` before they become public.
 
 Status response shape:
 

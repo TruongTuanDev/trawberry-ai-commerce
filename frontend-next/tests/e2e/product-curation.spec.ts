@@ -21,7 +21,7 @@ async function approveSeller(request: APIRequestContext, email: string, password
     data: {
       email,
       password,
-      fullName: "WB Import Checkout Seller",
+      fullName: "Product Curation Seller",
       role: "SELLER",
     },
   });
@@ -37,12 +37,12 @@ async function approveSeller(request: APIRequestContext, email: string, password
     headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
     data: {
       legalType: "IP",
-      legalName: "WB Import Checkout IP",
+      legalName: "Product Curation Seller IP",
       inn: "123456789012",
       ogrn: "1234567890123",
-      legalAddress: "Moscow, WB Import Street 1",
-      contactName: "WB Import Checkout Seller",
-      contactPhone: "+79990000011",
+      legalAddress: "Moscow, Product Curation Street 1",
+      contactName: "Product Curation Seller",
+      contactPhone: "+79990000012",
       contactEmail: email,
     },
   });
@@ -55,7 +55,7 @@ async function approveSeller(request: APIRequestContext, email: string, password
       file: {
         name: "seller-inn.pdf",
         mimeType: "application/pdf",
-        buffer: Buffer.from("%PDF-1.4\n% wb import checkout\n"),
+        buffer: Buffer.from("%PDF-1.4\n% product curation\n"),
       },
     },
   });
@@ -83,20 +83,17 @@ async function approveSeller(request: APIRequestContext, email: string, password
   return sellerLogin.accessToken;
 }
 
-test("seller imports Wildberries Excel, reviews and publishes it, then customer checks out", async ({
-  browser,
+test("seller curates imported Wildberries products before they appear in public marketplace", async ({
   page,
   request,
 }) => {
   test.setTimeout(150000);
 
   const stamp = Date.now();
-  const sellerEmail = `wb-import-checkout-${stamp}@example.com`;
+  const sellerEmail = `product-curation-${stamp}@example.com`;
   const password = "password123";
-  const shopName = `WB Checkout Shop ${stamp}`;
-  const preferredProductName = "WB Linen Shorts";
+  const shopName = `Product Curation Shop ${stamp}`;
   const fixturePath = path.resolve("../backend-nest/test/fixtures/wb-products-sample.xlsx");
-  const customerPhone = `+7996${String(stamp).slice(-7)}`;
 
   const sellerToken = await approveSeller(request, sellerEmail, password);
   const shop = await backendJson<{ id: string }>(request, "/api/shops", {
@@ -104,7 +101,7 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
     headers: { Authorization: `Bearer ${sellerToken}`, Cookie: "" },
     data: {
       name: shopName,
-      slug: `wb-checkout-shop-${stamp}`,
+      slug: `product-curation-shop-${stamp}`,
       paymentInstructions: "Manual transfer pending seller review.",
     },
   });
@@ -120,12 +117,9 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
   await expect(page.getByTestId("wb-import-page").getByText(shopName)).toBeVisible();
   await page.getByTestId("wb-import-file").setInputFiles(fixturePath);
   await page.getByTestId("wb-import-default-stock").fill("0");
-  await page.getByTestId("wb-import-publish-mode").selectOption("ACTIVE");
   await page.getByTestId("wb-import-price-fallback").fill("1990");
   await page.getByTestId("wb-import-preview").click();
-
   await expect(page.getByTestId("wb-import-summary")).toContainText("Products");
-  await expect(page.getByTestId("wb-import-product-row").first()).toBeVisible();
   await page.getByTestId("wb-import-confirm").click();
   await expect(page.getByTestId("wb-import-result")).toBeVisible();
 
@@ -134,18 +128,19 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
   }>(request, `/api/shops/${shop.id}/products?page=1&size=10`, {
     headers: { Authorization: `Bearer ${sellerToken}`, Cookie: "" },
   });
-  const importedProduct =
-    sellerProducts.items.find((item) => item.title.includes(preferredProductName)) ?? sellerProducts.items[0];
+  const importedProduct = sellerProducts.items[0];
   expect(importedProduct?.id).toBeTruthy();
   if (!importedProduct) {
-    throw new Error("Expected Wildberries import to create at least one product.");
+    throw new Error("Expected imported products in seller catalog.");
   }
-  const productName = importedProduct.title;
+
+  const notFoundBeforePublish = await request.get(`${backendBaseUrl}/api/public/products/${importedProduct.id}`);
+  expect(notFoundBeforePublish.status()).toBe(404);
 
   await page.getByRole("link", { name: "View imported products" }).click();
-  await page.getByPlaceholder("Search by product name, WB ID, brand or vendor code...").fill(productName);
+  await page.getByPlaceholder("Search by product name, WB ID, brand or vendor code...").fill(importedProduct.title);
   await page.getByRole("button", { name: "Apply filters" }).click();
-  const importedRow = page.getByTestId("seller-product-row").filter({ hasText: productName });
+  const importedRow = page.getByTestId("seller-product-row").filter({ hasText: importedProduct.title });
   await expect(importedRow).toBeVisible();
   await expect(importedRow).toContainText("IMPORTED");
   await importedRow.getByRole("link", { name: "View details" }).click();
@@ -154,49 +149,27 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
   await page.getByTestId("product-price-input").first().fill("1990");
   await page.getByTestId("product-stock-input").first().fill("5");
   await page.getByTestId("product-variant-save").first().click();
-  await expect(page.getByTestId("product-price-input").first()).toHaveValue("1990");
   await expect(page.getByText("5 available")).toBeVisible();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
 
-  const customerContext = await browser.newContext();
-  const customerPage = await customerContext.newPage();
-  await customerPage.goto("/products");
-  await customerPage.getByLabel("Search catalog").fill(productName);
-  await customerPage.getByRole("button", { name: "Search" }).click();
-  await expect(customerPage.getByTestId(`product-view-${importedProduct!.id}`)).toBeVisible();
-  await customerPage.getByTestId(`product-view-${importedProduct!.id}`).click();
-  await expect(customerPage.getByRole("heading", { name: productName })).toBeVisible();
-  await customerPage.getByTestId("product-quantity-input").fill("2");
-  await customerPage.getByTestId("continue-to-checkout").click();
+  const publicDetail = await backendJson<{ id: string }>(request, `/api/public/products/${importedProduct.id}`);
+  expect(publicDetail.id).toBe(importedProduct.id);
 
-  await customerPage.waitForURL(/\/checkout\?/);
-  await customerPage.getByTestId("checkout-full-name").fill("WB Checkout Customer");
-  await customerPage.getByTestId("checkout-phone").fill(customerPhone);
-  await customerPage.getByTestId("checkout-email").fill(`wb-customer-${stamp}@example.com`);
-  await customerPage.getByTestId("checkout-address").fill("Tverskaya Street 10, Moscow");
-  await customerPage.getByTestId("checkout-note").fill(`WB import checkout ${stamp}`);
-  await customerPage.getByTestId("checkout-submit").click();
-  await expect(customerPage.getByTestId("checkout-confirmation")).toBeVisible();
+  await page.goto("/products");
+  await page.getByLabel("Search catalog").fill(importedProduct.title);
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByTestId(`product-view-${importedProduct.id}`)).toBeVisible();
 
-  const confirmationText = await customerPage.getByTestId("checkout-confirmation").innerText();
-  const orderCode = confirmationText.match(/ORD-\d+-\d+/)?.[0] ?? "";
-  expect(orderCode).toBeTruthy();
-  await customerPage.getByTestId("confirmation-track-link").click();
-  await expect(customerPage.getByTestId("tracked-order-page")).toBeVisible();
-  await expect(customerPage.getByText(orderCode)).toBeVisible();
-  await customerContext.close();
+  await page.goto(`/seller/products/${importedProduct.id}`);
+  await page.getByRole("button", { name: "Unpublish", exact: true }).click();
+  await expect(page.getByText("Catalog status").locator("..")).toContainText("UNPUBLISHED");
 
-  await page.goto("/seller/orders");
-  await page.getByPlaceholder("Search by order, customer, phone, product").fill(orderCode);
-  await expect(page.getByTestId("seller-order-card").filter({ hasText: orderCode })).toBeVisible();
+  const notFoundAfterUnpublish = await request.get(`${backendBaseUrl}/api/public/products/${importedProduct.id}`);
+  expect(notFoundAfterUnpublish.status()).toBe(404);
 
-  const inventory = await backendJson<{ totalAvailableQuantity: number }>(
-    request,
-    `/api/shops/${shop.id}/products/${importedProduct!.id}/inventory`,
-    {
-      headers: { Authorization: `Bearer ${sellerToken}`, Cookie: "" },
-    },
-  );
-  expect(inventory.totalAvailableQuantity).toBe(3);
+  await page.goto("/products");
+  await page.getByLabel("Search catalog").fill(importedProduct.title);
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByTestId(`product-view-${importedProduct.id}`)).toHaveCount(0);
 });

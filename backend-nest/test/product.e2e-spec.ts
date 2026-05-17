@@ -75,6 +75,12 @@ type StoredProduct = {
   localDescription: string | null;
   seoSlug: string | null;
   visibility: string | null;
+  catalogStatus?: string | null;
+  source?: string | null;
+  publishedAt?: Date | null;
+  unpublishedAt?: Date | null;
+  archivedAt?: Date | null;
+  reviewWarningsJson?: string[] | null;
   localTags: string[] | null;
   averageRating: { toString(): string } | null;
   feedbackCount: number | null;
@@ -85,6 +91,10 @@ type StoredProduct = {
     id: string;
     name: string;
     slug: string;
+    status?: string;
+    sellerProfile?: {
+      approvalStatus: string;
+    };
   };
   images: Array<{
     id: string;
@@ -96,6 +106,9 @@ type StoredProduct = {
   variants: Array<{
     id: string;
     chrtId: bigint;
+    isActive?: boolean;
+    sellerSku?: string | null;
+    wbBarcode?: string | null;
     techSize: string | null;
     wbSize: string | null;
     basePrice: { toString(): string } | null;
@@ -145,6 +158,20 @@ type ProductCreateInput = {
 
 type ProductUpdateInput = Partial<ProductCreateInput>;
 
+type PublishErrorResponse = {
+  message: string;
+  blockingReasons: string[];
+};
+
+type BulkActionResponse = {
+  successCount: number;
+  failureCount: number;
+  results: Array<{
+    productId: string;
+    success: boolean;
+  }>;
+};
+
 describe('ProductsController (e2e)', () => {
   let app: INestApplication<App>;
   let users: StoredUser[];
@@ -152,9 +179,23 @@ describe('ProductsController (e2e)', () => {
   let categories: StoredCategory[];
   let products: StoredProduct[];
 
-  const decimal = (value: string) => ({
-    toString: () => value,
-  });
+  const decimal = (value: string) => {
+    const numeric = Number(value);
+
+    return {
+      toString: () => value,
+      comparedTo: (other: { toString(): string }) =>
+        numeric === Number(other.toString())
+          ? 0
+          : numeric > Number(other.toString())
+            ? 1
+            : -1,
+      lessThan: (other: { toString(): string }) =>
+        numeric < Number(other.toString()),
+      greaterThan: (other: { toString(): string }) =>
+        numeric > Number(other.toString()),
+    };
+  };
 
   const prismaMock = {
     user: {
@@ -280,6 +321,12 @@ describe('ProductsController (e2e)', () => {
         localDescription: 'Seller copy',
         seoSlug: 'alpha-local',
         visibility: 'ACTIVE',
+        catalogStatus: 'PUBLISHED',
+        source: 'MANUAL',
+        publishedAt: new Date(),
+        unpublishedAt: null,
+        archivedAt: null,
+        reviewWarningsJson: [],
         localTags: ['featured'],
         averageRating: decimal('4.50'),
         feedbackCount: 12,
@@ -290,6 +337,10 @@ describe('ProductsController (e2e)', () => {
           id: 'shop-1',
           name: 'Shop One',
           slug: 'shop-one',
+          status: 'ACTIVE',
+          sellerProfile: {
+            approvalStatus: 'APPROVED',
+          },
         },
         images: [
           {
@@ -304,6 +355,8 @@ describe('ProductsController (e2e)', () => {
           {
             id: 'var-1',
             chrtId: 2001n,
+            sellerSku: 'VENDOR-ALPHA-42',
+            wbBarcode: 'BARCODE-ALPHA-42',
             techSize: '42',
             wbSize: '42',
             basePrice: decimal('99.99'),
@@ -343,6 +396,12 @@ describe('ProductsController (e2e)', () => {
         localDescription: null,
         seoSlug: 'wb-beta',
         visibility: 'INACTIVE',
+        catalogStatus: 'DRAFT',
+        source: 'MANUAL',
+        publishedAt: null,
+        unpublishedAt: null,
+        archivedAt: null,
+        reviewWarningsJson: ['MISSING_IMAGE', 'MISSING_STOCK'],
         localTags: null,
         averageRating: decimal('0'),
         feedbackCount: 0,
@@ -353,12 +412,18 @@ describe('ProductsController (e2e)', () => {
           id: 'shop-1',
           name: 'Shop One',
           slug: 'shop-one',
+          status: 'ACTIVE',
+          sellerProfile: {
+            approvalStatus: 'APPROVED',
+          },
         },
         images: [],
         variants: [
           {
             id: 'var-2',
             chrtId: 2002n,
+            sellerSku: 'VENDOR-BETA-43',
+            wbBarcode: 'BARCODE-BETA-43',
             techSize: '43',
             wbSize: '43',
             basePrice: decimal('129.99'),
@@ -398,6 +463,12 @@ describe('ProductsController (e2e)', () => {
         localDescription: null,
         seoSlug: 'gamma-local',
         visibility: 'ACTIVE',
+        catalogStatus: 'PUBLISHED',
+        source: 'MANUAL',
+        publishedAt: new Date(),
+        unpublishedAt: null,
+        archivedAt: null,
+        reviewWarningsJson: ['MISSING_IMAGE'],
         localTags: null,
         averageRating: decimal('0'),
         feedbackCount: 0,
@@ -408,12 +479,18 @@ describe('ProductsController (e2e)', () => {
           id: 'shop-2',
           name: 'Shop Two',
           slug: 'shop-two',
+          status: 'ACTIVE',
+          sellerProfile: {
+            approvalStatus: 'APPROVED',
+          },
         },
         images: [],
         variants: [
           {
             id: 'var-3',
             chrtId: 3001n,
+            sellerSku: 'VENDOR-GAMMA-44',
+            wbBarcode: 'BARCODE-GAMMA-44',
             techSize: '44',
             wbSize: '44',
             basePrice: decimal('79.99'),
@@ -533,6 +610,12 @@ describe('ProductsController (e2e)', () => {
           localDescription: data.localDescription ?? null,
           seoSlug: data.seoSlug ?? null,
           visibility: data.visibility ?? 'ACTIVE',
+          catalogStatus: 'PUBLISHED',
+          source: 'MANUAL',
+          publishedAt: new Date(),
+          unpublishedAt: null,
+          archivedAt: null,
+          reviewWarningsJson: [],
           localTags: data.localTags ?? null,
           averageRating: decimal('0'),
           feedbackCount: 0,
@@ -543,6 +626,10 @@ describe('ProductsController (e2e)', () => {
             id: shop.id,
             name: shop.name,
             slug: shop.slug,
+            status: shop.status,
+            sellerProfile: {
+              approvalStatus: 'APPROVED',
+            },
           },
           images:
             data.images?.create?.map((image, index: number) => ({
@@ -679,6 +766,35 @@ describe('ProductsController (e2e)', () => {
     expect(body.meta.total).toBe(1);
     expect(body.meta.page).toBe(1);
     expect(body.meta.size).toBe(1);
+  });
+
+  it('searches products by WB ID, vendor code, and variant seller sku', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const byWbIdResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products?search=1001')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const byWbIdBody = readBody<PaginatedProductsResponseDto>(byWbIdResponse);
+    expect(byWbIdBody.items.map((item) => item.id)).toEqual(['prod-1']);
+
+    const byVendorResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products?search=A-2')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const byVendorBody =
+      readBody<PaginatedProductsResponseDto>(byVendorResponse);
+    expect(byVendorBody.items.map((item) => item.id)).toEqual(['prod-2']);
+
+    products[1].wbVendorCode = null;
+
+    const byVariantSkuResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products?search=VENDOR-BETA-43')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const byVariantSkuBody =
+      readBody<PaginatedProductsResponseDto>(byVariantSkuResponse);
+    expect(byVariantSkuBody.items.map((item) => item.id)).toEqual(['prod-2']);
   });
 
   it('filters products by stock status', async () => {
@@ -852,6 +968,144 @@ describe('ProductsController (e2e)', () => {
     expect(products[0].variants[0].stockQuantity).toBe(8);
   });
 
+  it('publishes a ready product and exposes it on the public marketplace', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    products[1] = {
+      ...products[1],
+      visibility: 'INACTIVE',
+      catalogStatus: 'IMPORTED',
+      localTitle: 'Ready Beta',
+      images: [
+        {
+          id: 'img-ready-beta',
+          wbUrl: 'https://example.com/ready-beta.jpg',
+          localUrl: null,
+          isMain: true,
+          sortOrder: 0,
+        },
+      ],
+      variants: [
+        {
+          ...products[1].variants[0],
+          basePrice: decimal('129.99'),
+          stockQuantity: 6,
+          isActive: true,
+        },
+      ],
+      reviewWarningsJson: [],
+    };
+
+    const readinessResponse = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/products/prod-2/readiness')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(readBody<{ ready: boolean }>(readinessResponse).ready).toBe(true);
+
+    const publishResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/prod-2/publish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    const published = readBody<ProductDetailResponseDto>(publishResponse);
+
+    expect(published.catalogStatus).toBe('PUBLISHED');
+
+    const publicListResponse = await request(app.getHttpServer())
+      .get('/api/public/products?search=Ready%20Beta')
+      .expect(200);
+    const publicList = readBody<{ items: Array<{ id: string }> }>(
+      publicListResponse,
+    );
+    expect(publicList.items.map((item) => item.id)).toContain('prod-2');
+  });
+
+  it('rejects publishing when readiness has blocking reasons', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/prod-2/publish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+    const body = readBody<PublishErrorResponse>(response);
+
+    expect(body.message).toBe('Product is not ready to publish.');
+    expect(body.blockingReasons).toEqual(
+      expect.arrayContaining(['MISSING_IMAGE', 'MISSING_STOCK']),
+    );
+  });
+
+  it('unpublishes and archives a product so it disappears from public listing', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const unpublishResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/prod-1/unpublish')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    expect(
+      readBody<ProductDetailResponseDto>(unpublishResponse).catalogStatus,
+    ).toBe('UNPUBLISHED');
+
+    await request(app.getHttpServer())
+      .get('/api/public/products/prod-1')
+      .expect(404);
+
+    const archiveResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/prod-1/archive')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(201);
+    expect(
+      readBody<ProductDetailResponseDto>(archiveResponse).catalogStatus,
+    ).toBe('ARCHIVED');
+  });
+
+  it('bulk publishes only ready products and returns per-product results', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    products[1] = {
+      ...products[1],
+      visibility: 'INACTIVE',
+      catalogStatus: 'IMPORTED',
+      localTitle: 'Bulk Ready Beta',
+      images: [
+        {
+          id: 'img-bulk-beta',
+          wbUrl: 'https://example.com/bulk-beta.jpg',
+          localUrl: null,
+          isMain: true,
+          sortOrder: 0,
+        },
+      ],
+      variants: [
+        {
+          ...products[1].variants[0],
+          basePrice: decimal('130.00'),
+          stockQuantity: 4,
+          isActive: true,
+        },
+      ],
+      reviewWarningsJson: [],
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-1', 'prod-2'],
+        action: 'PUBLISH',
+      })
+      .expect(201);
+    const body = readBody<BulkActionResponse>(response);
+
+    expect(body.successCount).toBe(2);
+    expect(body.failureCount).toBe(0);
+    expect(body.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ productId: 'prod-1', success: true }),
+        expect.objectContaining({ productId: 'prod-2', success: true }),
+      ]),
+    );
+  });
+
   it('forbids cross-shop inventory access', async () => {
     const token = await loginAndGetToken(app, 'seller1@example.com');
 
@@ -895,8 +1149,42 @@ function filterProducts(
       return false;
     }
 
+    if (
+      typeof where.catalogStatus === 'string' &&
+      product.catalogStatus !== where.catalogStatus
+    ) {
+      return false;
+    }
+
     if (where.categoryId && product.categoryId !== where.categoryId) {
       return false;
+    }
+
+    if (
+      where.images &&
+      typeof where.images === 'object' &&
+      where.images !== null &&
+      'some' in where.images &&
+      product.images.length < 1
+    ) {
+      return false;
+    }
+
+    if (where.shop && typeof where.shop === 'object' && where.shop !== null) {
+      const shopFilter = where.shop as {
+        status?: string;
+        sellerProfile?: { approvalStatus?: string };
+      };
+      if (shopFilter.status && product.shop.status !== shopFilter.status) {
+        return false;
+      }
+      if (
+        shopFilter.sellerProfile?.approvalStatus &&
+        product.shop.sellerProfile?.approvalStatus !==
+          shopFilter.sellerProfile.approvalStatus
+      ) {
+        return false;
+      }
     }
 
     if (where.NOT && typeof where.NOT === 'object' && where.NOT !== null) {
@@ -923,13 +1211,51 @@ function filterProducts(
       const variantsFilter = where.variants as Record<string, unknown>;
       if (variantsFilter.some) {
         const some = variantsFilter.some as {
+          isActive?: boolean;
           stockQuantity?: { gt?: number };
+          OR?: Array<{
+            discountPrice?: { gt?: number };
+            basePrice?: { gt?: number };
+          }>;
         };
         const gt = some.stockQuantity?.gt;
-        if (
-          gt !== undefined &&
-          !product.variants.some((variant) => variant.stockQuantity > gt)
-        ) {
+        const matchesSome = product.variants.some((variant) => {
+          if (
+            some.isActive !== undefined &&
+            (variant.isActive ?? true) !== some.isActive
+          ) {
+            return false;
+          }
+          if (gt !== undefined && !(variant.stockQuantity > gt)) {
+            return false;
+          }
+          if (some.OR?.length) {
+            const matchesPrice = some.OR.some((condition) => {
+              const discountPrice = Number(
+                variant.discountPrice?.toString() ?? '0',
+              );
+              const basePrice = Number(variant.basePrice?.toString() ?? '0');
+              if (
+                condition.discountPrice?.gt !== undefined &&
+                discountPrice > condition.discountPrice.gt
+              ) {
+                return true;
+              }
+              if (
+                condition.basePrice?.gt !== undefined &&
+                basePrice > condition.basePrice.gt
+              ) {
+                return true;
+              }
+              return false;
+            });
+            if (!matchesPrice) {
+              return false;
+            }
+          }
+          return true;
+        });
+        if (!matchesSome) {
           return false;
         }
       }
@@ -1032,6 +1358,33 @@ function matchesSearchCondition(
       (condition.seoSlug as { contains: string }).contains,
     ).toLowerCase();
     return (product.seoSlug ?? '').toLowerCase().includes(contains);
+  }
+
+  if (
+    condition.variants &&
+    typeof condition.variants === 'object' &&
+    condition.variants !== null
+  ) {
+    const variantsCondition = condition.variants as {
+      some?: {
+        sellerSku?: { contains: string };
+        wbBarcode?: { contains: string };
+      };
+    };
+    const some = variantsCondition.some;
+    if (some?.sellerSku && typeof some.sellerSku === 'object') {
+      const contains = String(some.sellerSku.contains).toLowerCase();
+      return product.variants.some((variant) =>
+        (variant.sellerSku ?? '').toLowerCase().includes(contains),
+      );
+    }
+
+    if (some?.wbBarcode && typeof some.wbBarcode === 'object') {
+      const contains = String(some.wbBarcode.contains).toLowerCase();
+      return product.variants.some((variant) =>
+        (variant.wbBarcode ?? '').toLowerCase().includes(contains),
+      );
+    }
   }
 
   if (condition.wbNmId) {

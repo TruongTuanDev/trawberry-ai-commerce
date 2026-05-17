@@ -1,5 +1,16 @@
 # Project Status
 
+## Seller Product Curation + Publishing
+
+- WB Excel import and WB API sync now create seller-catalog products as `IMPORTED` instead of auto-publishing them.
+- Seller catalog and public marketplace are now split by `catalogStatus`.
+- Seller products page supports tabs and filters for imported, needs review, ready, published, unpublished, archived, missing price, missing stock, and missing category.
+- Seller product detail now shows readiness and supports publish, unpublish, and archive actions.
+- Public marketplace and checkout now require `catalogStatus=PUBLISHED` plus checkout readiness.
+- Verification entry points:
+  - `npm run smoke:product-curation`
+  - `npm run test:e2e:product-curation`
+
 ## Category Mapping + Marketplace Search
 
 - Internal marketplace categories and category mappings are implemented in `backend-nest`.

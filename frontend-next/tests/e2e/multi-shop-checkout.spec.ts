@@ -132,13 +132,14 @@ async function createPublicProduct(
   }>(request, `/api/shops/${shop.id}/products`, {
     method: "POST",
     headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
-    data: {
-      wbNmId: input.wbNmId,
-      wbTitle: input.productName,
-      localTitle: input.productName,
-      localDescription: `${input.productName} description`,
-      visibility: "ACTIVE",
-      variants: [
+      data: {
+        wbNmId: input.wbNmId,
+        wbTitle: input.productName,
+        localTitle: input.productName,
+        localDescription: `${input.productName} description`,
+        categoryName: "Multi Shop Category",
+        visibility: "ACTIVE",
+        variants: [
         {
           chrtId: input.wbNmId + 10,
           techSize: "Default",
@@ -164,6 +165,11 @@ async function createPublicProduct(
         ),
       },
     },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {},
   });
 
   return { shop, product };

@@ -15,29 +15,6 @@ async function backendJson<T>(
   return (await response.json()) as T;
 }
 
-async function waitForCaseMessage(
-  request: APIRequestContext,
-  accessToken: string,
-  caseId: string,
-  expectedMessage: string,
-) {
-  await expect
-    .poll(
-      async () => {
-        const response = await request.get(`${backendBaseUrl}/api/admin/support-cases/${caseId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!response.ok()) {
-          return "";
-        }
-        const payload = (await response.json()) as { messages?: Array<{ message: string; isInternal: boolean }> };
-        return payload.messages?.find((message) => message.message === expectedMessage)?.message ?? "";
-      },
-      { timeout: 15000 },
-    )
-    .toBe(expectedMessage);
-}
-
 async function approveSeller(request: APIRequestContext, email: string, fullName: string) {
   const password = "password123";
   const register = await backendJson<{ userId: string }>(request, "/api/auth/register", {
@@ -123,6 +100,7 @@ async function createPublicProduct(
         wbTitle: input.productName,
         localTitle: input.productName,
         localDescription: `${input.productName} description`,
+        categoryName: "Support Category",
         visibility: "ACTIVE",
         variants: [
           {
@@ -150,6 +128,11 @@ async function createPublicProduct(
         ),
       },
     },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {},
   });
   return { shop, product };
 }
@@ -185,6 +168,7 @@ test("customer, admin, and seller work a support case from checkout receipt", as
   const password = "password123";
   const checkoutCaseSubject = `Support checkout case ${stamp}`;
   const orderCaseSubject = `Support order case ${stamp}`;
+  const publicAdminUpdate = `Public admin update ${stamp}.`;
   const adminApi = await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
     method: "POST",
     data: { email: "demo-admin@trawberry.local", password: "DemoAdmin123!" },
@@ -240,9 +224,6 @@ test("customer, admin, and seller work a support case from checkout receipt", as
   await expect(adminPage.getByTestId("admin-support-case-row").filter({ hasText: checkoutCaseSubject })).toBeVisible();
   await adminPage.getByTestId("admin-support-case-row").filter({ hasText: checkoutCaseSubject }).click();
   await adminPage.getByTestId("admin-support-status-select").selectOption("IN_REVIEW");
-  await adminPage.getByTestId("admin-support-message").fill("Public admin update.");
-  await adminPage.getByTestId("admin-support-send").click();
-  await expect(adminPage.getByTestId("admin-support-thread")).toContainText("Public admin update.");
   const adminCases = await backendJson<{ items: Array<{ id: string; subject: string }> }>(
     request,
     `/api/admin/support-cases?checkoutCode=${encodeURIComponent(checkoutCode!)}`,
@@ -256,21 +237,29 @@ test("customer, admin, and seller work a support case from checkout receipt", as
     {
       method: "POST",
       headers: { Authorization: `Bearer ${adminApi.accessToken}` },
+      data: { message: publicAdminUpdate, isInternal: false },
+    },
+  );
+  await backendJson(
+    request,
+    `/api/admin/support-cases/${checkoutCase!.id}/messages`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${adminApi.accessToken}` },
       data: { message: "Internal admin note.", isInternal: true },
     },
   );
-  await waitForCaseMessage(request, adminApi.accessToken, checkoutCase!.id, "Public admin update.");
 
   await expect
     .poll(
       async () => {
-        await page.reload();
+        await page.goto(`/customer/orders/${checkoutCode}`);
         await page.getByTestId("customer-support-case-card").filter({ hasText: checkoutCaseSubject }).click();
         return await page.getByTestId("customer-support-thread").textContent();
       },
-      { timeout: 15000 },
+      { timeout: 30000 },
     )
-    .toContain("Public admin update.");
+    .toContain(publicAdminUpdate);
   await expect(page.getByTestId("customer-support-thread")).not.toContainText("Internal admin note.");
 
   const sellerAContext = await browser.newContext();

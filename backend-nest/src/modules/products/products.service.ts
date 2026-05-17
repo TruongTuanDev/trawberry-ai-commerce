@@ -6,23 +6,61 @@ import {
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { BulkProductActionDto } from './dto/bulk-product-action.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductInventoryDto } from './dto/update-product-inventory.dto';
+import {
+  ProductCatalogStatus,
+  ProductReadinessReason,
+  ProductSource,
+} from './product-catalog.constants';
+import {
+  ProductReadinessResult,
+  ProductReadinessService,
+} from './product-readiness.service';
 
 type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'NOT_TRACKED';
 
+type ProductWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    images: {
+      orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }];
+    };
+    category: true;
+    shop: {
+      select: {
+        id: true;
+        name: true;
+        slug: true;
+        status: true;
+        sellerProfile: {
+          select: {
+            approvalStatus: true;
+          };
+        };
+      };
+    };
+    variants: true;
+  };
+}>;
+
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly productReadiness: ProductReadinessService,
+  ) {}
 
   async listByShop(shopId: string, query: ListShopProductsQueryDto) {
+    const search = query.q ?? query.search;
+    const pageSize = query.limit ?? query.size;
     const where: Prisma.ProductWhereInput = {
       shopId,
-      ...(query.search
+      ...(search
         ? {
-            OR: this.buildSearchPredicates(query.search),
+            OR: this.buildSearchPredicates(search),
           }
         : {}),
       ...(this.resolveVisibilityFilter(query)
@@ -30,6 +68,12 @@ export class ProductsService {
             visibility: this.resolveVisibilityFilter(query),
           }
         : {}),
+      ...(query.catalogStatus
+        ? { catalogStatus: query.catalogStatus }
+        : query.published
+          ? { catalogStatus: 'PUBLISHED' }
+          : {}),
+      ...(query.source ? { source: query.source } : {}),
       ...(query.categoryId
         ? {
             categoryId: BigInt(query.categoryId),
@@ -58,7 +102,7 @@ export class ProductsService {
             }),
     };
 
-    const products = await this.prisma.product.findMany({
+    const products = (await this.prisma.product.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
       include: {
@@ -66,31 +110,63 @@ export class ProductsService {
           orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
         },
         category: true,
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            status: true,
+            sellerProfile: {
+              select: {
+                approvalStatus: true,
+              },
+            },
+          },
+        },
         variants: true,
       },
+    })) as ProductWithRelations[];
+
+    const filteredItems = products.filter((product) => {
+      const readiness = this.productReadiness.getReadiness(product);
+      const warnings = readiness.blockingReasons;
+      const inventory = this.getProductInventorySummary(product.variants);
+
+      if (query.stockStatus && inventory.stockStatus !== query.stockStatus) {
+        return false;
+      }
+      if (query.missingPrice && !warnings.includes('MISSING_PRICE')) {
+        return false;
+      }
+      if (query.missingStock && !warnings.includes('MISSING_STOCK')) {
+        return false;
+      }
+      if (query.missingCategory && !warnings.includes('MISSING_CATEGORY')) {
+        return false;
+      }
+      if (query.readyToPublish && !readiness.ready) {
+        return false;
+      }
+      if (query.needsReview && readiness.ready) {
+        return false;
+      }
+      return true;
     });
 
-    const filteredItems = query.stockStatus
-      ? products.filter(
-          (product) =>
-            this.getProductInventorySummary(product.variants).stockStatus ===
-            query.stockStatus,
-        )
-      : products;
-
-    const total = filteredItems.length;
-    const items = filteredItems.slice(
-      (query.page - 1) * query.size,
-      (query.page - 1) * query.size + query.size,
+    const sorted = this.sortProducts(filteredItems, query.sort);
+    const total = sorted.length;
+    const items = sorted.slice(
+      (query.page - 1) * pageSize,
+      (query.page - 1) * pageSize + pageSize,
     );
 
     return {
       items: items.map((product) => this.mapProductSummary(product)),
       meta: {
         page: query.page,
-        size: query.size,
+        size: pageSize,
         total,
-        totalPages: total === 0 ? 0 : Math.ceil(total / query.size),
+        totalPages: total === 0 ? 0 : Math.ceil(total / pageSize),
       },
     };
   }
@@ -100,12 +176,26 @@ export class ProductsService {
     return this.mapProductDetail(product);
   }
 
+  async getReadiness(shopId: string, productId: string) {
+    const product = await this.findShopProductOrThrow(shopId, productId);
+    const readiness = this.productReadiness.getReadiness(product);
+    return {
+      productId: product.id,
+      shopId: product.shopId,
+      ready: readiness.ready,
+      blockingReasons: readiness.blockingReasons,
+      catalogStatus: this.effectiveCatalogStatus(product, readiness),
+    };
+  }
+
   async create(shopId: string, dto: CreateProductDto) {
     await this.ensureShopExists(shopId);
     await this.ensureUniqueWbNmId(shopId, dto.wbNmId);
     await this.ensureCategoryExists(dto.categoryId);
 
-    const product = await this.prisma.product.create({
+    const lifecycle = this.resolveManualLifecycleForCreate(dto.visibility);
+
+    const createdProduct = await this.prisma.product.create({
       data: {
         shopId,
         wbNmId: BigInt(dto.wbNmId),
@@ -135,6 +225,11 @@ export class ProductsService {
         localDescription: dto.localDescription,
         seoSlug: dto.seoSlug,
         visibility: dto.visibility ?? 'ACTIVE',
+        catalogStatus: lifecycle.catalogStatus,
+        publishedAt: lifecycle.publishedAt,
+        unpublishedAt: lifecycle.unpublishedAt,
+        archivedAt: lifecycle.archivedAt,
+        source: 'MANUAL',
         localTags: dto.localTags,
         images: dto.images?.length
           ? {
@@ -163,21 +258,44 @@ export class ProductsService {
             }
           : undefined,
       },
-      include: {
-        images: {
-          orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
-        },
-        category: true,
-        variants: true,
-        shop: true,
-      },
+      select: { id: true },
     });
+
+    const product = await this.findShopProductOrThrow(
+      shopId,
+      createdProduct.id,
+    );
+    const reviewWarnings = this.productReadiness.getProductWarnings(product);
+    if (reviewWarnings.length > 0 || lifecycle.catalogStatus !== 'PUBLISHED') {
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          reviewWarningsJson: reviewWarnings,
+          catalogStatus:
+            lifecycle.catalogStatus === 'PUBLISHED' && reviewWarnings.length > 0
+              ? 'DRAFT'
+              : undefined,
+          unpublishedAt:
+            lifecycle.catalogStatus === 'PUBLISHED' && reviewWarnings.length > 0
+              ? new Date()
+              : undefined,
+          publishedAt:
+            lifecycle.catalogStatus === 'PUBLISHED' && reviewWarnings.length > 0
+              ? null
+              : undefined,
+        },
+      });
+      return this.findOneByShop(shopId, product.id);
+    }
 
     return this.mapProductDetail(product);
   }
 
   async update(shopId: string, productId: string, dto: UpdateProductDto) {
-    await this.findShopProductOrThrow(shopId, productId);
+    const existingProduct = await this.findShopProductOrThrow(
+      shopId,
+      productId,
+    );
     await this.ensureCategoryExists(dto.categoryId);
 
     if (dto.wbNmId !== undefined) {
@@ -196,6 +314,11 @@ export class ProductsService {
         );
       }
     }
+
+    const lifecycle = this.resolveManualLifecycleForUpdate(
+      existingProduct.catalogStatus as ProductCatalogStatus,
+      dto.visibility,
+    );
 
     await this.prisma.$transaction(async (tx) => {
       await tx.product.update({
@@ -231,6 +354,10 @@ export class ProductsService {
           localDescription: dto.localDescription,
           seoSlug: dto.seoSlug,
           visibility: dto.visibility,
+          catalogStatus: lifecycle.catalogStatus,
+          publishedAt: lifecycle.publishedAt,
+          unpublishedAt: lifecycle.unpublishedAt,
+          archivedAt: lifecycle.archivedAt,
           localTags: dto.localTags,
         },
       });
@@ -266,8 +393,8 @@ export class ProductsService {
     });
 
     const product = await this.findShopProductOrThrow(shopId, productId);
-
-    return this.mapProductDetail(product);
+    await this.persistReviewWarnings(product);
+    return this.findOneByShop(shopId, productId);
   }
 
   async getInventory(shopId: string, productId: string) {
@@ -281,8 +408,9 @@ export class ProductsService {
     dto: UpdateProductInventoryDto,
   ) {
     const product = await this.findShopProductOrThrow(shopId, productId);
-    const variants = [...product.variants].sort(
-      (left, right) => Number(left.createdAt) - Number(right.createdAt),
+    const variants: ProductWithRelations['variants'] = product.variants.slice();
+    variants.sort(
+      (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
     );
     const targetVariant =
       (dto.variantId
@@ -306,7 +434,116 @@ export class ProductsService {
       shopId,
       productId,
     );
+    await this.persistReviewWarnings(refreshedProduct);
     return this.mapInventory(refreshedProduct);
+  }
+
+  async publish(shopId: string, productId: string) {
+    const product = await this.findShopProductOrThrow(shopId, productId);
+    const readiness = this.productReadiness.getReadiness(product);
+    if (!readiness.ready) {
+      throw new BadRequestException({
+        message: 'Product is not ready to publish.',
+        blockingReasons: readiness.blockingReasons,
+      });
+    }
+
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        catalogStatus: 'PUBLISHED',
+        visibility: 'ACTIVE',
+        publishedAt: new Date(),
+        unpublishedAt: null,
+        archivedAt: null,
+        reviewWarningsJson: [],
+      },
+    });
+
+    return this.findOneByShop(shopId, productId);
+  }
+
+  async unpublish(shopId: string, productId: string) {
+    await this.findShopProductOrThrow(shopId, productId);
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        catalogStatus: 'UNPUBLISHED',
+        unpublishedAt: new Date(),
+      },
+    });
+    return this.findOneByShop(shopId, productId);
+  }
+
+  async archive(shopId: string, productId: string) {
+    await this.findShopProductOrThrow(shopId, productId);
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        catalogStatus: 'ARCHIVED',
+        visibility: 'ARCHIVED',
+        archivedAt: new Date(),
+      },
+    });
+    return this.findOneByShop(shopId, productId);
+  }
+
+  async bulkAction(shopId: string, dto: BulkProductActionDto) {
+    const results: Array<{
+      productId: string;
+      success: boolean;
+      action: string;
+      blockingReasons?: ProductReadinessReason[];
+      error?: string;
+    }> = [];
+
+    for (const productId of dto.productIds) {
+      try {
+        if (dto.updates) {
+          await this.applyBulkUpdates(shopId, productId, dto.updates);
+        }
+
+        if (dto.action === 'PUBLISH') {
+          const product = await this.findShopProductOrThrow(shopId, productId);
+          const readiness = this.productReadiness.getReadiness(product);
+          if (!readiness.ready) {
+            results.push({
+              productId,
+              success: false,
+              action: dto.action,
+              blockingReasons: readiness.blockingReasons,
+            });
+            continue;
+          }
+          await this.publish(shopId, productId);
+        } else if (dto.action === 'UNPUBLISH') {
+          await this.unpublish(shopId, productId);
+        } else if (dto.action === 'ARCHIVE') {
+          await this.archive(shopId, productId);
+        }
+
+        results.push({
+          productId,
+          success: true,
+          action: dto.action,
+        });
+      } catch (error) {
+        results.push({
+          productId,
+          success: false,
+          action: dto.action,
+          error: error instanceof Error ? error.message : 'Bulk action failed.',
+        });
+      }
+    }
+
+    return {
+      action: dto.action,
+      total: dto.productIds.length,
+      successCount: results.filter((result) => result.success).length,
+      failureCount: results.filter((result) => !result.success).length,
+      results,
+    };
   }
 
   async remove(shopId: string, productId: string) {
@@ -314,6 +551,32 @@ export class ProductsService {
     await this.prisma.product.delete({
       where: { id: productId },
     });
+  }
+
+  private async applyBulkUpdates(
+    shopId: string,
+    productId: string,
+    updates: NonNullable<BulkProductActionDto['updates']>,
+  ) {
+    const payload: UpdateProductDto = {};
+    if (updates.categoryId !== undefined) {
+      payload.categoryId = updates.categoryId;
+    }
+    if (updates.categoryName !== undefined) {
+      payload.categoryName = updates.categoryName;
+    }
+    if (updates.variants) {
+      payload.variants = updates.variants.map((variant) => ({
+        chrtId: variant.chrtId,
+        basePrice: variant.basePrice,
+        discountPrice: variant.discountPrice,
+        stockQuantity: variant.stockQuantity,
+      }));
+    }
+
+    if (Object.keys(payload).length > 0) {
+      await this.update(shopId, productId, payload);
+    }
   }
 
   private async ensureShopExists(shopId: string) {
@@ -358,21 +621,17 @@ export class ProductsService {
     }
   }
 
-  private async findShopProductOrThrow(shopId: string, productId: string) {
-    const product = await this.prisma.product.findFirst({
+  private async findShopProductOrThrow(
+    shopId: string,
+    productId: string,
+  ): Promise<ProductWithRelations> {
+    const product = (await this.prisma.product.findFirst({
       where: {
         id: productId,
         shopId,
       },
-      include: {
-        images: {
-          orderBy: [{ isMain: 'desc' }, { sortOrder: 'asc' }],
-        },
-        category: true,
-        shop: true,
-        variants: true,
-      },
-    });
+      include: this.productInclude(),
+    })) as ProductWithRelations | null;
 
     if (!product) {
       throw new NotFoundException(
@@ -381,6 +640,32 @@ export class ProductsService {
     }
 
     return product;
+  }
+
+  private productInclude(): Prisma.ProductInclude {
+    return {
+      images: {
+        orderBy: [
+          { isMain: Prisma.SortOrder.desc },
+          { sortOrder: Prisma.SortOrder.asc },
+        ],
+      },
+      category: true,
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          sellerProfile: {
+            select: {
+              approvalStatus: true,
+            },
+          },
+        },
+      },
+      variants: true,
+    };
   }
 
   private buildSearchPredicates(search: string): Prisma.ProductWhereInput[] {
@@ -396,6 +681,20 @@ export class ProductsService {
       { brand: contains },
       { wbVendorCode: contains },
       { seoSlug: contains },
+      {
+        variants: {
+          some: {
+            sellerSku: contains,
+          },
+        },
+      },
+      {
+        variants: {
+          some: {
+            wbBarcode: contains,
+          },
+        },
+      },
     ];
 
     if (/^\d+$/.test(normalized)) {
@@ -411,31 +710,129 @@ export class ProductsService {
     return query.status ?? query.visibility;
   }
 
-  private mapProductSummary(product: {
-    id: string;
-    shopId: string;
-    wbNmId: bigint;
-    wbTitle: string;
-    localTitle: string | null;
-    brand: string | null;
-    visibility: string | null;
-    seoSlug: string | null;
-    categoryName: string | null;
-    sourceCategoryName: string | null;
-    sourceCategorySource: string | null;
-    wbVendorCode: string | null;
-    images: Array<{ wbUrl: string; localUrl: string | null }>;
-    category: { id: bigint; name: string; slug: string | null } | null;
-    variants: Array<{
-      id: string;
-      stockQuantity: number;
-      reservedStock: number;
-      lowStockThreshold: number;
-      trackInventory: boolean;
-    }>;
-  }) {
+  private resolveManualLifecycleForCreate(visibility?: string) {
+    if (visibility === 'ARCHIVED') {
+      return {
+        catalogStatus: 'ARCHIVED' as ProductCatalogStatus,
+        publishedAt: null,
+        unpublishedAt: null,
+        archivedAt: new Date(),
+      };
+    }
+
+    if (visibility === 'ACTIVE' || visibility === undefined) {
+      return {
+        catalogStatus: 'PUBLISHED' as ProductCatalogStatus,
+        publishedAt: new Date(),
+        unpublishedAt: null,
+        archivedAt: null,
+      };
+    }
+
+    return {
+      catalogStatus: 'DRAFT' as ProductCatalogStatus,
+      publishedAt: null,
+      unpublishedAt: null,
+      archivedAt: null,
+    };
+  }
+
+  private resolveManualLifecycleForUpdate(
+    currentStatus: ProductCatalogStatus,
+    visibility?: string,
+  ) {
+    if (visibility === undefined) {
+      return {
+        catalogStatus: currentStatus,
+        publishedAt: undefined,
+        unpublishedAt: undefined,
+        archivedAt: undefined,
+      };
+    }
+
+    if (visibility === 'ARCHIVED') {
+      return {
+        catalogStatus: 'ARCHIVED' as ProductCatalogStatus,
+        publishedAt: undefined,
+        unpublishedAt: undefined,
+        archivedAt: new Date(),
+      };
+    }
+
+    if (visibility === 'ACTIVE') {
+      return {
+        catalogStatus:
+          currentStatus === 'UNPUBLISHED' ? currentStatus : currentStatus,
+        publishedAt: currentStatus === 'PUBLISHED' ? undefined : undefined,
+        unpublishedAt: currentStatus === 'UNPUBLISHED' ? undefined : null,
+        archivedAt: null,
+      };
+    }
+
+    if (currentStatus === 'PUBLISHED') {
+      return {
+        catalogStatus: 'UNPUBLISHED' as ProductCatalogStatus,
+        publishedAt: undefined,
+        unpublishedAt: new Date(),
+        archivedAt: null,
+      };
+    }
+
+    return {
+      catalogStatus: currentStatus === 'IMPORTED' ? 'IMPORTED' : 'DRAFT',
+      publishedAt: undefined,
+      unpublishedAt: undefined,
+      archivedAt: null,
+    };
+  }
+
+  private async persistReviewWarnings(product: ProductWithRelations) {
+    const readiness = this.productReadiness.getReadiness(product);
+    const nextStatus = this.effectiveCatalogStatus(product, readiness);
+
+    await this.prisma.product.update({
+      where: { id: product.id },
+      data: {
+        catalogStatus: nextStatus,
+        reviewWarningsJson: readiness.blockingReasons,
+      },
+    });
+  }
+
+  private effectiveCatalogStatus(
+    product: Pick<
+      ProductWithRelations,
+      'catalogStatus' | 'archivedAt' | 'publishedAt' | 'unpublishedAt'
+    >,
+    readiness: ProductReadinessResult,
+  ): ProductCatalogStatus {
+    const currentStatus =
+      (product.catalogStatus as ProductCatalogStatus | null) ?? 'DRAFT';
+
+    if (currentStatus === 'ARCHIVED' || product.archivedAt) {
+      return 'ARCHIVED';
+    }
+
+    if (currentStatus === 'PUBLISHED') {
+      return 'PUBLISHED';
+    }
+
+    if (currentStatus === 'UNPUBLISHED') {
+      return 'UNPUBLISHED';
+    }
+
+    if (currentStatus === 'IMPORTED' && !readiness.ready) {
+      return 'IMPORTED';
+    }
+
+    return readiness.ready ? 'READY' : 'DRAFT';
+  }
+
+  private mapProductSummary(product: ProductWithRelations) {
     const mainImage = product.images[0];
     const inventory = this.getProductInventorySummary(product.variants);
+    const readiness = this.productReadiness.getReadiness(product);
+    const catalogStatus = this.effectiveCatalogStatus(product, readiness);
 
     return {
       id: product.id,
@@ -446,6 +843,8 @@ export class ProductsService {
       localTitle: product.localTitle,
       brand: product.brand,
       visibility: product.visibility,
+      catalogStatus,
+      source: (product.source ?? 'MANUAL') as ProductSource,
       seoSlug: product.seoSlug,
       categoryName: product.category?.name ?? product.categoryName,
       categoryId: product.category?.id.toString() ?? null,
@@ -453,6 +852,10 @@ export class ProductsService {
       sourceCategoryName: product.sourceCategoryName,
       sourceCategorySource: product.sourceCategorySource,
       wbVendorCode: product.wbVendorCode,
+      publishedAt: product.publishedAt?.toISOString() ?? null,
+      archivedAt: product.archivedAt?.toISOString() ?? null,
+      reviewWarnings: readiness.blockingReasons,
+      readyToPublish: readiness.ready,
       mainImage: mainImage?.localUrl ?? mainImage?.wbUrl ?? null,
       inStock: inventory.inStock,
       stockQuantity: inventory.totalAvailableQuantity,
@@ -464,44 +867,10 @@ export class ProductsService {
     };
   }
 
-  private mapProductDetail(product: {
-    id: string;
-    shopId: string;
-    wbNmId: bigint;
-    wbImtId: bigint | null;
-    wbTitle: string;
-    localTitle: string | null;
-    wbDescription: string | null;
-    localDescription: string | null;
-    brand: string | null;
-    visibility: string | null;
-    seoSlug: string | null;
-    wbVendorCode: string | null;
-    categoryName: string | null;
-    sourceCategoryName: string | null;
-    sourceCategorySource: string | null;
-    category: { id: bigint; name: string } | null;
-    shop: { id: string; name: string; slug: string };
-    images: Array<{
-      id: string;
-      wbUrl: string;
-      localUrl: string | null;
-      isMain: boolean | null;
-      sortOrder: number;
-    }>;
-    variants: Array<{
-      id: string;
-      chrtId: bigint;
-      techSize: string | null;
-      wbSize: string | null;
-      basePrice: Prisma.Decimal | null;
-      discountPrice: Prisma.Decimal | null;
-      stockQuantity: number;
-      reservedStock: number;
-      lowStockThreshold: number;
-      trackInventory: boolean;
-    }>;
-  }) {
+  private mapProductDetail(product: ProductWithRelations) {
+    const readiness = this.productReadiness.getReadiness(product);
+    const catalogStatus = this.effectiveCatalogStatus(product, readiness);
+
     return {
       id: product.id,
       shopId: product.shopId,
@@ -515,18 +884,28 @@ export class ProductsService {
       description: product.localDescription ?? product.wbDescription,
       brand: product.brand,
       visibility: product.visibility,
+      catalogStatus,
+      source: (product.source ?? 'MANUAL') as ProductSource,
+      publishedAt: product.publishedAt?.toISOString() ?? null,
+      unpublishedAt: product.unpublishedAt?.toISOString() ?? null,
+      archivedAt: product.archivedAt?.toISOString() ?? null,
       seoSlug: product.seoSlug,
       wbVendorCode: product.wbVendorCode,
       categoryName: product.category?.name ?? product.categoryName,
       sourceCategoryName: product.sourceCategoryName,
       sourceCategorySource: product.sourceCategorySource,
+      reviewWarnings: readiness.blockingReasons,
       category: product.category
         ? {
             id: Number(product.category.id),
             name: product.category.name,
           }
         : null,
-      shop: product.shop,
+      shop: {
+        id: product.shop.id,
+        name: product.shop.name,
+        slug: product.shop.slug,
+      },
       images: product.images.map((image) => ({
         id: image.id,
         wbUrl: image.wbUrl,
@@ -555,22 +934,7 @@ export class ProductsService {
     };
   }
 
-  private mapInventory(product: {
-    id: string;
-    shopId: string;
-    wbTitle: string;
-    localTitle: string | null;
-    variants: Array<{
-      id: string;
-      chrtId: bigint;
-      techSize: string | null;
-      wbSize: string | null;
-      stockQuantity: number;
-      reservedStock: number;
-      lowStockThreshold: number;
-      trackInventory: boolean;
-    }>;
-  }) {
+  private mapInventory(product: ProductWithRelations) {
     const variants = product.variants
       .slice()
       .sort((left, right) => Number(left.chrtId - right.chrtId))
@@ -681,5 +1045,31 @@ export class ProductsService {
     }
 
     return 'IN_STOCK';
+  }
+
+  private sortProducts(products: ProductWithRelations[], sort?: string) {
+    const items = [...products];
+    if (sort === 'updatedAt_asc') {
+      return items.sort(
+        (left, right) => left.updatedAt.getTime() - right.updatedAt.getTime(),
+      );
+    }
+    if (sort === 'title_asc') {
+      return items.sort((left, right) =>
+        (left.localTitle ?? left.wbTitle).localeCompare(
+          right.localTitle ?? right.wbTitle,
+        ),
+      );
+    }
+    if (sort === 'title_desc') {
+      return items.sort((left, right) =>
+        (right.localTitle ?? right.wbTitle).localeCompare(
+          left.localTitle ?? left.wbTitle,
+        ),
+      );
+    }
+    return items.sort(
+      (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+    );
   }
 }

@@ -4,6 +4,7 @@ type ProductFiltersValue = {
   search: string;
   status: string;
   stockStatus: string;
+  tab?: string;
 };
 
 export function ProductFilters({

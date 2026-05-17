@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type ProductImage, type ProductVariant } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { ProductReadinessService } from '../products/product-readiness.service';
 import { ListPublicProductsQueryDto } from './dto/list-public-products-query.dto';
 
 type PublicProductRecord = {
@@ -17,6 +18,8 @@ type PublicProductRecord = {
   categoryName: string | null;
   sourceCategoryName: string | null;
   visibility: string | null;
+  catalogStatus: string;
+  categoryId: bigint | null;
   updatedAt: Date;
   images: ProductImage[];
   variants: ProductVariant[];
@@ -25,6 +28,10 @@ type PublicProductRecord = {
     name: string;
     slug: string;
     logoUrl: string | null;
+    status: string;
+    sellerProfile: {
+      approvalStatus: string;
+    };
   };
   category: {
     id: bigint;
@@ -40,13 +47,17 @@ type FacetProductRecord = Pick<
 
 @Injectable()
 export class PublicProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly productReadiness: ProductReadinessService,
+  ) {}
 
   async list(query: ListPublicProductsQueryDto) {
     const search = (query.q ?? query.search)?.trim();
     const priceRange = this.resolvePriceRange(query);
     const where: Prisma.ProductWhereInput = {
       visibility: 'ACTIVE',
+      catalogStatus: 'PUBLISHED',
       images: {
         some: {},
       },
@@ -181,7 +192,7 @@ export class PublicProductsService {
         : {}),
     };
 
-    const [products, total, facetProducts] = await Promise.all([
+    const [products, facetProducts] = await Promise.all([
       this.prisma.product.findMany({
         where,
         include: {
@@ -213,14 +224,20 @@ export class PublicProductsService {
               name: true,
               slug: true,
               logoUrl: true,
+              status: true,
+              sellerProfile: {
+                select: {
+                  approvalStatus: true,
+                },
+              },
             },
           },
         },
       }),
-      this.prisma.product.count({ where }),
       this.prisma.product.findMany({
         where: {
           visibility: 'ACTIVE',
+          catalogStatus: 'PUBLISHED',
           images: { some: {} },
           shop: {
             status: 'ACTIVE',
@@ -238,8 +255,13 @@ export class PublicProductsService {
       }),
     ]);
 
-    const sorted = this.sortProducts(products, query.sort ?? 'newest');
-    const items = sorted.slice(
+    const visibleProducts = this.sortProducts(
+      products.filter(
+        (product) => this.productReadiness.getReadiness(product).ready,
+      ),
+      query.sort ?? 'newest',
+    );
+    const items = visibleProducts.slice(
       (query.page - 1) * query.size,
       (query.page - 1) * query.size + query.size,
     );
@@ -249,8 +271,11 @@ export class PublicProductsService {
       meta: {
         page: query.page,
         size: query.size,
-        total,
-        totalPages: total === 0 ? 0 : Math.ceil(total / query.size),
+        total: visibleProducts.length,
+        totalPages:
+          visibleProducts.length === 0
+            ? 0
+            : Math.ceil(visibleProducts.length / query.size),
       },
       filters: this.buildFacets(facetProducts),
     };
@@ -261,6 +286,7 @@ export class PublicProductsService {
       where: {
         id: productId,
         visibility: 'ACTIVE',
+        catalogStatus: 'PUBLISHED',
         images: {
           some: {},
         },
@@ -320,12 +346,18 @@ export class PublicProductsService {
             name: true,
             slug: true,
             logoUrl: true,
+            status: true,
+            sellerProfile: {
+              select: {
+                approvalStatus: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (!product) {
+    if (!product || !this.productReadiness.getReadiness(product).ready) {
       throw new NotFoundException(`Public product ${productId} was not found.`);
     }
 
@@ -375,7 +407,12 @@ export class PublicProductsService {
           availableQuantity: variantAvailableQuantity,
         };
       }),
-      shop: product.shop,
+      shop: {
+        id: product.shop.id,
+        name: product.shop.name,
+        slug: product.shop.slug,
+        logoUrl: product.shop.logoUrl,
+      },
     };
   }
 

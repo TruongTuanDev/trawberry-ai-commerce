@@ -7,12 +7,17 @@ import { SectionCard } from "@/components/seller/section-card";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
 import {
+  archiveShopProduct,
   getShopProductById,
   getShopProductInventory,
+  getShopProductReadiness,
+  publishShopProduct,
+  unpublishShopProduct,
   updateShopProduct,
   updateShopProductInventory,
   type ProductDetail,
   type ProductInventory,
+  type ProductReadiness,
   type UpdateProductPayload,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
@@ -23,10 +28,11 @@ export default function SellerProductDetailPage() {
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [inventory, setInventory] = useState<ProductInventory | null>(null);
+  const [readiness, setReadiness] = useState<ProductReadiness | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [inventorySavingId, setInventorySavingId] = useState<string | null>(null);
-  const [priceSavingId, setPriceSavingId] = useState<string | null>(null);
+  const [variantSavingId, setVariantSavingId] = useState<string | null>(null);
+  const [lifecycleSaving, setLifecycleSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,9 +49,11 @@ export default function SellerProductDetailPage() {
           getShopProductById(currentShopId, productId),
           getShopProductInventory(currentShopId, productId),
         ]);
+        const readinessResult = await getShopProductReadiness(currentShopId, productId);
         if (mounted) {
           setProduct(productResult);
           setInventory(inventoryResult);
+          setReadiness(readinessResult);
           setError(null);
         }
       } catch (err) {
@@ -75,6 +83,7 @@ export default function SellerProductDetailPage() {
     try {
       const updated = await updateShopProduct(currentShopId, product.id, payload);
       setProduct(updated);
+      setReadiness(await getShopProductReadiness(currentShopId, product.id));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to update product.");
@@ -84,46 +93,71 @@ export default function SellerProductDetailPage() {
     }
   };
 
-  const handleInventorySave = async (variantId: string, stockQuantity: number) => {
+  const handleVariantSave = async (
+    variantId: string,
+    chrtId: string,
+    basePrice: number,
+    discountPercent: number,
+    stockQuantity: number,
+  ) => {
     if (!currentShopId || !product) {
       return;
     }
 
-    setInventorySavingId(variantId);
+    setVariantSavingId(variantId);
     try {
-      const updatedInventory = await updateShopProductInventory(currentShopId, product.id, {
-        variantId,
-        stockQuantity,
-      });
-      const refreshedProduct = await getShopProductById(currentShopId, product.id);
+      const finalPrice = Math.max(
+        0,
+        Math.round(basePrice * (1 - discountPercent / 100)),
+      );
+      const [updatedProduct, updatedInventory] = await Promise.all([
+        updateShopProduct(currentShopId, product.id, {
+          variants: [
+            {
+              chrtId: Number(chrtId),
+              basePrice,
+              discountPrice: finalPrice,
+            },
+          ],
+        }),
+        updateShopProductInventory(currentShopId, product.id, {
+          variantId,
+          stockQuantity,
+        }),
+      ]);
+      setProduct(updatedProduct);
       setInventory(updatedInventory);
-      setProduct(refreshedProduct);
+      setReadiness(await getShopProductReadiness(currentShopId, product.id));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update inventory.");
+      setError(err instanceof Error ? err.message : "Unable to update variant.");
       throw err;
     } finally {
-      setInventorySavingId(null);
+      setVariantSavingId(null);
     }
   };
 
-  const handlePriceSave = async (variantId: string, chrtId: string, basePrice: number) => {
+  const handleLifecycle = async (action: "publish" | "unpublish" | "archive") => {
     if (!currentShopId || !product) {
       return;
     }
 
-    setPriceSavingId(variantId);
+    setLifecycleSaving(action);
     try {
-      const updated = await updateShopProduct(currentShopId, product.id, {
-        variants: [{ chrtId: Number(chrtId), basePrice, discountPrice: basePrice }],
-      });
+      const updated =
+        action === "publish"
+          ? await publishShopProduct(currentShopId, product.id)
+          : action === "unpublish"
+            ? await unpublishShopProduct(currentShopId, product.id)
+            : await archiveShopProduct(currentShopId, product.id);
       setProduct(updated);
+      setReadiness(await getShopProductReadiness(currentShopId, product.id));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update price.");
+      setError(err instanceof Error ? err.message : `Unable to ${action} product.`);
       throw err;
     } finally {
-      setPriceSavingId(null);
+      setLifecycleSaving(null);
     }
   };
 
@@ -160,10 +194,65 @@ export default function SellerProductDetailPage() {
         >
           Manage images
         </Link>
+        <button
+          type="button"
+          onClick={() => void handleLifecycle("publish")}
+          disabled={lifecycleSaving !== null || readiness?.ready === false && product.catalogStatus !== "PUBLISHED"}
+          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {lifecycleSaving === "publish" ? "Publishing..." : "Publish"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleLifecycle("unpublish")}
+          disabled={lifecycleSaving !== null || product.catalogStatus !== "PUBLISHED"}
+          className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {lifecycleSaving === "unpublish" ? "Unpublishing..." : "Unpublish"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleLifecycle("archive")}
+          disabled={lifecycleSaving !== null || product.catalogStatus === "ARCHIVED"}
+          className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {lifecycleSaving === "archive" ? "Archiving..." : "Archive"}
+        </button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
+          <SectionCard
+            eyebrow="Catalog"
+            title="Publish readiness"
+            description="Wildberries sync/import puts products into the seller catalog first. Only published and ready products become visible on the public marketplace."
+          >
+            <div className="grid gap-4 md:grid-cols-[180px_1fr]">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Catalog status</p>
+                <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{product.catalogStatus}</p>
+                <p className="mt-2 text-xs text-[var(--muted)]">Source: {product.source}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Readiness</p>
+                <p className={`mt-2 text-lg font-semibold ${readiness?.ready ? "text-emerald-700" : "text-amber-700"}`}>
+                  {readiness?.ready ? "Ready to publish" : "Needs review"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(readiness?.blockingReasons ?? []).map((reason) => (
+                    <span key={reason} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                      {reason.replaceAll("_", " ")}
+                    </span>
+                  ))}
+                  {readiness && readiness.blockingReasons.length < 1 ? (
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      READY
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </SectionCard>
           <ProductForm product={product} saving={saving} onSubmit={handleSave} />
           <SectionCard
             eyebrow="Variants"
@@ -171,11 +260,12 @@ export default function SellerProductDetailPage() {
             description="Inventory is managed per variant in this MVP. Stock updates are absolute values and checkout deducts inventory immediately."
           >
             <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-              <div className="hidden grid-cols-[110px_110px_130px_100px_120px_150px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
+              <div className="hidden grid-cols-[90px_90px_130px_110px_130px_110px_150px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
                 <div>Tech size</div>
                 <div>WB size</div>
                 <div>Base price</div>
                 <div>Discount</div>
+                <div>Final price</div>
                 <div>Stock</div>
                 <div>Status</div>
                 <div>Action</div>
@@ -195,16 +285,14 @@ export default function SellerProductDetailPage() {
                   inStock: variant.inStock,
                 }))).map((variant) => (
                   <InventoryRow
-                    key={`${variant.id}-${variant.stockQuantity}-${variant.reservedStock}`}
+                    key={`${variant.id}-${variant.stockQuantity}-${variant.reservedStock}-${product.variants.find((entry) => entry.id === variant.id)?.basePrice ?? "0"}-${product.variants.find((entry) => entry.id === variant.id)?.discountPrice ?? "0"}`}
                     variant={{
                       ...variant,
                       basePrice: product.variants.find((entry) => entry.id === variant.id)?.basePrice ?? null,
                       discountPrice: product.variants.find((entry) => entry.id === variant.id)?.discountPrice ?? null,
                     }}
-                    saving={inventorySavingId === variant.id}
-                    priceSaving={priceSavingId === variant.id}
-                    onSave={handleInventorySave}
-                    onPriceSave={handlePriceSave}
+                    saving={variantSavingId === variant.id}
+                    onSave={handleVariantSave}
                   />
                 ))}
               </div>
@@ -247,9 +335,7 @@ export default function SellerProductDetailPage() {
 function InventoryRow({
   variant,
   saving,
-  priceSaving,
   onSave,
-  onPriceSave,
 }: {
   variant: {
     id: string;
@@ -267,15 +353,63 @@ function InventoryRow({
     inStock: boolean;
   };
   saving: boolean;
-  priceSaving: boolean;
-  onSave: (variantId: string, stockQuantity: number) => Promise<void>;
-  onPriceSave: (variantId: string, chrtId: string, basePrice: number) => Promise<void>;
+  onSave: (
+    variantId: string,
+    chrtId: string,
+    basePrice: number,
+    discountPercent: number,
+    stockQuantity: number,
+  ) => Promise<void>;
 }) {
   const [value, setValue] = useState(String(variant.stockQuantity));
   const [priceValue, setPriceValue] = useState(variant.basePrice ?? "0");
+  const [rowError, setRowError] = useState<string | null>(null);
+  const [discountValue, setDiscountValue] = useState(() => {
+    const basePrice = Number(variant.basePrice ?? "0");
+    const finalPrice = Number(variant.discountPrice ?? variant.basePrice ?? "0");
+    if (basePrice <= 0) {
+      return "0";
+    }
+    const discountPercent = ((basePrice - finalPrice) / basePrice) * 100;
+    return String(Math.max(0, Math.round(discountPercent * 100) / 100));
+  });
+
+  const normalizedBasePrice = Math.max(0, Number(priceValue) || 0);
+  const normalizedDiscountPercent = Math.min(
+    100,
+    Math.max(0, Number(discountValue) || 0),
+  );
+  const finalPrice = Math.max(
+    0,
+    Math.round(normalizedBasePrice * (1 - normalizedDiscountPercent / 100)),
+  );
+
+  const handleSaveClick = async () => {
+    if (priceValue.trim() === "") {
+      setRowError("Base price is required.");
+      return;
+    }
+    if (discountValue.trim() === "") {
+      setRowError("Discount percentage is required.");
+      return;
+    }
+    if (value.trim() === "") {
+      setRowError("Stock quantity is required.");
+      return;
+    }
+
+    setRowError(null);
+    await onSave(
+      variant.id,
+      variant.chrtId,
+      normalizedBasePrice,
+      normalizedDiscountPercent,
+      Math.max(0, Number(value) || 0),
+    );
+  };
 
   return (
-    <article className="grid gap-3 px-4 py-4 md:grid-cols-[110px_110px_130px_100px_120px_150px_220px] md:px-5">
+    <article className="grid gap-3 px-4 py-4 md:grid-cols-[90px_90px_130px_110px_130px_110px_150px_220px] md:px-5">
       <div className="text-sm text-[var(--foreground)]">{variant.techSize ?? "N/A"}</div>
       <div className="text-sm text-[var(--muted)]">{variant.wbSize ?? "N/A"}</div>
       <div>
@@ -288,7 +422,22 @@ function InventoryRow({
           data-testid="product-price-input"
         />
       </div>
-      <div className="text-sm text-[var(--foreground)]">{variant.discountPrice ?? "-"}</div>
+      <div>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step="0.01"
+          value={discountValue}
+          onChange={(event) => setDiscountValue(event.target.value)}
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-sm text-[var(--foreground)]"
+          data-testid="product-discount-input"
+        />
+        <p className="mt-1 text-xs text-[var(--muted)]">%</p>
+      </div>
+      <div className="flex items-center rounded-xl border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
+        {finalPrice}
+      </div>
       <div>
           <input
           type="number"
@@ -305,25 +454,17 @@ function InventoryRow({
           {variant.trackInventory ? `${variant.reservedStock} reserved - threshold ${variant.lowStockThreshold}` : "Inventory tracking disabled"}
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-start gap-2">
+      <div className="flex flex-col items-start gap-2">
         <button
           type="button"
-          onClick={() => void onPriceSave(variant.id, variant.chrtId, Math.max(0, Number(priceValue) || 0))}
-          disabled={priceSaving}
-          className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-          data-testid="product-price-save"
-        >
-          {priceSaving ? "Saving..." : "Save price"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void onSave(variant.id, Math.max(0, Number(value) || 0))}
+          onClick={() => void handleSaveClick()}
           disabled={saving}
-          className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-          data-testid="product-stock-save"
+          className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+          data-testid="product-variant-save"
         >
-          {saving ? "Saving..." : "Save stock"}
+          {saving ? "Saving..." : "Save variant"}
         </button>
+        {rowError ? <p className="text-xs font-medium text-rose-700">{rowError}</p> : null}
       </div>
     </article>
   );

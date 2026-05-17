@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SectionCard } from "@/components/seller/section-card";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductTable } from "@/components/products/product-table";
 import {
+  archiveShopProduct,
+  bulkShopProductAction,
   createSellerShop,
   createShopProduct,
   getShopProducts,
+  publishShopProduct,
+  unpublishShopProduct,
   updateShopProductInventory,
   type ProductListItem,
 } from "@/lib/seller-api";
@@ -17,6 +21,21 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const PAGE_SIZE = 10;
+
+const catalogTabs = [
+  { id: "ALL", label: "All" },
+  { id: "IMPORTED", label: "Imported" },
+  { id: "NEEDS_REVIEW", label: "Needs review" },
+  { id: "READY", label: "Ready to publish" },
+  { id: "PUBLISHED", label: "Published" },
+  { id: "UNPUBLISHED", label: "Unpublished" },
+  { id: "ARCHIVED", label: "Archived" },
+  { id: "MISSING_PRICE", label: "Missing price" },
+  { id: "MISSING_STOCK", label: "Missing stock" },
+  { id: "MISSING_CATEGORY", label: "Missing category" },
+] as const;
+
+type CatalogTab = (typeof catalogTabs)[number]["id"];
 
 export function SellerProductsPageClient() {
   const router = useRouter();
@@ -40,8 +59,10 @@ export function SellerProductsPageClient() {
     search: searchParams.get("search") ?? "",
     status: searchParams.get("status") ?? "",
     stockStatus: searchParams.get("stockStatus") ?? "",
+    tab: (searchParams.get("tab") as CatalogTab | null) ?? "ALL",
   });
   const [page, setPage] = useState(Number(searchParams.get("page") ?? "1"));
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [state, setState] = useState<{
     items: Awaited<ReturnType<typeof getShopProducts>>["items"];
     meta: Awaited<ReturnType<typeof getShopProducts>>["meta"] | null;
@@ -55,6 +76,8 @@ export function SellerProductsPageClient() {
   });
   const [creatingShop, setCreatingShop] = useState(false);
   const [creatingProduct, setCreatingProduct] = useState(false);
+  const [bulkAction, setBulkAction] = useState<"PUBLISH" | "UNPUBLISH" | "ARCHIVE">("PUBLISH");
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -66,48 +89,84 @@ export function SellerProductsPageClient() {
       search: searchParams.get("search") ?? "",
       status: searchParams.get("status") ?? "",
       stockStatus: searchParams.get("stockStatus") ?? "",
+      tab: (searchParams.get("tab") as CatalogTab | null) ?? "ALL",
     });
     setPage(Number(searchParams.get("page") ?? "1"));
   }, [searchParams]);
 
-  useEffect(() => {
+  const listQuery = useMemo(() => {
+    const tabQuery: Parameters<typeof getShopProducts>[1] = {
+      page,
+      size: PAGE_SIZE,
+      search: filters.search || undefined,
+      status: filters.status || undefined,
+      stockStatus: (filters.stockStatus || undefined) as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
+    };
+
+    switch (filters.tab) {
+      case "IMPORTED":
+        tabQuery.catalogStatus = "IMPORTED";
+        break;
+      case "NEEDS_REVIEW":
+        tabQuery.needsReview = true;
+        break;
+      case "READY":
+        tabQuery.readyToPublish = true;
+        break;
+      case "PUBLISHED":
+        tabQuery.published = true;
+        break;
+      case "UNPUBLISHED":
+        tabQuery.catalogStatus = "UNPUBLISHED";
+        break;
+      case "ARCHIVED":
+        tabQuery.catalogStatus = "ARCHIVED";
+        break;
+      case "MISSING_PRICE":
+        tabQuery.missingPrice = true;
+        break;
+      case "MISSING_STOCK":
+        tabQuery.missingStock = true;
+        break;
+      case "MISSING_CATEGORY":
+        tabQuery.missingCategory = true;
+        break;
+      default:
+        break;
+    }
+
+    return tabQuery;
+  }, [filters.search, filters.status, filters.stockStatus, filters.tab, page]);
+
+  const loadProducts = useCallback(async () => {
     if (!user || !currentShopId) {
       return;
     }
 
-    const run = async () => {
-      setState((current) => ({ ...current, loading: true, error: null }));
+    setState((current) => ({ ...current, loading: true, error: null }));
+    try {
+      const response = await getShopProducts(currentShopId, listQuery, "");
+      setState({
+        items: response.items,
+        meta: response.meta,
+        loading: false,
+        error: null,
+      });
+      setSelectedIds((current) =>
+        current.filter((productId) => response.items.some((item) => item.id === productId)),
+      );
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error instanceof Error ? error.message : "Unable to load products.",
+      }));
+    }
+  }, [currentShopId, listQuery, user]);
 
-      try {
-        const response = await getShopProducts(
-          currentShopId,
-          {
-            page,
-            size: PAGE_SIZE,
-            search: filters.search || undefined,
-            status: filters.status || undefined,
-            stockStatus: (filters.stockStatus || undefined) as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
-          },
-          "",
-        );
-
-        setState({
-          items: response.items,
-          meta: response.meta,
-          loading: false,
-          error: null,
-        });
-      } catch (error) {
-        setState((current) => ({
-          ...current,
-          loading: false,
-          error: error instanceof Error ? error.message : "Unable to load products.",
-        }));
-      }
-    };
-
-    void run();
-  }, [currentShopId, filters.search, filters.status, filters.stockStatus, page, user]);
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
 
   useEffect(() => {
     let mounted = true;
@@ -134,6 +193,7 @@ export function SellerProductsPageClient() {
     if (filters.search) params.set("search", filters.search);
     if (filters.status) params.set("status", filters.status);
     if (filters.stockStatus) params.set("stockStatus", filters.stockStatus);
+    if (filters.tab !== "ALL") params.set("tab", filters.tab);
     params.set("page", "1");
     router.replace(`/seller/products?${params.toString()}`);
   };
@@ -143,6 +203,7 @@ export function SellerProductsPageClient() {
     if (filters.search) params.set("search", filters.search);
     if (filters.status) params.set("status", filters.status);
     if (filters.stockStatus) params.set("stockStatus", filters.stockStatus);
+    if (filters.tab !== "ALL") params.set("tab", filters.tab);
     params.set("page", String(nextPage));
     router.replace(`/seller/products?${params.toString()}`);
   };
@@ -153,31 +214,12 @@ export function SellerProductsPageClient() {
     }
 
     setState((current) => ({ ...current, loading: true, error: null }));
-
     try {
       await updateShopProductInventory(currentShopId, product.id, {
         variantId: product.primaryVariantId ?? undefined,
         stockQuantity,
       });
-
-      const response = await getShopProducts(
-        currentShopId,
-        {
-          page,
-          size: PAGE_SIZE,
-          search: filters.search || undefined,
-          status: filters.status || undefined,
-          stockStatus: (filters.stockStatus || undefined) as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
-        },
-        "",
-      );
-
-      setState({
-        items: response.items,
-        meta: response.meta,
-        loading: false,
-        error: null,
-      });
+      await loadProducts();
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -185,6 +227,77 @@ export function SellerProductsPageClient() {
         error: error instanceof Error ? error.message : "Unable to update stock.",
       }));
       throw error;
+    }
+  };
+
+  const handlePublish = async (productId: string) => {
+    if (!currentShopId) return;
+    setState((current) => ({ ...current, loading: true, error: null }));
+    try {
+      await publishShopProduct(currentShopId, productId);
+      await loadProducts();
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error instanceof Error ? error.message : "Unable to publish product.",
+      }));
+      throw error;
+    }
+  };
+
+  const handleUnpublish = async (productId: string) => {
+    if (!currentShopId) return;
+    setState((current) => ({ ...current, loading: true, error: null }));
+    try {
+      await unpublishShopProduct(currentShopId, productId);
+      await loadProducts();
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error instanceof Error ? error.message : "Unable to unpublish product.",
+      }));
+      throw error;
+    }
+  };
+
+  const handleArchive = async (productId: string) => {
+    if (!currentShopId) return;
+    setState((current) => ({ ...current, loading: true, error: null }));
+    try {
+      await archiveShopProduct(currentShopId, productId);
+      await loadProducts();
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error instanceof Error ? error.message : "Unable to archive product.",
+      }));
+      throw error;
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!currentShopId || selectedIds.length < 1) {
+      return;
+    }
+
+    setBulkSaving(true);
+    setCreateMessage(null);
+    setCreateError(null);
+    try {
+      const result = await bulkShopProductAction(currentShopId, {
+        productIds: selectedIds,
+        action: bulkAction,
+      });
+      setCreateMessage(`${bulkAction}: ${result.successCount} succeeded, ${result.failureCount} failed.`);
+      setSelectedIds([]);
+      await loadProducts();
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Unable to run bulk action.");
+    } finally {
+      setBulkSaving(false);
     }
   };
 
@@ -264,7 +377,7 @@ export function SellerProductsPageClient() {
       <SectionCard
         eyebrow="Catalog"
         title="Products"
-        description="The Angular seller product list has been reworked into a responsive table with search, pagination, and shop-scoped NestJS data."
+        description="Seller catalog is separate from the public marketplace. Imported products stay private until the seller reviews and publishes them."
       >
         <div className="space-y-5">
           {createMessage ? (
@@ -356,13 +469,60 @@ export function SellerProductsPageClient() {
             </div>
           )}
 
-          <ProductFilters value={filters} onChange={setFilters} onSubmit={applyFilters} />
+          <div className="flex flex-wrap gap-2">
+            {catalogTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilters((current) => ({ ...current, tab: tab.id }))}
+                className={filters.tab === tab.id ? "rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <ProductFilters
+            value={filters}
+            onChange={(value) =>
+              setFilters((current) => ({
+                ...current,
+                search: value.search,
+                status: value.status,
+                stockStatus: value.stockStatus,
+              }))
+            }
+            onSubmit={applyFilters}
+          />
 
           <div className="grid gap-4 sm:grid-cols-3">
             <InventorySummaryCard label="Tracked products" value={String(stockCounts.tracked)} tone="neutral" />
             <InventorySummaryCard label="Low stock on this page" value={String(stockCounts.lowStock)} tone={stockCounts.lowStock > 0 ? "warn" : "ok"} />
             <InventorySummaryCard label="Out of stock on this page" value={String(stockCounts.outOfStock)} tone={stockCounts.outOfStock > 0 ? "danger" : "ok"} />
           </div>
+
+          {currentShopId ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4">
+              <span className="text-sm font-semibold text-[var(--foreground)]">{selectedIds.length} selected</span>
+              <select
+                value={bulkAction}
+                onChange={(event) => setBulkAction(event.target.value as "PUBLISH" | "UNPUBLISH" | "ARCHIVE")}
+                className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm"
+              >
+                <option value="PUBLISH">Publish selected</option>
+                <option value="UNPUBLISH">Unpublish selected</option>
+                <option value="ARCHIVE">Archive selected</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => void handleBulkAction()}
+                disabled={bulkSaving || selectedIds.length < 1}
+                className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {bulkSaving ? "Processing..." : "Run bulk action"}
+              </button>
+            </div>
+          ) : null}
 
           {state.error ? (
             <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -379,8 +539,26 @@ export function SellerProductsPageClient() {
               ) : (
                 <ProductTable
                   products={state.items}
+                  selectedIds={selectedIds}
+                  onToggleSelect={(productId) =>
+                    setSelectedIds((current) =>
+                      current.includes(productId)
+                        ? current.filter((id) => id !== productId)
+                        : [...current, productId],
+                    )
+                  }
+                  onToggleSelectAll={() =>
+                    setSelectedIds((current) =>
+                      state.items.every((item) => current.includes(item.id))
+                        ? []
+                        : state.items.map((item) => item.id),
+                    )
+                  }
                   onEdit={(productId) => router.push(`/seller/products/${productId}`)}
                   onQuickUpdate={handleQuickUpdate}
+                  onPublish={handlePublish}
+                  onUnpublish={handleUnpublish}
+                  onArchive={handleArchive}
                 />
               )}
               <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">

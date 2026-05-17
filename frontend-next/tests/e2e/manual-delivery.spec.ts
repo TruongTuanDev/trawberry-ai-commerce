@@ -84,10 +84,16 @@ async function createPaidOrder(request: APIRequestContext, sellerToken: string, 
       wbTitle: `Manual Delivery Product ${stamp}`,
       localTitle: `Manual Delivery Product ${stamp}`,
       localDescription: "Manual delivery E2E product",
+      categoryName: "Manual Delivery Category",
       visibility: "ACTIVE",
       variants: [{ chrtId: 8300000 + (stamp % 100000), basePrice: 199, discountPrice: 199, stockQuantity: 5 }],
       images: [{ wbUrl: "https://example.com/manual-delivery.jpg", localUrl: "https://example.com/manual-delivery.jpg", isMain: true, sortOrder: 0 }],
     },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    token: sellerToken,
+    data: {},
   });
   const checkout = await backendJson<{ orderId: string; orderCode: string; trackingPath: string }>(request, "/api/checkout/orders", {
     method: "POST",

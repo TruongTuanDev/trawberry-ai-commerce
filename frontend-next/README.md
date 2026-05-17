@@ -39,6 +39,13 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/onboarding`
 - `/seller/settings`
 
+## Seller Catalog Workflow
+
+- Wildberries import and sync add products to seller catalog first.
+- `/seller/products` now separates imported, needs-review, ready, published, unpublished, and archived states.
+- Seller must publish products manually before they appear on public `/products`.
+- Seller can unpublish or archive products to remove them from public marketplace and checkout.
+
 ## Current features
 - Admin seller approval UI with:
   - pending/approved/rejected filters

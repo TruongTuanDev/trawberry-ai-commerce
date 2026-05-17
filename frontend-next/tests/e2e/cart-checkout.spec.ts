@@ -130,6 +130,7 @@ async function createTwoVariantProduct(
       wbTitle: `E2E Cart Product ${input.stamp}`,
       localTitle: `E2E Cart Product ${input.stamp}`,
       localDescription: "E2E cart product with two variants",
+      categoryName: "Cart Checkout Category",
       visibility: "ACTIVE",
       variants: [
         {
@@ -165,6 +166,11 @@ async function createTwoVariantProduct(
         ),
       },
     },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {},
   });
 
   return { shop, product };

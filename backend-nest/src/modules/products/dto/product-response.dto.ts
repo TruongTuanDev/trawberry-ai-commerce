@@ -25,6 +25,23 @@ export class ProductResponseDto {
   @ApiProperty({ nullable: true })
   visibility!: string | null;
 
+  @ApiProperty({
+    enum: [
+      'IMPORTED',
+      'DRAFT',
+      'READY',
+      'PUBLISHED',
+      'UNPUBLISHED',
+      'ARCHIVED',
+    ],
+  })
+  catalogStatus!: string;
+
+  @ApiProperty({
+    enum: ['MANUAL', 'WILDBERRIES_EXCEL', 'WILDBERRIES_API'],
+  })
+  source!: string;
+
   @ApiProperty({ nullable: true })
   seoSlug!: string | null;
 
@@ -45,6 +62,18 @@ export class ProductResponseDto {
 
   @ApiProperty({ nullable: true })
   wbVendorCode!: string | null;
+
+  @ApiProperty({ nullable: true })
+  publishedAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  archivedAt!: string | null;
+
+  @ApiProperty({ isArray: true, type: String })
+  reviewWarnings!: string[];
+
+  @ApiProperty()
+  readyToPublish!: boolean;
 
   @ApiProperty({ nullable: true })
   mainImage!: string | null;

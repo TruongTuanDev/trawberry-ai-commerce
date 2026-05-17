@@ -4,11 +4,20 @@ Seller product import from a Wildberries `.xlsx` export.
 
 API-based product sync is documented separately in `docs/WB_API_SYNC.md`.
 
+Imported products now land in the private seller catalog with `catalogStatus=IMPORTED`. They are not public until the seller reviews and publishes them.
+
 Use Excel import when the seller has an `.xlsx` export with price/stock columns. Use WB API sync when the seller wants to pull Content API cards directly from Wildberries.
 
 Category mapping is applied during preview and confirm. The source seller category is preserved as `sourceCategoryName`, mapped internal categories are shown in preview, and unmapped source categories add `UNMAPPED_CATEGORY` warnings without blocking import.
 
 This phase intentionally does not add WB price or stock sync; sellers still manage local price and inventory after import.
+
+## Catalog Curation
+
+- Confirm import creates or updates seller-catalog products.
+- New WB Excel products default to `source=WILDBERRIES_EXCEL` and `catalogStatus=IMPORTED`.
+- Re-import preserves seller-managed lifecycle and does not force products public.
+- Seller must review readiness, fix missing price/stock/category, and publish manually.
 
 ## Scope
 - Source sheet: `Товары`.

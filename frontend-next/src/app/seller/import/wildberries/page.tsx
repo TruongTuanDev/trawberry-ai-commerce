@@ -242,7 +242,11 @@ export default function WildberriesImportPage() {
       ) : null}
 
       {result ? (
-        <SectionCard eyebrow="Completed" title="Import result" description="Products are now available in the seller catalog.">
+        <SectionCard
+          eyebrow="Completed"
+          title="Import result"
+          description="Products were imported to Seller Catalog. They are not public until you review and publish them."
+        >
           <div className="grid gap-3 sm:grid-cols-3" data-testid="wb-import-result">
             <Metric label="Created products" value={result.createdProducts} />
             <Metric label="Updated products" value={result.updatedProducts} />
@@ -251,9 +255,17 @@ export default function WildberriesImportPage() {
             <Metric label="Images added" value={result.addedImages} />
             <Metric label="Images skipped" value={result.skippedImages} />
           </div>
-          <Link href="/seller/products" className="mt-5 inline-flex rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white">
-            Open products
-          </Link>
+          <p className="mt-4 text-sm text-[var(--muted)]">
+            Review imported products, fill any missing price, stock, category, or images, then publish the products you want to sell.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/seller/products?tab=IMPORTED" className="inline-flex rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white">
+              View imported products
+            </Link>
+            <Link href="/seller/products?tab=NEEDS_REVIEW" className="inline-flex rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)]">
+              View needs review
+            </Link>
+          </div>
         </SectionCard>
       ) : null}
     </div>

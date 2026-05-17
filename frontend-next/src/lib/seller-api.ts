@@ -304,6 +304,8 @@ export type ProductListItem = {
   localTitle: string | null;
   brand: string | null;
   visibility: string | null;
+  catalogStatus: "IMPORTED" | "DRAFT" | "READY" | "PUBLISHED" | "UNPUBLISHED" | "ARCHIVED";
+  source: "MANUAL" | "WILDBERRIES_EXCEL" | "WILDBERRIES_API";
   seoSlug: string | null;
   categoryId: string | null;
   categorySlug: string | null;
@@ -311,6 +313,10 @@ export type ProductListItem = {
   sourceCategoryName: string | null;
   sourceCategorySource: string | null;
   wbVendorCode: string | null;
+  publishedAt: string | null;
+  archivedAt: string | null;
+  reviewWarnings: string[];
+  readyToPublish: boolean;
   mainImage: string | null;
   inStock: boolean;
   stockQuantity: number;
@@ -344,11 +350,17 @@ export type ProductDetail = {
   description: string | null;
   brand: string | null;
   visibility: string | null;
+  catalogStatus: "IMPORTED" | "DRAFT" | "READY" | "PUBLISHED" | "UNPUBLISHED" | "ARCHIVED";
+  source: "MANUAL" | "WILDBERRIES_EXCEL" | "WILDBERRIES_API";
+  publishedAt: string | null;
+  unpublishedAt: string | null;
+  archivedAt: string | null;
   seoSlug: string | null;
   wbVendorCode: string | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
   sourceCategorySource: string | null;
+  reviewWarnings: string[];
   category: {
     id: number;
     name: string;
@@ -379,6 +391,14 @@ export type ProductDetail = {
     stockStatus: StockStatus;
     inStock: boolean;
   }>;
+};
+
+export type ProductReadiness = {
+  productId: string;
+  shopId: string;
+  ready: boolean;
+  blockingReasons: string[];
+  catalogStatus: ProductListItem["catalogStatus"];
 };
 
 export type ProductInventory = {
@@ -741,6 +761,15 @@ export async function getShopProducts(
     search?: string;
     status?: string;
     stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+    catalogStatus?: ProductListItem["catalogStatus"];
+    source?: ProductListItem["source"];
+    missingPrice?: boolean;
+    missingStock?: boolean;
+    missingCategory?: boolean;
+    readyToPublish?: boolean;
+    needsReview?: boolean;
+    published?: boolean;
+    sort?: "updatedAt_desc" | "updatedAt_asc" | "title_asc" | "title_desc";
   },
   token?: string,
 ) {
@@ -758,6 +787,33 @@ export async function getShopProducts(
   }
   if (query.stockStatus) {
     params.set("stockStatus", query.stockStatus);
+  }
+  if (query.catalogStatus) {
+    params.set("catalogStatus", query.catalogStatus);
+  }
+  if (query.source) {
+    params.set("source", query.source);
+  }
+  if (query.missingPrice) {
+    params.set("missingPrice", "true");
+  }
+  if (query.missingStock) {
+    params.set("missingStock", "true");
+  }
+  if (query.missingCategory) {
+    params.set("missingCategory", "true");
+  }
+  if (query.readyToPublish) {
+    params.set("readyToPublish", "true");
+  }
+  if (query.needsReview) {
+    params.set("needsReview", "true");
+  }
+  if (query.published) {
+    params.set("published", "true");
+  }
+  if (query.sort) {
+    params.set("sort", query.sort);
   }
 
   return apiRequest<ProductListResponse>(
@@ -823,6 +879,99 @@ export async function getShopProductInventory(
       token,
     },
   );
+}
+
+export async function getShopProductReadiness(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductReadiness>(
+    `/api/shops/${shopId}/products/${productId}/readiness`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function publishShopProduct(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductDetail>(
+    `/api/shops/${shopId}/products/${productId}/publish`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export async function unpublishShopProduct(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductDetail>(
+    `/api/shops/${shopId}/products/${productId}/unpublish`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export async function archiveShopProduct(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<ProductDetail>(
+    `/api/shops/${shopId}/products/${productId}/archive`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export async function bulkShopProductAction(
+  shopId: string,
+  payload: {
+    productIds: string[];
+    action: "PUBLISH" | "UNPUBLISH" | "ARCHIVE";
+    updates?: {
+      categoryId?: number;
+      categoryName?: string;
+      variants?: Array<{
+        chrtId: number;
+        basePrice?: number;
+        discountPrice?: number;
+        stockQuantity?: number;
+      }>;
+    };
+  },
+  token?: string,
+) {
+  return apiRequest<{
+    action: string;
+    total: number;
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+      productId: string;
+      success: boolean;
+      action: string;
+      blockingReasons?: string[];
+      error?: string;
+    }>;
+  }>(`/api/shops/${shopId}/products/bulk`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function updateShopProductInventory(

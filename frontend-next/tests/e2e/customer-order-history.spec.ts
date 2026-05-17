@@ -101,6 +101,7 @@ async function createPublicProduct(
         wbTitle: input.productName,
         localTitle: input.productName,
         localDescription: `${input.productName} description`,
+        categoryName: "History Category",
         visibility: "ACTIVE",
         variants: [
           {
@@ -128,6 +129,11 @@ async function createPublicProduct(
         ),
       },
     },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {},
   });
   return { shop, product };
 }

@@ -54,6 +54,19 @@ type WbSyncRunUpdateArgs = {
   };
 };
 
+type ProductCreateArgs = {
+  data: {
+    id: string;
+    shopId?: string;
+    [key: string]: unknown;
+  };
+};
+
+type ProductUpdateArgs = {
+  where: { id: string };
+  data: Record<string, unknown>;
+};
+
 describe('WbProductSyncService credentials', () => {
   const user = {
     userId: 'seller-user-1',
@@ -140,6 +153,41 @@ describe('WbProductSyncService credentials', () => {
     const prisma = {
       shop,
       shopWbCredential,
+      $transaction: jest
+        .fn()
+        .mockImplementation(
+          async (
+            callback: (tx: Record<string, unknown>) => Promise<unknown>,
+            transactionOptions?: { maxWait?: number; timeout?: number },
+          ) => {
+            void transactionOptions;
+            const tx = {
+              product: {
+                findFirst: jest.fn().mockResolvedValue(null),
+                create: jest
+                  .fn()
+                  .mockImplementation(({ data }: ProductCreateArgs) =>
+                    Promise.resolve({ id: data.id, ...data }),
+                  ),
+                update: jest
+                  .fn()
+                  .mockImplementation(({ where, data }: ProductUpdateArgs) =>
+                    Promise.resolve({ id: where.id, ...data }),
+                  ),
+              },
+              productVariant: {
+                findFirst: jest.fn().mockResolvedValue(null),
+                create: jest.fn().mockResolvedValue({ id: 'variant-1' }),
+                update: jest.fn().mockResolvedValue({ id: 'variant-1' }),
+              },
+              productImage: {
+                findFirst: jest.fn().mockResolvedValue(null),
+                create: jest.fn().mockResolvedValue({ id: 'image-1' }),
+              },
+            };
+            return callback(tx);
+          },
+        ),
       wbSyncRun: {
         create: jest.fn().mockImplementation(({ data }: WbSyncRunCreateArgs) =>
           Promise.resolve({
@@ -214,7 +262,56 @@ describe('WbProductSyncService credentials', () => {
     const service = new WbProductSyncService(
       prisma as never,
       apiClient as never,
-      {} as never,
+      {
+        mapCard: jest.fn().mockImplementation(() => ({
+          source: 'WILDBERRIES_API',
+          externalProductId: '123',
+          sellerSku: 'WB-ARTICLE-1',
+          wbNmId: BigInt(123),
+          wbImtId: BigInt(456),
+          wbNmUuid: 'nm-uuid-1',
+          name: 'Imported product',
+          description: 'Imported from Wildberries',
+          brand: 'WB Brand',
+          categoryName: 'T-Shirts',
+          categoryId: null,
+          mappedCategoryName: null,
+          sourceCategoryName: null,
+          subjectId: BigInt(789),
+          videoUrl: null,
+          needKiz: null,
+          dimensions: {
+            width: 10,
+            height: 20,
+            length: 30,
+            weightBrutto: 400,
+            isValid: true,
+          },
+          characteristics: {
+            gender: null,
+            composition: null,
+            color: null,
+          },
+          variants: [
+            {
+              chrtId: BigInt(987),
+              sellerSku: 'WB-ARTICLE-1',
+              wbBarcode: 'barcode-1',
+              sizeName: 'M',
+              russianSize: '46',
+            },
+          ],
+          images: [
+            {
+              url: 'https://images.example.com/1.jpg',
+              isMain: true,
+              sortOrder: 0,
+            },
+          ],
+          warnings: [],
+          errors: [],
+        })),
+      } as never,
       {
         mapSourceCategory: jest.fn().mockResolvedValue({
           sourceCategoryName: null,
@@ -383,6 +480,63 @@ describe('WbProductSyncService credentials', () => {
     expect(result.sourceMode).toBe('real');
     expect(result.rawSummary?.credentialKeyLast4).toBe('1234');
     expect(JSON.stringify(result)).not.toContain('secret-api-key-1234');
+  });
+
+  it('runs import sync inside a longer-lived Prisma transaction', async () => {
+    const { service, apiClient, prisma } = createService();
+    apiClient.fetchCards.mockResolvedValue({
+      cards: [
+        {
+          nmID: 123,
+          imtID: 456,
+          nmUUID: 'nm-uuid-1',
+          subjectName: 'T-Shirts',
+          vendorCode: 'WB-ARTICLE-1',
+          brand: 'WB Brand',
+          title: 'Imported product',
+          description: 'Imported from Wildberries',
+          dimensions: {
+            width: 10,
+            height: 20,
+            length: 30,
+            weightBrutto: 400,
+            isValid: true,
+          },
+          photos: [{ big: 'https://images.example.com/1.jpg' }],
+          video: '',
+          characteristics: [],
+          sizes: [
+            {
+              chrtID: 987,
+              techSize: 'M',
+              wbSize: '46',
+              skus: ['barcode-1'],
+            },
+          ],
+        },
+      ],
+      mode: 'real',
+      pagesFetched: 1,
+      fetchedCount: 1,
+      cursor: { total: 1 },
+    });
+
+    await service.saveCredentials('shop-1', user, 'secret-api-key-1234');
+    await service.syncAll('shop-1', user, {
+      mode: 'IMPORT',
+      limit: 5,
+      publishMode: 'DRAFT',
+      imageMode: 'REMOTE_URL',
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        maxWait: 10_000,
+        timeout: 60_000,
+      }),
+    );
   });
 
   it('forbids cross-shop seller credential access', async () => {
