@@ -214,3 +214,22 @@ npm run test:e2e:support-cases
 - `docs/MULTI_SHOP_CHECKOUT.md`
 - `docs/CUSTOMER_ACCOUNTS_ORDER_HISTORY.md`
 - `docs/SUPPORT_CASES.md`
+
+## 11. Docker build reliability
+
+The supported Docker path now builds app artifacts inside the images:
+
+- `backend-nest` builds `dist` during image build
+- `frontend-next` builds `.next/standalone` during image build
+- manual `docker cp` of host build artifacts is no longer part of the release path
+
+Useful commands:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d backend-nest frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env logs -f backend-nest frontend-next
+```
+
+See `docs/DOCKER_BUILD_RELIABILITY.md` for troubleshooting and CI-readiness notes.

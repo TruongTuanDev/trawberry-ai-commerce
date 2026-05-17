@@ -2,3 +2,10 @@ node_modules
 .next
 .env
 npm-debug.log
+dist
+coverage
+test-results
+playwright-report
+playwright-report-artifacts
+data.xlsx
+logs

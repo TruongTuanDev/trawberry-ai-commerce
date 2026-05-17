@@ -209,3 +209,20 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env down -v
   - `ai-service/.env`
   - `frontend-next/.env`
   - `frontend-next/.env.local`
+
+## Docker Build Reliability Addendum
+
+- App images now use deterministic `npm ci` with npm retry settings inside Docker.
+- Verified rebuild flow:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d backend-nest frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env ps
+curl.exe --ipv4 http://localhost:3001/api/health
+curl.exe --ipv4 -I http://localhost:3000/products
+```
+
+- The runtime no longer depends on copying host `dist` or `.next` artifacts into containers.
+- See [DOCKER_BUILD_RELIABILITY.md](C:/Users/admin/trawberry-ai-commerce/docs/DOCKER_BUILD_RELIABILITY.md) for troubleshooting.

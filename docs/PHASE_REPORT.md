@@ -1595,3 +1595,22 @@ Retained non-goals:
 - no visibility rule changes
 - no proactive stale-cart server validation before checkout submit
 - no legacy app changes
+
+# Phase Report: Docker Build Reliability + CI Readiness
+
+Implemented:
+
+- added npm fetch retry and registry config before `npm ci` in both app Dockerfiles
+- preserved layer caching by copying `package*.json` before source
+- split backend image into build-deps, build, prod-deps, and runner stages
+- switched frontend Docker runtime to Next standalone output
+- tightened `.dockerignore` rules for backend, frontend, and repo root
+- documented supported rebuild, log-tail, and troubleshooting commands
+
+Verification:
+
+- `backend-nest`: `npm run prisma:generate`, `npm run lint`, `npm test -- --runInBand`, `npm run build`
+- `frontend-next`: `npm run lint`, `npm run build`
+- Docker: `docker compose ... build backend-nest frontend-next`, `docker compose ... up -d backend-nest frontend-next`, `docker compose ... ps`
+- runtime health: backend, frontend `/products`, and ai-service
+- minimal smoke/E2E rerun after Docker rebuild

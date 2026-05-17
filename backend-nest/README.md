@@ -268,3 +268,18 @@ The multi-shop smoke creates two approved sellers, two shops, and two products, 
 The customer history smoke creates a logged-in customer checkout, verifies the parent `checkoutCode`, customer history/detail, public receipt lookup by phone, wrong-phone rejection, and individual order tracking.
 
 The support cases smoke creates checkout-level and order-level support cases, verifies admin public/internal messaging, verifies customer cannot see internal notes, verifies seller can reply on linked order cases, and verifies another seller is blocked.
+
+## Docker Build Reliability
+
+- Docker image builds use `npm ci`, not `npm install`.
+- npm fetch retry settings are configured in the Dockerfile to reduce transient `ECONNRESET` failures.
+- The backend Docker build now separates build dependencies, build output, production dependencies, and final runtime layers.
+- Supported rebuild flow:
+
+```bash
+cd ..
+docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d backend-nest
+```
+
+- Do not use host `dist` copy as a primary runtime fix path.

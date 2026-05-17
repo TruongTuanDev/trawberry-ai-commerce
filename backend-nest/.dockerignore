@@ -4,3 +4,9 @@ coverage
 uploads
 .env
 npm-debug.log
+.next
+test-results
+playwright-report
+playwright-report-artifacts
+data.xlsx
+logs

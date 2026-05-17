@@ -243,11 +243,15 @@ test.describe("cart validation stale cart preflight", () => {
       },
     );
 
+    await expect(page.getByTestId("checkout-submit")).toBeEnabled({
+      timeout: 15000,
+    });
     await page.getByTestId("checkout-submit").click();
     await expect(page.getByTestId("checkout-validation-panel")).toBeVisible();
     await expect(page.getByTestId("checkout-validation-panel")).toContainText(
       "no longer public",
     );
+    await expect(page.getByTestId("checkout-submit")).toBeDisabled();
     await page.getByTestId("checkout-validation-back-to-cart").click();
 
     await expect(

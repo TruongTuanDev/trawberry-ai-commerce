@@ -864,3 +864,25 @@ Implemented:
 Current gap:
 
 - stale cart item availability warning is still a future enhancement and is not yet resolved proactively before checkout
+
+# Docker Build Reliability + CI Readiness Status
+
+Implemented:
+
+- hardened `backend-nest` and `frontend-next` Dockerfiles around deterministic `npm ci`
+- added npm registry retry configuration during image builds
+- separated backend build-time and production dependency stages
+- moved frontend Docker runtime to Next standalone output
+- tightened `.dockerignore` coverage for app build contexts
+- documented a supported compose rebuild path with no manual artifact copy
+
+Verification:
+
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest frontend-next`
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d backend-nest frontend-next`
+- `curl.exe --ipv4 http://localhost:3001/api/health`
+- `curl.exe --ipv4 -I http://localhost:3000/products`
+
+Current gap:
+
+- GitHub Actions workflow wiring is still a future phase; this pass prepares the Docker layer and docs for it.

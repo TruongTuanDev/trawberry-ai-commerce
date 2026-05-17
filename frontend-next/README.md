@@ -539,3 +539,20 @@ Support case coverage verifies:
 - internal admin note remains hidden from customer and seller
 - seller opens `/seller/support-cases` and replies to a linked shop case
 - unrelated seller does not see another shop's case
+
+## Docker Build Reliability
+
+- Docker image builds use deterministic `npm ci`.
+- npm fetch retry settings are configured in the Dockerfile to reduce transient `ECONNRESET` failures.
+- The Docker runtime uses Next standalone output from inside the image build:
+  - `.next/standalone`
+  - `.next/static`
+- Supported rebuild flow:
+
+```bash
+cd ..
+docker compose -f infra/docker-compose.yml --env-file infra/.env build frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d frontend-next
+```
+
+- Do not use host `.next` copy as a primary runtime fix path.

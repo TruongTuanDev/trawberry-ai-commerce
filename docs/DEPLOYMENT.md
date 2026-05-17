@@ -111,3 +111,20 @@ npm run smoke:ai-service-integration
 - Do not commit `infra/.env`
 - Do not commit real service `.env` files
 - Commit only `.env.example` files
+
+## Docker Build Reliability Addendum
+
+- Rebuild app images with:
+
+```powershell
+cd C:\Users\admin\trawberry-ai-commerce
+docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env up -d backend-nest frontend-next
+docker compose -f infra/docker-compose.yml --env-file infra/.env logs -f backend-nest frontend-next
+```
+
+- `backend-nest` now builds `dist` inside Docker.
+- `frontend-next` now builds Next standalone output inside Docker.
+- Manual `docker cp` of host `dist` or `.next` is no longer part of the supported release path.
+- Dockerfiles now configure npm fetch retries before `npm ci` to reduce transient `ECONNRESET` failures.
+- See [DOCKER_BUILD_RELIABILITY.md](C:/Users/admin/trawberry-ai-commerce/docs/DOCKER_BUILD_RELIABILITY.md).
