@@ -100,4 +100,10 @@ export class ProductResponseDto {
 
   @ApiProperty({ nullable: true })
   primaryVariantId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  minPrice!: string | null;
+
+  @ApiProperty({ nullable: true })
+  maxPrice!: string | null;
 }

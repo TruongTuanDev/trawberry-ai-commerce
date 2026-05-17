@@ -325,6 +325,8 @@ export type ProductListItem = {
   stockStatus: StockStatus;
   variantCount: number;
   primaryVariantId: string | null;
+  minPrice: string | null;
+  maxPrice: string | null;
 };
 
 export type ProductListResponse = {
@@ -399,6 +401,40 @@ export type ProductReadiness = {
   ready: boolean;
   blockingReasons: string[];
   catalogStatus: ProductListItem["catalogStatus"];
+};
+
+export type BulkProductVariantMode =
+  | "ALL_VARIANTS"
+  | "MISSING_ONLY"
+  | "FIRST_VARIANT_ONLY";
+
+export type BulkUpdateShopProductsPayload = {
+  productIds: string[];
+  updates: {
+    categoryId?: number;
+    price?: number;
+    stockQuantity?: number;
+    trackInventory?: boolean;
+  };
+  scope?: {
+    variantMode?: BulkProductVariantMode;
+  };
+  publishIfReady?: boolean;
+};
+
+export type BulkUpdateShopProductsResponse = {
+  updated: number;
+  failed: number;
+  items: Array<{
+    productId: string;
+    success: boolean;
+    error: string | null;
+    readiness: {
+      ready: boolean;
+      blockingReasons: string[];
+      catalogStatus: ProductListItem["catalogStatus"];
+    } | null;
+  }>;
 };
 
 export type ProductInventory = {
@@ -972,6 +1008,21 @@ export async function bulkShopProductAction(
     token,
     body: JSON.stringify(payload),
   });
+}
+
+export async function bulkUpdateShopProducts(
+  shopId: string,
+  payload: BulkUpdateShopProductsPayload,
+  token?: string,
+) {
+  return apiRequest<BulkUpdateShopProductsResponse>(
+    `/api/shops/${shopId}/products/bulk-update`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export async function updateShopProductInventory(

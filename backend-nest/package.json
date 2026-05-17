@@ -38,6 +38,7 @@
     "debug:wb-credential": "powershell -ExecutionPolicy Bypass -File scripts/debug-wb-credential.ps1",
     "smoke:wb-import-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-curation.ps1",
     "smoke:product-curation": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-curation.ps1",
+    "smoke:bulk-product-edit": "powershell -ExecutionPolicy Bypass -File scripts/smoke-bulk-product-edit.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",
     "smoke:payments": "powershell -ExecutionPolicy Bypass -File scripts/smoke-payments.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",

@@ -11,6 +11,15 @@
   - `npm run smoke:product-curation`
   - `npm run test:e2e:product-curation`
 
+## Seller Bulk Product Editing
+
+- `/seller/products` now supports bulk category, price, and stock updates for selected products.
+- Backend exposes `POST /api/shops/:shopId/products/bulk-update` with variant scope and optional `publishIfReady`.
+- Bulk editing recalculates readiness per product and keeps public marketplace rules unchanged.
+- Verification entry points:
+  - `npm run smoke:bulk-product-edit`
+  - `npm run test:e2e:bulk-product-edit`
+
 ## Category Mapping + Marketplace Search
 
 - Internal marketplace categories and category mappings are implemented in `backend-nest`.

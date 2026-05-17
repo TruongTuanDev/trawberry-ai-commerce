@@ -90,6 +90,8 @@ Both endpoints now:
 
 Seller must review and publish products from `/seller/products` before they become public.
 
+Seller can now use `/seller/products` bulk editing to set category, price, and stock for many imported WB API products before bulk publishing them.
+
 Status response shape:
 
 ```json

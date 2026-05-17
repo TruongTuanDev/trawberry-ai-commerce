@@ -45,6 +45,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/products` now separates imported, needs-review, ready, published, unpublished, and archived states.
 - Seller must publish products manually before they appear on public `/products`.
 - Seller can unpublish or archive products to remove them from public marketplace and checkout.
+- Seller can bulk edit category, price, and stock for selected products before bulk publishing them.
 
 ## Current features
 - Admin seller approval UI with:
@@ -89,6 +90,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - product creation with initial price/stock variant
   - product detail metadata and stock update
   - product image upload
+  - bulk product editing for category, price, stock, and publish-if-ready
 - Seller Wildberries import UI with:
   - `.xlsx` upload
   - stock, publish, and fallback-price options
@@ -196,6 +198,23 @@ Real runtime note:
 - seller page now shows explicit mode and connection diagnostics so real-mode issues are visible in the UI
 - runtime seller flow does not use `WB_REAL_API_KEY`; the seller must save the key through the UI for the selected shop
 - request/verify behavior is aligned with the legacy successful backend call documented in `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`
+
+## Playwright Bulk Product Editing
+
+```bash
+npm run test:e2e:bulk-product-edit
+```
+
+Coverage:
+
+- approved seller/shop setup
+- WB import into private seller catalog
+- bulk category update
+- bulk price update
+- bulk stock update
+- publish-if-ready result
+- public product visibility
+- checkout success after bulk edit and publish
 
 ## Playwright Marketplace Search/Filter/Sort
 

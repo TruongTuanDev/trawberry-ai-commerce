@@ -23,8 +23,16 @@ Wildberries sync and Excel import now feed a private seller catalog first. They 
 2. Review imported products in `/seller/products`.
 3. Filter by `Imported`, `Needs review`, `Missing price`, `Missing stock`, `Missing category`, `Ready to publish`, `Published`, `Unpublished`, or `Archived`.
 4. Update price, stock, category, images, and copy as needed.
+5. Use seller bulk editing to fix category, price, and stock across multiple products at once.
 5. Publish individual products or run bulk publish.
 6. Unpublish or archive products when they should leave the marketplace.
+
+## Bulk Editing
+
+- `POST /api/shops/:shopId/products/bulk-update` updates category, price, stock, and inventory tracking in bulk.
+- Variant scope supports `ALL_VARIANTS`, `MISSING_ONLY`, and `FIRST_VARIANT_ONLY`.
+- `publishIfReady=true` is optional and never overrides readiness checks.
+- Frontend `/seller/products` exposes bulk edit and bulk publish controls in the same seller catalog view.
 
 ## Readiness Rules
 
@@ -74,3 +82,6 @@ Checkout rejects:
 
 - Backend: `npm run smoke:product-curation`
 - Frontend: `npm run test:e2e:product-curation`
+- Bulk editing:
+  - Backend: `npm run smoke:bulk-product-edit`
+  - Frontend: `npm run test:e2e:bulk-product-edit`

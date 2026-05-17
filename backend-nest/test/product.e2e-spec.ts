@@ -106,6 +106,7 @@ type StoredProduct = {
   variants: Array<{
     id: string;
     chrtId: bigint;
+    createdAt?: Date;
     isActive?: boolean;
     sellerSku?: string | null;
     wbBarcode?: string | null;
@@ -172,6 +173,21 @@ type BulkActionResponse = {
   }>;
 };
 
+type BulkUpdateResponse = {
+  updated: number;
+  failed: number;
+  items: Array<{
+    productId: string;
+    success: boolean;
+    error: string | null;
+    readiness: {
+      ready: boolean;
+      blockingReasons: string[];
+      catalogStatus: string;
+    } | null;
+  }>;
+};
+
 describe('ProductsController (e2e)', () => {
   let app: INestApplication<App>;
   let users: StoredUser[];
@@ -220,6 +236,7 @@ describe('ProductsController (e2e)', () => {
     },
     productVariant: {
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -703,7 +720,12 @@ describe('ProductsController (e2e)', () => {
         data,
       }: {
         where: { id: string };
-        data: { stockQuantity?: number };
+        data: {
+          stockQuantity?: number;
+          trackInventory?: boolean;
+          basePrice?: { toString(): string };
+          discountPrice?: { toString(): string };
+        };
       }) => {
         for (const product of products) {
           const variant = product.variants.find(
@@ -716,11 +738,66 @@ describe('ProductsController (e2e)', () => {
           if (data.stockQuantity !== undefined) {
             variant.stockQuantity = data.stockQuantity;
           }
+          if (data.trackInventory !== undefined) {
+            variant.trackInventory = data.trackInventory;
+          }
+          if (data.basePrice !== undefined) {
+            variant.basePrice = data.basePrice;
+          }
+          if (data.discountPrice !== undefined) {
+            variant.discountPrice = data.discountPrice;
+          }
 
           return Promise.resolve(variant);
         }
 
         throw new Error('Variant not found');
+      },
+    );
+
+    prismaMock.productVariant.updateMany.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { productId: string; chrtId: bigint };
+        data: {
+          isActive?: boolean;
+          basePrice?: { toString(): string };
+          discountPrice?: { toString(): string };
+          stockQuantity?: number;
+          lowStockThreshold?: number;
+          trackInventory?: boolean;
+        };
+      }) => {
+        const product = products.find((entry) => entry.id === where.productId);
+        const variant = product?.variants.find(
+          (entry) => entry.chrtId === where.chrtId,
+        );
+        if (!variant) {
+          return Promise.resolve({ count: 0 });
+        }
+
+        if (data.isActive !== undefined) {
+          variant.isActive = data.isActive;
+        }
+        if (data.basePrice !== undefined) {
+          variant.basePrice = data.basePrice;
+        }
+        if (data.discountPrice !== undefined) {
+          variant.discountPrice = data.discountPrice;
+        }
+        if (data.stockQuantity !== undefined) {
+          variant.stockQuantity = data.stockQuantity;
+        }
+        if (data.lowStockThreshold !== undefined) {
+          variant.lowStockThreshold = data.lowStockThreshold;
+        }
+        if (data.trackInventory !== undefined) {
+          variant.trackInventory = data.trackInventory;
+        }
+
+        return Promise.resolve({ count: 1 });
       },
     );
 
@@ -1104,6 +1181,255 @@ describe('ProductsController (e2e)', () => {
         expect.objectContaining({ productId: 'prod-2', success: true }),
       ]),
     );
+  });
+
+  it('bulk updates category, price, and stock and returns per-product readiness', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    products[1] = {
+      ...products[1],
+      categoryId: null,
+      categoryName: null,
+      localTitle: 'Bulk Edit Beta',
+      images: [
+        {
+          id: 'img-bulk-edit-beta',
+          wbUrl: 'https://example.com/bulk-edit-beta.jpg',
+          localUrl: null,
+          isMain: true,
+          sortOrder: 0,
+        },
+      ],
+      variants: [
+        {
+          ...products[1].variants[0],
+          basePrice: decimal('0'),
+          discountPrice: null,
+          stockQuantity: 0,
+          isActive: true,
+        },
+      ],
+      reviewWarningsJson: [
+        'MISSING_PRICE',
+        'MISSING_STOCK',
+        'MISSING_CATEGORY',
+      ],
+    };
+
+    const categoryResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-2'],
+        updates: {
+          categoryId: 10,
+        },
+      })
+      .expect(201);
+    const categoryBody = readBody<BulkUpdateResponse>(categoryResponse);
+    expect(categoryBody.updated).toBe(1);
+    expect(products[1].categoryId).toBe(10n);
+    expect(categoryBody.items[0].readiness?.blockingReasons).toEqual(
+      expect.arrayContaining(['MISSING_PRICE', 'MISSING_STOCK']),
+    );
+
+    const priceResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-2'],
+        updates: {
+          price: 1990,
+        },
+        scope: {
+          variantMode: 'ALL_VARIANTS',
+        },
+      })
+      .expect(201);
+    const priceBody = readBody<BulkUpdateResponse>(priceResponse);
+    expect(priceBody.updated).toBe(1);
+    expect(products[1].variants[0].basePrice?.toString()).toBe('1990');
+    expect(products[1].variants[0].discountPrice?.toString()).toBe('1990');
+
+    const stockResponse = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-2'],
+        updates: {
+          stockQuantity: 7,
+        },
+        scope: {
+          variantMode: 'ALL_VARIANTS',
+        },
+      })
+      .expect(201);
+    const stockBody = readBody<BulkUpdateResponse>(stockResponse);
+    expect(stockBody.updated).toBe(1);
+    expect(products[1].variants[0].stockQuantity).toBe(7);
+    expect(stockBody.items[0].readiness).toEqual({
+      ready: true,
+      blockingReasons: [],
+      catalogStatus: 'READY',
+    });
+  });
+
+  it('bulk update rejects invalid category and invalid price', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-1'],
+        updates: {
+          categoryId: 999,
+        },
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-1'],
+        updates: {
+          price: 0,
+        },
+      })
+      .expect(400);
+  });
+
+  it('bulk update does not allow cross-shop access', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-2/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-3'],
+        updates: {
+          stockQuantity: 5,
+        },
+      })
+      .expect(403);
+  });
+
+  it('bulk update skips archived products with per-product failure result', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    products[0] = {
+      ...products[0],
+      catalogStatus: 'ARCHIVED',
+      archivedAt: new Date(),
+      visibility: 'ARCHIVED',
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-1'],
+        updates: {
+          stockQuantity: 9,
+        },
+      })
+      .expect(201);
+    const body = readBody<BulkUpdateResponse>(response);
+
+    expect(body.updated).toBe(0);
+    expect(body.failed).toBe(1);
+    expect(body.items[0]).toEqual(
+      expect.objectContaining({
+        productId: 'prod-1',
+        success: false,
+      }),
+    );
+    expect(body.items[0].error).toContain('cannot be bulk edited');
+    expect(products[0].variants[0].stockQuantity).toBe(5);
+  });
+
+  it('bulk update can publish only ready products when publishIfReady is enabled', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    products[0] = {
+      ...products[0],
+      catalogStatus: 'IMPORTED',
+      publishedAt: null,
+      unpublishedAt: null,
+      reviewWarningsJson: ['MISSING_PRICE'],
+      variants: [
+        {
+          ...products[0].variants[0],
+          basePrice: decimal('0'),
+          discountPrice: null,
+          stockQuantity: 5,
+          isActive: true,
+        },
+      ],
+    };
+
+    products[1] = {
+      ...products[1],
+      catalogStatus: 'IMPORTED',
+      categoryId: 10n,
+      categoryName: 'Sneakers',
+      localTitle: 'Publishable Beta',
+      images: [],
+      variants: [
+        {
+          ...products[1].variants[0],
+          basePrice: decimal('0'),
+          discountPrice: null,
+          stockQuantity: 0,
+          isActive: true,
+        },
+      ],
+      reviewWarningsJson: ['MISSING_IMAGE', 'MISSING_PRICE', 'MISSING_STOCK'],
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/products/bulk-update')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        productIds: ['prod-1', 'prod-2'],
+        updates: {
+          price: 2500,
+          stockQuantity: 8,
+        },
+        scope: {
+          variantMode: 'ALL_VARIANTS',
+        },
+        publishIfReady: true,
+      })
+      .expect(201);
+    const body = readBody<BulkUpdateResponse>(response);
+
+    expect(body.updated).toBe(2);
+    expect(products[0].catalogStatus).toBe('PUBLISHED');
+    expect(products[1].catalogStatus).not.toBe('PUBLISHED');
+    const firstResult = body.items.find((item) => item.productId === 'prod-1');
+    const secondResult = body.items.find((item) => item.productId === 'prod-2');
+    expect(firstResult).toEqual({
+      productId: 'prod-1',
+      success: true,
+      error: null,
+      readiness: {
+        ready: true,
+        blockingReasons: [],
+        catalogStatus: 'PUBLISHED',
+      },
+    });
+    expect(secondResult?.success).toBe(true);
+    expect(secondResult?.readiness?.ready).toBe(false);
+
+    await request(app.getHttpServer())
+      .get('/api/public/products/prod-1')
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/api/public/products/prod-2')
+      .expect(404);
   });
 
   it('forbids cross-shop inventory access', async () => {

@@ -1,5 +1,15 @@
 # Phase Report
 
+## Seller Bulk Product Editing
+
+- Added `POST /api/shops/:shopId/products/bulk-update` for category, price, stock, and track-inventory updates.
+- Added variant scope support: `ALL_VARIANTS`, `MISSING_ONLY`, `FIRST_VARIANT_ONLY`.
+- Added optional `publishIfReady` flow that publishes only products that pass readiness checks after bulk edit.
+- Updated seller products UI with multi-select toolbar, bulk edit panel, and per-product readiness results.
+- Added verification:
+  - `npm run smoke:bulk-product-edit`
+  - `npm run test:e2e:bulk-product-edit`
+
 ## Seller Product Curation + Publishing
 
 - Added seller-catalog lifecycle fields and readiness checks for `IMPORTED`, `DRAFT`, `READY`, `PUBLISHED`, `UNPUBLISHED`, and `ARCHIVED`.

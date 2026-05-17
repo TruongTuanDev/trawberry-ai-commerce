@@ -40,6 +40,7 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `POST /api/shops/:shopId/products/:productId/unpublish`
 - `POST /api/shops/:shopId/products/:productId/archive`
 - `POST /api/shops/:shopId/products/bulk`
+- `POST /api/shops/:shopId/products/bulk-update`
 - `DELETE /api/shops/:shopId/products/:productId`
 - `GET /api/shops/:shopId/products/:productId/images`
 - `POST /api/shops/:shopId/products/:productId/images`
@@ -62,6 +63,8 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - WB Excel import and WB API sync create seller-catalog products first.
 - Public marketplace and checkout require `catalogStatus=PUBLISHED`.
 - Use readiness, publish, unpublish, archive, and bulk endpoints to curate imported products before they become public.
+- Seller bulk editing supports category, price, stock, and inventory tracking updates across multiple selected products.
+- `publishIfReady=true` can be used with `POST /api/shops/:shopId/products/bulk-update`, but only readiness-passing products are published.
 
 ## Local run
 
@@ -125,6 +128,7 @@ npm run start:dev
 - Confirm import upserts products, variants, and remote image URLs. `REMOTE_URL` is the default MVP image mode; `DOWNLOAD_TO_STORAGE` is reserved for a future phase.
 - Smoke: `npm run smoke:wb-import`.
 - Full import-to-checkout smoke: `npm run smoke:wb-import-checkout`.
+- Bulk edit smoke: `npm run smoke:bulk-product-edit`.
 
 ## Wildberries API sync
 - Legacy reference audit: `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`.

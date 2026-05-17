@@ -23,6 +23,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { BulkProductActionDto } from './dto/bulk-product-action.dto';
+import { BulkUpdateProductsDto } from './dto/bulk-update-products.dto';
+import { BulkUpdateProductsResponseDto } from './dto/bulk-update-products-response.dto';
 import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { PaginatedProductsResponseDto } from './dto/paginated-products-response.dto';
 import { ProductDetailResponseDto } from './dto/product-detail-response.dto';
@@ -157,6 +159,19 @@ export class ProductsController {
     @Body() dto: BulkProductActionDto,
   ) {
     return this.productsService.bulkAction(shopId, dto);
+  }
+
+  @Post('bulk-update')
+  @ApiOperation({
+    summary:
+      'Bulk update category, price, stock, and inventory tracking for seller products.',
+  })
+  @ApiOkResponse({ type: BulkUpdateProductsResponseDto })
+  bulkUpdate(
+    @Param('shopId') shopId: string,
+    @Body() dto: BulkUpdateProductsDto,
+  ) {
+    return this.productsService.bulkUpdate(shopId, dto);
   }
 
   @Delete(':productId')

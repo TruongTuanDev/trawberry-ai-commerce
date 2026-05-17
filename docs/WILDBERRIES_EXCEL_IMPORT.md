@@ -18,6 +18,7 @@ This phase intentionally does not add WB price or stock sync; sellers still mana
 - New WB Excel products default to `source=WILDBERRIES_EXCEL` and `catalogStatus=IMPORTED`.
 - Re-import preserves seller-managed lifecycle and does not force products public.
 - Seller must review readiness, fix missing price/stock/category, and publish manually.
+- Seller can now fix missing category, price, and stock in bulk from `/seller/products`.
 
 ## Scope
 - Source sheet: `Товары`.

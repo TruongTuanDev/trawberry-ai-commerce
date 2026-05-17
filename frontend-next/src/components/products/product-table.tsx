@@ -93,7 +93,7 @@ export function ProductTable({
         <div>Product</div>
         <div>Catalog</div>
         <div>Category</div>
-        <div>Inventory</div>
+        <div>Pricing and stock</div>
         <div className="text-right">Actions</div>
       </div>
       <div className="divide-y divide-[var(--border)]">
@@ -194,12 +194,18 @@ function ProductRow({
       <div className="text-sm lg:flex lg:items-center">
         <div className="space-y-3">
           <div className="space-y-1">
+            <p className="font-semibold text-[var(--foreground)]">{renderPriceSummary(product.minPrice, product.maxPrice)}</p>
+            <p className="text-xs text-[var(--muted)]">
+              {product.minPrice || product.maxPrice ? "Current sell price range" : "Missing price"}
+            </p>
+          </div>
+          <div className="space-y-1">
             <p className={product.stockStatus === "OUT_OF_STOCK" ? "font-semibold text-rose-700" : product.stockStatus === "LOW_STOCK" ? "font-semibold text-amber-700" : "text-emerald-700"}>
               {product.trackInventory ? `${product.stockQuantity} available` : "Inventory not tracked"}
             </p>
             {product.trackInventory ? (
               <p className="text-xs text-[var(--muted)]">
-                Threshold {product.lowStockThreshold} · {product.variantCount} variant{product.variantCount === 1 ? "" : "s"}
+                Threshold {product.lowStockThreshold} | {product.variantCount} variant{product.variantCount === 1 ? "" : "s"}
               </p>
             ) : null}
           </div>
@@ -251,6 +257,26 @@ function ProductRow({
       </div>
     </article>
   );
+}
+
+function renderPriceSummary(minPrice: string | null, maxPrice: string | null) {
+  if (!minPrice && !maxPrice) {
+    return "No price";
+  }
+
+  if (minPrice && maxPrice && minPrice !== maxPrice) {
+    return `${formatMoney(minPrice)} - ${formatMoney(maxPrice)}`;
+  }
+
+  return formatMoney(minPrice ?? maxPrice ?? "0");
+}
+
+function formatMoney(value: string) {
+  const amount = Number(value);
+  if (Number.isNaN(amount)) {
+    return value;
+  }
+  return amount.toLocaleString("en-US");
 }
 
 function QuickStockEditor({

@@ -10,6 +10,7 @@ Scope: `frontend-next`, `backend-nest`, `ai-service`, and Docker runtime. Legacy
 - Imported products now land in seller catalog status `IMPORTED`.
 - Seller must review readiness and explicitly publish products before they appear on `/products` or become checkout-eligible.
 - Unpublish and archive remove products from public listing and checkout immediately.
+- Seller bulk editing now covers category, price, stock, and optional `publishIfReady` from `/seller/products`.
 
 ## Category Mapping + Search/Filter/Sort
 

@@ -8,12 +8,14 @@ import { ProductTable } from "@/components/products/product-table";
 import {
   archiveShopProduct,
   bulkShopProductAction,
+  bulkUpdateShopProducts,
   createSellerShop,
   createShopProduct,
   getShopProducts,
   publishShopProduct,
   unpublishShopProduct,
   updateShopProductInventory,
+  type BulkProductVariantMode,
   type ProductListItem,
 } from "@/lib/seller-api";
 import { getCategories, type PublicCategory } from "@/lib/public-api";
@@ -36,6 +38,7 @@ const catalogTabs = [
 ] as const;
 
 type CatalogTab = (typeof catalogTabs)[number]["id"];
+type BulkEditMode = "CATEGORY" | "PRICE" | "STOCK" | null;
 
 export function SellerProductsPageClient() {
   const router = useRouter();
@@ -76,13 +79,29 @@ export function SellerProductsPageClient() {
   });
   const [creatingShop, setCreatingShop] = useState(false);
   const [creatingProduct, setCreatingProduct] = useState(false);
-  const [bulkAction, setBulkAction] = useState<"PUBLISH" | "UNPUBLISH" | "ARCHIVE">("PUBLISH");
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkEditMode, setBulkEditMode] = useState<BulkEditMode>(null);
+  const [bulkForm, setBulkForm] = useState({
+    categoryId: "",
+    price: "",
+    stockQuantity: "",
+    trackInventory: true,
+    variantMode: "MISSING_ONLY" as BulkProductVariantMode,
+    publishIfReady: false,
+  });
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState<Awaited<ReturnType<typeof bulkUpdateShopProducts>> | null>(null);
 
   const totalPages = useMemo(() => state.meta?.totalPages ?? 0, [state.meta]);
+  const allCategories = useMemo(() => flattenCategories(categories), [categories]);
+  const selectedProducts = useMemo(
+    () => state.items.filter((item) => selectedIds.includes(item.id)),
+    [selectedIds, state.items],
+  );
 
   useEffect(() => {
     setFilters({
@@ -182,11 +201,14 @@ export function SellerProductsPageClient() {
     };
   }, []);
 
-  const stockCounts = useMemo(() => ({
-    tracked: state.items.filter((item) => item.trackInventory).length,
-    lowStock: state.items.filter((item) => item.stockStatus === "LOW_STOCK").length,
-    outOfStock: state.items.filter((item) => item.stockStatus === "OUT_OF_STOCK").length,
-  }), [state.items]);
+  const stockCounts = useMemo(
+    () => ({
+      tracked: state.items.filter((item) => item.trackInventory).length,
+      lowStock: state.items.filter((item) => item.stockStatus === "LOW_STOCK").length,
+      outOfStock: state.items.filter((item) => item.stockStatus === "OUT_OF_STOCK").length,
+    }),
+    [state.items],
+  );
 
   const applyFilters = () => {
     const params = new URLSearchParams();
@@ -278,24 +300,86 @@ export function SellerProductsPageClient() {
     }
   };
 
-  const handleBulkAction = async () => {
+  const runBulkLifecycle = async (action: "PUBLISH" | "UNPUBLISH" | "ARCHIVE") => {
     if (!currentShopId || selectedIds.length < 1) {
       return;
     }
 
     setBulkSaving(true);
-    setCreateMessage(null);
-    setCreateError(null);
+    setBulkMessage(null);
+    setBulkError(null);
+    setBulkResult(null);
     try {
       const result = await bulkShopProductAction(currentShopId, {
         productIds: selectedIds,
-        action: bulkAction,
+        action,
       });
-      setCreateMessage(`${bulkAction}: ${result.successCount} succeeded, ${result.failureCount} failed.`);
+      setBulkMessage(`${action}: ${result.successCount} succeeded, ${result.failureCount} failed.`);
       setSelectedIds([]);
       await loadProducts();
     } catch (error) {
-      setCreateError(error instanceof Error ? error.message : "Unable to run bulk action.");
+      setBulkError(error instanceof Error ? error.message : "Unable to run bulk action.");
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!currentShopId || selectedIds.length < 1 || !bulkEditMode) {
+      return;
+    }
+
+    const updates: {
+      categoryId?: number;
+      price?: number;
+      stockQuantity?: number;
+      trackInventory?: boolean;
+    } = {};
+
+    if (bulkEditMode === "CATEGORY") {
+      if (!bulkForm.categoryId) {
+        setBulkError("Select an internal category before applying the bulk update.");
+        return;
+      }
+      updates.categoryId = Number(bulkForm.categoryId);
+    }
+
+    if (bulkEditMode === "PRICE") {
+      const price = Number(bulkForm.price);
+      if (!Number.isFinite(price) || price <= 0) {
+        setBulkError("Bulk price must be greater than zero.");
+        return;
+      }
+      updates.price = price;
+    }
+
+    if (bulkEditMode === "STOCK") {
+      const stockQuantity = Number(bulkForm.stockQuantity);
+      if (!Number.isFinite(stockQuantity) || stockQuantity < 0) {
+        setBulkError("Bulk stock must be zero or greater.");
+        return;
+      }
+      updates.stockQuantity = stockQuantity;
+      updates.trackInventory = bulkForm.trackInventory;
+    }
+
+    setBulkSaving(true);
+    setBulkMessage(null);
+    setBulkError(null);
+    try {
+      const result = await bulkUpdateShopProducts(currentShopId, {
+        productIds: selectedIds,
+        updates,
+        scope: {
+          variantMode: bulkForm.variantMode,
+        },
+        publishIfReady: bulkForm.publishIfReady,
+      });
+      setBulkResult(result);
+      setBulkMessage(`Bulk edit complete: ${result.updated} updated, ${result.failed} failed.`);
+      await loadProducts();
+    } catch (error) {
+      setBulkError(error instanceof Error ? error.message : "Unable to update selected products.");
     } finally {
       setBulkSaving(false);
     }
@@ -428,16 +512,21 @@ export function SellerProductsPageClient() {
                 <CreateInput label="Brand" value={productForm.brand} onChange={(value) => setProductForm((current) => ({ ...current, brand: value }))} testId="create-product-brand" />
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
                   <span>Internal category</span>
-                  <select value={productForm.categoryId} onChange={(event) => {
-                    const selected = flattenCategories(categories).find((category) => category.id === event.target.value);
-                    setProductForm((current) => ({
-                      ...current,
-                      categoryId: event.target.value,
-                      categoryName: selected?.name ?? current.categoryName,
-                    }));
-                  }} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-product-category-id">
+                  <select
+                    value={productForm.categoryId}
+                    onChange={(event) => {
+                      const selected = allCategories.find((category) => category.id === event.target.value);
+                      setProductForm((current) => ({
+                        ...current,
+                        categoryId: event.target.value,
+                        categoryName: selected?.name ?? current.categoryName,
+                      }));
+                    }}
+                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="create-product-category-id"
+                  >
                     <option value="">No internal category</option>
-                    {flattenCategories(categories).map((category) => (
+                    {allCategories.map((category) => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
@@ -502,25 +591,197 @@ export function SellerProductsPageClient() {
           </div>
 
           {currentShopId ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4">
-              <span className="text-sm font-semibold text-[var(--foreground)]">{selectedIds.length} selected</span>
-              <select
-                value={bulkAction}
-                onChange={(event) => setBulkAction(event.target.value as "PUBLISH" | "UNPUBLISH" | "ARCHIVE")}
-                className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm"
-              >
-                <option value="PUBLISH">Publish selected</option>
-                <option value="UNPUBLISH">Unpublish selected</option>
-                <option value="ARCHIVE">Archive selected</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => void handleBulkAction()}
-                disabled={bulkSaving || selectedIds.length < 1}
-                className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {bulkSaving ? "Processing..." : "Run bulk action"}
-              </button>
+            <div className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4" data-testid="bulk-edit-toolbar">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm font-semibold text-[var(--foreground)]">{selectedIds.length} selected</span>
+                <button
+                  type="button"
+                  onClick={() => setBulkEditMode("CATEGORY")}
+                  disabled={selectedIds.length < 1}
+                  className={bulkEditMode === "CATEGORY" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
+                  data-testid="bulk-open-category"
+                >
+                  Set category for selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkEditMode("PRICE")}
+                  disabled={selectedIds.length < 1}
+                  className={bulkEditMode === "PRICE" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
+                  data-testid="bulk-open-price"
+                >
+                  Set price for selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkEditMode("STOCK")}
+                  disabled={selectedIds.length < 1}
+                  className={bulkEditMode === "STOCK" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
+                  data-testid="bulk-open-stock"
+                >
+                  Set stock for selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runBulkLifecycle("PUBLISH")}
+                  disabled={bulkSaving || selectedIds.length < 1}
+                  className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="bulk-publish-selected"
+                >
+                  Publish selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runBulkLifecycle("UNPUBLISH")}
+                  disabled={bulkSaving || selectedIds.length < 1}
+                  className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Unpublish selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runBulkLifecycle("ARCHIVE")}
+                  disabled={bulkSaving || selectedIds.length < 1}
+                  className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Archive selected
+                </button>
+              </div>
+
+              {bulkEditMode ? (
+                <div className="grid gap-4 rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+                    {bulkEditMode === "CATEGORY" ? (
+                      <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+                        <span>Internal category</span>
+                        <select
+                          value={bulkForm.categoryId}
+                          onChange={(event) => setBulkForm((current) => ({ ...current, categoryId: event.target.value }))}
+                          className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                          data-testid="bulk-category-select"
+                        >
+                          <option value="">Select a category</option>
+                          {allCategories.map((category) => (
+                            <option key={category.id} value={category.id}>{category.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : null}
+
+                    {bulkEditMode === "PRICE" ? (
+                      <CreateInput
+                        label="Price"
+                        type="number"
+                        value={bulkForm.price}
+                        onChange={(value) => setBulkForm((current) => ({ ...current, price: value }))}
+                        testId="bulk-price-input"
+                      />
+                    ) : null}
+
+                    {bulkEditMode === "STOCK" ? (
+                      <>
+                        <CreateInput
+                          label="Stock quantity"
+                          type="number"
+                          value={bulkForm.stockQuantity}
+                          onChange={(value) => setBulkForm((current) => ({ ...current, stockQuantity: value }))}
+                          testId="bulk-stock-input"
+                        />
+                        <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]">
+                          <input
+                            type="checkbox"
+                            checked={bulkForm.trackInventory}
+                            onChange={(event) => setBulkForm((current) => ({ ...current, trackInventory: event.target.checked }))}
+                          />
+                          Track inventory after update
+                        </label>
+                      </>
+                    ) : null}
+
+                    <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+                      <span>Variant mode</span>
+                      <select
+                        value={bulkForm.variantMode}
+                        onChange={(event) => setBulkForm((current) => ({ ...current, variantMode: event.target.value as BulkProductVariantMode }))}
+                        className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                        data-testid="bulk-variant-mode"
+                      >
+                        <option value="ALL_VARIANTS">All variants</option>
+                        <option value="MISSING_ONLY">Missing only</option>
+                        <option value="FIRST_VARIANT_ONLY">First variant only</option>
+                      </select>
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]">
+                      <input
+                        type="checkbox"
+                        checked={bulkForm.publishIfReady}
+                        onChange={(event) => setBulkForm((current) => ({ ...current, publishIfReady: event.target.checked }))}
+                        data-testid="bulk-publish-if-ready"
+                      />
+                      Publish automatically if a product becomes ready
+                    </label>
+                  </div>
+
+                  <div className="flex items-end justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBulkEditMode(null)}
+                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleBulkUpdate()}
+                      disabled={bulkSaving || selectedIds.length < 1}
+                      className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="bulk-apply-submit"
+                    >
+                      {bulkSaving ? "Applying..." : "Apply bulk update"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {bulkMessage ? (
+                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{bulkMessage}</div>
+              ) : null}
+              {bulkError ? (
+                <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{bulkError}</div>
+              ) : null}
+              {bulkResult ? (
+                <div className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4" data-testid="bulk-edit-result">
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--muted)]">
+                    <span>{bulkResult.updated} updated</span>
+                    <span>{bulkResult.failed} failed</span>
+                    <span>{selectedProducts.length} selected on page</span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {bulkResult.items.map((item) => (
+                      <div key={item.productId} className="rounded-xl border border-[var(--border)] px-3 py-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="font-semibold text-[var(--foreground)]">{item.productId}</span>
+                          <span className={item.success ? "text-emerald-700" : "text-rose-700"}>
+                            {item.success ? "Updated" : "Failed"}
+                          </span>
+                          {item.readiness ? (
+                            <span className="text-[var(--muted)]">
+                              {item.readiness.catalogStatus} | {item.readiness.ready ? "Ready" : "Needs review"}
+                            </span>
+                          ) : null}
+                        </div>
+                        {item.error ? <p className="mt-2 text-rose-700">{item.error}</p> : null}
+                        {item.readiness && item.readiness.blockingReasons.length > 0 ? (
+                          <p className="mt-2 text-[var(--muted)]">
+                            Blocking reasons: {item.readiness.blockingReasons.join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -563,7 +824,7 @@ export function SellerProductsPageClient() {
               )}
               <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-[var(--muted)]">
-                  {state.meta ? `Showing page ${state.meta.page} of ${Math.max(state.meta.totalPages, 1)} · ${state.meta.total} total products` : "No data loaded yet"}
+                  {state.meta ? `Showing page ${state.meta.page} of ${Math.max(state.meta.totalPages, 1)} | ${state.meta.total} total products` : "No data loaded yet"}
                 </p>
                 <div className="flex gap-3">
                   <button

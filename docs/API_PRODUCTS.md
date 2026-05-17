@@ -137,6 +137,7 @@ List products for a shop.
 - `POST /api/shops/:shopId/products/:productId/unpublish`
 - `POST /api/shops/:shopId/products/:productId/archive`
 - `POST /api/shops/:shopId/products/bulk`
+- `POST /api/shops/:shopId/products/bulk-update`
 
 Bulk body:
 
@@ -148,6 +149,36 @@ Bulk body:
 ```
 
 Bulk publish returns per-product success/failure and blocking reasons for products that are not ready.
+
+## Bulk Seller Editing
+
+`POST /api/shops/:shopId/products/bulk-update`
+
+```json
+{
+  "productIds": ["..."],
+  "updates": {
+    "categoryId": 10,
+    "price": 1990,
+    "stockQuantity": 5,
+    "trackInventory": true
+  },
+  "scope": {
+    "variantMode": "MISSING_ONLY"
+  },
+  "publishIfReady": false
+}
+```
+
+Rules:
+
+- shop-scoped seller access only
+- archived products are rejected
+- `categoryId` must exist
+- `price > 0`
+- `stockQuantity >= 0`
+- readiness is recalculated per product after each bulk update
+- `publishIfReady=true` publishes only products that become ready
 
 ## Public Marketplace Rules
 
@@ -188,7 +219,9 @@ Bulk publish returns per-product success/failure and blocking reasons for produc
       "trackInventory": true,
       "stockStatus": "LOW_STOCK",
       "variantCount": 1,
-      "primaryVariantId": "uuid"
+      "primaryVariantId": "uuid",
+      "minPrice": "1990",
+      "maxPrice": "1990"
     }
   ],
   "meta": {

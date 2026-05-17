@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BulkProductActionDto } from './dto/bulk-product-action.dto';
+import { BulkUpdateProductsDto } from './dto/bulk-update-products.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListShopProductsQueryDto } from './dto/list-shop-products-query.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -409,9 +410,7 @@ export class ProductsService {
   ) {
     const product = await this.findShopProductOrThrow(shopId, productId);
     const variants: ProductWithRelations['variants'] = product.variants.slice();
-    variants.sort(
-      (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
-    );
+    variants.sort((left, right) => this.compareVariants(left, right));
     const targetVariant =
       (dto.variantId
         ? variants.find((variant) => variant.id === dto.variantId)
@@ -546,6 +545,141 @@ export class ProductsService {
     };
   }
 
+  async bulkUpdate(shopId: string, dto: BulkUpdateProductsDto) {
+    await this.ensureShopExists(shopId);
+    const category =
+      dto.updates.categoryId !== undefined
+        ? await this.requireCategory(dto.updates.categoryId)
+        : null;
+    const variantMode = dto.scope?.variantMode ?? 'ALL_VARIANTS';
+    const items: Array<{
+      productId: string;
+      success: boolean;
+      error: string | null;
+      readiness: {
+        ready: boolean;
+        blockingReasons: ProductReadinessReason[];
+        catalogStatus: ProductCatalogStatus;
+      } | null;
+    }> = [];
+
+    for (const productId of dto.productIds) {
+      try {
+        const refreshed = await this.prisma.$transaction(async (tx) => {
+          const product = await this.findShopProductOrThrowWithClient(
+            tx,
+            shopId,
+            productId,
+          );
+          if (product.catalogStatus === 'ARCHIVED') {
+            throw new BadRequestException(
+              `Archived product ${productId} cannot be bulk edited.`,
+            );
+          }
+
+          if (category) {
+            await tx.product.update({
+              where: { id: product.id },
+              data: {
+                categoryId: category.id,
+                categoryName: category.name,
+                sourceCategorySource: 'MANUAL',
+              },
+            });
+          }
+
+          const variants = product.variants
+            .slice()
+            .sort((left, right) => this.compareVariants(left, right));
+          const targetVariants = this.resolveBulkUpdateVariants(
+            variants,
+            variantMode,
+            dto.updates,
+          );
+
+          if (
+            dto.updates.price !== undefined ||
+            dto.updates.stockQuantity !== undefined ||
+            dto.updates.trackInventory !== undefined
+          ) {
+            for (const variant of targetVariants) {
+              await tx.productVariant.update({
+                where: { id: variant.id },
+                data: {
+                  ...(dto.updates.price !== undefined
+                    ? {
+                        basePrice: new Prisma.Decimal(dto.updates.price),
+                        discountPrice: new Prisma.Decimal(dto.updates.price),
+                      }
+                    : {}),
+                  ...(dto.updates.stockQuantity !== undefined
+                    ? {
+                        stockQuantity: dto.updates.stockQuantity,
+                      }
+                    : {}),
+                  ...(dto.updates.trackInventory !== undefined
+                    ? {
+                        trackInventory: dto.updates.trackInventory,
+                      }
+                    : {}),
+                },
+              });
+            }
+          }
+
+          const updated = await this.findShopProductOrThrowWithClient(
+            tx,
+            shopId,
+            productId,
+          );
+          const readiness = this.productReadiness.getReadiness(updated);
+          if (dto.publishIfReady && readiness.ready) {
+            await tx.product.update({
+              where: { id: updated.id },
+              data: {
+                catalogStatus: 'PUBLISHED',
+                visibility: 'ACTIVE',
+                publishedAt: new Date(),
+                unpublishedAt: null,
+                archivedAt: null,
+                reviewWarningsJson: [],
+              },
+            });
+          } else {
+            await this.persistReviewWarningsWithClient(tx, updated);
+          }
+
+          return this.findShopProductOrThrowWithClient(tx, shopId, productId);
+        });
+
+        const readiness = this.productReadiness.getReadiness(refreshed);
+        items.push({
+          productId,
+          success: true,
+          error: null,
+          readiness: {
+            ready: readiness.ready,
+            blockingReasons: readiness.blockingReasons,
+            catalogStatus: this.effectiveCatalogStatus(refreshed, readiness),
+          },
+        });
+      } catch (error) {
+        items.push({
+          productId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Bulk update failed.',
+          readiness: null,
+        });
+      }
+    }
+
+    return {
+      updated: items.filter((item) => item.success).length,
+      failed: items.filter((item) => !item.success).length,
+      items,
+    };
+  }
+
   async remove(shopId: string, productId: string) {
     await this.findShopProductOrThrow(shopId, productId);
     await this.prisma.product.delete({
@@ -621,11 +755,46 @@ export class ProductsService {
     }
   }
 
+  private async requireCategory(categoryId: number) {
+    const category = await this.prisma.category.findUnique({
+      where: { id: BigInt(categoryId) },
+      select: { id: true, name: true },
+    });
+
+    if (!category) {
+      throw new BadRequestException(`Category ${categoryId} does not exist.`);
+    }
+
+    return category;
+  }
+
   private async findShopProductOrThrow(
     shopId: string,
     productId: string,
   ): Promise<ProductWithRelations> {
     const product = (await this.prisma.product.findFirst({
+      where: {
+        id: productId,
+        shopId,
+      },
+      include: this.productInclude(),
+    })) as ProductWithRelations | null;
+
+    if (!product) {
+      throw new NotFoundException(
+        `Product ${productId} was not found in shop ${shopId}.`,
+      );
+    }
+
+    return product;
+  }
+
+  private async findShopProductOrThrowWithClient(
+    client: Prisma.TransactionClient,
+    shopId: string,
+    productId: string,
+  ): Promise<ProductWithRelations> {
+    const product = (await client.product.findFirst({
       where: {
         id: productId,
         shopId,
@@ -787,10 +956,17 @@ export class ProductsService {
   }
 
   private async persistReviewWarnings(product: ProductWithRelations) {
+    await this.persistReviewWarningsWithClient(this.prisma, product);
+  }
+
+  private async persistReviewWarningsWithClient(
+    client: Pick<Prisma.TransactionClient, 'product'>,
+    product: ProductWithRelations,
+  ) {
     const readiness = this.productReadiness.getReadiness(product);
     const nextStatus = this.effectiveCatalogStatus(product, readiness);
 
-    await this.prisma.product.update({
+    await client.product.update({
       where: { id: product.id },
       data: {
         catalogStatus: nextStatus,
@@ -833,6 +1009,7 @@ export class ProductsService {
     const inventory = this.getProductInventorySummary(product.variants);
     const readiness = this.productReadiness.getReadiness(product);
     const catalogStatus = this.effectiveCatalogStatus(product, readiness);
+    const prices = this.getPriceSummary(product.variants);
 
     return {
       id: product.id,
@@ -864,6 +1041,8 @@ export class ProductsService {
       stockStatus: inventory.stockStatus,
       variantCount: product.variants.length,
       primaryVariantId: product.variants[0]?.id ?? null,
+      minPrice: prices.minPrice,
+      maxPrice: prices.maxPrice,
     };
   }
 
@@ -1071,5 +1250,82 @@ export class ProductsService {
     return items.sort(
       (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
     );
+  }
+
+  private getPriceSummary(
+    variants: Array<{
+      basePrice: Prisma.Decimal | null;
+      discountPrice: Prisma.Decimal | null;
+    }>,
+  ) {
+    const prices = variants
+      .map((variant) => this.resolveVariantPrice(variant))
+      .filter((price): price is Prisma.Decimal => price !== null)
+      .sort((left, right) => left.comparedTo(right));
+
+    return {
+      minPrice: prices[0]?.toString() ?? null,
+      maxPrice: prices.at(-1)?.toString() ?? null,
+    };
+  }
+
+  private resolveVariantPrice(variant: {
+    basePrice: Prisma.Decimal | null;
+    discountPrice: Prisma.Decimal | null;
+  }) {
+    return variant.discountPrice ?? variant.basePrice ?? null;
+  }
+
+  private resolveBulkUpdateVariants(
+    variants: ProductWithRelations['variants'],
+    variantMode: 'ALL_VARIANTS' | 'MISSING_ONLY' | 'FIRST_VARIANT_ONLY',
+    updates: BulkUpdateProductsDto['updates'],
+  ) {
+    if (variantMode === 'FIRST_VARIANT_ONLY') {
+      return variants[0] ? [variants[0]] : [];
+    }
+
+    if (variantMode === 'ALL_VARIANTS') {
+      return variants;
+    }
+
+    const onlyTrackInventoryChange =
+      updates.price === undefined && updates.stockQuantity === undefined;
+    if (onlyTrackInventoryChange) {
+      return variants;
+    }
+
+    return variants.filter((variant) => {
+      let shouldUpdate = false;
+      if (updates.price !== undefined) {
+        shouldUpdate ||=
+          (Number(this.resolveVariantPrice(variant)?.toString() ?? 0) || 0) <=
+          0;
+      }
+      if (updates.stockQuantity !== undefined) {
+        shouldUpdate ||=
+          variant.trackInventory !== false && variant.stockQuantity <= 0;
+      }
+      return shouldUpdate;
+    });
+  }
+
+  private compareVariants(
+    left: {
+      chrtId: bigint;
+      createdAt?: Date;
+    },
+    right: {
+      chrtId: bigint;
+      createdAt?: Date;
+    },
+  ) {
+    const leftCreatedAt = left.createdAt?.getTime() ?? null;
+    const rightCreatedAt = right.createdAt?.getTime() ?? null;
+    if (leftCreatedAt !== null && rightCreatedAt !== null) {
+      return leftCreatedAt - rightCreatedAt;
+    }
+
+    return Number(left.chrtId - right.chrtId);
   }
 }
