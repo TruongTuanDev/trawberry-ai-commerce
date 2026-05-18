@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { currentUserRequest, logoutRequest, type CurrentUserResponse } from "@/lib/auth-api";
+import { useCartStore } from "@/stores/cart-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const AUTH_STORAGE_KEY = "strawberry-next-auth";
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   sessionError: null,
   setSession: (payload) => {
     save({ user: payload.user });
+    useCartStore.getState().hydrate();
     set({
       user: payload.user,
       sessionError: null,
@@ -76,6 +78,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const user = await currentUserRequest();
       save({ user });
+      useCartStore.getState().hydrate();
       set({
         user,
         sessionLoading: false,
@@ -84,6 +87,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       return true;
     } catch (error) {
       clear();
+      useCartStore.getState().hydrate();
       useSellerWorkspaceStore.getState().clear();
       set({
         user: null,
@@ -100,6 +104,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Clear local auth state even if the backend cookie has already expired.
     } finally {
       clear();
+      useCartStore.getState().hydrate();
       useSellerWorkspaceStore.getState().clear();
       set({
         user: null,

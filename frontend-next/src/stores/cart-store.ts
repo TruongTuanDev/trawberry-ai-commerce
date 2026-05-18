@@ -3,7 +3,8 @@
 import { create } from "zustand";
 import type { PublicProduct } from "@/lib/public-api";
 
-const CART_STORAGE_KEY = "strawberry-next-cart";
+const CART_STORAGE_KEY = "strawberry-next-cart-v2";
+const AUTH_STORAGE_KEY = "strawberry-next-auth";
 
 export type CartItem = {
   productId: string;
@@ -47,6 +48,14 @@ type CartState = {
   getItemCount: () => number;
 };
 
+type PersistedCart = {
+  itemsByCustomer?: Record<string, CartItem[]>;
+};
+
+type PersistedAnonymousCart = {
+  items?: CartItem[];
+};
+
 function variantLabel(variant: PublicProduct["variants"][number]) {
   return (
     [variant.sizeName, variant.russianSize, variant.techSize, variant.wbSize]
@@ -65,37 +74,101 @@ function clampQuantity(
     : normalized;
 }
 
+function normalizeItems(items: CartItem[]) {
+  return items.map((item) => ({
+    ...item,
+    productNameSnapshot: item.productNameSnapshot ?? item.productName,
+    imageUrlSnapshot:
+      item.imageUrlSnapshot === undefined ? item.imageUrl : item.imageUrlSnapshot,
+    unitPriceSnapshot: item.unitPriceSnapshot ?? item.unitPrice,
+  }));
+}
+
+function getCurrentCustomerId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      user?: { id?: string; role?: string } | null;
+    };
+    return parsed.user?.role === "CUSTOMER" && parsed.user.id ? parsed.user.id : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadItems() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const customerId = getCurrentCustomerId();
+  if (customerId) {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(raw) as PersistedCart;
+      return normalizeItems(parsed.itemsByCustomer?.[customerId] ?? []);
+    } catch {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+      return [];
+    }
+  }
+
+  const raw = window.sessionStorage.getItem(CART_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as PersistedAnonymousCart;
+    return normalizeItems(parsed.items ?? []);
+  } catch {
+    window.sessionStorage.removeItem(CART_STORAGE_KEY);
+    return [];
+  }
+}
+
 function save(items: CartItem[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items }));
+
+  const customerId = getCurrentCustomerId();
+  if (customerId) {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
+    let parsed: PersistedCart = {};
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw) as PersistedCart;
+      } catch {
+        parsed = {};
+      }
+    }
+    const next: PersistedCart = {
+      itemsByCustomer: {
+        ...(parsed.itemsByCustomer ?? {}),
+        [customerId]: items,
+      },
+    };
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(next));
+    return;
+  }
+
+  window.sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items }));
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   hydrated: false,
   hydrate: () => {
-    if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-    if (!raw) {
-      set({ hydrated: true });
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw) as { items?: CartItem[] };
-      const items = (parsed.items ?? []).map((item) => ({
-        ...item,
-        productNameSnapshot: item.productNameSnapshot ?? item.productName,
-        imageUrlSnapshot:
-          item.imageUrlSnapshot === undefined
-            ? item.imageUrl
-            : item.imageUrlSnapshot,
-        unitPriceSnapshot: item.unitPriceSnapshot ?? item.unitPrice,
-      }));
-      set({ items, hydrated: true });
-    } catch {
-      window.localStorage.removeItem(CART_STORAGE_KEY);
-      set({ items: [], hydrated: true });
-    }
+    set({ items: loadItems(), hydrated: true });
   },
   addItem: (product, variant, quantity) => {
     const nextItem: CartItem = {
