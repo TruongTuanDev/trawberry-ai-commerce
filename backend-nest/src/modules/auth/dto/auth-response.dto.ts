@@ -17,6 +17,9 @@ export class AuthResponseDto {
   email!: string;
 
   @ApiProperty({ nullable: true })
+  phone!: string | null;
+
+  @ApiProperty({ nullable: true })
   fullName!: string | null;
 
   @ApiProperty({ example: 'CUSTOMER' })

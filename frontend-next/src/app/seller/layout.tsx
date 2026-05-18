@@ -1,10 +1,5 @@
-import { ProtectedShell } from "@/components/auth/protected-shell";
-import { SellerShell } from "@/components/seller/seller-shell";
+import { SellerRouteShell } from "@/components/seller/seller-route-shell";
 
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ProtectedShell allowedRoles={["SELLER"]} loginPath="/seller-login">
-      <SellerShell>{children}</SellerShell>
-    </ProtectedShell>
-  );
+  return <SellerRouteShell>{children}</SellerRouteShell>;
 }

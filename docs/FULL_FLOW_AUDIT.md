@@ -1,5 +1,17 @@
 # Full Commerce Flow Audit
 
+## Auth UX Separation Addendum
+
+- Public `/`, `/products`, `/cart`, and `/checkout` now expose customer and seller entry points only.
+- Admin login remains operational at `/admin-login` and is intentionally absent from public marketplace navigation.
+- Customer auth flow:
+  - register/login by email or phone
+  - redirect to `/customer/orders`
+- Seller auth flow:
+  - register/login by email or phone
+  - redirect to `/seller/onboarding` until approved, then `/seller/dashboard`
+- Compatibility staff login `/login` still works for seller/admin test flows.
+
 ## Cart Reliability Addendum
 
 - Added backend preflight endpoint `POST /api/public/cart/validate`.

@@ -217,18 +217,71 @@ export class CheckoutService {
       return user.userId;
     }
 
+    const normalizedPhone = dto.customer.phone.trim();
+    const normalizedEmail = dto.customer.email?.trim().toLowerCase() ?? null;
     const passwordHash = await bcrypt.hash(randomBytes(16).toString('hex'), 10);
     const email =
-      dto.customer.email?.trim().toLowerCase() ??
+      normalizedEmail ??
       `guest-checkout-${Date.now()}-${Math.round(Math.random() * 1_000_000)}@guest.local`;
 
-    const existing = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
+    const existingMatches = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          normalizedEmail ? { email: normalizedEmail } : undefined,
+          { phone: normalizedPhone },
+        ].filter(Boolean) as Prisma.UserWhereInput[],
+      },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        role: true,
+        fullName: true,
+      },
     });
 
-    if (existing && dto.customer.email) {
-      return existing.id;
+    if (existingMatches.length > 0) {
+      const emailMatch = normalizedEmail
+        ? existingMatches.find(
+            (candidate) => candidate.email === normalizedEmail,
+          )
+        : null;
+      const phoneMatch = existingMatches.find(
+        (candidate) => candidate.phone === normalizedPhone,
+      );
+      const matchedUser = emailMatch ?? phoneMatch ?? existingMatches[0];
+
+      if (emailMatch && phoneMatch && emailMatch.id !== phoneMatch.id) {
+        throw new BadRequestException(
+          'Customer contact details are already in use.',
+        );
+      }
+
+      if (matchedUser.role !== USER_ROLES.CUSTOMER) {
+        throw new BadRequestException(
+          'Customer contact details are already in use.',
+        );
+      }
+
+      const shouldBackfillName =
+        !matchedUser.fullName && dto.customer.fullName.trim().length > 0;
+      const shouldBackfillPhone = !matchedUser.phone;
+      const shouldBackfillEmail = !matchedUser.email && !!normalizedEmail;
+
+      if (shouldBackfillName || shouldBackfillPhone || shouldBackfillEmail) {
+        await this.prisma.user.update({
+          where: { id: matchedUser.id },
+          data: {
+            ...(shouldBackfillName
+              ? { fullName: dto.customer.fullName.trim() }
+              : {}),
+            ...(shouldBackfillPhone ? { phone: normalizedPhone } : {}),
+            ...(shouldBackfillEmail ? { email: normalizedEmail } : {}),
+          },
+        });
+      }
+
+      return matchedUser.id;
     }
 
     const created = await this.prisma.user.create({
@@ -236,7 +289,7 @@ export class CheckoutService {
         email,
         passwordHash,
         fullName: dto.customer.fullName.trim(),
-        phone: dto.customer.phone.trim(),
+        phone: normalizedPhone,
         role: USER_ROLES.CUSTOMER,
         status: 'ACTIVE',
       },

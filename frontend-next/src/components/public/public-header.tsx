@@ -11,8 +11,8 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
   { href: "/orders/track", label: "Track Order" },
-  { href: "/seller-login", label: "Seller Login" },
-  { href: "/admin-login", label: "Admin Login" },
+  { href: "/seller/register", label: "Sell on marketplace" },
+  { href: "/seller/login", label: "Seller login" },
 ];
 
 export function PublicHeader() {
@@ -25,6 +25,7 @@ export function PublicHeader() {
   );
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
   useEffect(() => {
     hydrateCart();
@@ -41,6 +42,15 @@ export function PublicHeader() {
     }
     router.push(`/products${params.toString() ? `?${params.toString()}` : ""}`);
   };
+
+  const customerHref =
+    user?.role === "CUSTOMER"
+      ? "/customer/orders"
+      : user?.role === "SELLER"
+        ? "/seller/dashboard"
+      : user?.role === "ADMIN"
+        ? "/admin/dashboard"
+        : "/customer/login";
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border)]/70 bg-[rgba(249,243,234,0.88)] backdrop-blur-xl">
@@ -91,13 +101,64 @@ export function PublicHeader() {
             ) : null}
           </Link>
 
-          <Link
-            href={user?.role === "CUSTOMER" ? "/customer/orders" : "/customer/login"}
-            className="public-button-primary hidden px-4 py-3 text-sm shadow-[0_14px_28px_rgba(182,49,75,0.2)] md:inline-flex"
-            data-testid="public-customer-link"
-          >
-            {user?.role === "CUSTOMER" ? "My orders" : "Customer login"}
-          </Link>
+          <div className="hidden items-center gap-2 md:flex">
+            {user?.role === "ADMIN" ? (
+              <>
+                <Link
+                  href="/admin/dashboard"
+                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                  data-testid="public-admin-dashboard-link"
+                >
+                  Admin dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                  data-testid="public-admin-logout"
+                >
+                  Logout
+                </button>
+              </>
+            ) : user?.role === "SELLER" ? (
+              <>
+                <Link
+                  href="/seller/dashboard"
+                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                  data-testid="public-seller-dashboard-link"
+                >
+                  Seller dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                  data-testid="public-seller-logout"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href={customerHref}
+                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                  data-testid="public-customer-link"
+                >
+                  {user?.role === "CUSTOMER" ? "My orders" : "Customer login"}
+                </Link>
+                {user?.role !== "CUSTOMER" ? (
+                  <Link
+                    href="/customer/register"
+                    className="public-button-primary px-4 py-3 text-sm shadow-[0_14px_28px_rgba(182,49,75,0.2)]"
+                    data-testid="public-customer-register-link"
+                  >
+                    Customer register
+                  </Link>
+                ) : null}
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -128,12 +189,39 @@ export function PublicHeader() {
             })}
           </nav>
 
-          <Link
-            href={user?.role === "CUSTOMER" ? "/customer/orders" : "/customer/login"}
-            className="public-button-primary px-4 py-2 text-sm md:hidden"
-          >
-            {user?.role === "CUSTOMER" ? "My orders" : "Login"}
-          </Link>
+          {user?.role === "ADMIN" ? (
+            <div className="flex gap-2 md:hidden">
+              <Link href="/admin/dashboard" className="public-button-primary px-4 py-2 text-sm">
+                Admin dashboard
+              </Link>
+              <button type="button" onClick={() => void logout()} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+                Logout
+              </button>
+            </div>
+          ) : user?.role === "SELLER" ? (
+            <div className="flex gap-2 md:hidden">
+              <Link href="/seller/dashboard" className="public-button-primary px-4 py-2 text-sm">
+                Seller dashboard
+              </Link>
+              <button type="button" onClick={() => void logout()} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2 md:hidden">
+              <Link
+                href={customerHref}
+                className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+              >
+                {user?.role === "CUSTOMER" ? "My orders" : "Login"}
+              </Link>
+              {user?.role !== "CUSTOMER" ? (
+                <Link href="/customer/register" className="public-button-primary px-4 py-2 text-sm">
+                  Register
+                </Link>
+              ) : null}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 overflow-x-auto md:hidden">

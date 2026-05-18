@@ -22,6 +22,6 @@ export class UsersController {
   @ApiOperation({ summary: 'Get the current authenticated user profile.' })
   @ApiOkResponse({ type: CurrentUserResponseDto })
   me(@CurrentUser() user: AuthenticatedUser) {
-    return this.usersService.getCurrentUserProfileByEmail(user.email);
+    return this.usersService.getCurrentUserProfileById(user.userId);
   }
 }

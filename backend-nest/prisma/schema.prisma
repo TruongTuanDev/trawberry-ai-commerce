@@ -12,7 +12,7 @@ model User {
   email                   String                 @unique @db.VarChar(255)
   passwordHash            String                 @map("password_hash") @db.VarChar(255)
   fullName                String?                @map("full_name") @db.VarChar(255)
-  phone                   String?                @db.VarChar(255)
+  phone                   String?                @unique @db.VarChar(255)
   role                    String                 @db.VarChar(50)
   status                  String                 @default("ACTIVE") @db.VarChar(50)
   createdAt               DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)

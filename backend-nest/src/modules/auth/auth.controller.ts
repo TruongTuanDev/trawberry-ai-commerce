@@ -70,6 +70,20 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @Post('customer/register')
+  @ApiOperation({ summary: 'Register a new customer account.' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  registerCustomer(@Body() dto: RegisterDto) {
+    return this.authService.registerCustomer(dto);
+  }
+
+  @Post('seller/register')
+  @ApiOperation({ summary: 'Register a new seller account.' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  registerSeller(@Body() dto: RegisterDto) {
+    return this.authService.registerSeller(dto);
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log in with email and password.' })
@@ -79,6 +93,45 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const response = await this.authService.login(dto);
+    this.setAuthCookie(res, response.accessToken);
+    return response;
+  }
+
+  @Post('customer/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log in to a customer account.' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  async loginCustomer(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.loginCustomer(dto);
+    this.setAuthCookie(res, response.accessToken);
+    return response;
+  }
+
+  @Post('seller/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log in to a seller account.' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  async loginSeller(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.loginSeller(dto);
+    this.setAuthCookie(res, response.accessToken);
+    return response;
+  }
+
+  @Post('admin/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log in to an admin account.' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  async loginAdmin(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.loginAdmin(dto);
     this.setAuthCookie(res, response.accessToken);
     return response;
   }
@@ -132,6 +185,6 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the current authenticated user.' })
   me(@CurrentUser() user: AuthenticatedUser) {
-    return this.authService.getCurrentUser(user.email);
+    return this.authService.getCurrentUser(user.userId);
   }
 }

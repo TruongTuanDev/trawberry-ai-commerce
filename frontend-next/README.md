@@ -1,5 +1,17 @@
 # frontend-next
 
+## Auth Role Separation
+
+- Public marketplace surfaces show customer login/register, seller register/login, cart, and search.
+- Public marketplace does not show admin login links.
+- `/admin-login` remains operational-only and is not a substitute for role guards.
+- Customer and seller auth accept email or phone identifiers.
+- Browser verification entry:
+
+```bash
+npm run test:e2e:auth-role-separation
+```
+
 Next.js frontend runs in parallel with the legacy Angular app in `strawberry-frontend`.
 
 ## Stack

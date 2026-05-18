@@ -1,5 +1,12 @@
 # Trawberry AI Commerce
 
+## Auth Separation Update
+
+- Public marketplace promotes only customer login/register and seller register/login.
+- Admin login is operational-only at `/admin-login`.
+- Public pages do not show admin login links.
+- Customer and seller registration accept email/password or phone/password.
+
 Marketplace/e-commerce stack đang được migrate sang kiến trúc mới:
 
 - `frontend-next`: Next.js frontend
@@ -60,7 +67,7 @@ Seed là idempotent cho local/demo use.
 
 Đăng nhập tại:
 
-- `http://localhost:3000/login`
+- `http://localhost:3000/admin-login`
 
 Màn hình chính:
 
@@ -78,7 +85,7 @@ Màn hình chính:
 
 Đăng nhập tại:
 
-- `http://localhost:3000/login`
+- `http://localhost:3000/seller/login`
 
 Màn hình chính:
 
@@ -99,6 +106,11 @@ Customer có thể dùng public flow anonymous, nhưng để test order history 
 
 - `http://localhost:3000/customer/register`
 - `http://localhost:3000/customer/login`
+
+Customer and seller registration now accept:
+
+- email + password
+- or phone + password
 
 Trang chính:
 
@@ -210,6 +222,7 @@ npm run test:e2e:support-cases
 - `backend-nest/README.md`
 - `frontend-next/README.md`
 - `docs/PROJECT_STATUS.md`
+- `docs/AUTH_ROLE_SEPARATION.md`
 - `docs/FULL_FLOW_AUDIT.md`
 - `docs/MULTI_SHOP_CHECKOUT.md`
 - `docs/CUSTOMER_ACCOUNTS_ORDER_HISTORY.md`

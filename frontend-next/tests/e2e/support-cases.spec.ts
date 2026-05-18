@@ -178,6 +178,7 @@ test("customer, admin, and seller work a support case from checkout receipt", as
   await page.getByTestId("customer-register-name").fill("Support UI Customer");
   await page.getByTestId("customer-register-email").fill(customerEmail);
   await page.getByTestId("customer-register-password").fill(password);
+  await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
   await page.waitForURL("**/customer/orders");
 

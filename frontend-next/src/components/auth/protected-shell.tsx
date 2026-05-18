@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { getRoleHome } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 
 type ProtectedShellProps = {
@@ -15,11 +16,7 @@ export function ProtectedShell({
   children,
   allowedRoles,
   loginPath = "/seller-login",
-  redirectByRole = {
-    ADMIN: "/admin/dashboard",
-    SELLER: "/seller/dashboard",
-    CUSTOMER: "/customer/orders",
-  },
+  redirectByRole = {},
 }: ProtectedShellProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,7 +51,7 @@ export function ProtectedShell({
     }
 
     if (allowedRoles?.length && !allowedRoles.includes(user.role)) {
-      const redirectTarget = redirectByRole[user.role] ?? loginPath;
+      const redirectTarget = redirectByRole[user.role] ?? getRoleHome(user);
       router.replace(redirectTarget);
     }
   }, [

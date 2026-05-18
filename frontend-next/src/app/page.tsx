@@ -47,8 +47,8 @@ export default function HomePage() {
                   <Link href="/orders/track" className="public-button-secondary inline-flex items-center justify-center px-6 py-3 text-sm">
                     Track an order
                   </Link>
-                  <Link href="/login" className="inline-flex items-center justify-center rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a2923]">
-                    Seller login
+                  <Link href="/seller/register" className="inline-flex items-center justify-center rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-white hover:bg-[#3a2923]">
+                    Sell on marketplace
                   </Link>
                 </div>
               </div>

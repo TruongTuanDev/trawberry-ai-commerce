@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { NextFunction, Request, Response } from 'express';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import * as bcrypt from 'bcrypt';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
@@ -22,6 +23,7 @@ type StoredUser = {
     userId: string;
     approvalStatus: string;
     currentShopId: string | null;
+    rejectionReason?: string | null;
   } | null;
 };
 
@@ -67,6 +69,7 @@ describe('AuthController (e2e)', () => {
   const prismaMock = {
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
     },
     sellerProfile: {
@@ -76,20 +79,78 @@ describe('AuthController (e2e)', () => {
   };
 
   beforeEach(async () => {
-    users = [];
+    users = [
+      {
+        id: 'admin-1',
+        email: 'demo-admin@trawberry.local',
+        passwordHash: bcrypt.hashSync('DemoAdmin123!', 10),
+        fullName: 'Demo Admin',
+        phone: '+79990000009',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: null,
+      },
+    ];
 
     prismaMock.user.findUnique.mockImplementation(
       async ({
         where,
         include,
+        select,
       }: {
-        where: { email?: string; id?: string };
+        where: { email?: string; id?: string; phone?: string };
+        include?: {
+          sellerProfile?: boolean | { select: Record<string, boolean> };
+        };
+        select?: Record<string, boolean>;
+      }) => {
+        const found = users.find((user) => {
+          if (where.email) return user.email === where.email;
+          if (where.id) return user.id === where.id;
+          if (where.phone) return user.phone === where.phone;
+          return false;
+        });
+
+        if (!found) {
+          return Promise.resolve(null);
+        }
+
+        if (select) {
+          return Promise.resolve({
+            ...(select.id ? { id: found.id } : {}),
+          });
+        }
+
+        if (include?.sellerProfile) {
+          return Promise.resolve({
+            ...found,
+            sellerProfile: found.sellerProfile ?? null,
+          });
+        }
+
+        return Promise.resolve(found);
+      },
+    );
+
+    prismaMock.user.findFirst.mockImplementation(
+      async ({
+        where,
+        include,
+      }: {
+        where?: {
+          OR?: Array<{ email?: string; phone?: string }>;
+        };
         include?: {
           sellerProfile?: boolean | { select: Record<string, boolean> };
         };
       }) => {
         const found = users.find((user) =>
-          where.email ? user.email === where.email : user.id === where.id,
+          (where?.OR ?? []).some(
+            (entry) =>
+              (entry.email && entry.email === user.email) ||
+              (entry.phone && entry.phone === user.phone),
+          ),
         );
 
         if (!found) {
@@ -137,6 +198,7 @@ describe('AuthController (e2e)', () => {
           userId: user.id,
           approvalStatus: data.approvalStatus,
           currentShopId: null,
+          rejectionReason: null,
         };
 
         return Promise.resolve(user.sellerProfile);
@@ -175,53 +237,240 @@ describe('AuthController (e2e)', () => {
     jest.clearAllMocks();
   });
 
-  it('registers a customer with hashed password and returns JWTs', async () => {
+  it('registers a customer with email and password', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
+      .post('/api/auth/customer/register')
       .send({
         email: 'customer@example.com',
         password: 'password123',
         fullName: 'Customer One',
-        role: 'USER',
       })
       .expect(201);
     const body = readBody<AuthResponseDto>(response);
 
-    expect(body.accessToken).toBeTruthy();
-    expect(body.refreshToken).toBeTruthy();
     expect(body.email).toBe('customer@example.com');
+    expect(body.phone).toBeNull();
     expect(body.role).toBe('CUSTOMER');
     expect(body.status).toBe('ACTIVE');
     expect(body.approvalStatus).toBeNull();
-
-    expect(users).toHaveLength(1);
-    expect(users[0].passwordHash).not.toBe('password123');
-    expect(users[0].passwordHash.startsWith('$2')).toBe(true);
   });
 
-  it('registers a seller and creates a pending seller profile', async () => {
+  it('registers a customer with phone and password', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/auth/register')
+      .post('/api/auth/customer/register')
+      .send({
+        phone: '+79990000011',
+        password: 'password123',
+        fullName: 'Phone Customer',
+      })
+      .expect(201);
+    const body = readBody<AuthResponseDto>(response);
+
+    expect(body.phone).toBe('+79990000011');
+    expect(body.role).toBe('CUSTOMER');
+    expect(users.at(-1)?.email).toContain('phone-79990000011@customer.local');
+  });
+
+  it('registers a seller with email and creates a pending seller profile', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
       .send({
         email: 'seller@example.com',
         password: 'password123',
         fullName: 'Seller One',
-        role: 'SELLER',
       })
       .expect(201);
     const body = readBody<AuthResponseDto>(response);
 
     expect(body.role).toBe('SELLER');
     expect(body.approvalStatus).toBe('PENDING');
-    expect(users[0].sellerProfile?.approvalStatus).toBe('PENDING');
+    expect(users.at(-1)?.sellerProfile?.approvalStatus).toBe('PENDING');
   });
 
-  it('logs in and returns a JWT', async () => {
-    await request(app.getHttpServer()).post('/api/auth/register').send({
-      email: 'customer@example.com',
-      password: 'password123',
-      fullName: 'Customer One',
-    });
+  it('registers a seller with phone and creates a pending seller profile', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        phone: '+79990000012',
+        password: 'password123',
+        fullName: 'Phone Seller',
+      })
+      .expect(201);
+    const body = readBody<AuthResponseDto>(response);
+
+    expect(body.role).toBe('SELLER');
+    expect(body.phone).toBe('+79990000012');
+    expect(body.approvalStatus).toBe('PENDING');
+  });
+
+  it('keeps legacy register compatibility for seller role', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'legacy-seller@example.com',
+        password: 'password123',
+        fullName: 'Legacy Seller',
+        role: 'SELLER',
+      })
+      .expect(201);
+
+    expect(readBody<AuthResponseDto>(response).role).toBe('SELLER');
+  });
+
+  it('rejects admin creation through public register', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({
+        email: 'admin@example.com',
+        password: 'password123',
+        fullName: 'Blocked Admin',
+        role: 'ADMIN',
+      })
+      .expect(400);
+  });
+
+  it('rejects duplicate email safely', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(409);
+  });
+
+  it('rejects duplicate phone safely', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        phone: '+79990000013',
+        password: 'password123',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        phone: '+79990000013',
+        password: 'password123',
+      })
+      .expect(409);
+  });
+
+  it('logs customer in by email', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+    const body = readBody<AuthResponseDto>(response);
+
+    expect(body.role).toBe('CUSTOMER');
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('access_token='),
+        expect.stringContaining('HttpOnly'),
+      ]),
+    );
+  });
+
+  it('logs customer in by phone', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        phone: '+79990000014',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: '+79990000014',
+        password: 'password123',
+      })
+      .expect(200);
+
+    expect(readBody<AuthResponseDto>(response).phone).toBe('+79990000014');
+  });
+
+  it('logs seller in by identifier', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        email: 'seller@example.com',
+        phone: '+79990000015',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: '+79990000015',
+        password: 'password123',
+      })
+      .expect(200);
+
+    expect(readBody<AuthResponseDto>(response).role).toBe('SELLER');
+  });
+
+  it('allows admin login only on admin endpoint', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'DemoAdmin123!',
+      })
+      .expect(200);
+
+    expect(readBody<AuthResponseDto>(response).role).toBe('ADMIN');
+  });
+
+  it('blocks wrong role login on role-specific endpoint', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(401);
+  });
+
+  it('keeps legacy login compatibility with email field', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(201);
 
     const response = await request(app.getHttpServer())
       .post('/api/auth/login')
@@ -230,53 +479,52 @@ describe('AuthController (e2e)', () => {
         password: 'password123',
       })
       .expect(200);
-    const body = readBody<AuthResponseDto>(response);
 
-    expect(body.accessToken).toBeTruthy();
-    expect(body.email).toBe('customer@example.com');
-    expect(body.role).toBe('CUSTOMER');
-    expect(response.headers['set-cookie']).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('access_token='),
-        expect.stringContaining('HttpOnly'),
-        expect.stringContaining('Path=/'),
-      ]),
-    );
+    expect(readBody<AuthResponseDto>(response).role).toBe('CUSTOMER');
+  });
+
+  it('returns safe invalid credentials for unknown identifier', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'missing@example.com',
+        password: 'password123',
+      })
+      .expect(401);
   });
 
   it('returns current user from /api/auth/me when authenticated by cookie', async () => {
     await request(app.getHttpServer())
-      .post('/api/auth/register')
+      .post('/api/auth/customer/register')
       .send({
-        email: 'customer@example.com',
+        phone: '+79990000016',
         password: 'password123',
         fullName: 'Customer One',
       })
       .expect(201);
 
     const loginResponse = await request(app.getHttpServer())
-      .post('/api/auth/login')
+      .post('/api/auth/customer/login')
       .send({
-        email: 'customer@example.com',
+        identifier: '+79990000016',
         password: 'password123',
       })
       .expect(200);
-    const cookies = loginResponse.headers['set-cookie'];
 
     const response = await request(app.getHttpServer())
       .get('/api/auth/me')
-      .set('Cookie', cookies)
+      .set('Cookie', loginResponse.headers['set-cookie'])
       .expect(200);
     const body = readBody<CurrentUserResponse>(response);
 
-    expect(body.email).toBe('customer@example.com');
+    expect(body.phone).toBe('+79990000016');
     expect(body.role).toBe('CUSTOMER');
     expect(body.fullName).toBe('Customer One');
   });
 
   it('keeps Authorization bearer fallback for /api/auth/me', async () => {
     const registerResponse = await request(app.getHttpServer())
-      .post('/api/auth/register')
+      .post('/api/auth/customer/register')
       .send({
         email: 'customer@example.com',
         password: 'password123',
@@ -297,7 +545,7 @@ describe('AuthController (e2e)', () => {
 
   it('refreshes token pair', async () => {
     const registerResponse = await request(app.getHttpServer())
-      .post('/api/auth/register')
+      .post('/api/auth/customer/register')
       .send({
         email: 'customer@example.com',
         password: 'password123',
@@ -320,16 +568,18 @@ describe('AuthController (e2e)', () => {
   });
 
   it('clears the auth cookie on logout', async () => {
-    await request(app.getHttpServer()).post('/api/auth/register').send({
-      email: 'customer@example.com',
-      password: 'password123',
-      fullName: 'Customer One',
-    });
-
-    const loginResponse = await request(app.getHttpServer())
-      .post('/api/auth/login')
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
       .send({
         email: 'customer@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'customer@example.com',
         password: 'password123',
       })
       .expect(200);

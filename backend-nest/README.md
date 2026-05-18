@@ -1,5 +1,19 @@
 # backend-nest
 
+## Auth Role Separation
+
+- Preferred public auth endpoints:
+  - `POST /api/auth/customer/register`
+  - `POST /api/auth/customer/login`
+  - `POST /api/auth/seller/register`
+  - `POST /api/auth/seller/login`
+  - `POST /api/auth/admin/login`
+- Compatibility endpoints remain available:
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+- Login supports email/password and phone/password.
+- Public registration never creates admin accounts.
+
 NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot service.
 
 ## Stack

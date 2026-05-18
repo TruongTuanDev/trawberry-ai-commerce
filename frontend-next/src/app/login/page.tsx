@@ -27,12 +27,14 @@ export default function StaffLoginPage() {
               badgeLabel="Staff access"
               roleLabel="Staff"
               title="Seller or admin login"
-              description="Use `/seller-login` and `/admin-login` for dedicated entry points, or keep using this compatibility form."
+              description="Operational compatibility entry for seller and admin staff accounts. Public marketplace pages do not expose this route."
               expectedRoles={["SELLER", "ADMIN"]}
               defaultRedirect="/seller/dashboard"
               redirectByRole={{ ADMIN: "/admin/dashboard", SELLER: "/seller/dashboard" }}
-              secondaryLinkHref="/customer/login"
-              secondaryLinkLabel="Customer login"
+              footerLinks={[
+                { href: "/seller/login", label: "Seller login" },
+                { href: "/customer/login", label: "Customer login" },
+              ]}
               testIdPrefix="login"
             />
           </Suspense>

@@ -1,5 +1,14 @@
 # Security Hardening
 
+## Auth Role Separation Update
+
+- Public marketplace no longer links to admin login.
+- Admin access remains protected by role guards, not by route obscurity.
+- Public registration is limited to `CUSTOMER` and `SELLER`.
+- Admin accounts can only log in through existing admin credentials on `/admin-login`.
+- Login accepts email or phone identifier.
+- Phone-based accounts remain cookie-authenticated and use backend-side normalization.
+
 ## Overview
 This document outlines the security measures implemented across the `backend-nest` and `frontend-next` applications.
 

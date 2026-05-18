@@ -6,11 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { currentUserRequest, loginRequest } from "@/lib/auth-api";
+import { currentUserRequest, loginRequest, roleLoginRequest, type StaffRole } from "@/lib/auth-api";
+import { getRoleHome } from "@/lib/auth-redirect";
 import { useAuthStore } from "@/stores/auth-store";
 
 const loginSchema = z.object({
-  email: z.email("Enter a valid email."),
+  identifier: z.string().trim().min(1, "Enter your email or phone."),
   password: z.string().min(6, "Password must be at least 6 characters."),
 });
 
@@ -21,11 +22,13 @@ type RoleLoginFormProps = {
   badgeLabel: string;
   title: string;
   description?: string;
-  expectedRoles: Array<"ADMIN" | "SELLER" | "CUSTOMER">;
+  expectedRoles: StaffRole[];
+  submitRole?: StaffRole;
   defaultRedirect: string;
-  redirectByRole?: Partial<Record<"ADMIN" | "SELLER" | "CUSTOMER", string>>;
+  redirectByRole?: Partial<Record<StaffRole, string>>;
   secondaryLinkHref?: string;
   secondaryLinkLabel?: string;
+  footerLinks?: Array<{ href: string; label: string }>;
   testIdPrefix: "admin-login" | "seller-login" | "customer-login" | "login";
 };
 
@@ -35,10 +38,12 @@ export function RoleLoginForm({
   title,
   description,
   expectedRoles,
+  submitRole,
   defaultRedirect,
   redirectByRole,
   secondaryLinkHref,
   secondaryLinkLabel,
+  footerLinks,
   testIdPrefix,
 }: RoleLoginFormProps) {
   const router = useRouter();
@@ -50,7 +55,7 @@ export function RoleLoginForm({
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
   });
@@ -60,17 +65,22 @@ export function RoleLoginForm({
     setFormError(null);
 
     try {
-      await loginRequest(values);
+      if (submitRole) {
+        await roleLoginRequest(submitRole, values);
+      } else {
+        await loginRequest(values);
+      }
       const user = await currentUserRequest();
 
-      if (!expectedRoles.includes(user.role as "ADMIN" | "SELLER" | "CUSTOMER")) {
+      if (!expectedRoles.includes(user.role as StaffRole)) {
         throw new Error(`${roleLabel} account is required.`);
       }
 
       setSession({ user });
       router.push(
         searchParams.get("next") ||
-          redirectByRole?.[user.role as "ADMIN" | "SELLER" | "CUSTOMER"] ||
+          redirectByRole?.[user.role as StaffRole] ||
+          getRoleHome(user) ||
           defaultRedirect,
       );
     } catch (error) {
@@ -90,17 +100,18 @@ export function RoleLoginForm({
       <form className="mt-8 space-y-5" onSubmit={onSubmit}>
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor={`${testIdPrefix}-email`}>
-            Email
+            Email or phone
           </label>
           <input
             id={`${testIdPrefix}-email`}
-            type="email"
+            type="text"
+            autoComplete="username"
             data-testid={`${testIdPrefix}-email`}
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
-            {...form.register("email")}
+            {...form.register("identifier")}
           />
-          {form.formState.errors.email ? (
-            <p className="mt-2 text-sm text-[var(--accent)]">{form.formState.errors.email.message}</p>
+          {form.formState.errors.identifier ? (
+            <p className="mt-2 text-sm text-[var(--accent)]">{form.formState.errors.identifier.message}</p>
           ) : null}
         </div>
         <div>
@@ -110,6 +121,7 @@ export function RoleLoginForm({
           <input
             id={`${testIdPrefix}-password`}
             type="password"
+            autoComplete="current-password"
             data-testid={`${testIdPrefix}-password`}
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
             {...form.register("password")}
@@ -132,6 +144,15 @@ export function RoleLoginForm({
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
+      {footerLinks?.length ? (
+        <div className="mt-6 flex flex-wrap gap-3 text-sm text-[var(--muted)]">
+          {footerLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
       {secondaryLinkHref && secondaryLinkLabel ? (
         <div className="mt-8 flex items-center justify-between text-sm text-[var(--muted)]">
           <span>Need another account area?</span>

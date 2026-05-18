@@ -6,6 +6,7 @@ export type AuthResponse = {
   refreshToken: string;
   tokenType: string;
   email: string;
+  phone: string | null;
   fullName: string | null;
   role: string;
   status: string;
@@ -25,20 +26,64 @@ export type CurrentUserResponse = {
   sellerRejectionReason: string | null;
 };
 
-export async function loginRequest(input: { email: string; password: string }) {
+export type PublicRole = "CUSTOMER" | "SELLER";
+export type StaffRole = "ADMIN" | "SELLER" | "CUSTOMER";
+
+export async function loginRequest(input: {
+  identifier?: string;
+  email?: string;
+  password: string;
+}) {
   return apiRequest<AuthResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
+export async function roleLoginRequest(
+  role: StaffRole,
+  input: {
+    identifier?: string;
+    email?: string;
+    password: string;
+  },
+) {
+  const path =
+    role === "ADMIN"
+      ? "/api/auth/admin/login"
+      : role === "SELLER"
+        ? "/api/auth/seller/login"
+        : "/api/auth/customer/login";
+
+  return apiRequest<AuthResponse>(path, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function registerRequest(input: {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
-  fullName: string;
+  fullName?: string;
   role?: "CUSTOMER" | "SELLER" | "USER";
 }) {
   return apiRequest<AuthResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function roleRegisterRequest(
+  role: PublicRole,
+  input: {
+    email?: string;
+    phone?: string;
+    password: string;
+    fullName?: string;
+  },
+) {
+  return apiRequest<AuthResponse>(`/api/auth/${role.toLowerCase()}/register`, {
     method: "POST",
     body: JSON.stringify(input),
   });

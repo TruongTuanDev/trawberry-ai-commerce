@@ -1,5 +1,21 @@
 # Project Status
 
+## Auth Role Separation
+
+- Status: implemented
+- Scope:
+  - customer login/register separated
+  - seller login/register separated
+  - hidden admin login preserved at `/admin-login`
+  - public header/footer/home no longer advertise admin auth
+  - identifier login supports email or phone
+  - existing cookie auth flow preserved
+- Compatibility kept:
+  - `/api/auth/register`
+  - `/api/auth/login`
+  - `/login`
+  - `/seller-login`
+
 ## Cart Validation + Checkout Preflight
 
 - Status: Done for the current public marketplace/cart reliability phase

@@ -1,5 +1,17 @@
 # Phase Report
 
+## Auth UX Separation Phase
+
+- Implemented role-specific public auth UX for customer and seller.
+- Removed admin login promotion from public marketplace surfaces.
+- Added role-specific backend endpoints for:
+  - customer register/login
+  - seller register/login
+  - admin login
+- Added identifier login with email or phone.
+- Preserved compatibility endpoints and httpOnly cookie session flow.
+- Added `auth-role-separation` Playwright coverage and expanded backend auth e2e coverage.
+
 ## Stale Cart Validation + Checkout Preflight
 
 - Added `POST /api/public/cart/validate`.
