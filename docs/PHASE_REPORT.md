@@ -1,5 +1,16 @@
 # Phase Report
 
+## 2026-05-19 CI Postgres Extension Fix
+
+- Fixed the GitHub Actions `backend` job failure at `npx prisma db push`.
+- Root cause: Prisma schema defaults use `uuid_generate_v4()`, but the GitHub Actions PostgreSQL service did not enable `uuid-ossp`.
+- Updated `.github/workflows/ci.yml` to:
+  - install `postgresql-client`
+  - run `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";` before `npx prisma db push`
+- Scope check:
+  - `backend-nest/prisma/schema.prisma` uses `uuid_generate_v4()`
+  - no `gen_random_uuid()` or `pgcrypto` dependency was found, so `pgcrypto` was not added
+
 ## 2026-05-18 CI + AI Service Isolation Phase
 
 - Fixed `ai-service` pytest isolation so local `.env` contamination no longer flips tests onto S3 or OpenAI.

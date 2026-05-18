@@ -1,5 +1,11 @@
 # Project Status
 
+## CI Postgres Extension Fix Snapshot - 2026-05-19
+
+- GitHub Actions `backend` job was hardened for Prisma schema UUID defaults.
+- `.github/workflows/ci.yml` now enables PostgreSQL extension `uuid-ossp` before `npx prisma db push`.
+- `pgcrypto` was intentionally not added because the current schema does not use `gen_random_uuid()`.
+
 ## CI + AI Service Isolation Snapshot - 2026-05-18
 
 - `ai-service` local pytest isolation is fixed for mock-safe mode.
