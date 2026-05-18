@@ -13,7 +13,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import { OrdersService } from './orders.service';
 import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
@@ -23,7 +23,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @ApiTags('orders')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}

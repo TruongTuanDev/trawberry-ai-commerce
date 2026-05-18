@@ -6,7 +6,7 @@ import { App } from 'supertest/types';
 import { AdminQueueTasksController } from '../src/modules/admin/admin-queue-tasks.controller';
 import { AdminQueueTasksService } from '../src/modules/admin/admin-queue-tasks.service';
 import { PrismaService } from '../src/common/prisma/prisma.service';
-import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { readBody } from './test-helpers';
 
 describe('AdminQueueTasksController (e2e)', () => {
@@ -126,7 +126,7 @@ describe('AdminQueueTasksController (e2e)', () => {
         { provide: PrismaService, useValue: prismaMock },
       ],
     })
-      .overrideGuard(JwtAuthGuard)
+      .overrideGuard(AdminJwtAuthGuard)
       .useValue({
         canActivate: (context: {
           switchToHttp: () => {

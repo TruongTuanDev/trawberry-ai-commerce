@@ -12,7 +12,7 @@ export function SellerRouteShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ProtectedShell allowedRoles={["SELLER"]} loginPath="/seller-login">
+    <ProtectedShell role="seller" allowedRoles={["SELLER"]} loginPath="/seller-login">
       <SellerShell>{children}</SellerShell>
     </ProtectedShell>
   );

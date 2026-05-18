@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export function ShopSwitcher() {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.sellerUser);
   const shops = useSellerWorkspaceStore((state) => state.shops);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const loading = useSellerWorkspaceStore((state) => state.loading);

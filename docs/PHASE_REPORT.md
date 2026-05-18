@@ -1,5 +1,17 @@
 # Phase Report
 
+## Multi-Role Session Isolation
+
+- Split browser cookie auth by role:
+  - `admin_access_token`
+  - `seller_access_token`
+  - `customer_access_token`
+- Added role-specific `me` and logout endpoints.
+- Replaced shared frontend auth snapshot with role-separated state.
+- Public header now reflects only customer auth.
+- Added backend auth e2e coverage for cookie coexistence and role-specific logout.
+- Added frontend browser coverage at `npm run test:e2e:multi-role-sessions`.
+
 ## Auth UX Separation Phase
 
 - Implemented role-specific public auth UX for customer and seller.

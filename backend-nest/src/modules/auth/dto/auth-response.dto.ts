@@ -30,4 +30,13 @@ export class AuthResponseDto {
 
   @ApiProperty({ nullable: true, example: 'PENDING' })
   approvalStatus!: string | null;
+
+  @ApiProperty({ nullable: true, example: 'WAIT_FOR_APPROVAL' })
+  sellerNextStep!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sellerOnboardingComplete!: boolean | null;
+
+  @ApiProperty()
+  isSyntheticEmail!: boolean;
 }

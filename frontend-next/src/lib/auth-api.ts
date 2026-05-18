@@ -34,6 +34,7 @@ export type CurrentUserResponse = {
 
 export type PublicRole = "CUSTOMER" | "SELLER";
 export type StaffRole = "ADMIN" | "SELLER" | "CUSTOMER";
+export type AuthRoleKey = "admin" | "seller" | "customer";
 
 export async function loginRequest(input: {
   identifier?: string;
@@ -104,6 +105,51 @@ export async function currentUserRequest(token?: string) {
 
 export async function logoutRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/logout", {
+    method: "POST",
+  });
+}
+
+export async function getAdminMeRequest(token?: string) {
+  return apiRequest<CurrentUserResponse>("/api/auth/admin/me", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getSellerMeRequest(token?: string) {
+  return apiRequest<CurrentUserResponse>("/api/auth/seller/me", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getCustomerMeRequest(token?: string) {
+  return apiRequest<CurrentUserResponse>("/api/auth/customer/me", {
+    method: "GET",
+    token,
+  });
+}
+
+export async function logoutAdminRequest() {
+  return apiRequest<{ success: boolean }>("/api/auth/admin/logout", {
+    method: "POST",
+  });
+}
+
+export async function logoutSellerRequest() {
+  return apiRequest<{ success: boolean }>("/api/auth/seller/logout", {
+    method: "POST",
+  });
+}
+
+export async function logoutCustomerRequest() {
+  return apiRequest<{ success: boolean }>("/api/auth/customer/logout", {
+    method: "POST",
+  });
+}
+
+export async function logoutAllRequest() {
+  return apiRequest<{ success: boolean }>("/api/auth/logout-all", {
     method: "POST",
   });
 }

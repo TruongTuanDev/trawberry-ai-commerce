@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
-import { currentUserRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
+import { getSellerMeRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
 import { getRoleHome } from "@/lib/auth-redirect";
 import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
@@ -43,7 +43,7 @@ export function SellerRegisterPageClient() {
         identifier: email.trim() || normalizedPhone,
         password,
       });
-      const user = await currentUserRequest();
+      const user = await getSellerMeRequest();
       if (user.role !== "SELLER") {
         throw new Error("Seller account is required.");
       }

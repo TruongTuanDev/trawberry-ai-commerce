@@ -1,5 +1,22 @@
 # backend-nest
 
+## Multi-Role Sessions
+
+- Role-specific auth cookies:
+  - `admin_access_token`
+  - `seller_access_token`
+  - `customer_access_token`
+- Role-specific current-user endpoints:
+  - `GET /api/auth/admin/me`
+  - `GET /api/auth/seller/me`
+  - `GET /api/auth/customer/me`
+- Role-specific logout endpoints:
+  - `POST /api/auth/admin/logout`
+  - `POST /api/auth/seller/logout`
+  - `POST /api/auth/customer/logout`
+  - `POST /api/auth/logout-all`
+- Bearer token fallback remains available for automation and smoke scripts.
+
 ## Auth Role Separation
 
 - Preferred public auth endpoints:

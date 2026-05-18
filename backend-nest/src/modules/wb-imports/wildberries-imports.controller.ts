@@ -18,7 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { ConfirmWildberriesImportDto } from './dto/confirm-wildberries-import.dto';
@@ -27,7 +27,7 @@ import { WildberriesImportsService } from './wildberries-imports.service';
 
 @ApiTags('wildberries imports')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/imports/wildberries')
 export class WildberriesImportsController {
   constructor(private readonly importsService: WildberriesImportsService) {}

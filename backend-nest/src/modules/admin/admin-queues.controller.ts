@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AdminQueuesService } from './admin-queues.service';
 import {
   AdminDeliveryQueueQueryDto,
@@ -9,7 +9,7 @@ import {
   AdminSellerQueueQueryDto,
 } from './dto/admin-queues-query.dto';
 
-@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
 @Controller('api/admin/queues')
 export class AdminQueuesController {
   constructor(private readonly queuesService: AdminQueuesService) {}

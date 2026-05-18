@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function SellerPendingPage() {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.sellerUser);
   const status = user?.sellerApprovalStatus ?? "PENDING";
   const nextStep = user?.sellerNextStep ?? "WAIT_FOR_APPROVAL";
 

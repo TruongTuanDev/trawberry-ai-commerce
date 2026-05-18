@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CreateSupportCaseMessageDto } from './dto/create-support-case-message.dto';
@@ -9,7 +9,7 @@ import { SupportCasesService } from './support-cases.service';
 
 @ApiTags('seller-support-cases')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/support-cases')
 export class SellerSupportCasesController {
   constructor(private readonly supportCasesService: SupportCasesService) {}

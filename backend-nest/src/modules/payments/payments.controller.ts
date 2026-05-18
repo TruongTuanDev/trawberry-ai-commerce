@@ -15,7 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { AddPaymentNoteDto } from './dto/add-payment-note.dto';
@@ -28,7 +28,7 @@ import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}

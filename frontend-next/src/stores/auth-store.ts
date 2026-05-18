@@ -1,27 +1,95 @@
 "use client";
 
 import { create } from "zustand";
-import { currentUserRequest, logoutRequest, type CurrentUserResponse } from "@/lib/auth-api";
+import {
+  getAdminMeRequest,
+  getCustomerMeRequest,
+  getSellerMeRequest,
+  logoutAdminRequest,
+  logoutAllRequest,
+  logoutCustomerRequest,
+  logoutSellerRequest,
+  type CurrentUserResponse,
+} from "@/lib/auth-api";
 import { useCartStore } from "@/stores/cart-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const AUTH_STORAGE_KEY = "strawberry-next-auth";
 
+export type AuthRoleKey = "admin" | "seller" | "customer";
+
 type PersistedAuth = {
-  user: CurrentUserResponse | null;
+  adminUser: CurrentUserResponse | null;
+  sellerUser: CurrentUserResponse | null;
+  customerUser: CurrentUserResponse | null;
 };
+
+type RoleStatus = Record<AuthRoleKey, boolean>;
+type RoleErrors = Record<AuthRoleKey, string | null>;
 
 type AuthState = PersistedAuth & {
   hydrated: boolean;
-  sessionLoading: boolean;
-  sessionError: string | null;
-  setSession: (payload: PersistedAuth) => void;
+  sessionLoading: RoleStatus;
+  sessionError: RoleErrors;
+  setRoleSession: (role: AuthRoleKey, user: CurrentUserResponse | null) => void;
+  setSession: (payload: { user: CurrentUserResponse | null }) => void;
   hydrate: () => void;
-  refreshMe: () => Promise<boolean>;
-  logout: () => Promise<void>;
+  refreshRole: (role: AuthRoleKey) => Promise<boolean>;
+  logoutRole: (role: AuthRoleKey) => Promise<void>;
+  logoutAll: () => Promise<void>;
 };
 
-function save(payload: PersistedAuth) {
+const emptyLoadingState: RoleStatus = {
+  admin: false,
+  seller: false,
+  customer: false,
+};
+
+const emptyErrorState: RoleErrors = {
+  admin: null,
+  seller: null,
+  customer: null,
+};
+
+function roleField(role: AuthRoleKey) {
+  return role === "admin"
+    ? "adminUser"
+    : role === "seller"
+      ? "sellerUser"
+      : "customerUser";
+}
+
+function inferRole(user: CurrentUserResponse | null): AuthRoleKey | null {
+  if (!user) {
+    return null;
+  }
+
+  return user.role === "ADMIN"
+    ? "admin"
+    : user.role === "SELLER"
+      ? "seller"
+      : user.role === "CUSTOMER"
+        ? "customer"
+        : null;
+}
+
+function getMeRequest(role: AuthRoleKey) {
+  return role === "admin"
+    ? getAdminMeRequest
+    : role === "seller"
+      ? getSellerMeRequest
+      : getCustomerMeRequest;
+}
+
+function getLogoutRequest(role: AuthRoleKey) {
+  return role === "admin"
+    ? logoutAdminRequest
+    : role === "seller"
+      ? logoutSellerRequest
+      : logoutCustomerRequest;
+}
+
+function persist(payload: PersistedAuth) {
   if (typeof window === "undefined") {
     return;
   }
@@ -29,7 +97,7 @@ function save(payload: PersistedAuth) {
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
 }
 
-function clear() {
+function clearStorage() {
   if (typeof window === "undefined") {
     return;
   }
@@ -37,18 +105,48 @@ function clear() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  hydrated: false,
-  sessionLoading: false,
-  sessionError: null,
-  setSession: (payload) => {
-    save({ user: payload.user });
+function afterRoleStateChange(role: AuthRoleKey, user: CurrentUserResponse | null) {
+  if (role === "customer") {
     useCartStore.getState().hydrate();
-    set({
-      user: payload.user,
-      sessionError: null,
-    });
+  }
+
+  if (role === "seller" && !user) {
+    useSellerWorkspaceStore.getState().clear();
+  }
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  adminUser: null,
+  sellerUser: null,
+  customerUser: null,
+  hydrated: false,
+  sessionLoading: emptyLoadingState,
+  sessionError: emptyErrorState,
+  setRoleSession: (role, user) => {
+    const field = roleField(role);
+    const nextPersisted: PersistedAuth = {
+      adminUser: role === "admin" ? user : get().adminUser,
+      sellerUser: role === "seller" ? user : get().sellerUser,
+      customerUser: role === "customer" ? user : get().customerUser,
+    };
+
+    persist(nextPersisted);
+    afterRoleStateChange(role, user);
+    set((state) => ({
+      ...state,
+      [field]: user,
+      sessionError: {
+        ...state.sessionError,
+        [role]: null,
+      },
+    }));
+  },
+  setSession: (payload) => {
+    const role = inferRole(payload.user);
+    if (!role) {
+      return;
+    }
+    get().setRoleSession(role, payload.user);
   },
   hydrate: () => {
     if (typeof window === "undefined") {
@@ -62,54 +160,120 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     try {
-      const parsed = JSON.parse(raw) as PersistedAuth;
+      const parsed = JSON.parse(raw) as Partial<PersistedAuth>;
       set({
-        user: parsed.user,
+        adminUser: parsed.adminUser ?? null,
+        sellerUser: parsed.sellerUser ?? null,
+        customerUser: parsed.customerUser ?? null,
         hydrated: true,
       });
     } catch {
-      clear();
-      set({ user: null, hydrated: true, sessionError: null });
+      clearStorage();
+      set({
+        adminUser: null,
+        sellerUser: null,
+        customerUser: null,
+        hydrated: true,
+        sessionError: emptyErrorState,
+      });
     }
   },
-  refreshMe: async () => {
-    set({ sessionLoading: true, sessionError: null });
+  refreshRole: async (role) => {
+    set((state) => ({
+      sessionLoading: {
+        ...state.sessionLoading,
+        [role]: true,
+      },
+      sessionError: {
+        ...state.sessionError,
+        [role]: null,
+      },
+    }));
 
     try {
-      const user = await currentUserRequest();
-      save({ user });
-      useCartStore.getState().hydrate();
-      set({
-        user,
-        sessionLoading: false,
-        sessionError: null,
-      });
+      const user = await getMeRequest(role)();
+      get().setRoleSession(role, user);
+      set((state) => ({
+        sessionLoading: {
+          ...state.sessionLoading,
+          [role]: false,
+        },
+        sessionError: {
+          ...state.sessionError,
+          [role]: null,
+        },
+      }));
       return true;
     } catch (error) {
-      clear();
-      useCartStore.getState().hydrate();
-      useSellerWorkspaceStore.getState().clear();
-      set({
-        user: null,
-        sessionLoading: false,
-        sessionError: error instanceof Error ? error.message : "Session expired.",
-      });
+      const field = roleField(role);
+      const nextPersisted: PersistedAuth = {
+        adminUser: role === "admin" ? null : get().adminUser,
+        sellerUser: role === "seller" ? null : get().sellerUser,
+        customerUser: role === "customer" ? null : get().customerUser,
+      };
+
+      persist(nextPersisted);
+      afterRoleStateChange(role, null);
+      set((state) => ({
+        ...state,
+        [field]: null,
+        sessionLoading: {
+          ...state.sessionLoading,
+          [role]: false,
+        },
+        sessionError: {
+          ...state.sessionError,
+          [role]: error instanceof Error ? error.message : "Session expired.",
+        },
+      }));
       return false;
     }
   },
-  logout: async () => {
+  logoutRole: async (role) => {
     try {
-      await logoutRequest();
+      await getLogoutRequest(role)();
     } catch {
-      // Clear local auth state even if the backend cookie has already expired.
+      // Keep local cleanup even if the cookie is already gone.
     } finally {
-      clear();
+      const field = roleField(role);
+      const nextPersisted: PersistedAuth = {
+        adminUser: role === "admin" ? null : get().adminUser,
+        sellerUser: role === "seller" ? null : get().sellerUser,
+        customerUser: role === "customer" ? null : get().customerUser,
+      };
+
+      persist(nextPersisted);
+      afterRoleStateChange(role, null);
+      set((state) => ({
+        ...state,
+        [field]: null,
+        sessionLoading: {
+          ...state.sessionLoading,
+          [role]: false,
+        },
+        sessionError: {
+          ...state.sessionError,
+          [role]: null,
+        },
+      }));
+    }
+  },
+  logoutAll: async () => {
+    try {
+      await logoutAllRequest();
+    } catch {
+      // Keep local cleanup even if some cookies are already missing.
+    } finally {
+      clearStorage();
       useCartStore.getState().hydrate();
       useSellerWorkspaceStore.getState().clear();
       set({
-        user: null,
-        sessionLoading: false,
-        sessionError: null,
+        adminUser: null,
+        sellerUser: null,
+        customerUser: null,
+        hydrated: true,
+        sessionLoading: emptyLoadingState,
+        sessionError: emptyErrorState,
       });
     }
   },

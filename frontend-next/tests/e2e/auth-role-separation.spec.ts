@@ -93,7 +93,7 @@ test("admin login route works, has no register link, and customer or seller cann
   await customerPage.getByTestId("customer-register-submit").click();
   await customerPage.waitForURL("**/customer/orders");
   await customerPage.goto("/admin/dashboard");
-  await customerPage.waitForURL("**/customer/orders");
+  await customerPage.waitForURL(/\/admin-login\?next=/);
   await customerContext.close();
 
   const sellerContext = await browser.newContext();
@@ -109,6 +109,6 @@ test("admin login route works, has no register link, and customer or seller cann
   await sellerPage.getByTestId("seller-register-submit").click();
   await sellerPage.waitForURL("**/seller/onboarding");
   await sellerPage.goto("/admin/dashboard");
-  await sellerPage.waitForURL("**/seller/onboarding");
+  await sellerPage.waitForURL(/\/admin-login\?next=/);
   await sellerContext.close();
 });

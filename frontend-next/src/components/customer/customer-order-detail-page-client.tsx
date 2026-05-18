@@ -11,10 +11,10 @@ import { useAuthStore } from "@/stores/auth-store";
 
 export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: string }) {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.customerUser);
   const hydrated = useAuthStore((state) => state.hydrated);
   const hydrate = useAuthStore((state) => state.hydrate);
-  const refreshMe = useAuthStore((state) => state.refreshMe);
+  const refreshRole = useAuthStore((state) => state.refreshRole);
   const [receipt, setReceipt] = useState<CustomerCheckoutReceipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +27,8 @@ export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: 
     let mounted = true;
     const run = async () => {
       if (!hydrated) return;
-      const ok = user ? true : await refreshMe();
-      const currentUser = useAuthStore.getState().user;
+      const ok = user ? true : await refreshRole("customer");
+      const currentUser = useAuthStore.getState().customerUser;
       if (!ok || currentUser?.role !== "CUSTOMER") {
         router.replace(`/customer/login?next=/customer/orders/${checkoutCode}`);
         return;
@@ -48,7 +48,7 @@ export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: 
     return () => {
       mounted = false;
     };
-  }, [checkoutCode, hydrated, refreshMe, router, user]);
+  }, [checkoutCode, hydrated, refreshRole, router, user]);
 
   return (
     <PublicShell>

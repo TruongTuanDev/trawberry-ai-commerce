@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
-import { currentUserRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
+import { getCustomerMeRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
 import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -41,7 +41,7 @@ export function CustomerRegisterPageClient() {
         identifier: email.trim() || normalizedPhone,
         password,
       });
-      const user = await currentUserRequest();
+      const user = await getCustomerMeRequest();
       setSession({ user });
       router.push("/customer/orders");
     } catch (err) {

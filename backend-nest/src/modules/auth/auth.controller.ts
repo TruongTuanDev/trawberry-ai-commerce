@@ -17,8 +17,15 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import {
+  AdminJwtAuthGuard,
+  CustomerJwtAuthGuard,
+  JwtAuthGuard,
+  SellerJwtAuthGuard,
+} from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { USER_ROLES } from '../../common/constants/roles.constant';
+import { AuthCookieService } from './auth-cookie.service';
 import { AuthRateLimit } from './auth-rate-limit.decorator';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -32,38 +39,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly authCookieService: AuthCookieService,
   ) {}
-
-  private setAuthCookie(res: Response, token: string) {
-    const cookieName = this.configService.get<string>(
-      'AUTH_COOKIE_NAME',
-      'access_token',
-    );
-    const isSecure =
-      this.configService.get<string>('AUTH_COOKIE_SECURE', 'false') === 'true';
-    const sameSiteConfig = this.configService.get<string>(
-      'AUTH_COOKIE_SAME_SITE',
-      'lax',
-    );
-    const sameSite = (
-      ['lax', 'strict', 'none'].includes(sameSiteConfig) &&
-      !(sameSiteConfig === 'none' && !isSecure)
-        ? sameSiteConfig
-        : 'lax'
-    ) as boolean | 'lax' | 'strict' | 'none';
-    const maxAge = this.configService.get<number>(
-      'AUTH_COOKIE_MAX_AGE_SECONDS',
-      15 * 60,
-    );
-
-    res.cookie(cookieName, token, {
-      httpOnly: true,
-      secure: isSecure,
-      sameSite,
-      maxAge: maxAge * 1000,
-      path: '/',
-    });
-  }
 
   @Post('register')
   @AuthRateLimit({
@@ -119,7 +96,16 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const response = await this.authService.login(dto);
-    this.setAuthCookie(res, response.accessToken);
+    res.cookie(
+      this.configService.get<string>('AUTH_COOKIE_NAME', 'access_token'),
+      response.accessToken,
+      this.authCookieService.getAuthCookieOptions(),
+    );
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      response.role as (typeof USER_ROLES)[keyof typeof USER_ROLES],
+      response.accessToken,
+    );
     return response;
   }
 
@@ -138,7 +124,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const response = await this.authService.loginCustomer(dto);
-    this.setAuthCookie(res, response.accessToken);
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      USER_ROLES.CUSTOMER,
+      response.accessToken,
+    );
     return response;
   }
 
@@ -157,7 +147,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const response = await this.authService.loginSeller(dto);
-    this.setAuthCookie(res, response.accessToken);
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      USER_ROLES.SELLER,
+      response.accessToken,
+    );
     return response;
   }
 
@@ -176,7 +170,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const response = await this.authService.loginAdmin(dto);
-    this.setAuthCookie(res, response.accessToken);
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      USER_ROLES.ADMIN,
+      response.accessToken,
+    );
     return response;
   }
 
@@ -191,7 +189,16 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const response = await this.authService.refresh(dto);
-    this.setAuthCookie(res, response.accessToken);
+    res.cookie(
+      this.configService.get<string>('AUTH_COOKIE_NAME', 'access_token'),
+      response.accessToken,
+      this.authCookieService.getAuthCookieOptions(),
+    );
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      response.role as (typeof USER_ROLES)[keyof typeof USER_ROLES],
+      response.accessToken,
+    );
     return response;
   }
 
@@ -199,29 +206,39 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Log out and clear the auth cookie.' })
   logout(@Res({ passthrough: true }) res: Response) {
-    const cookieName = this.configService.get<string>(
-      'AUTH_COOKIE_NAME',
-      'access_token',
-    );
-    const isSecure =
-      this.configService.get<string>('AUTH_COOKIE_SECURE', 'false') === 'true';
-    const sameSiteConfig = this.configService.get<string>(
-      'AUTH_COOKIE_SAME_SITE',
-      'lax',
-    );
-    const sameSite = (
-      ['lax', 'strict', 'none'].includes(sameSiteConfig) &&
-      !(sameSiteConfig === 'none' && !isSecure)
-        ? sameSiteConfig
-        : 'lax'
-    ) as boolean | 'lax' | 'strict' | 'none';
+    this.authCookieService.clearLegacyCookie(res);
+    return { success: true };
+  }
 
-    res.clearCookie(cookieName, {
-      httpOnly: true,
-      secure: isSecure,
-      sameSite,
-      path: '/',
-    });
+  @Post('customer/logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log out and clear the customer auth cookie.' })
+  logoutCustomer(@Res({ passthrough: true }) res: Response) {
+    this.authCookieService.clearRoleCookies(res, USER_ROLES.CUSTOMER);
+    return { success: true };
+  }
+
+  @Post('seller/logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log out and clear the seller auth cookie.' })
+  logoutSeller(@Res({ passthrough: true }) res: Response) {
+    this.authCookieService.clearRoleCookies(res, USER_ROLES.SELLER);
+    return { success: true };
+  }
+
+  @Post('admin/logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log out and clear the admin auth cookie.' })
+  logoutAdmin(@Res({ passthrough: true }) res: Response) {
+    this.authCookieService.clearRoleCookies(res, USER_ROLES.ADMIN);
+    return { success: true };
+  }
+
+  @Post('logout-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Log out and clear all role auth cookies.' })
+  logoutAll(@Res({ passthrough: true }) res: Response) {
+    this.authCookieService.clearAllAuthCookies(res);
     return { success: true };
   }
 
@@ -231,5 +248,38 @@ export class AuthController {
   @ApiOperation({ summary: 'Get the current authenticated user.' })
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.getCurrentUser(user.userId);
+  }
+
+  @Get('customer/me')
+  @UseGuards(CustomerJwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the current authenticated customer.' })
+  customerMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.getCurrentUserForRole(
+      user.userId,
+      USER_ROLES.CUSTOMER,
+    );
+  }
+
+  @Get('seller/me')
+  @UseGuards(SellerJwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the current authenticated seller.' })
+  sellerMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.getCurrentUserForRole(
+      user.userId,
+      USER_ROLES.SELLER,
+    );
+  }
+
+  @Get('admin/me')
+  @UseGuards(AdminJwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the current authenticated admin.' })
+  adminMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.getCurrentUserForRole(
+      user.userId,
+      USER_ROLES.ADMIN,
+    );
   }
 }

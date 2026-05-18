@@ -20,7 +20,7 @@ export function SellerPaymentDetailPageClient({
 }: {
   orderId: string;
 }) {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [payment, setPayment] = useState<SellerPaymentItem | null>(null);
   const [note, setNote] = useState("");

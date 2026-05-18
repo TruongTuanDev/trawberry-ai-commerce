@@ -24,8 +24,8 @@ export function PublicHeader() {
     state.items.reduce((sum, item) => sum + item.quantity, 0),
   );
   const hydrateAuth = useAuthStore((state) => state.hydrate);
-  const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.customerUser);
+  const logoutRole = useAuthStore((state) => state.logoutRole);
 
   useEffect(() => {
     hydrateCart();
@@ -43,14 +43,7 @@ export function PublicHeader() {
     router.push(`/products${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
-  const customerHref =
-    user?.role === "CUSTOMER"
-      ? "/customer/orders"
-      : user?.role === "SELLER"
-        ? "/seller/dashboard"
-      : user?.role === "ADMIN"
-        ? "/admin/dashboard"
-        : "/customer/login";
+  const customerHref = user?.role === "CUSTOMER" ? "/customer/orders" : "/customer/login";
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border)]/70 bg-[rgba(249,243,234,0.88)] backdrop-blur-xl">
@@ -102,38 +95,20 @@ export function PublicHeader() {
           </Link>
 
           <div className="hidden items-center gap-2 md:flex">
-            {user?.role === "ADMIN" ? (
+            {user?.role === "CUSTOMER" ? (
               <>
                 <Link
-                  href="/admin/dashboard"
+                  href={customerHref}
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
-                  data-testid="public-admin-dashboard-link"
+                  data-testid="public-customer-link"
                 >
-                  Admin dashboard
+                  My orders
                 </Link>
                 <button
                   type="button"
-                  onClick={() => void logout()}
+                  onClick={() => void logoutRole("customer")}
                   className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
-                  data-testid="public-admin-logout"
-                >
-                  Logout
-                </button>
-              </>
-            ) : user?.role === "SELLER" ? (
-              <>
-                <Link
-                  href="/seller/dashboard"
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
-                  data-testid="public-seller-dashboard-link"
-                >
-                  Seller dashboard
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void logout()}
-                  className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
-                  data-testid="public-seller-logout"
+                  data-testid="public-customer-logout"
                 >
                   Logout
                 </button>
@@ -145,17 +120,15 @@ export function PublicHeader() {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
                   data-testid="public-customer-link"
                 >
-                  {user?.role === "CUSTOMER" ? "My orders" : "Customer login"}
+                  Customer login
                 </Link>
-                {user?.role !== "CUSTOMER" ? (
-                  <Link
-                    href="/customer/register"
-                    className="public-button-primary px-4 py-3 text-sm shadow-[0_14px_28px_rgba(182,49,75,0.2)]"
-                    data-testid="public-customer-register-link"
-                  >
-                    Customer register
-                  </Link>
-                ) : null}
+                <Link
+                  href="/customer/register"
+                  className="public-button-primary px-4 py-3 text-sm shadow-[0_14px_28px_rgba(182,49,75,0.2)]"
+                  data-testid="public-customer-register-link"
+                >
+                  Customer register
+                </Link>
               </>
             )}
           </div>
@@ -189,21 +162,15 @@ export function PublicHeader() {
             })}
           </nav>
 
-          {user?.role === "ADMIN" ? (
+          {user?.role === "CUSTOMER" ? (
             <div className="flex gap-2 md:hidden">
-              <Link href="/admin/dashboard" className="public-button-primary px-4 py-2 text-sm">
-                Admin dashboard
+              <Link
+                href={customerHref}
+                className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+              >
+                My orders
               </Link>
-              <button type="button" onClick={() => void logout()} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
-                Logout
-              </button>
-            </div>
-          ) : user?.role === "SELLER" ? (
-            <div className="flex gap-2 md:hidden">
-              <Link href="/seller/dashboard" className="public-button-primary px-4 py-2 text-sm">
-                Seller dashboard
-              </Link>
-              <button type="button" onClick={() => void logout()} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+              <button type="button" onClick={() => void logoutRole("customer")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
                 Logout
               </button>
             </div>
@@ -213,13 +180,11 @@ export function PublicHeader() {
                 href={customerHref}
                 className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
               >
-                {user?.role === "CUSTOMER" ? "My orders" : "Login"}
+                Login
               </Link>
-              {user?.role !== "CUSTOMER" ? (
-                <Link href="/customer/register" className="public-button-primary px-4 py-2 text-sm">
-                  Register
-                </Link>
-              ) : null}
+              <Link href="/customer/register" className="public-button-primary px-4 py-2 text-sm">
+                Register
+              </Link>
             </div>
           )}
         </div>

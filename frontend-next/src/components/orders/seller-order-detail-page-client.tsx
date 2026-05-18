@@ -51,7 +51,7 @@ const exceptionReasons: DeliveryExceptionReasonCode[] = [
 ];
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [order, setOrder] = useState<SellerOrderListItem | null>(null);
   const [nextStatus, setNextStatus] =

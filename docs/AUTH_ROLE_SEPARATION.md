@@ -32,17 +32,34 @@ Compatibility routes still exist:
 - Customer:
   - `POST /api/auth/customer/register`
   - `POST /api/auth/customer/login`
+  - `GET /api/auth/customer/me`
+  - `POST /api/auth/customer/logout`
 - Seller:
   - `POST /api/auth/seller/register`
   - `POST /api/auth/seller/login`
+  - `GET /api/auth/seller/me`
+  - `POST /api/auth/seller/logout`
 - Admin:
   - `POST /api/auth/admin/login`
+  - `GET /api/auth/admin/me`
+  - `POST /api/auth/admin/logout`
 - Shared compatibility:
   - `POST /api/auth/register`
   - `POST /api/auth/login`
   - `POST /api/auth/refresh`
   - `POST /api/auth/logout`
+  - `POST /api/auth/logout-all`
   - `GET /api/auth/me`
+
+## Session isolation
+
+- Same browser can keep admin, seller, and customer sessions in parallel.
+- Role cookies are isolated:
+  - `admin_access_token`
+  - `seller_access_token`
+  - `customer_access_token`
+- Public header only consumes customer auth state.
+- Admin login remains hidden from public marketplace UI.
 
 ## Identifier rules
 

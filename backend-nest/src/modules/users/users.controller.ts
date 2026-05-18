@@ -6,7 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CustomerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CurrentUserResponseDto } from './dto/current-user-response.dto';
 import { UsersService } from './users.service';
@@ -17,7 +17,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(CustomerJwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the current authenticated user profile.' })
   @ApiOkResponse({ type: CurrentUserResponseDto })

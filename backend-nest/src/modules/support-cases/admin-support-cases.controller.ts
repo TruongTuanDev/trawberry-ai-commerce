@@ -11,7 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { AdminCreateSupportCaseMessageDto } from './dto/create-support-case-message.dto';
 import { ListAdminSupportCasesQueryDto } from './dto/list-admin-support-cases-query.dto';
@@ -20,7 +20,7 @@ import { SupportCasesService } from './support-cases.service';
 
 @ApiTags('admin-support-cases')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
 @Controller('api/admin/support-cases')
 export class AdminSupportCasesController {
   constructor(private readonly supportCasesService: SupportCasesService) {}

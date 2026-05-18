@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CustomerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CreateCustomerSupportCaseDto } from './dto/create-customer-support-case.dto';
 import { CreateSupportCaseMessageDto } from './dto/create-support-case-message.dto';
@@ -9,7 +9,7 @@ import { SupportCasesService } from './support-cases.service';
 
 @ApiTags('customer-support-cases')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(CustomerJwtAuthGuard)
 @Controller('api/customer')
 export class CustomerSupportCasesController {
   constructor(private readonly supportCasesService: SupportCasesService) {}

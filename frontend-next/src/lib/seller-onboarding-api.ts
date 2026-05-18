@@ -8,6 +8,8 @@ export type SellerOnboardingProfile = {
   userId: string;
   sellerApprovalStatus: string;
   sellerRejectionReason: string | null;
+  sellerNextStep: string;
+  sellerOnboardingComplete: boolean;
   legalType: LegalType | null;
   legalName: string | null;
   inn: string | null;

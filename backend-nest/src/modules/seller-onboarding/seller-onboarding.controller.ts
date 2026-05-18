@@ -22,7 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
 import { UpdateSellerOnboardingProfileDto } from './dto/update-seller-onboarding-profile.dto';
@@ -31,7 +31,7 @@ import { SellerOnboardingService } from './seller-onboarding.service';
 
 @ApiTags('seller-onboarding')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(SellerJwtAuthGuard)
 @Controller('api/seller/onboarding')
 export class SellerOnboardingController {
   constructor(

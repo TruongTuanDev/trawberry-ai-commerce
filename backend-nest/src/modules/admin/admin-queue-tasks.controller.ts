@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { AdminQueueTasksService } from './admin-queue-tasks.service';
 import {
@@ -21,7 +21,7 @@ import {
   UpdateAdminQueueTaskStatusDto,
 } from './dto/admin-queue-task.dto';
 
-@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
 @Controller('api/admin/queue-tasks')
 export class AdminQueueTasksController {
   constructor(private readonly tasksService: AdminQueueTasksService) {}

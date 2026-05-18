@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AdminReportsController } from '../src/modules/admin/admin-reports.controller';
 import { AdminReportsService } from '../src/modules/admin/admin-reports.service';
-import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { readBody } from './test-helpers';
 
 describe('AdminReportsController (e2e)', () => {
@@ -120,7 +120,7 @@ describe('AdminReportsController (e2e)', () => {
       controllers: [AdminReportsController],
       providers: [{ provide: AdminReportsService, useValue: reportService }],
     })
-      .overrideGuard(JwtAuthGuard)
+      .overrideGuard(AdminJwtAuthGuard)
       .useValue({
         canActivate: (context: {
           switchToHttp: () => {

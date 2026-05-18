@@ -43,7 +43,7 @@ type BulkEditMode = "CATEGORY" | "PRICE" | "STOCK" | null;
 export function SellerProductsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const selectShop = useSellerWorkspaceStore((state) => state.selectShop);

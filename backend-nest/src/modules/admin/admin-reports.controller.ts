@@ -1,6 +1,6 @@
 import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AdminReportsService } from './admin-reports.service';
 import {
   AdminDeliveryExceptionsReportQueryDto,
@@ -10,7 +10,7 @@ import {
   AdminWorkloadReportQueryDto,
 } from './dto/admin-reports-query.dto';
 
-@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
 @Controller('api/admin/reports')
 export class AdminReportsController {
   constructor(private readonly reportsService: AdminReportsService) {}

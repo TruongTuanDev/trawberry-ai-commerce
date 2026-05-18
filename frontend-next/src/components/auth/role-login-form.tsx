@@ -7,7 +7,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  currentUserRequest,
+  getAdminMeRequest,
+  getCustomerMeRequest,
+  getSellerMeRequest,
   loginRequest,
   roleLoginRequest,
   type StaffRole,
@@ -37,6 +39,29 @@ type RoleLoginFormProps = {
   footerLinks?: Array<{ href: string; label: string }>;
   testIdPrefix: "admin-login" | "seller-login" | "customer-login" | "login";
 };
+
+async function loadRoleUser(
+  submitRole: StaffRole | undefined,
+  expectedRoles: StaffRole[],
+) {
+  if (submitRole === "ADMIN") {
+    return getAdminMeRequest();
+  }
+  if (submitRole === "SELLER") {
+    return getSellerMeRequest();
+  }
+  if (submitRole === "CUSTOMER") {
+    return getCustomerMeRequest();
+  }
+  if (expectedRoles.includes("ADMIN")) {
+    try {
+      return await getAdminMeRequest();
+    } catch {
+      return getSellerMeRequest();
+    }
+  }
+  return getCustomerMeRequest();
+}
 
 export function RoleLoginForm({
   roleLabel,
@@ -86,7 +111,7 @@ export function RoleLoginForm({
           password: values.password,
         });
       }
-      const user = await currentUserRequest();
+      const user = await loadRoleUser(submitRole, expectedRoles);
 
       if (!expectedRoles.includes(user.role as StaffRole)) {
         throw new Error(`${roleLabel} account is required.`);

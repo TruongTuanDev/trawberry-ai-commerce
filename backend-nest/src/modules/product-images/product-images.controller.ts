@@ -23,7 +23,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import { ProductImageResponseDto } from './dto/product-image-response.dto';
 import { UpdateProductImageDto } from './dto/update-product-image.dto';
@@ -32,7 +32,7 @@ import { ProductImagesService } from './product-images.service';
 
 @ApiTags('product-images')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/products/:productId/images')
 export class ProductImagesController {
   constructor(private readonly productImagesService: ProductImagesService) {}

@@ -17,7 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { ProductImageResponseDto } from '../product-images/dto/product-image-response.dto';
@@ -29,7 +29,7 @@ import { ListAiImageTasksQueryDto } from './dto/list-ai-image-tasks-query.dto';
 
 @ApiTags('ai-images')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId')
 export class AiImagesController {
   constructor(private readonly aiImagesService: AiImagesService) {}

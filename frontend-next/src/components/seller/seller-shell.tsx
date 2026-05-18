@@ -25,8 +25,8 @@ const navigation = [
 export function SellerShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.sellerUser);
+  const logoutRole = useAuthStore((state) => state.logoutRole);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const [loggingOut, setLoggingOut] = useState(false);
   const sellerBlocked =
@@ -40,6 +40,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+    if (user.role !== "SELLER") return;
     if (sellerBlocked) return;
     void loadShops();
   }, [loadShops, sellerBlocked, user]);
@@ -47,7 +48,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await logout();
+      await logoutRole("seller");
       router.replace("/seller-login");
     } finally {
       setLoggingOut(false);
@@ -69,14 +70,6 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               </p>
             </div>
             <nav className="mt-8 space-y-2">
-              {user?.role === "ADMIN" ? (
-                <Link
-                  href="/admin/sellers"
-                  className="flex items-center rounded-2xl px-4 py-3 text-sm font-medium text-white/78 transition hover:bg-white/8 hover:text-white"
-                >
-                  Admin approvals
-                </Link>
-              ) : null}
               {navigation.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (

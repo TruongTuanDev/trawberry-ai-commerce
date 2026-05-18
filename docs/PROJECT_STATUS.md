@@ -1,5 +1,18 @@
 # Project Status
 
+## Multi-Role Session Isolation
+
+- Status: implemented
+- Scope:
+  - role-specific cookies for admin, seller, customer
+  - role-specific `/api/auth/*/me`
+  - role-specific `/api/auth/*/logout`
+  - shared browser support for admin + seller + customer at once
+  - public header limited to customer auth state
+- Verification entry points:
+  - `backend-nest/test/auth.e2e-spec.ts`
+  - `npm run test:e2e:multi-role-sessions`
+
 ## Auth Role Separation
 
 - Status: implemented

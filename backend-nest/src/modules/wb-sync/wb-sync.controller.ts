@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { SyncAllProductsDto } from './dto/sync-all-products.dto';
@@ -16,7 +16,7 @@ import { SyncProductByArticleDto } from './dto/sync-product-by-article.dto';
 import { UpdateWbCredentialsDto } from './dto/wb-credentials.dto';
 import { WbProductSyncService } from './wb-product-sync.service';
 
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/wb-sync')
 export class WbSyncController {
   constructor(private readonly syncService: WbProductSyncService) {}

@@ -11,6 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { USER_ROLES } from '../../common/constants/roles.constant';
+import type { UserRole } from '../../common/constants/roles.constant';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import {
@@ -117,6 +118,16 @@ export class AuthService {
 
   async getCurrentUser(userId: string) {
     return this.usersService.getCurrentUserProfileById(userId);
+  }
+
+  async getCurrentUserForRole(userId: string, expectedRole: UserRole) {
+    const profile = await this.usersService.getCurrentUserProfileById(userId);
+
+    if (profile.role !== expectedRole) {
+      throw new UnauthorizedException('Invalid session for requested role.');
+    }
+
+    return profile;
   }
 
   private async registerForRole(dto: RegisterDto, role: string) {

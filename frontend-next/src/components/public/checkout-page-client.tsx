@@ -74,9 +74,9 @@ export function CheckoutPageClient({
   const addItem = useCartStore((state) => state.addItem);
   const patchItem = useCartStore((state) => state.patchItem);
   const clearCart = useCartStore((state) => state.clearCart);
-  const authUser = useAuthStore((state) => state.user);
+  const authUser = useAuthStore((state) => state.customerUser);
   const hydrateAuth = useAuthStore((state) => state.hydrate);
-  const refreshMe = useAuthStore((state) => state.refreshMe);
+  const refreshRole = useAuthStore((state) => state.refreshRole);
   const [paymentMethod, setPaymentMethod] = useState<
     "MANUAL_TRANSFER" | "CASH_ON_DELIVERY"
   >("MANUAL_TRANSFER");
@@ -98,8 +98,8 @@ export function CheckoutPageClient({
 
   useEffect(() => {
     hydrateAuth();
-    void refreshMe();
-  }, [hydrateAuth, refreshMe]);
+    void refreshRole("customer");
+  }, [hydrateAuth, refreshRole]);
 
   const customerForm = {
     fullName:

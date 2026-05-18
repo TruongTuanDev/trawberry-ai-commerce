@@ -7,7 +7,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
 import { CategoriesService } from './categories.service';
 
@@ -20,7 +20,7 @@ export class CategoriesController {
     return this.categoriesService.listActive();
   }
 
-  @UseGuards(JwtAuthGuard, AdminOnlyGuard)
+  @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
   @Post('api/admin/categories')
   createCategory(
     @Body() body: Parameters<CategoriesService['createCategory']>[0],
@@ -28,7 +28,7 @@ export class CategoriesController {
     return this.categoriesService.createCategory(body);
   }
 
-  @UseGuards(JwtAuthGuard, AdminOnlyGuard)
+  @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
   @Patch('api/admin/categories/:categoryId')
   updateCategory(
     @Param('categoryId') categoryId: string,
@@ -37,13 +37,13 @@ export class CategoriesController {
     return this.categoriesService.updateCategory(categoryId, body);
   }
 
-  @UseGuards(JwtAuthGuard, AdminOnlyGuard)
+  @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
   @Get('api/admin/category-mappings')
   listMappings() {
     return this.categoriesService.adminListMappings();
   }
 
-  @UseGuards(JwtAuthGuard, AdminOnlyGuard)
+  @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
   @Post('api/admin/category-mappings')
   createMapping(
     @Body() body: Parameters<CategoriesService['createMapping']>[0],
@@ -51,7 +51,7 @@ export class CategoriesController {
     return this.categoriesService.createMapping(body);
   }
 
-  @UseGuards(JwtAuthGuard, AdminOnlyGuard)
+  @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
   @Patch('api/admin/category-mappings/:mappingId')
   updateMapping(
     @Param('mappingId') mappingId: string,

@@ -4,11 +4,17 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '../users/users.module';
+import { AuthCookieService } from './auth-cookie.service';
 import { AuthController } from './auth.controller';
 import { AuthRateLimitGuard } from './auth-rate-limit.guard';
 import { AuthRateLimitService } from './auth-rate-limit.service';
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './strategies/jwt.strategy';
+import {
+  AdminJwtStrategy,
+  CustomerJwtStrategy,
+  JwtStrategy,
+  SellerJwtStrategy,
+} from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -46,7 +52,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AuthCookieService,
     JwtStrategy,
+    AdminJwtStrategy,
+    SellerJwtStrategy,
+    CustomerJwtStrategy,
     AuthRateLimitService,
     {
       provide: APP_GUARD,

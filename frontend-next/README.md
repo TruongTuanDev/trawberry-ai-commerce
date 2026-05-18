@@ -1,5 +1,18 @@
 # frontend-next
 
+## Multi-Role Sessions
+
+- Frontend auth state is split into `adminUser`, `sellerUser`, and `customerUser`.
+- Admin shell calls `GET /api/auth/admin/me`.
+- Seller shell calls `GET /api/auth/seller/me`.
+- Customer pages and public header call `GET /api/auth/customer/me`.
+- Public marketplace header only reflects customer auth state.
+- Browser verification entry:
+
+```bash
+npm run test:e2e:multi-role-sessions
+```
+
 ## Auth Role Separation
 
 - Public marketplace surfaces show customer login/register, seller register/login, cart, and search.

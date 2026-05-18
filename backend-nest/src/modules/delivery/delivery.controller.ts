@@ -16,7 +16,10 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import {
+  AdminJwtAuthGuard,
+  SellerJwtAuthGuard,
+} from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CalculateDeliveryOffersDto } from './dto/calculate-delivery-offers.dto';
@@ -41,7 +44,7 @@ import { DeliveryService } from './delivery.service';
 @ApiTags('delivery')
 @ApiBearerAuth()
 @Controller('api/shops/:shopId')
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 export class DeliveryController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
@@ -257,7 +260,7 @@ export class DeliveryController {
 
 @ApiTags('admin deliveries')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
 @Controller('api/admin/deliveries')
 export class AdminDeliveriesController {
   constructor(private readonly deliveryService: DeliveryService) {}

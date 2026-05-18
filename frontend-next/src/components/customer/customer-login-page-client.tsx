@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
-import { currentUserRequest, roleLoginRequest } from "@/lib/auth-api";
+import { getCustomerMeRequest, roleLoginRequest } from "@/lib/auth-api";
 import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -29,7 +29,7 @@ export function CustomerLoginPageClient() {
         identifier: normalizedIdentifier,
         password,
       });
-      const user = await currentUserRequest();
+      const user = await getCustomerMeRequest();
       if (user.role !== "CUSTOMER") {
         throw new Error("Customer account is required.");
       }

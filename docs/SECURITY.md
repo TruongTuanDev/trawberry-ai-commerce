@@ -20,17 +20,19 @@
 This document outlines the security measures implemented across the `backend-nest` and `frontend-next` applications.
 
 ## Authentication
-- **HttpOnly Cookies**: NestJS issues the access token in an `httpOnly` cookie with `path=/`, configurable `SameSite`, configurable `Secure`, and configurable `maxAge`. The Next.js app authenticates through `credentials: "include"` and re-hydrates the session from `GET /api/auth/me`.
+- **HttpOnly Cookies**: NestJS now issues role-isolated `httpOnly` cookies with `path=/`, configurable `SameSite`, configurable `Secure`, and configurable `maxAge`. The Next.js app authenticates through `credentials: "include"` and re-hydrates role-specific sessions from `GET /api/auth/admin|seller|customer/me`.
+- **Role Cookie Split**: Role logins no longer share one browser cookie. Admin, seller, and customer cookies can coexist safely in one browser context.
 - **Bearer Token Fallback**: For backward compatibility with legacy clients (such as API integration scripts, `curl`, and old applications), the API still supports extracting JWTs from the `Authorization: Bearer <token>` header if the cookie is not present.
 - **SameSite Policy**: Cookies are configured with `SameSite=lax` (default) to provide CSRF protection while maintaining usability. This can be configured via environment variables.
 - **Secure Flag**: The `Secure` flag can be toggled via `AUTH_COOKIE_SECURE=true` for production environments (HTTPS only).
 - **Credentialed CORS Allowlist**: `credentials: true` is paired with explicit origins only. Do not use wildcard origins with cookie auth.
-- **Logout Flow**: `POST /api/auth/logout` clears the auth cookie and the frontend clears its local user/shop hydration state.
+- **Logout Flow**: Role-specific logout endpoints clear only the matching role cookie. `POST /api/auth/logout-all` clears all auth cookies.
 - **Client Storage**: The frontend no longer stores raw auth JWTs in `localStorage`. `localStorage` is only used for lightweight UI hydration data such as the current user snapshot and selected seller shop.
 - **Browser E2E Coverage**: `frontend-next/tests/e2e/auth-cookie.spec.ts` verifies browser login, session persistence after reload, logout, protected-route redirect, and absence of raw JWT auth tokens in `localStorage`.
 - **CSRF Posture**: This phase does not add a synchronizer CSRF token. Current posture depends on `SameSite` cookies, no wildcard credentialed CORS, and trusted frontend origins only.
 
 ## Authorization
+- **Role-Specific Guards**: Admin endpoints read only `admin_access_token`, seller endpoints read only `seller_access_token`, customer endpoints read only `customer_access_token`, and checkout optional auth reads only the customer cookie.
 - **Admin Seller Approval**: Seller review endpoints under `/api/admin/sellers` require both `JwtAuthGuard` and `AdminOnlyGuard`. Non-admin users receive `403`.
 - **Seller Approval Gate**: Newly registered sellers start with `approvalStatus=PENDING`. The shop creation API rejects `PENDING` and `REJECTED` sellers, so UI hiding is not the security boundary.
 - **KYC Approval Gate**: Admin seller approval now requires at least one `APPROVED` seller document. Seller onboarding endpoints only expose the current seller's own profile and documents.

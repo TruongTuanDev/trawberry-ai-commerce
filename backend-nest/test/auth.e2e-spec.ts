@@ -403,10 +403,14 @@ describe('AuthController (e2e)', () => {
     expect(body.role).toBe('CUSTOMER');
     expect(response.headers['set-cookie']).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('access_token='),
+        expect.stringContaining('customer_access_token='),
         expect.stringContaining('HttpOnly'),
       ]),
     );
+    const setCookies = response.headers['set-cookie'] as string[];
+    expect(
+      setCookies.some((cookie) => cookie.startsWith('access_token=')),
+    ).toBe(false);
   });
 
   it('logs customer in by phone', async () => {
@@ -538,6 +542,113 @@ describe('AuthController (e2e)', () => {
     expect(body.role).toBe('CUSTOMER');
     expect(body.fullName).toBe('Customer One');
     expect(body.isSyntheticEmail).toBe(true);
+  });
+
+  it('returns current user from role-specific /api/auth/customer/me', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer-role@example.com',
+        password: 'password123',
+        fullName: 'Customer Role',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'customer-role@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/auth/customer/me')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(200);
+
+    expect(readBody<CurrentUserResponse>(response).role).toBe('CUSTOMER');
+  });
+
+  it('allows admin and seller cookies to coexist and read the correct me endpoint', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        email: 'seller-coexist@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const adminLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'DemoAdmin123!',
+      })
+      .expect(200);
+
+    const sellerLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: 'seller-coexist@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const combinedCookies = [
+      ...adminLoginResponse.headers['set-cookie'],
+      ...sellerLoginResponse.headers['set-cookie'],
+    ];
+
+    const adminMeResponse = await request(app.getHttpServer())
+      .get('/api/auth/admin/me')
+      .set('Cookie', combinedCookies)
+      .expect(200);
+    const sellerMeResponse = await request(app.getHttpServer())
+      .get('/api/auth/seller/me')
+      .set('Cookie', combinedCookies)
+      .expect(200);
+
+    expect(readBody<CurrentUserResponse>(adminMeResponse).role).toBe('ADMIN');
+    expect(readBody<CurrentUserResponse>(sellerMeResponse).role).toBe('SELLER');
+  });
+
+  it('rejects seller cookie on admin me endpoint', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        email: 'seller-only@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const sellerLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: 'seller-only@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/api/auth/admin/me')
+      .set('Cookie', sellerLoginResponse.headers['set-cookie'])
+      .expect(401);
+  });
+
+  it('rejects admin cookie on seller me endpoint', async () => {
+    const adminLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'DemoAdmin123!',
+      })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/api/auth/seller/me')
+      .set('Cookie', adminLoginResponse.headers['set-cookie'])
+      .expect(401);
   });
 
   it('keeps Authorization bearer fallback for /api/auth/me', async () => {
@@ -706,4 +817,71 @@ describe('AuthController (e2e)', () => {
     );
   });
 
+  it('clears only the seller cookie on seller logout while admin remains valid', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        email: 'seller-logout@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const adminLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'DemoAdmin123!',
+      })
+      .expect(200);
+
+    const sellerLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: 'seller-logout@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const logoutResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/logout')
+      .set('Cookie', [
+        ...adminLoginResponse.headers['set-cookie'],
+        ...sellerLoginResponse.headers['set-cookie'],
+      ])
+      .expect(200);
+
+    expect(logoutResponse.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('seller_access_token=;'),
+      ]),
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/auth/admin/me')
+      .set('Cookie', adminLoginResponse.headers['set-cookie'])
+      .expect(200);
+  });
+
+  it('clears all role cookies on logout-all', async () => {
+    const adminLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'DemoAdmin123!',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/logout-all')
+      .set('Cookie', adminLoginResponse.headers['set-cookie'])
+      .expect(200);
+
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('admin_access_token=;'),
+        expect.stringContaining('seller_access_token=;'),
+        expect.stringContaining('customer_access_token=;'),
+      ]),
+    );
+  });
 });

@@ -19,7 +19,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { BulkProductActionDto } from './dto/bulk-product-action.dto';
@@ -36,7 +36,7 @@ import { ProductsService } from './products.service';
 
 @ApiTags('products')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, ShopAccessGuard)
+@UseGuards(SellerJwtAuthGuard, ShopAccessGuard)
 @Controller('api/shops/:shopId/products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}

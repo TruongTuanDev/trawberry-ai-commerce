@@ -8,7 +8,7 @@ import { AdminQueuesController } from '../src/modules/admin/admin-queues.control
 import { AdminQueuesService } from '../src/modules/admin/admin-queues.service';
 import { AdminQueueTasksService } from '../src/modules/admin/admin-queue-tasks.service';
 import { PrismaService } from '../src/common/prisma/prisma.service';
-import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
 import { readBody } from './test-helpers';
 
 describe('AdminQueuesController (e2e)', () => {
@@ -134,7 +134,7 @@ describe('AdminQueuesController (e2e)', () => {
         { provide: PrismaService, useValue: prismaMock },
       ],
     })
-      .overrideGuard(JwtAuthGuard)
+      .overrideGuard(AdminJwtAuthGuard)
       .useValue({
         canActivate: (context: {
           switchToHttp: () => {

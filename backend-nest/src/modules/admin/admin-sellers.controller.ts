@@ -16,7 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { AdminSellersService } from './admin-sellers.service';
 import { AdminSellerResponseDto } from './dto/admin-seller-response.dto';
@@ -25,7 +25,7 @@ import { RejectSellerDto } from './dto/reject-seller.dto';
 
 @ApiTags('admin sellers')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, AdminOnlyGuard)
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
 @Controller()
 export class AdminSellersController {
   constructor(private readonly adminSellersService: AdminSellersService) {}

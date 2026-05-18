@@ -9,7 +9,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export function SellerOrdersPageClient() {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [orders, setOrders] = useState<SellerOrderListItem[]>([]);
   const [page, setPage] = useState(1);

@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getRoleHome } from "@/lib/auth-redirect";
-import { useAuthStore } from "@/stores/auth-store";
+import { type AuthRoleKey, useAuthStore } from "@/stores/auth-store";
 
 type ProtectedShellProps = {
   children: React.ReactNode;
+  role: AuthRoleKey;
   allowedRoles?: string[];
   loginPath?: string;
   redirectByRole?: Partial<Record<string, string>>;
@@ -14,17 +15,24 @@ type ProtectedShellProps = {
 
 export function ProtectedShell({
   children,
+  role,
   allowedRoles,
   loginPath = "/seller-login",
   redirectByRole = {},
 }: ProtectedShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) =>
+    role === "admin"
+      ? state.adminUser
+      : role === "seller"
+        ? state.sellerUser
+        : state.customerUser,
+  );
   const hydrated = useAuthStore((state) => state.hydrated);
-  const sessionLoading = useAuthStore((state) => state.sessionLoading);
-  const sessionError = useAuthStore((state) => state.sessionError);
-  const refreshMe = useAuthStore((state) => state.refreshMe);
+  const sessionLoading = useAuthStore((state) => state.sessionLoading[role]);
+  const sessionError = useAuthStore((state) => state.sessionError[role]);
+  const refreshRole = useAuthStore((state) => state.refreshRole);
   const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
@@ -32,13 +40,13 @@ export function ProtectedShell({
       return;
     }
 
-    void refreshMe().then((authenticated) => {
+    void refreshRole(role).then((authenticated) => {
       setSessionChecked(true);
       if (!authenticated) {
         router.replace(`${loginPath}?next=${encodeURIComponent(pathname)}`);
       }
     });
-  }, [hydrated, loginPath, pathname, refreshMe, router, sessionChecked]);
+  }, [hydrated, loginPath, pathname, refreshRole, role, router, sessionChecked]);
 
   useEffect(() => {
     if (!hydrated || sessionLoading || !sessionChecked) {
