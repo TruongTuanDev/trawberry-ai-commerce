@@ -1,5 +1,27 @@
 # Project Status
 
+## Reality Audit Snapshot - 2026-05-18
+
+- Primary new-stack commerce flows remain real and broadly verified.
+- External-provider readiness is still partial:
+  - Wildberries real mode: coded, not verified in this audit
+  - OpenAI real mode: coded, not called in this audit
+  - Yandex real mode: coded, not called in this audit
+  - CDEK real mode: skeleton only
+  - payment provider: not implemented
+- Placeholder/UI-only surfaces still present:
+  - `frontend-next/src/app/seller/dashboard/page.tsx`
+  - `frontend-next/src/app/seller/ai-images/page.tsx`
+- Verification results from this audit:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass (`25` suites, `185` tests)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: failed (`3` failures) due invalid S3 endpoint state in current local config path
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: failed because Docker daemon was unavailable locally
+
 ## Multi-Role Session Isolation
 
 - Status: implemented

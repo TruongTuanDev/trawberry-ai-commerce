@@ -1,5 +1,20 @@
 # Phase Report
 
+## 2026-05-18 Reality Audit Addendum
+
+- Added `docs/REALITY_AUDIT.md` as a repo-wide real-vs-mock-vs-demo audit for the active new stack only.
+- Audit conclusion:
+  - core commerce MVP flows in `backend-nest` + `frontend-next` are broadly real and verified
+  - real external integrations remain partial
+  - `ai-service` local pytest is currently environment-sensitive and failed in this audit
+  - seller dashboard and `/seller/ai-images` remain placeholder-level UI surfaces
+  - no CI pipeline or release-grade deployment path is finished yet
+- Release blockers called out by the audit:
+  - no real payment provider
+  - CDEK real provider still skeleton-only
+  - Docker runtime could not be re-verified on 2026-05-18 because local Docker daemon was unavailable
+  - `data.xlsx` must be treated as a repo hygiene blocker if Git still tracks it
+
 ## Multi-Role Session Isolation
 
 - Split browser cookie auth by role:
