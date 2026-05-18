@@ -45,6 +45,7 @@ If the token is missing or invalid, the service returns `401`.
   - `images.generate` when no reference image exists
 
 ## Important env
+- `ENVIRONMENT=development|test|production`
 - `AI_IMAGE_PROVIDER=mock|openai`
 - `OPENAI_API_KEY=`
 - `OPENAI_IMAGE_MODEL=gpt-image-1`
@@ -123,6 +124,11 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+Profiles:
+- development: `.env.example`
+- test: `.env.test.example`
+- production: inject real values from the deploy platform; do not reuse local examples unchanged
+
 ### 3. Start with mock provider
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -131,6 +137,10 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 Recommended local defaults:
 - `AI_IMAGE_PROVIDER=mock`
 - `STORAGE_DRIVER=mock`
+
+If you want persisted local files instead of metadata-only mock storage:
+- set `STORAGE_DRIVER=local`
+- keep `AI_IMAGE_PROVIDER=mock` unless you intentionally test OpenAI with a real key
 
 ### 4. Start with OpenAI provider
 Set:
@@ -148,6 +158,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 python -m compileall app
 python -m pytest -q
 ```
+
+Test isolation rules:
+- `pytest` forces `ENVIRONMENT=test`
+- `pytest` forces `AI_IMAGE_PROVIDER=mock`
+- `pytest` forces `STORAGE_DRIVER=mock`
+- `pytest` clears S3/OpenAI runtime env so tests never require MinIO, S3, or OpenAI
 
 ## Optional OpenAI smoke
 This never runs by default.

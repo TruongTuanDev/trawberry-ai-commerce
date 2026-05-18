@@ -1,5 +1,23 @@
 # Project Status
 
+## CI + AI Service Isolation Snapshot - 2026-05-18
+
+- `ai-service` local pytest isolation is fixed for mock-safe mode.
+- Added GitHub Actions CI at `.github/workflows/ci.yml`.
+- CI scope:
+  - `backend-nest`: lint, test, build
+  - `frontend-next`: lint, build
+  - `ai-service`: compileall, pytest
+  - Docker build validation for `backend-nest` and `frontend-next`
+- Local verification results for this phase:
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass (`18` tests)
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest frontend-next`: pass
+- Local safety finding:
+  - the current local `infra/.env` points `ai-service` at real `OpenAI` runtime mode; keep it untracked, rotate the key if it was real, and normalize local shared setup back to mock-safe defaults
+
 ## Reality Audit Snapshot - 2026-05-18
 
 - Primary new-stack commerce flows remain real and broadly verified.
@@ -19,7 +37,7 @@
   - `frontend-next npm run lint`: pass
   - `frontend-next npm run build`: pass
   - `ai-service python -m compileall app`: pass
-  - `ai-service python -m pytest -q`: failed (`3` failures) due invalid S3 endpoint state in current local config path
+  - `ai-service python -m pytest -q`: pass after test env isolation hardening (`18` tests)
   - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: failed because Docker daemon was unavailable locally
 
 ## Multi-Role Session Isolation

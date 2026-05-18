@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: strawberry_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d strawberry_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend-nest
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/strawberry_ci?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      JWT_SECRET: ci-legacy-secret
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      BULLMQ_DISABLED: "true"
+      FILE_STORAGE_DRIVER: local
+      STORAGE_DRIVER: local
+      UPLOAD_ROOT: uploads-ci
+      FILES_PUBLIC_BASE_URL: http://127.0.0.1:3001
+      AI_SERVICE_BASE_URL: http://127.0.0.1:8010
+      AI_SERVICE_INTERNAL_TOKEN: ci-internal-token
+      WB_SYNC_MODE: mock
+      DELIVERY_PROVIDER_MODE: mock
+      CDEK_DELIVERY_ENABLED: "false"
+      YANDEX_DELIVERY_ENABLED: "false"
+      WB_CREDENTIAL_ENCRYPTION_KEY: ci-wb-credential-key-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend-nest/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma db push
+      - run: npm run lint
+      - run: npm test -- --runInBand
+      - run: npm run build
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-next
+    env:
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend-next/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  ai-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    env:
+      ENVIRONMENT: test
+      AI_IMAGE_PROVIDER: mock
+      OPENAI_API_KEY: ""
+      RUN_OPENAI_SMOKE: "false"
+      STORAGE_DRIVER: mock
+      STORAGE_LOCAL_ROOT: generated-test
+      STORAGE_PUBLIC_BASE_URL: http://testserver/generated
+      S3_ENDPOINT: ""
+      S3_ENDPOINT_URL: ""
+      S3_ACCESS_KEY_ID: ""
+      S3_SECRET_ACCESS_KEY: ""
+      S3_PUBLIC_BASE_URL: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ai-service/requirements.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: python -m compileall app
+      - run: python -m pytest -q
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs:
+      - backend
+      - frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t strawberry-backend-nest:ci backend-nest
+      - name: Build frontend image
+        run: docker build --build-arg NEXT_PUBLIC_API_URL=http://127.0.0.1:3001 -t strawberry-frontend-next:ci frontend-next

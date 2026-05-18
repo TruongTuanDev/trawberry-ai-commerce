@@ -1,5 +1,24 @@
 # Phase Report
 
+## 2026-05-18 CI + AI Service Isolation Phase
+
+- Fixed `ai-service` pytest isolation so local `.env` contamination no longer flips tests onto S3 or OpenAI.
+- Added `ai-service/tests/conftest.py` to force `ENVIRONMENT=test`, `AI_IMAGE_PROVIDER=mock`, `STORAGE_DRIVER=mock`, and blank external-provider env during pytest.
+- Added `ai-service/.env.test.example` and clarified dev/test/prod env profiles in `ai-service/README.md` and `.env.example`.
+- Added GitHub Actions workflow at `.github/workflows/ci.yml` for:
+  - `backend-nest` lint/test/build
+  - `frontend-next` lint/build
+  - `ai-service` compileall/pytest
+  - Docker image build checks for `backend-nest` and `frontend-next`
+- Local re-verification for this phase:
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass (`18` tests)
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env config`: pass
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: pass (`6/6` healthy)
+  - `docker compose -f infra/docker-compose.yml --env-file infra/.env build backend-nest frontend-next`: pass
+- Local safety finding:
+  - the current local `infra/.env` selects real `OpenAI` mode for `ai-service`; keep that file untracked, rotate the key if it was a live credential, and reset local defaults to mock-safe before wider team use
+
 ## 2026-05-18 Reality Audit Addendum
 
 - Added `docs/REALITY_AUDIT.md` as a repo-wide real-vs-mock-vs-demo audit for the active new stack only.
