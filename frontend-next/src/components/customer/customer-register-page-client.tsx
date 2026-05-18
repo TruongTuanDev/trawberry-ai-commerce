@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
 import { currentUserRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
+import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function CustomerRegisterPageClient() {
@@ -28,10 +29,16 @@ export function CustomerRegisterPageClient() {
       if (password !== confirmPassword) {
         throw new Error("Passwords do not match.");
       }
+      const normalizedPhone = phone.trim() ? maybeNormalizePhone(phone) : "";
 
-      await roleRegisterRequest("CUSTOMER", { email, phone, password, fullName });
+      await roleRegisterRequest("CUSTOMER", {
+        email: email.trim() || undefined,
+        phone: normalizedPhone || undefined,
+        password,
+        fullName,
+      });
       await roleLoginRequest("CUSTOMER", {
-        identifier: email.trim() || phone.trim(),
+        identifier: email.trim() || normalizedPhone,
         password,
       });
       const user = await currentUserRequest();
@@ -58,10 +65,10 @@ export function CustomerRegisterPageClient() {
               <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="public-input" data-testid="customer-register-name" />
             </Field>
             <Field label="Email">
-              <input value={email} onChange={(event) => setEmail(event.target.value)} className="public-input" data-testid="customer-register-email" />
+              <input value={email} onChange={(event) => setEmail(event.target.value)} className="public-input" placeholder="name@example.com" data-testid="customer-register-email" />
             </Field>
             <Field label="Phone">
-              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" data-testid="customer-register-phone" />
+              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="customer-register-phone" />
             </Field>
             <Field label="Password">
               <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="customer-register-password" />

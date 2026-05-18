@@ -13,6 +13,15 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
+import {
+  createSyntheticEmailFromPhone,
+  isSyntheticEmail,
+  normalizePhone,
+} from '../../common/utils/phone.util';
+import {
+  isSellerOnboardingComplete,
+  resolveSellerNextStep,
+} from '../../common/utils/seller-next-step.util';
 
 @Injectable()
 export class AuthService {
@@ -78,6 +87,21 @@ export class AuthService {
           sellerProfile: {
             select: {
               approvalStatus: true,
+              rejectionReason: true,
+              legalType: true,
+              legalName: true,
+              inn: true,
+              legalAddress: true,
+              contactName: true,
+              contactPhone: true,
+              contactEmail: true,
+              bankName: true,
+              bankAccount: true,
+              bik: true,
+              documents: {
+                select: { id: true },
+                take: 1,
+              },
             },
           },
         },
@@ -126,7 +150,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const persistedEmail = email ?? this.createSyntheticEmail(phone!);
+    const persistedEmail = email ?? createSyntheticEmailFromPhone(phone!);
 
     const user = await this.prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
@@ -156,6 +180,21 @@ export class AuthService {
             sellerProfile: {
               select: {
                 approvalStatus: true,
+                rejectionReason: true,
+                legalType: true,
+                legalName: true,
+                inn: true,
+                legalAddress: true,
+                contactName: true,
+                contactPhone: true,
+                contactEmail: true,
+                bankName: true,
+                bankAccount: true,
+                bik: true,
+                documents: {
+                  select: { id: true },
+                  take: 1,
+                },
               },
             },
           },
@@ -176,6 +215,21 @@ export class AuthService {
         sellerProfile: {
           select: {
             approvalStatus: true,
+            rejectionReason: true,
+            legalType: true,
+            legalName: true,
+            inn: true,
+            legalAddress: true,
+            contactName: true,
+            contactPhone: true,
+            contactEmail: true,
+            bankName: true,
+            bankAccount: true,
+            bik: true,
+            documents: {
+              select: { id: true },
+              take: 1,
+            },
           },
         },
       },
@@ -213,8 +267,57 @@ export class AuthService {
     status: string;
     sellerProfile?: {
       approvalStatus: string;
+      rejectionReason?: string | null;
+      legalType?: string | null;
+      legalName?: string | null;
+      inn?: string | null;
+      legalAddress?: string | null;
+      contactName?: string | null;
+      contactPhone?: string | null;
+      contactEmail?: string | null;
+      bankName?: string | null;
+      bankAccount?: string | null;
+      bik?: string | null;
+      documents?: Array<{ id: string }>;
     } | null;
   }) {
+    const sellerOnboardingComplete =
+      user.role === USER_ROLES.SELLER
+        ? isSellerOnboardingComplete({
+            approvalStatus: user.sellerProfile?.approvalStatus ?? null,
+            rejectionReason: user.sellerProfile?.rejectionReason ?? null,
+            legalType: user.sellerProfile?.legalType ?? null,
+            legalName: user.sellerProfile?.legalName ?? null,
+            inn: user.sellerProfile?.inn ?? null,
+            legalAddress: user.sellerProfile?.legalAddress ?? null,
+            contactName: user.sellerProfile?.contactName ?? null,
+            contactPhone: user.sellerProfile?.contactPhone ?? null,
+            contactEmail: user.sellerProfile?.contactEmail ?? null,
+            bankName: user.sellerProfile?.bankName ?? null,
+            bankAccount: user.sellerProfile?.bankAccount ?? null,
+            bik: user.sellerProfile?.bik ?? null,
+            documentCount: user.sellerProfile?.documents?.length ?? 0,
+          })
+        : null;
+    const sellerNextStep =
+      user.role === USER_ROLES.SELLER
+        ? resolveSellerNextStep({
+            approvalStatus: user.sellerProfile?.approvalStatus ?? null,
+            rejectionReason: user.sellerProfile?.rejectionReason ?? null,
+            legalType: user.sellerProfile?.legalType ?? null,
+            legalName: user.sellerProfile?.legalName ?? null,
+            inn: user.sellerProfile?.inn ?? null,
+            legalAddress: user.sellerProfile?.legalAddress ?? null,
+            contactName: user.sellerProfile?.contactName ?? null,
+            contactPhone: user.sellerProfile?.contactPhone ?? null,
+            contactEmail: user.sellerProfile?.contactEmail ?? null,
+            bankName: user.sellerProfile?.bankName ?? null,
+            bankAccount: user.sellerProfile?.bankAccount ?? null,
+            bik: user.sellerProfile?.bik ?? null,
+            documentCount: user.sellerProfile?.documents?.length ?? 0,
+          })
+        : null;
+
     const payload = {
       sub: user.email,
       userId: user.id,
@@ -265,6 +368,9 @@ export class AuthService {
       role: user.role,
       status: user.status,
       approvalStatus: user.sellerProfile?.approvalStatus ?? null,
+      sellerNextStep,
+      sellerOnboardingComplete,
+      isSyntheticEmail: isSyntheticEmail(user.email),
     };
   }
 
@@ -290,7 +396,7 @@ export class AuthService {
 
     return trimmed.includes('@')
       ? trimmed.toLowerCase()
-      : this.normalizePhone(trimmed);
+      : normalizePhone(trimmed);
   }
 
   private normalizeOptionalEmail(email?: string | null) {
@@ -306,16 +412,7 @@ export class AuthService {
     if (!normalized) {
       return null;
     }
-    return this.normalizePhone(normalized);
-  }
-
-  private normalizePhone(phone: string) {
-    return phone.replace(/\s+/g, '');
-  }
-
-  private createSyntheticEmail(phone: string) {
-    const safePhone = phone.replace(/[^a-zA-Z0-9]/g, '');
-    return `phone-${safePhone}@customer.local`;
+    return normalizePhone(normalized);
   }
 
   private getJwtSecret(rawSecret: string): string | Buffer {

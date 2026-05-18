@@ -8,6 +8,11 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { normalizePhone } from '../../common/utils/phone.util';
+import {
+  isSellerOnboardingComplete,
+  resolveSellerNextStep,
+} from '../../common/utils/seller-next-step.util';
 import { FilesService } from '../files/files.service';
 import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
 import { UpdateSellerOnboardingProfileDto } from './dto/update-seller-onboarding-profile.dto';
@@ -49,11 +54,18 @@ export class SellerOnboardingService {
         kpp: dto.kpp?.trim(),
         legalAddress: dto.legalAddress?.trim(),
         contactName: dto.contactName?.trim(),
-        contactPhone: dto.contactPhone?.trim(),
+        contactPhone: dto.contactPhone
+          ? normalizePhone(dto.contactPhone, 'Contact phone')
+          : undefined,
         contactEmail: dto.contactEmail?.trim().toLowerCase(),
         bankName: dto.bankName?.trim(),
         bankAccount: dto.bankAccount?.trim(),
         bik: dto.bik?.trim(),
+      },
+      include: {
+        documents: {
+          select: { id: true },
+        },
       },
     });
     return this.mapProfile(profile);
@@ -132,6 +144,11 @@ export class SellerOnboardingService {
   private async findProfile(userId: string) {
     const profile = await this.prisma.sellerProfile.findUnique({
       where: { userId },
+      include: {
+        documents: {
+          select: { id: true },
+        },
+      },
     });
     if (!profile) {
       throw new NotFoundException(
@@ -179,11 +196,44 @@ export class SellerOnboardingService {
     bankAccount: string | null;
     bik: string | null;
     updatedAt: Date;
+    documents?: Array<{ id: string }>;
   }) {
+    const sellerOnboardingComplete = isSellerOnboardingComplete({
+      approvalStatus: profile.approvalStatus,
+      rejectionReason: profile.rejectionReason,
+      legalType: profile.legalType,
+      legalName: profile.legalName,
+      inn: profile.inn,
+      legalAddress: profile.legalAddress,
+      contactName: profile.contactName,
+      contactPhone: profile.contactPhone,
+      contactEmail: profile.contactEmail,
+      bankName: profile.bankName,
+      bankAccount: profile.bankAccount,
+      bik: profile.bik,
+      documentCount: profile.documents?.length ?? 0,
+    });
+
     return {
       userId: profile.userId,
       sellerApprovalStatus: profile.approvalStatus,
       sellerRejectionReason: profile.rejectionReason,
+      sellerNextStep: resolveSellerNextStep({
+        approvalStatus: profile.approvalStatus,
+        rejectionReason: profile.rejectionReason,
+        legalType: profile.legalType,
+        legalName: profile.legalName,
+        inn: profile.inn,
+        legalAddress: profile.legalAddress,
+        contactName: profile.contactName,
+        contactPhone: profile.contactPhone,
+        contactEmail: profile.contactEmail,
+        bankName: profile.bankName,
+        bankAccount: profile.bankAccount,
+        bik: profile.bik,
+        documentCount: profile.documents?.length ?? 0,
+      }),
+      sellerOnboardingComplete,
       legalType: profile.legalType,
       legalName: profile.legalName,
       inn: profile.inn,

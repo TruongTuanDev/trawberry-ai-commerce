@@ -9,6 +9,10 @@ import { Prisma, type ProductVariant } from '@prisma/client';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
+import {
+  createSyntheticEmailFromPhone,
+  normalizePhone,
+} from '../../common/utils/phone.util';
 import { CreateCheckoutOrderDto } from './dto/create-checkout-order.dto';
 import {
   CartValidationLine,
@@ -217,20 +221,29 @@ export class CheckoutService {
       return user.userId;
     }
 
-    const normalizedPhone = dto.customer.phone.trim();
+    const normalizedPhone = normalizePhone(
+      dto.customer.phone,
+      'Customer phone',
+    );
     const normalizedEmail = dto.customer.email?.trim().toLowerCase() ?? null;
     const passwordHash = await bcrypt.hash(randomBytes(16).toString('hex'), 10);
     const email =
-      normalizedEmail ??
-      `guest-checkout-${Date.now()}-${Math.round(Math.random() * 1_000_000)}@guest.local`;
+      normalizedEmail ?? createSyntheticEmailFromPhone(normalizedPhone);
 
-    const existingMatches = await this.prisma.user.findMany({
-      where: {
-        OR: [
-          normalizedEmail ? { email: normalizedEmail } : undefined,
-          { phone: normalizedPhone },
-        ].filter(Boolean) as Prisma.UserWhereInput[],
-      },
+    const emailMatch = normalizedEmail
+      ? await this.prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            role: true,
+            fullName: true,
+          },
+        })
+      : null;
+    const phoneMatch = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
       select: {
         id: true,
         email: true,
@@ -240,16 +253,13 @@ export class CheckoutService {
       },
     });
 
-    if (existingMatches.length > 0) {
-      const emailMatch = normalizedEmail
-        ? existingMatches.find(
-            (candidate) => candidate.email === normalizedEmail,
-          )
-        : null;
-      const phoneMatch = existingMatches.find(
-        (candidate) => candidate.phone === normalizedPhone,
-      );
-      const matchedUser = emailMatch ?? phoneMatch ?? existingMatches[0];
+    if (emailMatch || phoneMatch) {
+      const matchedUser = emailMatch ?? phoneMatch;
+      if (!matchedUser) {
+        throw new BadRequestException(
+          'Customer contact details are already in use.',
+        );
+      }
 
       if (emailMatch && phoneMatch && emailMatch.id !== phoneMatch.id) {
         throw new BadRequestException(

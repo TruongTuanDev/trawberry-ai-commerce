@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test",
+    "test:e2e:auth-hardening": "playwright test auth-hardening",
     "test:e2e:auth-role-separation": "playwright test auth-role-separation",
     "test:e2e:admin-seller-approval": "playwright test admin-seller-approval",
     "test:e2e:auth": "playwright test auth-cookie",

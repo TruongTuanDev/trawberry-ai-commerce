@@ -145,6 +145,13 @@ export default function SellerOnboardingPage() {
             <p className="mt-1 font-bold text-[var(--foreground)]" data-testid="seller-onboarding-status">
               {approval?.sellerApprovalStatus ?? "Loading"}
             </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              {approval?.sellerApprovalStatus === "REJECTED"
+                ? "Review the rejection note, update onboarding details, and re-upload any required documents."
+                : approval?.sellerApprovalStatus === "APPROVED"
+                  ? "Seller approval is active. Marketplace tools are available."
+                  : "Complete profile details and add at least one verification document before admin approval."}
+            </p>
           </div>
         </div>
         {approval?.sellerApprovalStatus === "REJECTED" && approval.sellerRejectionReason ? (

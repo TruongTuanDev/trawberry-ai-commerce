@@ -30,4 +30,13 @@ export class CurrentUserResponseDto {
 
   @ApiProperty({ nullable: true })
   sellerRejectionReason!: string | null;
+
+  @ApiProperty({ nullable: true, example: 'WAIT_FOR_APPROVAL' })
+  sellerNextStep!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sellerOnboardingComplete!: boolean | null;
+
+  @ApiProperty()
+  isSyntheticEmail!: boolean;
 }

@@ -14,6 +14,13 @@
 - Login supports email/password and phone/password.
 - Public registration never creates admin accounts.
 
+## Auth Hardening 2
+
+- Auth login/register endpoints are throttled.
+- Cookie auth expects explicit `CORS_ALLOWED_ORIGINS` when credentials are enabled.
+- Phone identifiers normalize to a stable canonical form.
+- Seller auth/session payloads now expose pending vs onboarding vs approved next-step state.
+
 NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot service.
 
 ## Stack

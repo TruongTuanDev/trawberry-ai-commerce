@@ -59,14 +59,23 @@ Compatibility routes still exist:
 - `CUSTOMER` -> `/customer/orders`
 - `SELLER`:
   - approved -> `/seller/dashboard`
-  - pending/rejected -> `/seller/onboarding`
+  - onboarding incomplete -> `/seller/onboarding`
+  - waiting approval -> `/seller/pending`
+  - rejected -> `/seller/pending`
 - `ADMIN` -> `/admin/dashboard`
+
+## Hardening follow-up
+
+- Auth endpoints are throttled with role-specific limits.
+- Phone identifiers are normalized before lookup and duplicate checks.
+- Seller session payloads now expose `sellerNextStep` and `sellerOnboardingComplete`.
+- Internal synthetic email storage remains implementation detail for phone-only accounts.
 
 ## Security notes
 
 - Hidden admin route is a UX/privacy measure only.
 - Real security remains:
   - role-aware login endpoints
-  - `JwtAuthGuard`
-  - admin-only / seller-only route guards
+  - role-specific JWT guards
+  - admin-only / seller-only / customer-only route guards
 - Public registration never accepts `ADMIN`.

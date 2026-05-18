@@ -24,6 +24,17 @@ type StoredUser = {
     approvalStatus: string;
     currentShopId: string | null;
     rejectionReason?: string | null;
+    legalType?: string | null;
+    legalName?: string | null;
+    inn?: string | null;
+    legalAddress?: string | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
+    contactEmail?: string | null;
+    bankName?: string | null;
+    bankAccount?: string | null;
+    bik?: string | null;
+    documents?: Array<{ id: string }>;
   } | null;
 };
 
@@ -37,6 +48,10 @@ type CurrentUserResponse = {
   sellerProfileId: string | null;
   currentShopId: string | null;
   sellerApprovalStatus: string | null;
+  sellerRejectionReason: string | null;
+  sellerNextStep: string | null;
+  sellerOnboardingComplete: boolean | null;
+  isSyntheticEmail: boolean;
 };
 
 function parseCookies(rawCookieHeader: string | undefined) {
@@ -199,6 +214,7 @@ describe('AuthController (e2e)', () => {
           approvalStatus: data.approvalStatus,
           currentShopId: null,
           rejectionReason: null,
+          documents: [],
         };
 
         return Promise.resolve(user.sellerProfile);
@@ -259,7 +275,7 @@ describe('AuthController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/auth/customer/register')
       .send({
-        phone: '+79990000011',
+        phone: '8 (999) 000-00-11',
         password: 'password123',
         fullName: 'Phone Customer',
       })
@@ -269,6 +285,7 @@ describe('AuthController (e2e)', () => {
     expect(body.phone).toBe('+79990000011');
     expect(body.role).toBe('CUSTOMER');
     expect(users.at(-1)?.email).toContain('phone-79990000011@customer.local');
+    expect(body.isSyntheticEmail).toBe(true);
   });
 
   it('registers a seller with email and creates a pending seller profile', async () => {
@@ -351,7 +368,7 @@ describe('AuthController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/auth/customer/register')
       .send({
-        phone: '+79990000013',
+        phone: '+7 (999) 000-00-13',
         password: 'password123',
       })
       .expect(201);
@@ -359,7 +376,7 @@ describe('AuthController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/auth/seller/register')
       .send({
-        phone: '+79990000013',
+        phone: '8 999 000 00 13',
         password: 'password123',
       })
       .expect(409);
@@ -396,7 +413,7 @@ describe('AuthController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/auth/customer/register')
       .send({
-        phone: '+79990000014',
+        phone: '+7 (999) 000-00-14',
         password: 'password123',
       })
       .expect(201);
@@ -404,7 +421,7 @@ describe('AuthController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/auth/customer/login')
       .send({
-        identifier: '+79990000014',
+        identifier: '8 999 000 00 14',
         password: 'password123',
       })
       .expect(200);
@@ -520,6 +537,7 @@ describe('AuthController (e2e)', () => {
     expect(body.phone).toBe('+79990000016');
     expect(body.role).toBe('CUSTOMER');
     expect(body.fullName).toBe('Customer One');
+    expect(body.isSyntheticEmail).toBe(true);
   });
 
   it('keeps Authorization bearer fallback for /api/auth/me', async () => {
@@ -541,6 +559,97 @@ describe('AuthController (e2e)', () => {
 
     expect(body.email).toBe('customer@example.com');
     expect(body.role).toBe('CUSTOMER');
+  });
+
+  it('returns seller next step for pending onboarding accounts', async () => {
+    const registerResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        phone: '+7 999 000 00 21',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: '8 999 000 00 21',
+        password: 'password123',
+      })
+      .expect(200);
+
+    expect(readBody<AuthResponseDto>(registerResponse).sellerNextStep).toBe(
+      'COMPLETE_ONBOARDING',
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(200);
+    const body = readBody<CurrentUserResponse>(response);
+
+    expect(body.sellerNextStep).toBe('COMPLETE_ONBOARDING');
+    expect(body.sellerOnboardingComplete).toBe(false);
+  });
+
+  it('throttles repeated customer login attempts', async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request(app.getHttpServer())
+        .post('/api/auth/customer/login')
+        .send({
+          identifier: 'missing@example.com',
+          password: 'password123',
+        })
+        .expect(401);
+    }
+
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'missing@example.com',
+        password: 'password123',
+      })
+      .expect(429);
+  });
+
+  it('throttles repeated admin login attempts more strictly', async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request(app.getHttpServer())
+        .post('/api/auth/admin/login')
+        .send({
+          identifier: 'demo-admin@trawberry.local',
+          password: 'wrong-password',
+        })
+        .expect(401);
+    }
+
+    await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'wrong-password',
+      })
+      .expect(429);
+  });
+
+  it('throttles repeated customer register attempts', async () => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await request(app.getHttpServer())
+        .post('/api/auth/customer/register')
+        .send({
+          phone: '+7 999 000 00 31',
+          password: 'password123',
+        })
+        .expect(attempt === 0 ? 201 : 409);
+    }
+
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        phone: '+7 999 000 00 31',
+        password: 'password123',
+      })
+      .expect(429);
   });
 
   it('refreshes token pair', async () => {
@@ -596,4 +705,5 @@ describe('AuthController (e2e)', () => {
       ]),
     );
   });
+
 });

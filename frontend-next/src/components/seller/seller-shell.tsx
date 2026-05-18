@@ -33,10 +33,13 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     user?.role === "SELLER" &&
     user.sellerApprovalStatus &&
     user.sellerApprovalStatus !== "APPROVED";
+  const sellerActionHref =
+    user?.sellerNextStep === "WAIT_FOR_APPROVAL" || user?.sellerNextStep === "CONTACT_SUPPORT"
+      ? "/seller/pending"
+      : "/seller/onboarding";
 
   useEffect(() => {
     if (!user) return;
-    if (user.role !== "SELLER") return;
     if (sellerBlocked) return;
     void loadShops();
   }, [loadShops, sellerBlocked, user]);
@@ -145,16 +148,20 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 </p>
                 {user?.sellerApprovalStatus === "REJECTED" && user.sellerRejectionReason ? (
                   <p className="mt-2 text-sm text-[var(--muted)]">{user.sellerRejectionReason}</p>
+                ) : user?.sellerNextStep === "WAIT_FOR_APPROVAL" ? (
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Your onboarding profile and verification documents were submitted. Admin review is still pending.
+                  </p>
                 ) : (
                   <p className="mt-2 text-sm text-[var(--muted)]">
                     Complete onboarding and upload verification documents so an admin can review the account.
                   </p>
                 )}
                 <Link
-                  href="/seller/onboarding"
+                  href={sellerActionHref}
                   className="mt-3 inline-flex rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white"
                 >
-                  Open onboarding
+                  {sellerActionHref === "/seller/pending" ? "Review status" : "Open onboarding"}
                 </Link>
               </div>
             ) : null}

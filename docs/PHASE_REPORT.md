@@ -12,6 +12,14 @@
 - Preserved compatibility endpoints and httpOnly cookie session flow.
 - Added `auth-role-separation` Playwright coverage and expanded backend auth e2e coverage.
 
+## Auth Hardening 2 Phase
+
+- Added auth endpoint throttling with generic `429` responses.
+- Added phone normalization shared across auth and seller onboarding contact phone.
+- Hardened cookie/CORS configuration around credentialed requests and explicit origin allowlists.
+- Added seller next-step metadata and a dedicated `/seller/pending` UX path.
+- Added `auth-hardening` Playwright coverage and expanded backend auth e2e coverage for normalization and throttle behavior.
+
 ## Stale Cart Validation + Checkout Preflight
 
 - Added `POST /api/public/cart/validate`.

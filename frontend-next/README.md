@@ -12,6 +12,17 @@
 npm run test:e2e:auth-role-separation
 ```
 
+## Auth Hardening 2
+
+- Public customer/seller forms now normalize phone input before submit.
+- Seller non-approved states distinguish onboarding incomplete vs pending admin review.
+- Added `/seller/pending` for waiting-approval and rejected seller states.
+- Browser verification entry:
+
+```bash
+npm run test:e2e:auth-hardening
+```
+
 Next.js frontend runs in parallel with the legacy Angular app in `strawberry-frontend`.
 
 ## Stack

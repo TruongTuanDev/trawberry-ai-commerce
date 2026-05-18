@@ -16,6 +16,19 @@
   - `/login`
   - `/seller-login`
 
+## Auth Hardening 2
+
+- Status: implemented
+- Scope:
+  - auth throttling for login/register
+  - stricter cookie/CORS configuration posture
+  - phone normalization for auth and seller contact phone
+  - seller pending/rejected next-step UX
+- Known limits:
+  - no persistent lockout yet
+  - `/admin-login` remains fixed operational path
+  - phone-only accounts still persist with internal synthetic email
+
 ## Cart Validation + Checkout Preflight
 
 - Status: Done for the current public marketplace/cart reliability phase

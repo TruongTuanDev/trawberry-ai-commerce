@@ -11,6 +11,9 @@ export type AuthResponse = {
   role: string;
   status: string;
   approvalStatus: string | null;
+  sellerNextStep: string | null;
+  sellerOnboardingComplete: boolean | null;
+  isSyntheticEmail: boolean;
 };
 
 export type CurrentUserResponse = {
@@ -24,6 +27,9 @@ export type CurrentUserResponse = {
   currentShopId: string | null;
   sellerApprovalStatus: string | null;
   sellerRejectionReason: string | null;
+  sellerNextStep: string | null;
+  sellerOnboardingComplete: boolean | null;
+  isSyntheticEmail: boolean;
 };
 
 export type PublicRole = "CUSTOMER" | "SELLER";

@@ -12,16 +12,36 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   const corsOrigin = configService.get<string>(
-    'CORS_ORIGIN',
-    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:4200,http://127.0.0.1:4200',
+    'CORS_ALLOWED_ORIGINS',
+    configService.get<string>(
+      'CORS_ORIGIN',
+      'http://localhost:3000,http://127.0.0.1:3000,http://localhost:4200,http://127.0.0.1:4200',
+    ),
   );
+  const allowedOrigins = corsOrigin
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+    .filter((origin) => origin !== '*');
   const uploadRoot = configService.get<string>('UPLOAD_ROOT', 'uploads');
   const cookieParserFactory = cookieParser as unknown as () => RequestHandler;
   const cookieParserMiddleware = cookieParserFactory();
 
   app.use(cookieParserMiddleware);
   app.enableCors({
-    origin: corsOrigin.split(',').map((origin) => origin.trim()),
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('CORS origin not allowed'));
+    },
     credentials: true,
   });
   app.useStaticAssets(join(process.cwd(), uploadRoot), {

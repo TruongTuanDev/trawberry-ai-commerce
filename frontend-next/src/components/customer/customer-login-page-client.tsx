@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
 import { currentUserRequest, roleLoginRequest } from "@/lib/auth-api";
+import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function CustomerLoginPageClient() {
@@ -20,7 +21,14 @@ export function CustomerLoginPageClient() {
     setLoading(true);
     setError(null);
     try {
-      await roleLoginRequest("CUSTOMER", { identifier, password });
+      const normalizedIdentifier = identifier.includes("@")
+        ? identifier.trim()
+        : maybeNormalizePhone(identifier);
+
+      await roleLoginRequest("CUSTOMER", {
+        identifier: normalizedIdentifier,
+        password,
+      });
       const user = await currentUserRequest();
       if (user.role !== "CUSTOMER") {
         throw new Error("Customer account is required.");
@@ -49,6 +57,7 @@ export function CustomerLoginPageClient() {
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 className="public-input"
+                placeholder="name@example.com or +7XXXXXXXXXX"
                 autoComplete="username"
                 data-testid="customer-login-email"
               />

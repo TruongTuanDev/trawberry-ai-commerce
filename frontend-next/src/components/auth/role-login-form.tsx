@@ -6,8 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { currentUserRequest, loginRequest, roleLoginRequest, type StaffRole } from "@/lib/auth-api";
+import {
+  currentUserRequest,
+  loginRequest,
+  roleLoginRequest,
+  type StaffRole,
+} from "@/lib/auth-api";
 import { getRoleHome } from "@/lib/auth-redirect";
+import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
 
 const loginSchema = z.object({
@@ -65,10 +71,20 @@ export function RoleLoginForm({
     setFormError(null);
 
     try {
+      const normalizedIdentifier = values.identifier.includes("@")
+        ? values.identifier.trim()
+        : maybeNormalizePhone(values.identifier);
+
       if (submitRole) {
-        await roleLoginRequest(submitRole, values);
+        await roleLoginRequest(submitRole, {
+          identifier: normalizedIdentifier,
+          password: values.password,
+        });
       } else {
-        await loginRequest(values);
+        await loginRequest({
+          identifier: normalizedIdentifier,
+          password: values.password,
+        });
       }
       const user = await currentUserRequest();
 
@@ -108,6 +124,7 @@ export function RoleLoginForm({
             autoComplete="username"
             data-testid={`${testIdPrefix}-email`}
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
+            placeholder="name@example.com or +7XXXXXXXXXX"
             {...form.register("identifier")}
           />
           {form.formState.errors.identifier ? (

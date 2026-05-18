@@ -19,6 +19,7 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { AuthRateLimit } from './auth-rate-limit.decorator';
 import { AuthService } from './auth.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
@@ -45,7 +46,8 @@ export class AuthController {
       'lax',
     );
     const sameSite = (
-      ['lax', 'strict', 'none'].includes(sameSiteConfig)
+      ['lax', 'strict', 'none'].includes(sameSiteConfig) &&
+      !(sameSiteConfig === 'none' && !isSecure)
         ? sameSiteConfig
         : 'lax'
     ) as boolean | 'lax' | 'strict' | 'none';
@@ -64,6 +66,12 @@ export class AuthController {
   }
 
   @Post('register')
+  @AuthRateLimit({
+    keyPrefix: 'auth-register-legacy',
+    limit: 3,
+    windowMs: 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Register a new customer or seller account.' })
   @ApiOkResponse({ type: AuthResponseDto })
   register(@Body() dto: RegisterDto) {
@@ -71,6 +79,12 @@ export class AuthController {
   }
 
   @Post('customer/register')
+  @AuthRateLimit({
+    keyPrefix: 'auth-register-customer',
+    limit: 3,
+    windowMs: 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Register a new customer account.' })
   @ApiOkResponse({ type: AuthResponseDto })
   registerCustomer(@Body() dto: RegisterDto) {
@@ -78,6 +92,12 @@ export class AuthController {
   }
 
   @Post('seller/register')
+  @AuthRateLimit({
+    keyPrefix: 'auth-register-seller',
+    limit: 3,
+    windowMs: 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Register a new seller account.' })
   @ApiOkResponse({ type: AuthResponseDto })
   registerSeller(@Body() dto: RegisterDto) {
@@ -86,6 +106,12 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @AuthRateLimit({
+    keyPrefix: 'auth-login-legacy',
+    limit: 5,
+    windowMs: 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Log in with email and password.' })
   @ApiOkResponse({ type: AuthResponseDto })
   async login(
@@ -99,6 +125,12 @@ export class AuthController {
 
   @Post('customer/login')
   @HttpCode(HttpStatus.OK)
+  @AuthRateLimit({
+    keyPrefix: 'auth-login-customer',
+    limit: 5,
+    windowMs: 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Log in to a customer account.' })
   @ApiOkResponse({ type: AuthResponseDto })
   async loginCustomer(
@@ -112,6 +144,12 @@ export class AuthController {
 
   @Post('seller/login')
   @HttpCode(HttpStatus.OK)
+  @AuthRateLimit({
+    keyPrefix: 'auth-login-seller',
+    limit: 5,
+    windowMs: 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Log in to a seller account.' })
   @ApiOkResponse({ type: AuthResponseDto })
   async loginSeller(
@@ -125,6 +163,12 @@ export class AuthController {
 
   @Post('admin/login')
   @HttpCode(HttpStatus.OK)
+  @AuthRateLimit({
+    keyPrefix: 'auth-login-admin',
+    limit: 5,
+    windowMs: 5 * 60_000,
+    includeIdentifier: true,
+  })
   @ApiOperation({ summary: 'Log in to an admin account.' })
   @ApiOkResponse({ type: AuthResponseDto })
   async loginAdmin(
@@ -166,7 +210,8 @@ export class AuthController {
       'lax',
     );
     const sameSite = (
-      ['lax', 'strict', 'none'].includes(sameSiteConfig)
+      ['lax', 'strict', 'none'].includes(sameSiteConfig) &&
+      !(sameSiteConfig === 'none' && !isSecure)
         ? sameSiteConfig
         : 'lax'
     ) as boolean | 'lax' | 'strict' | 'none';
