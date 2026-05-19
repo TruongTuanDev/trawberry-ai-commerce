@@ -29,14 +29,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6" data-testid="admin-shell">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1400px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)]">
-        <aside className="hidden w-72 border-r border-[var(--border)] bg-[#2f2025] p-6 text-white lg:block">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Admin</p>
-          <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold">Marketplace Ops</h1>
+        <aside className="hidden w-72 border-r border-slate-800 bg-slate-900 p-6 text-slate-100 lg:block">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
+          <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
           <nav className="mt-8 space-y-2">
             <Link
               href="/admin/dashboard"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/dashboard") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+                pathname.startsWith("/admin/dashboard") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
               Dashboard
@@ -44,7 +44,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/admin/sellers"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/sellers") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+                pathname.startsWith("/admin/sellers") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
               Seller approvals
@@ -52,7 +52,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/admin/deliveries"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/deliveries") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+                pathname.startsWith("/admin/deliveries") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
               Delivery supervision
@@ -60,7 +60,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/admin/queues"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/queues") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+                pathname.startsWith("/admin/queues") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
               Operational queues
@@ -68,7 +68,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/admin/support-cases"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/support-cases") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+                pathname.startsWith("/admin/support-cases") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
               Support cases
@@ -76,12 +76,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/admin/reports"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/reports") ? "bg-white text-[#2f2025]" : "text-white/78 hover:bg-white/8"
+                pathname.startsWith("/admin/reports") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
               Reports
             </Link>
-            <Link href="/seller/dashboard" className="flex rounded-2xl px-4 py-3 text-sm font-medium text-white/78 transition hover:bg-white/8">
+            <Link href="/seller/dashboard" className="flex rounded-2xl px-4 py-3 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white mt-4 border border-slate-800">
               Seller center
             </Link>
           </nav>

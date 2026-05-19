@@ -45,19 +45,19 @@ export function ProductCard({ product }: { product: PublicProduct }) {
 
   return (
     <article
-      className="card-panel group flex h-full flex-col overflow-hidden rounded-[1.9rem] bg-white"
+      className="card-panel hover-card-effect group flex h-full flex-col overflow-hidden bg-white"
       data-testid="product-card"
     >
       <Link href={`/products/${product.id}`} className="relative block overflow-hidden">
         <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
           <StockBadge label={stockState.label} tone={stockState.tone} />
           {inCartQuantity > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-white">
+            <span className="inline-flex items-center rounded-full bg-gradient-primary px-3 py-1 text-xs font-semibold text-white">
               In cart {inCartQuantity}
             </span>
           ) : null}
         </div>
-        <div className="aspect-[4/5] overflow-hidden bg-[linear-gradient(180deg,#f4ecdf,#eadbc5)]">
+        <div className="aspect-[4/5] overflow-hidden bg-[var(--panel-strong)]">
           <FallbackImage
             src={product.images[0]?.url}
             alt={product.name}
@@ -92,7 +92,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         <div className="mt-auto space-y-4">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
+              <p className="text-gradient-primary text-2xl font-bold">
                 {formattedPrice ?? "Contact shop"}
               </p>
               {formattedOldPrice ? (

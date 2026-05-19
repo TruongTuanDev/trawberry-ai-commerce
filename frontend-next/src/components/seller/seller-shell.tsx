@@ -58,15 +58,15 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6" data-testid="seller-shell">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1600px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)]">
-        <aside className="hidden w-72 flex-col justify-between border-r border-[var(--border)] bg-[linear-gradient(180deg,#3e1e24_0%,#2d181e_100%)] p-6 text-white lg:flex">
+        <aside className="hidden w-72 flex-col justify-between border-r border-[var(--border)] bg-white p-6 text-[var(--foreground)] lg:flex">
           <div>
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/65">Strawberry</p>
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Strawberry</p>
               <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold">
                 Seller Center
               </h2>
-              <p className="mt-3 text-sm leading-6 text-white/70">
-                Next.js migration shell for seller operations, product work, images, and AI tasks.
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                Marketplace Seller Center for seller operations, product work, images, and AI tasks.
               </p>
             </div>
             <nav className="mt-8 space-y-2">
@@ -78,7 +78,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     className={clsx(
                       "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition",
-                      active ? "bg-white text-[#2d181e]" : "text-white/78 hover:bg-white/8 hover:text-white",
+                      active ? "bg-gradient-primary text-white shadow-md" : "text-[var(--muted)] hover:bg-[var(--panel)] hover:text-[var(--foreground)]",
                     )}
                   >
                     {item.label}
@@ -87,16 +87,16 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               })}
             </nav>
           </div>
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-white/55">Current user</p>
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Current user</p>
             <p className="mt-2 text-sm font-semibold">{user?.fullName ?? "Unknown seller"}</p>
-            <p className="text-sm text-white/65">{user?.email ?? "No email loaded"}</p>
+            <p className="text-sm text-[var(--muted)]">{user?.email ?? "No email loaded"}</p>
             <button
               type="button"
               onClick={() => void handleLogout()}
               disabled={loggingOut}
               data-testid="logout-button"
-              className="mt-4 inline-flex rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-[#2d181e]"
+              className="public-button-secondary mt-4 w-full px-4 py-2 text-xs"
             >
               {loggingOut ? "Signing out..." : "Logout"}
             </button>
@@ -110,7 +110,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                   Seller Operations
                 </p>
                 <h1 className="mt-1 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-[var(--foreground)]">
-                  Migrating the seller center to Next.js
+                  Marketplace Seller Center
                 </h1>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

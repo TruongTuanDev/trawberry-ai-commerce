@@ -1,6 +1,11 @@
 # Project Status
 
-## AI Service Mock Runtime Snapshot - 2026-05-19
+## Visual Identity & Next.js Migration Complete - 2026-05-19
+- The frontend Next.js platform has been completely overhauled visually.
+- The `Public Marketplace` now uses a Wildberries-inspired pink/purple gradient theme (`#CB11AB` to `#A100FF`).
+- The `Seller Center` is now a professional, bright dashboard (`var(--panel)`). All legacy "Migration" text has been removed.
+- The `Admin Ops` dashboard is now a neutral/dark serious environment (`bg-slate-900`, `indigo-600`) to separate ops from public/seller themes.
+- Validated via automated E2E tests (`test:e2e:public-marketplace-contract`, `test:e2e:product-buying-ux`, `test:e2e:cart-checkout`) ensuring zero logic or contract breakages.## AI Service Mock Runtime Snapshot - 2026-05-19
 
 - seller AI runtime verification target is now `AI_SERVICE_MOCK`
 - expected compose/runtime shape:

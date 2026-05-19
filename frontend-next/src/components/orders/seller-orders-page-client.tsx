@@ -71,7 +71,7 @@ export function SellerOrdersPageClient() {
       <SectionCard
         eyebrow="Fulfillment"
         title="Orders"
-        description="Seller order queue migrated to Next.js. Filter by status, date, or customer/order search while staying scoped to the active shop."
+        description="Seller order queue. Filter by status, date, or customer/order search while staying scoped to the active shop."
       >
         <div className="grid gap-4 lg:grid-cols-[1.2fr_180px_180px_180px]">
           <input

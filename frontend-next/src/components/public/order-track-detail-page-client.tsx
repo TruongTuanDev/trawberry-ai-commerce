@@ -125,7 +125,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
           </div>
 
           {error ? (
-            <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
+            <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
               {error}
             </div>
           ) : null}
@@ -179,7 +179,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                     Order snapshot
                   </p>
-                  <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)]">
+                  <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold">
                     {order.orderCode}
                   </h1>
                   <div className="mt-6 grid gap-4 md:grid-cols-2">

@@ -37,7 +37,7 @@ export function OrderTrackPageClient() {
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1fr_0.95fr]">
           <section className="card-panel rounded-[2.25rem] px-6 py-8 sm:px-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Track a public order</p>
-            <h1 className="mt-4 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)] sm:text-5xl">
+            <h1 className="text-gradient-primary mt-4 font-[family-name:var(--font-mono-app)] text-4xl font-bold sm:text-5xl">
               Return with your order code and phone.
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-[var(--muted)]">
@@ -45,7 +45,7 @@ export function OrderTrackPageClient() {
             </p>
 
             {error ? (
-              <div className="mt-6 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
+              <div className="mt-6 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
                 {error}
               </div>
             ) : null}
@@ -81,7 +81,7 @@ export function OrderTrackPageClient() {
             </div>
           </section>
 
-          <section className="card-panel rounded-[2.25rem] bg-[linear-gradient(180deg,rgba(182,49,75,0.04),rgba(47,107,73,0.08))] px-6 py-8 sm:px-8">
+          <section className="card-panel rounded-[2.25rem] bg-[linear-gradient(180deg,rgba(203,17,171,0.03),rgba(161,0,255,0.05))] px-6 py-8 sm:px-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">What you can do</p>
             <div className="mt-6 grid gap-4">
               {[

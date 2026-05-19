@@ -56,7 +56,7 @@ export function CustomerRegisterPageClient() {
       <main className="px-4 py-10 sm:px-6">
         <section className="card-panel mx-auto max-w-md rounded-[2rem] px-6 py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Customer account</p>
-          <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">Customer registration</h1>
+          <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">Customer registration</h1>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
             Create a customer account with email and password, or phone and password.
           </p>
@@ -76,7 +76,7 @@ export function CustomerRegisterPageClient() {
             <Field label="Confirm password">
               <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="customer-register-confirm-password" />
             </Field>
-            {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
+            {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
             <button type="button" onClick={() => void handleSubmit()} disabled={loading} className="public-button-primary px-5 py-3 text-sm disabled:opacity-60" data-testid="customer-register-submit">
               {loading ? "Creating account..." : "Create account"}
             </button>

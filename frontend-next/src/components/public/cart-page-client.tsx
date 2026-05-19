@@ -197,7 +197,7 @@ export function CartPageClient() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
               Cart
             </p>
-            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)]">
+            <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold">
               Shopping cart
             </h1>
           </section>
@@ -210,7 +210,7 @@ export function CartPageClient() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                 Cart
               </p>
-              <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
+              <h2 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
                 Your cart is empty
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
@@ -309,7 +309,7 @@ export function CartPageClient() {
                           key={key}
                           className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4 md:grid-cols-[96px_1fr_220px_120px]"
                         >
-                          <div className="overflow-hidden rounded-2xl bg-[var(--panel)]">
+                          <div className="overflow-hidden rounded-2xl bg-[var(--panel-strong)]">
                             <FallbackImage
                               src={validated?.imageUrl ?? item.imageUrl}
                               alt={validated?.productName ?? item.productName}
@@ -445,7 +445,7 @@ export function CartPageClient() {
                             <button
                               type="button"
                               onClick={() => removeItem(item.productId, item.variantId)}
-                              className="mt-3 text-sm font-semibold text-[var(--accent)]"
+                              className="mt-3 text-sm font-semibold text-[var(--accent-strong)] transition-colors hover:text-[var(--accent)]"
                             >
                               Remove
                             </button>
@@ -481,7 +481,7 @@ export function CartPageClient() {
                 </p>
                 <div className="mt-5 flex items-center justify-between text-sm">
                   <span className="text-[var(--muted)]">Grand total</span>
-                  <span className="font-semibold text-[var(--foreground)]">
+                  <span className="text-gradient-primary text-xl font-bold">
                     {subtotal.toFixed(2)}
                   </span>
                 </div>

@@ -47,7 +47,7 @@ export function CustomerLoginPageClient() {
       <main className="px-4 py-10 sm:px-6">
         <section className="card-panel mx-auto max-w-md rounded-[2rem] px-6 py-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Customer account</p>
-          <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">Customer login</h1>
+          <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">Customer login</h1>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
             Sign in with the email or phone number you used when creating the account.
           </p>
@@ -72,7 +72,7 @@ export function CustomerLoginPageClient() {
                 data-testid="customer-login-password"
               />
             </Field>
-            {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
+            {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
             <button type="button" onClick={() => void handleSubmit()} disabled={loading} className="public-button-primary px-5 py-3 text-sm disabled:opacity-60" data-testid="customer-login-submit">
               {loading ? "Signing in..." : "Sign in"}
             </button>

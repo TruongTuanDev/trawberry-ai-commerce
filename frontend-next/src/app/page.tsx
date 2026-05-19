@@ -34,7 +34,7 @@ export default function HomePage() {
                   Public marketplace demo
                 </p>
                 <h1 className="mt-6 max-w-3xl font-[family-name:var(--font-mono-app)] text-5xl font-bold tracking-tight text-[var(--foreground)] sm:text-6xl">
-                  Strawberry AI Commerce now feels like a real storefront, not only a migration sandbox.
+                  Strawberry AI Commerce now feels like a real storefront.
                 </h1>
                 <p className="mt-6 max-w-2xl text-base leading-8 text-[var(--muted)] sm:text-lg">
                   Browse customer-facing products, place a manual-transfer order, track the order later, and upload payment proof
@@ -103,7 +103,7 @@ export default function HomePage() {
               </ol>
             </article>
 
-            <article className="card-panel rounded-[2rem] bg-[linear-gradient(180deg,rgba(182,49,75,0.04),rgba(47,107,73,0.08))] px-6 py-8 sm:px-8">
+            <article className="card-panel rounded-[2rem] bg-[linear-gradient(180deg,rgba(203,17,171,0.03),rgba(161,0,255,0.05))] px-6 py-8 sm:px-8">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Seller + AI value</p>
               <h2 className="mt-4 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
                 Public storefront polish now matches the seller-side platform story.

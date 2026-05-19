@@ -16,7 +16,7 @@ export function PublicShell({
       style={{
         background:
           tone === "hero"
-            ? "radial-gradient(circle at top left, rgba(182,49,75,0.18), transparent 24%), radial-gradient(circle at 85% 10%, rgba(47,107,73,0.16), transparent 20%), linear-gradient(180deg, #fbf6ee 0%, #f3e8da 100%)"
+            ? "radial-gradient(circle at top left, rgba(203,17,171,0.12), transparent 24%), radial-gradient(circle at 85% 10%, rgba(161,0,255,0.1), transparent 20%), linear-gradient(180deg, #f7f7fa 0%, #ffffff 100%)"
             : undefined,
       }}
     >

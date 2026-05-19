@@ -366,7 +366,7 @@ export function CheckoutPageClient({
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                 Orders created
               </p>
-              <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold text-[var(--foreground)]">
+              <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold">
                 Confirmation
               </h1>
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -524,7 +524,7 @@ export function CheckoutPageClient({
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                     Customer info
                   </p>
-                  <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
+                  <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
                     Delivery details
                   </h1>
                   <div className="mt-6 grid gap-4">
@@ -670,7 +670,7 @@ export function CheckoutPageClient({
                   </div>
                   <div className="mt-5 flex items-center justify-between text-sm">
                     <span className="text-[var(--muted)]">Subtotal</span>
-                    <span className="font-semibold text-[var(--foreground)]">
+                    <span className="text-gradient-primary text-xl font-bold">
                       {subtotal.toFixed(2)}
                     </span>
                   </div>
@@ -735,7 +735,7 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`rounded-[1.35rem] border px-4 py-4 ${checked ? "border-[var(--accent)] bg-white" : "border-[var(--border)] bg-white/70"}`}
+      className={`rounded-[1.35rem] border px-4 py-4 transition-all duration-200 cursor-pointer ${checked ? "border-[var(--accent)] bg-[var(--accent-soft)]/30 shadow-[0_4px_14px_rgba(203,17,171,0.1)]" : "border-[var(--border)] bg-white/70 hover:border-[var(--muted)]"}`}
     >
       <input
         type="radio"

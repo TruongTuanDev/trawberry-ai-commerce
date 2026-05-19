@@ -46,11 +46,11 @@ export function PublicHeader() {
   const customerHref = user?.role === "CUSTOMER" ? "/customer/orders" : "/customer/login";
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--border)]/70 bg-[rgba(249,243,234,0.88)] backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[rgba(255,255,255,0.95)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6">
         <div className="flex items-center gap-3 lg:gap-4">
           <Link href="/" className="flex items-center gap-3" data-testid="public-logo">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#b6314b,#8f1731)] font-[family-name:var(--font-mono-app)] text-sm font-bold text-white shadow-[0_16px_30px_rgba(182,49,75,0.28)]">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-primary font-[family-name:var(--font-mono-app)] text-sm font-bold text-white shadow-[0_16px_30px_rgba(203,17,171,0.25)]">
               SA
             </span>
             <div className="hidden sm:block">
@@ -124,7 +124,7 @@ export function PublicHeader() {
                 </Link>
                 <Link
                   href="/customer/register"
-                  className="public-button-primary px-4 py-3 text-sm shadow-[0_14px_28px_rgba(182,49,75,0.2)]"
+                  className="public-button-primary px-4 py-3 text-sm"
                   data-testid="public-customer-register-link"
                 >
                   Customer register

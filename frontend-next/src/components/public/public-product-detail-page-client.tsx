@@ -306,7 +306,7 @@ export function PublicProductDetailPageClient({
                                   setSelectedVariantId(variant.id);
                                   setQuantity(1);
                                 }}
-                              className={`min-w-20 rounded-2xl border px-4 py-3 text-left ${active ? "border-[var(--accent)] bg-[var(--accent-soft)]/30 shadow-[0_10px_22px_rgba(182,49,75,0.12)]" : "border-[var(--border)] bg-white"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
+                              className={`min-w-20 rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${active ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--muted)]"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
                                 disabled={!variant.inStock}
                                 data-testid={active ? "product-selected-size" : `product-size-${variant.id}`}
                               >
@@ -372,10 +372,10 @@ export function PublicProductDetailPageClient({
                   </div>
 
                   <aside className="xl:sticky xl:top-24 xl:self-start">
-                    <div className="rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[0_24px_60px_rgba(69,35,26,0.12)]">
+                    <div className="rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[0_12px_40px_rgba(203,17,171,0.08)]">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-end gap-3">
-                          <p className="text-4xl font-bold text-[var(--accent-strong)]">
+                          <p className="text-gradient-primary text-4xl font-bold">
                             {formatMoney(currentPrice) ?? "Contact shop"}
                           </p>
                           {oldPrice ? (
@@ -406,7 +406,7 @@ export function PublicProductDetailPageClient({
                         </div>
 
                         {cartItem ? (
-                          <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/30 px-4 py-3 text-sm font-semibold text-[var(--accent-strong)]">
+                          <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent-strong)]">
                             В корзине: {cartItem.quantity}
                           </div>
                         ) : null}
@@ -424,7 +424,7 @@ export function PublicProductDetailPageClient({
                           type="button"
                           onClick={handleBuyNow}
                           disabled={!hasReadyVariant}
-                          className="w-full rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)]/35 px-5 py-3.5 text-sm font-semibold text-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-5 py-3.5 text-sm font-semibold text-[var(--accent-strong)] transition-all duration-200 hover:bg-[var(--accent-soft)]/80 disabled:cursor-not-allowed disabled:opacity-50"
                           data-testid="continue-to-checkout"
                         >
                           Купить сейчас
@@ -451,10 +451,10 @@ export function PublicProductDetailPageClient({
                 className="fixed inset-x-3 bottom-3 z-40 lg:hidden"
                 data-testid="mobile-product-cta"
               >
-                <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_24px_60px_rgba(69,35,26,0.16)] backdrop-blur">
+                <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_12px_40px_rgba(203,17,171,0.16)] backdrop-blur">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xl font-bold text-[var(--accent-strong)]">
+                      <p className="text-gradient-primary text-xl font-bold">
                         {formatMoney(currentPrice) ?? "Contact shop"}
                       </p>
                       <p className="mt-1 text-xs text-[var(--muted)]">
@@ -491,7 +491,7 @@ export function PublicProductDetailPageClient({
                       type="button"
                       onClick={handleBuyNow}
                       disabled={!hasReadyVariant}
-                      className="min-w-0 flex-1 rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)]/35 px-4 py-3 text-sm font-semibold text-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="min-w-0 flex-1 rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent-strong)] transition-all duration-200 hover:bg-[var(--accent-soft)]/80 disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid="mobile-buy-now"
                     >
                       Купить сейчас

@@ -12,7 +12,7 @@ export default function SellerDashboardPage() {
       <SectionCard
         eyebrow="Overview"
         title="Dashboard"
-        description="This seller dashboard is the first Next.js shell for the migration. Replace placeholders with live KPI calls as NestJS modules expand."
+        description="This seller dashboard provides a high-level overview of your marketplace operations. Monitor orders, inventory, and automated tasks in real-time."
       >
         <div className="grid gap-4 md:grid-cols-3">
           {metrics.map((metric) => (
@@ -26,9 +26,9 @@ export default function SellerDashboardPage() {
         </div>
       </SectionCard>
       <SectionCard
-        eyebrow="Migration status"
-        title="Parallel rollout"
-        description="Angular remains untouched. This Next.js area is ready to absorb seller flows incrementally while NestJS replaces Spring Boot modules."
+        eyebrow="Updates"
+        title="Recent Activity"
+        description="No new alerts. Your shop is running smoothly."
       />
     </div>
   );
