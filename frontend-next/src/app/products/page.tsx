@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
+import { PromoSlider } from "@/components/public/promo-slider";
 import { PublicShell } from "@/components/public/public-shell";
 import { getPublicProducts, type PaginatedPublicProducts, type PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
@@ -185,19 +186,34 @@ function ProductsPageContent({
 
   return (
     <PublicShell>
-      <main className="px-4 py-8 sm:px-6 sm:py-10">
+      <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-7xl space-y-6">
+          <PromoSlider compact />
+
           <section className="card-panel overflow-hidden rounded-[2.25rem]">
-            <div className="grid gap-8 bg-[linear-gradient(135deg,rgba(182,49,75,0.08),rgba(47,107,73,0.08))] px-6 py-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-10">
+            <div className="grid gap-8 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,241,255,0.96))] px-6 py-8 sm:px-8 lg:grid-cols-[1.02fr_0.98fr] lg:px-10">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Public marketplace</p>
-                <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold tracking-tight text-[var(--foreground)] sm:text-5xl">
-                  Browse active products ready for checkout in the new stack.
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Marketplace catalog</p>
+                <h1 className="mt-3 text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl">
+                  Product grid ngay dưới promo, giống nhịp marketplace thật.
                 </h1>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">Search and filter by category, brand, color, gender, stock, and price. Prices are sorted by the lowest sellable variant price.</p>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
+                  Search và filter vẫn giữ nguyên theo backend hiện tại: category, brand, color, gender, stock, price, sort. Chỉ thay đổi cấu trúc nhìn và độ ưu tiên thị giác.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
+                    public only
+                  </span>
+                  <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
+                    backend data
+                  </span>
+                  <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
+                    cart logic unchanged
+                  </span>
+                </div>
               </div>
 
-              <form onSubmit={handleSearch} className="public-muted-card grid gap-3 rounded-[1.5rem] p-4 sm:grid-cols-2">
+              <form onSubmit={handleSearch} className="public-muted-card grid gap-3 rounded-[1.8rem] border-white/70 bg-white/92 p-4 shadow-[0_22px_46px_rgba(161,0,255,0.08)] sm:grid-cols-2">
                 <div className="space-y-2 text-sm font-semibold text-[var(--foreground)] sm:col-span-2">
                   <label htmlFor="catalog-search" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     Search catalog
@@ -271,8 +287,22 @@ function ProductsPageContent({
             </div>
           ) : null}
 
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+                Marketplace results
+              </p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)]">
+                Сетка товаров
+              </h2>
+            </div>
+            <p className="hidden text-sm text-[var(--muted)] md:block">
+              {meta.total} public products
+            </p>
+          </div>
+
           {loading ? (
-            <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" data-testid="products-grid">
+            <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4" data-testid="products-grid">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="card-panel animate-pulse rounded-[1.75rem] overflow-hidden">
                   <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
@@ -286,7 +316,7 @@ function ProductsPageContent({
               ))}
             </section>
           ) : items.length ? (
-            <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" data-testid="products-grid">
+            <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4" data-testid="products-grid">
               {items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

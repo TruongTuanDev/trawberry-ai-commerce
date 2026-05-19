@@ -1,5 +1,37 @@
 # Phase Report
 
+## 2026-05-20 Marketplace Hero Header + Promo Slider
+
+- redesigned the public marketplace header to follow a Wildberries-like layout:
+  - strong pink-purple gradient
+  - logo on the left
+  - large central white search bar
+  - customer login/register prominence
+  - lighter seller entry
+  - clearer cart badge
+  - no admin login in public navigation
+- added a new frontend-only promo slider under the header on `/` and `/products`
+- converted `/` into a marketplace landing page with:
+  - promo hero
+  - quick marketplace entry tiles
+  - real product preview grid from the existing backend public products API
+- updated `/products` to show:
+  - promo slider before the catalog controls
+  - refreshed filter shell
+  - product grid directly after promo/filter content
+- refined public product cards with:
+  - larger image-first layout
+  - stronger pink price hierarchy
+  - decorative wishlist icon
+  - full-width gradient CTA
+- updated marketplace CSS tokens and motion:
+  - softer lavender background
+  - brighter panel/border system
+  - search focus glow
+  - promo fade/translate animation
+  - cart badge micro-pop
+- no backend, ai-service, Prisma, API, cart logic, auth logic, or session logic changes
+
 ## 2026-05-19 Seller AI Runtime To ai-service Mock
 
 - set the verified seller AI runtime target to `backend-nest -> ai-service`

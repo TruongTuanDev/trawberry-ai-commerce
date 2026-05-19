@@ -1,43 +1,54 @@
 # Frontend Visual Design System
 
-## Overview
-The Trawberry AI Commerce platform has been visually overhauled to implement a modern, professional, and "wow" aesthetic. The design system enforces a clear separation of visual identity between the Public Marketplace, Seller Center, and Admin Ops Dashboard.
+## Public Marketplace Header / Slider Layout
 
-## Visual Identities
+- Public marketplace now uses a Wildberries-inspired top structure on `/` and `/products`.
+- Header stays in the public zone only and never exposes admin login.
+- Main visual order:
+  - gradient pink-purple header
+  - large search-first navigation row
+  - promo slider / hero banner directly under header
+  - product grid immediately below promo
+- Product data remains real backend data from the existing public products API.
+- Promo content is static frontend-safe marketing content only.
 
-### 1. Public Marketplace (Wildberries-inspired)
-- **Theme**: Pink to purple gradients (`#CB11AB` to `#A100FF`).
-- **Background**: Light lavender-gray (`#F7F7FA`) with white content cards.
-- **Components**: 
-  - Rounded cards (`rounded-2xl` and `rounded-[2rem]`).
-  - Gradient headers and sticky checkout bars.
-  - Interactive hover scaling and soft shadow elevations.
-- **Key Files Updated**: `globals.css`, `public-shell.tsx`, `public-header.tsx`, `product-card.tsx`, `public-product-detail-page-client.tsx`, `cart-page-client.tsx`, `checkout-page-client.tsx`.
+## Color Palette
 
-### 2. Seller Center (Professional Business)
-- **Theme**: Clean, bright, and modern business dashboard.
-- **Background**: Light/white panels with subtle gray borders (`var(--panel)`, `var(--border)`).
-- **Components**: 
-  - Standardized `SectionCard` with clear typography.
-  - Removed all legacy "Migration" text to ensure a production-ready feel.
-  - Active navigation states highlighted with gradients for continuity, but the overall container remains serious and clean.
-- **Key Files Updated**: `seller-shell.tsx`, `seller-dashboard.tsx`, `seller-orders-page-client.tsx`.
+- Primary gradient: `linear-gradient(90deg, #CB11AB 0%, #A100FF 100%)`
+- Background: `#F4F2FB`
+- Panel: `#FFFFFF`
+- Panel strong: `#F3F0F8`
+- Border: `#E7DFF0`
+- Accent soft: `#FDE7F8`
+- Cart badge highlight: `#FFCF33`
 
-### 3. Admin Ops Dashboard (Neutral/Dark Serious)
-- **Theme**: Slate and indigo (dark/neutral serious).
-- **Background**: Dark slate sidebar (`bg-slate-900`) with indigo active states (`bg-indigo-600`).
-- **Components**:
-  - Differentiated entirely from Public and Seller zones to reflect its operational focus.
-  - "Marketplace Ops" labeling across navigation and headers.
-- **Key Files Updated**: `admin-shell.tsx`, `admin-login/page.tsx`, `admin-dashboard-page-client.tsx`.
+## Components Changed
 
-## Core CSS Utility Classes
-- `.bg-gradient-primary`: Applies the primary Wildberries pink-to-purple background gradient.
-- `.text-gradient-primary`: Applies the primary gradient to text elements.
-- `.hover-card-effect`: Standardized hover animation for interactive cards.
-- `.public-button-primary`: Reusable gradient button with hover and active states.
-- `.public-button-secondary`: Reusable outline button matching the theme.
+- `frontend-next/src/components/public/public-header.tsx`
+  - redesigned to a large marketplace header with logo, menu button, oversized search, customer entry, seller entry, and cart badge
+- `frontend-next/src/components/public/promo-slider.tsx`
+  - new client-side promo slider with static slides, auto-rotate, dots, and arrow controls
+- `frontend-next/src/app/page.tsx`
+  - home page now behaves like a marketplace landing page with promo-first layout and public product preview grid
+- `frontend-next/src/app/products/page.tsx`
+  - catalog page now shows promo slider before filters and grid while keeping existing search/filter logic intact
+- `frontend-next/src/components/public/product-card.tsx`
+  - cards now use larger image emphasis, stronger price hierarchy, cleaner badges, and full-width gradient CTA
+- `frontend-next/src/components/public/public-shell.tsx`
+  - updated marketplace background and sticky-header fallback height
+- `frontend-next/src/app/globals.css`
+  - updated marketplace palette, shadow system, search focus glow, promo animation, and cart badge micro-animation
+
+## Interaction Rules
+
+- Search remains URL-driven and routes to `/products`.
+- Cart, auth, session, and checkout behavior are unchanged.
+- Decorative wishlist icon in cards is UI-only and has no fake backend logic.
+- Product cards still respect current variant-selection rules:
+  - multi-variant products route to detail selection
+  - single-variant products can quick-add as before
 
 ## Verification
-- All UI changes were verified against the existing E2E test suite (Playwright).
-- **No business logic, API contracts, `data-testid` selectors, or routing structures were modified during this UI overhaul.**
+
+- No backend, API contract, database, or business logic changes were introduced in this visual phase.
+- Required verification for this phase is tracked in `docs/PHASE_REPORT.md` and `docs/PROJECT_STATUS.md`.

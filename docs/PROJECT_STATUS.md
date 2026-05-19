@@ -1,5 +1,25 @@
 # Project Status
 
+## Public Marketplace Header / Promo Refresh - 2026-05-20
+
+- `/` and `/products` now follow a stronger marketplace-first composition closer to Wildberries:
+  - gradient pink-purple public header
+  - large search-first navigation
+  - promo slider directly below header
+  - product grid immediately after hero content
+- Public home is no longer just a generic landing page; it now previews real public products from the backend.
+- `/products` keeps the same public API and search/filter logic, but the layout is now merchandising-first instead of tool-first.
+- Public product cards now emphasize:
+  - larger imagery
+  - stronger price hierarchy
+  - clearer add-to-cart CTA
+  - improved hover polish
+- Scope guardrails preserved:
+  - no backend/API/database changes
+  - no fake products
+  - no admin login in public header
+  - no cart/auth/session contract changes
+
 ## Visual Identity & Next.js Migration Complete - 2026-05-19
 - The frontend Next.js platform has been completely overhauled visually.
 - The `Public Marketplace` now uses a Wildberries-inspired pink/purple gradient theme (`#CB11AB` to `#A100FF`).

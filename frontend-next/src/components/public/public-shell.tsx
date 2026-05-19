@@ -16,12 +16,12 @@ export function PublicShell({
       style={{
         background:
           tone === "hero"
-            ? "radial-gradient(circle at top left, rgba(203,17,171,0.12), transparent 24%), radial-gradient(circle at 85% 10%, rgba(161,0,255,0.1), transparent 20%), linear-gradient(180deg, #f7f7fa 0%, #ffffff 100%)"
+            ? "radial-gradient(circle at top left, rgba(203,17,171,0.16), transparent 24%), radial-gradient(circle at 85% 10%, rgba(161,0,255,0.14), transparent 20%), linear-gradient(180deg, #f4f2fb 0%, #ffffff 38%, #fff7fd 100%)"
             : undefined,
       }}
     >
       <div className="relative z-10 flex min-h-screen flex-col">
-        <Suspense fallback={<div className="h-[105px] sm:h-[117px]" />}>
+        <Suspense fallback={<div className="h-[172px] sm:h-[188px]" />}>
           <PublicHeader />
         </Suspense>
         <div className="flex-1">{children}</div>

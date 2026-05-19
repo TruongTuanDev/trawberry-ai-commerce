@@ -45,23 +45,37 @@ export function ProductCard({ product }: { product: PublicProduct }) {
 
   return (
     <article
-      className="card-panel hover-card-effect group flex h-full flex-col overflow-hidden bg-white"
+      className="card-panel hover-card-effect group flex h-full flex-col overflow-hidden rounded-[1.85rem] border-white/70 bg-white"
       data-testid="product-card"
     >
       <Link href={`/products/${product.id}`} className="relative block overflow-hidden">
-        <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
-          <StockBadge label={stockState.label} tone={stockState.tone} />
+        <div className="absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <StockBadge label={stockState.label} tone={stockState.tone} />
+            {product.averageRating ? (
+              <span className="inline-flex items-center rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)]">
+                {Number(product.averageRating).toFixed(1)}
+              </span>
+            ) : null}
+          </div>
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[#cb11ab] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
+            ♡
+          </span>
+        </div>
+
+        <div className="absolute bottom-4 left-4 z-10 flex flex-wrap gap-2">
           {inCartQuantity > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-gradient-primary px-3 py-1 text-xs font-semibold text-white">
+            <span className="inline-flex items-center rounded-full bg-gradient-primary px-3 py-1 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(203,17,171,0.24)]">
               In cart {inCartQuantity}
             </span>
           ) : null}
         </div>
-        <div className="aspect-[4/5] overflow-hidden bg-[var(--panel-strong)]">
+
+        <div className="aspect-[4/5] overflow-hidden rounded-b-[1.6rem] bg-[linear-gradient(180deg,#f6f1ff_0%,#f1f1f6_100%)]">
           <FallbackImage
             src={product.images[0]?.url}
             alt={product.name}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
             testId={`product-card-image-${product.id}`}
           />
         </div>
@@ -83,16 +97,25 @@ export function ProductCard({ product }: { product: PublicProduct }) {
               </Link>
             </div>
           </div>
+
           <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-            {product.brand ? <span>{product.brand}</span> : null}
-            {product.categoryName ? <span>{product.categoryName}</span> : null}
+            {product.brand ? (
+              <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-1">
+                {product.brand}
+              </span>
+            ) : null}
+            {product.categoryName ? (
+              <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-1">
+                {product.categoryName}
+              </span>
+            ) : null}
           </div>
         </div>
 
         <div className="mt-auto space-y-4">
-          <div className="flex items-end justify-between gap-3">
+          <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,#fff8fe_0%,#ffffff_100%)] p-3">
             <div>
-              <p className="text-gradient-primary text-2xl font-bold">
+              <p className="text-3xl font-black tracking-tight text-[#cb11ab]">
                 {formattedPrice ?? "Contact shop"}
               </p>
               {formattedOldPrice ? (
@@ -128,7 +151,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
               type="button"
               onClick={handleQuickAdd}
               disabled={!primaryVariant?.inStock}
-              className="public-button-primary w-full px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="public-button-primary w-full px-4 py-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               data-testid={`product-primary-action-${product.id}`}
             >
               {requiresSelection
