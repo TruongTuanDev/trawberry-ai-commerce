@@ -79,10 +79,19 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null): {
   helper?: string;
 } {
   switch (runtimeStatus?.sellerFlowEffectiveMode ?? runtimeStatus?.effectiveMode) {
-    case "OPENAI_REAL":
+    case "AI_SERVICE_OPENAI_READY":
       return {
         label: "OpenAI real mode",
         tone: "bg-emerald-100 text-emerald-800",
+        helper: runtimeStatus?.openAiSmokeEnabled
+          ? "OpenAI real mode is enabled for opt-in verification."
+          : "OpenAI real mode is configured. Default tests still stay mock-safe.",
+      };
+    case "AI_SERVICE_OPENAI_BLOCKED":
+      return {
+        label: "OpenAI real blocked",
+        tone: "bg-rose-100 text-rose-800",
+        helper: getSafeRuntimeErrorMessage(runtimeStatus?.safeErrorCode),
       };
     case "AI_SERVICE_MOCK":
       return {
@@ -90,7 +99,7 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null): {
         tone: "bg-sky-100 text-sky-800",
         helper: "AI service mock mode - no OpenAI billing used.",
       };
-    case "AI_SERVICE_UNAVAILABLE":
+    case "OFFLINE":
       return {
         label: "AI service offline",
         tone: "bg-rose-100 text-rose-800",
@@ -101,6 +110,29 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null): {
         label: "Internal mock mode",
         tone: "bg-amber-100 text-amber-800",
       };
+  }
+}
+
+function getSafeRuntimeErrorMessage(safeErrorCode: string | null | undefined) {
+  switch (safeErrorCode) {
+    case "OPENAI_UNAUTHORIZED":
+      return "OpenAI real mode is blocked by authentication or missing key configuration.";
+    case "OPENAI_BILLING_HARD_LIMIT":
+      return "OpenAI billing hard limit blocked the runtime.";
+    case "OPENAI_QUOTA_EXCEEDED":
+      return "OpenAI quota is exhausted for this runtime.";
+    case "OPENAI_RATE_LIMIT":
+      return "OpenAI rate limit is currently blocking requests.";
+    case "OPENAI_BAD_REQUEST":
+      return "OpenAI rejected the current image request shape.";
+    case "STORAGE_WRITE_FAILED":
+      return "Runtime storage is not ready for OpenAI output persistence.";
+    case "AI_SERVICE_UNREACHABLE":
+      return "The backend cannot currently reach ai-service.";
+    case "AI_SERVICE_INVALID_RESPONSE":
+      return "ai-service returned an invalid provider response.";
+    default:
+      return "OpenAI real mode is blocked by runtime configuration or provider availability.";
   }
 }
 
@@ -450,9 +482,15 @@ export function SellerAiImagesWorkspace() {
           </div>
         </div>
 
-        {runtimeStatus?.effectiveMode === "AI_SERVICE_UNAVAILABLE" ? (
+        {runtimeStatus?.sellerFlowEffectiveMode === "OFFLINE" ? (
           <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
             `ai-service` is configured as the worker target but its health endpoint is unreachable. New tasks can fail until the service comes back.
+          </div>
+        ) : null}
+
+        {runtimeStatus?.sellerFlowEffectiveMode === "AI_SERVICE_OPENAI_BLOCKED" ? (
+          <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {getSafeRuntimeErrorMessage(runtimeStatus.safeErrorCode)}
           </div>
         ) : null}
 
@@ -660,7 +698,9 @@ export function SellerAiImagesWorkspace() {
                 const product = products.find((item) => item.id === task.productId) ?? null;
                 const provider =
                   task.generatedImages[0]?.provider ??
-                  (runtimeStatus?.effectiveMode === "OPENAI_REAL" ? "OPENAI" : runtimeStatus?.aiServiceProvider ?? "pending");
+                  (runtimeStatus?.sellerFlowEffectiveMode === "AI_SERVICE_OPENAI_READY"
+                    ? "OPENAI"
+                    : runtimeStatus?.aiServiceProvider ?? "pending");
                 const active = task.id === selectedTask?.id;
 
                 return (

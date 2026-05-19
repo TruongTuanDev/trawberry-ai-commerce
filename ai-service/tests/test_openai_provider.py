@@ -189,6 +189,21 @@ def test_openai_provider_maps_rate_limit_error() -> None:
 
     assert error.value.status_code == 503
     assert error.value.retryable is True
+    assert error.value.code == "OPENAI_RATE_LIMIT"
+
+
+def test_openai_provider_maps_missing_key_to_safe_code() -> None:
+    provider = OpenAIImageProvider(
+        Settings(
+            ai_image_provider="openai",
+            openai_api_key="",
+        ),
+    )
+
+    with pytest.raises(ProviderError) as error:
+        asyncio.run(provider.generate(build_request()))
+
+    assert error.value.code == "OPENAI_UNAUTHORIZED"
 
 
 def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:

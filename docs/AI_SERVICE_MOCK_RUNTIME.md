@@ -20,10 +20,15 @@ Audit date: `2026-05-19`
   - backend calls `ai-service`
   - `ai-service` uses `MockImageProvider`
   - no OpenAI billing is used
-- `OPENAI_REAL`
+- `AI_SERVICE_OPENAI_READY`
   - backend calls `ai-service`
   - `ai-service` uses `OpenAIImageProvider`
-  - this remains opt-in and not part of default verification
+  - runtime is ready for real OpenAI generation
+- `AI_SERVICE_OPENAI_BLOCKED`
+  - ai-service is set to OpenAI provider
+  - runtime is blocked by configuration or provider-safe diagnostics
+- `OFFLINE`
+  - backend cannot reach `ai-service`
 
 ## Required Env
 
@@ -48,7 +53,9 @@ AI service:
   "aiServiceReachable": true,
   "aiServiceProvider": "mock",
   "aiServiceStorageDriver": "mock",
+  "openAiSmokeEnabled": false,
   "openAiRealEnabled": false,
+  "safeErrorCode": null,
   "sellerFlowEffectiveMode": "AI_SERVICE_MOCK"
 }
 ```
@@ -69,3 +76,11 @@ No secrets are returned.
 
 - OpenAI real remains pending and must be verified separately.
 - virtual try-on remains `Coming soon`.
+
+## Opt-In Real OpenAI
+
+Manual verification only:
+- `backend-nest npm run smoke:ai-service-openai-real`
+- `ai-service python scripts/smoke_openai_provider.py`
+
+These commands must not run in default CI.

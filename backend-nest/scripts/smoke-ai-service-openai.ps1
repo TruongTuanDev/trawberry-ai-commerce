@@ -2,6 +2,31 @@ $ErrorActionPreference = 'Stop'
 
 $baseUrl = if ($env:BACKEND_BASE_URL) { $env:BACKEND_BASE_URL.TrimEnd('/') } else { 'http://127.0.0.1:3001' }
 $aiServiceBaseUrl = if ($env:AI_SERVICE_BASE_URL) { $env:AI_SERVICE_BASE_URL.TrimEnd('/') } else { 'http://127.0.0.1:8000' }
+$runOpenAiSmoke = if ($null -eq $env:RUN_OPENAI_SMOKE) { '' } else { $env:RUN_OPENAI_SMOKE }
+$aiWorkerMode = if ($null -eq $env:AI_WORKER_MODE) { '' } else { $env:AI_WORKER_MODE }
+$aiImageProvider = if ($null -eq $env:AI_IMAGE_PROVIDER) { '' } else { $env:AI_IMAGE_PROVIDER }
+
+if ($runOpenAiSmoke.Trim().ToLowerInvariant() -ne 'true') {
+  Write-Output 'SKIPPED: RUN_OPENAI_SMOKE is not true.'
+  exit 0
+}
+
+if ($aiWorkerMode.Trim() -ne 'ai-service') {
+  throw 'RUN_OPENAI_SMOKE=true requires AI_WORKER_MODE=ai-service.'
+}
+if ($aiImageProvider.Trim() -ne 'openai') {
+  throw 'RUN_OPENAI_SMOKE=true requires AI_IMAGE_PROVIDER=openai.'
+}
+if ([string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) {
+  throw 'RUN_OPENAI_SMOKE=true requires OPENAI_API_KEY.'
+}
+if ([string]::IsNullOrWhiteSpace($env:AI_SERVICE_INTERNAL_TOKEN)) {
+  throw 'RUN_OPENAI_SMOKE=true requires AI_SERVICE_INTERNAL_TOKEN.'
+}
+if ([string]::IsNullOrWhiteSpace($env:STORAGE_DRIVER)) {
+  throw 'RUN_OPENAI_SMOKE=true requires STORAGE_DRIVER.'
+}
+
 $timestamp = Get-Date -Format 'yyyyMMddHHmmss'
 $email = "smoke-ai-service-$timestamp@example.com"
 $password = 'password123'
@@ -10,6 +35,18 @@ $productNmId = [int64](4000000 + (Get-Random -Minimum 1 -Maximum 99999))
 $health = Invoke-RestMethod -Method Get -Uri "$aiServiceBaseUrl/health"
 if ($health.status -ne 'OK') {
   throw "ai-service health check failed."
+}
+if ($health.aiImageProvider -ne 'openai') {
+  throw "Expected ai-service provider openai, got '$($health.aiImageProvider)'."
+}
+if (-not $health.openaiConfigured) {
+  throw 'Expected ai-service to report openaiConfigured=true.'
+}
+if (-not $health.openaiSmokeEnabled) {
+  throw 'Expected ai-service to report openaiSmokeEnabled=true.'
+}
+if ($health.safeErrorCode) {
+  throw "OpenAI runtime is blocked before task execution: $($health.safeErrorCode)."
 }
 
 $register = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/auth/register" -ContentType 'application/json' -Body (@{
@@ -56,6 +93,23 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
   localTitle = 'Smoke AI Service Product'
   visibility = 'ACTIVE'
 } | ConvertTo-Json)
+
+$runtime = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/ai-images/runtime" -Headers $headers
+if ($runtime.workerMode -ne 'ai-service') {
+  throw "Expected backend worker mode ai-service, got '$($runtime.workerMode)'."
+}
+if ($runtime.sellerFlowEffectiveMode -ne 'AI_SERVICE_OPENAI_READY') {
+  throw "Expected runtime sellerFlowEffectiveMode AI_SERVICE_OPENAI_READY, got '$($runtime.sellerFlowEffectiveMode)'."
+}
+if (-not $runtime.openAiConfigured) {
+  throw 'Expected backend runtime to report openAiConfigured=true.'
+}
+if (-not $runtime.openAiSmokeEnabled) {
+  throw 'Expected backend runtime to report openAiSmokeEnabled=true.'
+}
+if ($runtime.safeErrorCode) {
+  throw "Expected runtime safeErrorCode to be empty, got '$($runtime.safeErrorCode)'."
+}
 
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "strawberry-smoke-ai-service-$timestamp"
 New-Item -ItemType Directory -Path $tempDir | Out-Null
@@ -121,12 +175,15 @@ if ($taskDetail.status -eq 'COMPLETED') {
   if ($creditDelta -ne 0) {
     throw "Expected 0 credits to be deducted on FAILED, but delta was $creditDelta."
   }
+  $safeFailure = if ([string]::IsNullOrWhiteSpace($taskDetail.errorMessage)) { 'UNKNOWN_OPENAI_FAILURE' } else { $taskDetail.errorMessage }
+  throw "OpenAI real runtime failed: $safeFailure"
 }
 
 Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
 
 [pscustomobject]@{
   aiServiceStatus = $health.status
+  runtimeEffectiveMode = $runtime.sellerFlowEffectiveMode
   shopId = $shop.id
   productId = $product.id
   taskId = $task.id

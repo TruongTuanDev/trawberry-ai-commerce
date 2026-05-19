@@ -81,9 +81,10 @@ class OpenAIImageProvider(ImageProvider):
     async def generate(self, request: ProviderGenerateRequest) -> list[ProviderImageResult]:
         if not self.settings.openai_api_key:
             raise ProviderError(
-                "OpenAI provider is enabled but OPENAI_API_KEY is missing.",
+                "OpenAI authentication failed.",
                 status_code=500,
                 retryable=False,
+                code="OPENAI_UNAUTHORIZED",
             )
 
         downloaded_images = await self._download_reference_images(request)
@@ -98,52 +99,62 @@ class OpenAIImageProvider(ImageProvider):
             raise
         except openai.AuthenticationError as error:
             raise ProviderError(
-                f"OpenAI authentication failed: {self._safe_message(error)}",
+                "OpenAI authentication failed.",
                 status_code=502,
                 retryable=False,
+                code="OPENAI_UNAUTHORIZED",
             ) from error
         except openai.RateLimitError as error:
+            code = self._classify_rate_limit_error(error)
             raise ProviderError(
-                f"OpenAI rate limit hit: {self._safe_message(error)}",
+                self._message_for_code(code),
                 status_code=503,
                 retryable=True,
+                code=code,
             ) from error
         except openai.APITimeoutError as error:
             raise ProviderError(
-                f"OpenAI request timed out: {self._safe_message(error)}",
+                "OpenAI rate limit or timeout blocked the request.",
                 status_code=504,
                 retryable=True,
+                code="OPENAI_RATE_LIMIT",
             ) from error
         except openai.BadRequestError as error:
             raise ProviderError(
-                f"OpenAI rejected the request: {self._safe_message(error)}",
+                "OpenAI rejected the image request.",
                 status_code=422,
                 retryable=False,
+                code="OPENAI_BAD_REQUEST",
             ) from error
         except openai.PermissionDeniedError as error:
             raise ProviderError(
-                f"OpenAI permission denied: {self._safe_message(error)}",
+                "OpenAI authentication failed.",
                 status_code=403,
                 retryable=False,
+                code="OPENAI_UNAUTHORIZED",
             ) from error
         except openai.APIConnectionError as error:
             raise ProviderError(
-                f"OpenAI connection failed: {self._safe_message(error)}",
+                "OpenAI connection failed.",
                 status_code=503,
                 retryable=True,
+                code="AI_SERVICE_UNREACHABLE",
             ) from error
         except openai.APIStatusError as error:
             retryable = error.status_code >= 500
+            code = self._classify_status_error(error)
             raise ProviderError(
-                f"OpenAI API error: {self._safe_message(error)}",
+                self._message_for_code(code),
                 status_code=error.status_code,
                 retryable=retryable,
+                code=code,
             ) from error
         except openai.OpenAIError as error:
             raise ProviderError(
-                f"OpenAI image generation failed: {self._safe_message(error)}",
+                "OpenAI image generation failed.",
                 status_code=502,
                 retryable=False,
+                code="OPENAI_BAD_REQUEST",
             ) from error
 
         return self._parse_response(response)
@@ -309,11 +320,12 @@ class OpenAIImageProvider(ImageProvider):
     def _parse_response(self, response) -> list[ProviderImageResult]:
         data = getattr(response, "data", None)
         if not data:
-            raise ProviderError(
-                "OpenAI returned no image data.",
-                status_code=502,
-                retryable=False,
-            )
+                raise ProviderError(
+                    "OpenAI returned no image data.",
+                    status_code=502,
+                    retryable=False,
+                    code="AI_SERVICE_INVALID_RESPONSE",
+                )
 
         width, height = DIMENSION_MAP.get(
             self.settings.openai_image_size,
@@ -328,6 +340,7 @@ class OpenAIImageProvider(ImageProvider):
                     "OpenAI returned an image response without b64_json output.",
                     status_code=502,
                     retryable=False,
+                    code="AI_SERVICE_INVALID_RESPONSE",
                 )
 
             try:
@@ -337,6 +350,7 @@ class OpenAIImageProvider(ImageProvider):
                     "OpenAI returned malformed base64 image output.",
                     status_code=502,
                     retryable=False,
+                    code="AI_SERVICE_INVALID_RESPONSE",
                 ) from error
 
             quality = validate_generated_image(
@@ -368,3 +382,37 @@ class OpenAIImageProvider(ImageProvider):
         if not message:
             return error.__class__.__name__
         return message.replace(self.settings.openai_api_key or "", "[redacted]")
+
+    def _classify_rate_limit_error(self, error: openai.RateLimitError) -> str:
+        message = self._safe_message(error).lower()
+        if "billing hard limit" in message:
+            return "OPENAI_BILLING_HARD_LIMIT"
+        if "quota" in message:
+            return "OPENAI_QUOTA_EXCEEDED"
+        return "OPENAI_RATE_LIMIT"
+
+    def _classify_status_error(self, error: openai.APIStatusError) -> str:
+        message = self._safe_message(error).lower()
+        if error.status_code == 429:
+            if "billing hard limit" in message:
+                return "OPENAI_BILLING_HARD_LIMIT"
+            if "quota" in message:
+                return "OPENAI_QUOTA_EXCEEDED"
+            return "OPENAI_RATE_LIMIT"
+        if error.status_code in (401, 403):
+            return "OPENAI_UNAUTHORIZED"
+        if error.status_code == 400:
+            return "OPENAI_BAD_REQUEST"
+        return "AI_SERVICE_INVALID_RESPONSE"
+
+    def _message_for_code(self, code: str) -> str:
+        messages = {
+            "OPENAI_UNAUTHORIZED": "OpenAI authentication failed.",
+            "OPENAI_BILLING_HARD_LIMIT": "OpenAI billing hard limit blocked the request.",
+            "OPENAI_RATE_LIMIT": "OpenAI rate limit blocked the request.",
+            "OPENAI_QUOTA_EXCEEDED": "OpenAI quota exceeded.",
+            "OPENAI_BAD_REQUEST": "OpenAI rejected the image request.",
+            "AI_SERVICE_UNREACHABLE": "OpenAI connection failed.",
+            "AI_SERVICE_INVALID_RESPONSE": "OpenAI returned an invalid response.",
+        }
+        return messages.get(code, "OpenAI image generation failed.")

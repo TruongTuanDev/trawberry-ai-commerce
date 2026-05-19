@@ -15,6 +15,22 @@
 - tightened seller browser verification so `/seller/ai-images` must show `AI service mock mode`
 - OpenAI real remains pending and not part of this phase pass
 
+## 2026-05-19 OpenAI Real Runtime Verification
+
+- added opt-in-only OpenAI runtime verification
+- default verification remains mock-safe
+- added safe runtime states for seller UI and backend diagnostics:
+  - `AI_SERVICE_OPENAI_READY`
+  - `AI_SERVICE_OPENAI_BLOCKED`
+  - `AI_SERVICE_MOCK`
+  - `INTERNAL_MOCK`
+  - `OFFLINE`
+- added `npm run smoke:ai-service-openai-real`
+- ai-service OpenAI smoke now:
+  - skips only when `RUN_OPENAI_SMOKE=false`
+  - fails when the flag is on but required env is missing
+  - never prints the API key
+
 ## 2026-05-19 Seller AI Images UI
 
 - Replaced the placeholder `/seller/ai-images` route with a real seller AI workspace.

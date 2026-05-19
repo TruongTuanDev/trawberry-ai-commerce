@@ -857,14 +857,16 @@ describe('AiImagesController (e2e)', () => {
     expect([
       'INTERNAL_MOCK',
       'AI_SERVICE_MOCK',
-      'OPENAI_REAL',
-      'AI_SERVICE_UNAVAILABLE',
+      'AI_SERVICE_OPENAI_READY',
+      'AI_SERVICE_OPENAI_BLOCKED',
+      'OFFLINE',
     ]).toContain(body.effectiveMode);
     expect([
       'INTERNAL_MOCK',
       'AI_SERVICE_MOCK',
-      'OPENAI_REAL',
-      'AI_SERVICE_UNAVAILABLE',
+      'AI_SERVICE_OPENAI_READY',
+      'AI_SERVICE_OPENAI_BLOCKED',
+      'OFFLINE',
     ]).toContain(body.sellerFlowEffectiveMode);
     expect(body.supportsTaskGeneration).toBe(true);
     expect(body.supportsTaskAttach).toBe(true);

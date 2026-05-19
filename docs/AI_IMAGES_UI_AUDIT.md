@@ -140,7 +140,12 @@ After this phase:
 
 - default verified path is now `ai-service mock`, not real OpenAI
 - `/seller/ai-images` does not expose a verified try-on execution flow
-- runtime can report `AI_SERVICE_UNAVAILABLE` if NestJS expects `ai-service` but the downstream service is offline
+- runtime can report:
+  - `AI_SERVICE_OPENAI_READY`
+  - `AI_SERVICE_OPENAI_BLOCKED`
+  - `AI_SERVICE_MOCK`
+  - `INTERNAL_MOCK`
+  - `OFFLINE`
 
 ## Verification References
 

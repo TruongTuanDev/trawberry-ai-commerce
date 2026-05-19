@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import sys
+
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = SERVICE_ROOT.parent
+if str(SERVICE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SERVICE_ROOT))
 
 from fastapi.testclient import TestClient
 
@@ -13,10 +19,19 @@ from app.main import app
 
 from dotenv import load_dotenv
 
+
+def _bool_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() == "true"
+
+
 def main() -> int:
-    load_dotenv()
-    run_smoke = os.getenv("RUN_OPENAI_SMOKE", "").lower() == "true"
+    load_dotenv(REPO_ROOT / "infra" / ".env")
+    load_dotenv(SERVICE_ROOT / ".env")
+    run_smoke = _bool_env("RUN_OPENAI_SMOKE")
     api_key = os.getenv("OPENAI_API_KEY", "")
+    provider = os.getenv("AI_IMAGE_PROVIDER", "mock").strip().lower()
+    storage_driver = os.getenv("STORAGE_DRIVER", "mock").strip().lower()
+    internal_token = os.getenv("AI_SERVICE_INTERNAL_TOKEN", "")
     front_image_url = os.getenv(
         "OPENAI_SMOKE_FRONT_IMAGE_URL",
         "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80",
@@ -27,8 +42,17 @@ def main() -> int:
         return 0
 
     if not api_key:
-        print("SKIP: OPENAI_API_KEY is not configured.")
-        return 0
+        print("FAIL: RUN_OPENAI_SMOKE=true but OPENAI_API_KEY is missing.")
+        return 1
+    if provider != "openai":
+        print("FAIL: RUN_OPENAI_SMOKE=true requires AI_IMAGE_PROVIDER=openai.")
+        return 1
+    if not internal_token:
+        print("FAIL: RUN_OPENAI_SMOKE=true requires AI_SERVICE_INTERNAL_TOKEN.")
+        return 1
+    if storage_driver not in {"mock", "local", "s3"}:
+        print(f"FAIL: Unsupported STORAGE_DRIVER '{storage_driver}'.")
+        return 1
 
     get_settings.cache_clear()
     get_provider.cache_clear()
@@ -36,7 +60,16 @@ def main() -> int:
 
     settings = get_settings()
     model = settings.openai_image_model
-    print(f"Running OpenAI smoke test using model: {model}")
+    print(
+        json.dumps(
+            {
+                "status": "RUNNING",
+                "provider": settings.ai_image_provider,
+                "storageDriver": settings.storage_driver,
+                "model": model,
+            }
+        )
+    )
 
     client = TestClient(app)
     token = settings.ai_service_internal_token
@@ -58,14 +91,7 @@ def main() -> int:
     )
 
     body = response.json()
-    print(json.dumps({"status_code": response.status_code, "body": body}, ensure_ascii=False))
-
-    if response.status_code == 422:
-        detail = body.get("detail", "")
-        if "Billing hard limit has been reached" in detail or "quota" in detail.lower():
-            print("Account/Billing Quota Issue: The OpenAI account has reached its billing hard limit or quota.")
-            return 0
-        return 1
+    print(json.dumps({"statusCode": response.status_code, "body": body}, ensure_ascii=False))
 
     if response.status_code != 200:
         return 1

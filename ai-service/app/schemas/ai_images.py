@@ -22,6 +22,8 @@ class HealthResponse(ApiModel):
     ai_image_provider: Literal["mock", "openai"] = "mock"
     storage_driver: Literal["mock", "local", "s3"] = "mock"
     openai_configured: bool = False
+    openai_smoke_enabled: bool = False
+    safe_error_code: str | None = None
     try_on_ready: bool = False
 
 

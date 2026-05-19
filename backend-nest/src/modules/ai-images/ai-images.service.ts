@@ -37,26 +37,24 @@ export class AiImagesService {
     );
     const aiServiceConfigured = workerMode === 'ai-service';
     const aiServiceHealth = await this.getAiServiceHealth(workerMode);
+    const sellerFlowEffectiveMode =
+      workerMode === 'internal-mock'
+        ? 'INTERNAL_MOCK'
+        : !aiServiceHealth.reachable
+          ? 'OFFLINE'
+          : aiServiceHealth.provider === 'mock'
+            ? 'AI_SERVICE_MOCK'
+            : aiServiceHealth.provider === 'openai' &&
+                aiServiceHealth.openAiConfigured &&
+                !aiServiceHealth.safeErrorCode
+              ? 'AI_SERVICE_OPENAI_READY'
+              : 'AI_SERVICE_OPENAI_BLOCKED';
 
     return {
       shopId,
       workerMode,
-      sellerFlowEffectiveMode:
-        workerMode === 'internal-mock'
-          ? 'INTERNAL_MOCK'
-          : !aiServiceHealth.reachable
-            ? 'AI_SERVICE_UNAVAILABLE'
-            : aiServiceHealth.provider === 'openai'
-              ? 'OPENAI_REAL'
-              : 'AI_SERVICE_MOCK',
-      effectiveMode:
-        workerMode === 'internal-mock'
-          ? 'INTERNAL_MOCK'
-          : !aiServiceHealth.reachable
-            ? 'AI_SERVICE_UNAVAILABLE'
-            : aiServiceHealth.provider === 'openai'
-              ? 'OPENAI_REAL'
-              : 'AI_SERVICE_MOCK',
+      sellerFlowEffectiveMode,
+      effectiveMode: sellerFlowEffectiveMode,
       supportsTaskGeneration: true,
       supportsTaskAttach: true,
       supportsCredits: true,
@@ -68,19 +66,26 @@ export class AiImagesService {
       aiServiceProvider: aiServiceHealth.provider,
       aiServiceStorageDriver: aiServiceHealth.storageDriver,
       openAiConfigured: aiServiceHealth.openAiConfigured,
+      openAiSmokeEnabled: aiServiceHealth.openAiSmokeEnabled,
       openAiRealEnabled:
         workerMode === 'ai-service' &&
         aiServiceHealth.reachable &&
         aiServiceHealth.provider === 'openai' &&
-        aiServiceHealth.openAiConfigured,
+        aiServiceHealth.openAiConfigured &&
+        !aiServiceHealth.safeErrorCode,
+      safeErrorCode: aiServiceHealth.safeErrorCode,
       statusMessage:
         workerMode === 'internal-mock'
           ? 'NestJS is generating AI tasks with the internal mock worker path.'
           : !aiServiceHealth.reachable
             ? 'NestJS is configured for ai-service mode, but the ai-service health endpoint is unreachable.'
-            : aiServiceHealth.provider === 'openai'
+            : aiServiceHealth.provider === 'openai' &&
+                aiServiceHealth.openAiConfigured &&
+                !aiServiceHealth.safeErrorCode
               ? 'NestJS is using ai-service with the OpenAI provider.'
-              : 'NestJS is using ai-service with the mock provider.',
+              : aiServiceHealth.provider === 'openai'
+                ? `NestJS is configured for ai-service OpenAI mode, but runtime is blocked${aiServiceHealth.safeErrorCode ? ` (${aiServiceHealth.safeErrorCode})` : ''}.`
+                : 'NestJS is using ai-service with the mock provider.',
     };
   }
 
@@ -698,6 +703,8 @@ export class AiImagesService {
     provider: 'mock' | 'openai' | null;
     storageDriver: 'mock' | 'local' | 's3' | null;
     openAiConfigured: boolean;
+    openAiSmokeEnabled: boolean;
+    safeErrorCode: string | null;
   }> {
     if (workerMode !== 'ai-service') {
       return {
@@ -705,6 +712,8 @@ export class AiImagesService {
         provider: null,
         storageDriver: null,
         openAiConfigured: false,
+        openAiSmokeEnabled: false,
+        safeErrorCode: null,
       };
     }
 
@@ -725,6 +734,8 @@ export class AiImagesService {
           provider: null,
           storageDriver: null,
           openAiConfigured: false,
+          openAiSmokeEnabled: false,
+          safeErrorCode: null,
         };
       }
 
@@ -732,6 +743,8 @@ export class AiImagesService {
         aiImageProvider?: 'mock' | 'openai';
         storageDriver?: 'mock' | 'local' | 's3';
         openaiConfigured?: boolean;
+        openaiSmokeEnabled?: boolean;
+        safeErrorCode?: string | null;
       };
 
       return {
@@ -739,6 +752,8 @@ export class AiImagesService {
         provider: body.aiImageProvider ?? null,
         storageDriver: body.storageDriver ?? null,
         openAiConfigured: body.openaiConfigured ?? false,
+        openAiSmokeEnabled: body.openaiSmokeEnabled ?? false,
+        safeErrorCode: body.safeErrorCode ?? null,
       };
     } catch {
       return {
@@ -746,6 +761,8 @@ export class AiImagesService {
         provider: null,
         storageDriver: null,
         openAiConfigured: false,
+        openAiSmokeEnabled: false,
+        safeErrorCode: null,
       };
     }
   }

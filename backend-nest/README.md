@@ -295,6 +295,10 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
   - `AI_WORKER_MODE=ai-service`
   - downstream `ai-service` with `AI_IMAGE_PROVIDER=mock`
   - `npm run smoke:ai-service-mock-images`
+- Opt-in real OpenAI verification:
+  - `npm run smoke:ai-service-openai-real`
+  - requires `RUN_OPENAI_SMOKE=true`
+  - must not be part of default CI or default local verification
 # Cart Checkout Smoke
 
 Useful script:

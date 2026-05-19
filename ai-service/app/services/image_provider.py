@@ -9,10 +9,12 @@ class ProviderError(Exception):
         *,
         status_code: int = 502,
         retryable: bool = False,
+        code: str | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.retryable = retryable
+        self.code = code
 
 
 @dataclass(slots=True)

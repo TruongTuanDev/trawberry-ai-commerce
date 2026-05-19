@@ -1,6 +1,6 @@
 from app.schemas.ai_images import AiImageGenerateRequest, AiImageGenerateResponse, GeneratedImage
 from app.services.callback_client import CallbackClient
-from app.services.image_provider import ImageProvider, ProviderGenerateRequest, ProviderImageResult
+from app.services.image_provider import ImageProvider, ProviderError, ProviderGenerateRequest, ProviderImageResult
 from app.services.prompt_builder import EcommercePromptBuilder
 from app.services.storage_service import StorageService
 
@@ -90,13 +90,29 @@ class AiImageService:
         asset: ProviderImageResult,
     ):
         if asset.image_bytes is not None:
-            return await self.storage_service.store_bytes(
-                object_key,
-                asset.image_bytes,
-                content_type=asset.mime_type or "application/octet-stream",
-            )
+            try:
+                return await self.storage_service.store_bytes(
+                    object_key,
+                    asset.image_bytes,
+                    content_type=asset.mime_type or "application/octet-stream",
+                )
+            except Exception as error:
+                raise ProviderError(
+                    "Generated image could not be written to storage.",
+                    status_code=502,
+                    retryable=False,
+                    code="STORAGE_WRITE_FAILED",
+                ) from error
 
         if asset.source_url is None:
             raise ValueError("Provider image result must include either image_bytes or source_url.")
 
-        return await self.storage_service.store_from_url(object_key, asset.source_url)
+        try:
+            return await self.storage_service.store_from_url(object_key, asset.source_url)
+        except Exception as error:
+            raise ProviderError(
+                "Generated image metadata could not be written to storage.",
+                status_code=502,
+                retryable=False,
+                code="STORAGE_WRITE_FAILED",
+            ) from error

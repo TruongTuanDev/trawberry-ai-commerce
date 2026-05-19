@@ -671,13 +671,15 @@ export type AiRuntimeStatus = {
   effectiveMode:
     | "INTERNAL_MOCK"
     | "AI_SERVICE_MOCK"
-    | "OPENAI_REAL"
-    | "AI_SERVICE_UNAVAILABLE";
+    | "AI_SERVICE_OPENAI_READY"
+    | "AI_SERVICE_OPENAI_BLOCKED"
+    | "OFFLINE";
   sellerFlowEffectiveMode:
     | "INTERNAL_MOCK"
     | "AI_SERVICE_MOCK"
-    | "OPENAI_REAL"
-    | "AI_SERVICE_UNAVAILABLE";
+    | "AI_SERVICE_OPENAI_READY"
+    | "AI_SERVICE_OPENAI_BLOCKED"
+    | "OFFLINE";
   supportsTaskGeneration: boolean;
   supportsTaskAttach: boolean;
   supportsCredits: boolean;
@@ -689,7 +691,9 @@ export type AiRuntimeStatus = {
   aiServiceProvider: "mock" | "openai" | null;
   aiServiceStorageDriver: "mock" | "local" | "s3" | null;
   openAiConfigured: boolean;
+  openAiSmokeEnabled: boolean;
   openAiRealEnabled: boolean;
+  safeErrorCode: string | null;
   statusMessage: string;
 };
 

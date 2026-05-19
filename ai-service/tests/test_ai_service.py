@@ -23,7 +23,25 @@ def test_health() -> None:
     assert body["aiImageProvider"] == "mock"
     assert body["storageDriver"] == "mock"
     assert body["openaiConfigured"] is False
+    assert body["openaiSmokeEnabled"] is False
+    assert body["safeErrorCode"] is None
     assert body["tryOnReady"] is False
+
+
+def test_health_reports_openai_blocked_when_provider_is_openai_without_key(monkeypatch) -> None:
+    monkeypatch.setenv("AI_IMAGE_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    get_settings.cache_clear()
+    get_provider.cache_clear()
+    get_ai_image_service.cache_clear()
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["aiImageProvider"] == "openai"
+    assert body["openaiConfigured"] is False
+    assert body["safeErrorCode"] == "OPENAI_UNAUTHORIZED"
 
 
 def test_generate_with_valid_token(monkeypatch) -> None:

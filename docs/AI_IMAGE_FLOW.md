@@ -32,6 +32,18 @@ Flow:
   - `ai-service`: `STORAGE_DRIVER=mock`
 - this proves the seller task path goes through `ai-service` without using OpenAI billing
 
+## Optional OpenAI Runtime
+
+Real OpenAI remains opt-in only:
+- enable `RUN_OPENAI_SMOKE=true`
+- set `AI_IMAGE_PROVIDER=openai`
+- provide `OPENAI_API_KEY`
+- run dedicated smoke only
+
+If billing, quota, auth, or storage fails:
+- the smoke must fail
+- default mock-safe verification remains unchanged
+
 ## AI Service Provider Branches
 
 ### `AI_IMAGE_PROVIDER=mock`

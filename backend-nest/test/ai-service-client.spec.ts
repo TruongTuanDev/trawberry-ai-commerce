@@ -115,7 +115,15 @@ describe('AiServiceClientService', () => {
 
   it('does not retry 401 responses', async () => {
     const fetchMock = createFetchMock(
-      createJsonResponse({ detail: 'Unauthorized' }, 401),
+      createJsonResponse(
+        {
+          detail: {
+            code: 'OPENAI_UNAUTHORIZED',
+            message: 'OpenAI authentication failed.',
+          },
+        },
+        401,
+      ),
     );
     global.fetch = fetchMock;
 
@@ -133,7 +141,8 @@ describe('AiServiceClientService', () => {
       }),
     ).rejects.toEqual(
       expect.objectContaining<Partial<AiServiceRequestError>>({
-        message: 'Unauthorized',
+        message: 'OPENAI_UNAUTHORIZED: OpenAI authentication failed.',
+        safeErrorCode: 'OPENAI_UNAUTHORIZED',
         retryable: false,
         refundCredit: true,
         statusCode: 401,
@@ -248,8 +257,11 @@ describe('AiServiceClientService', () => {
     const fetchMock = createFetchMock(
       createJsonResponse(
         {
-          detail:
-            'Generated image failed quality validation because the binary is not a readable image.',
+          detail: {
+            code: 'AI_SERVICE_INVALID_RESPONSE',
+            message:
+              'Generated image failed quality validation because the binary is not a readable image.',
+          },
         },
         502,
       ),
@@ -271,7 +283,8 @@ describe('AiServiceClientService', () => {
     ).rejects.toEqual(
       expect.objectContaining<Partial<AiServiceRequestError>>({
         message:
-          'Generated image failed quality validation because the binary is not a readable image.',
+          'AI_SERVICE_INVALID_RESPONSE: Generated image failed quality validation because the binary is not a readable image.',
+        safeErrorCode: 'AI_SERVICE_INVALID_RESPONSE',
         retryable: true,
         refundCredit: true,
         statusCode: 502,

@@ -9,6 +9,7 @@ Current state:
 - `backend-nest` can keep using the same HTTP contract
 - no frontend calls `ai-service` directly
 - current default verified runtime is `AI_SERVICE_MOCK`
+- real OpenAI verification is opt-in only
 
 ## Internal Contract
 
@@ -22,6 +23,8 @@ Current state:
   "aiImageProvider": "mock",
   "storageDriver": "mock",
   "openaiConfigured": false,
+  "openaiSmokeEnabled": false,
+  "safeErrorCode": null,
   "tryOnReady": false
 }
 ```
@@ -88,6 +91,16 @@ Response body:
 - OpenAI authentication/config issue: `502`
 - OpenAI rate limit / connection / timeout: `503` or `504`
 
+Safe provider/runtime codes include:
+- `OPENAI_UNAUTHORIZED`
+- `OPENAI_BILLING_HARD_LIMIT`
+- `OPENAI_RATE_LIMIT`
+- `OPENAI_QUOTA_EXCEEDED`
+- `OPENAI_BAD_REQUEST`
+- `AI_SERVICE_UNREACHABLE`
+- `AI_SERVICE_INVALID_RESPONSE`
+- `STORAGE_WRITE_FAILED`
+
 This lets `backend-nest` keep its existing task failure and credit refund behavior.
 
 `/health` is also used by `backend-nest` to power seller-safe runtime badges for `/seller/ai-images`.
@@ -113,6 +126,7 @@ Notes:
 ### `backend-nest` integration
 - `npm run smoke:ai-service-integration`: pass
 - `npm run smoke:ai-service-mock-images`: required for the seller runtime phase
+- `npm run smoke:ai-service-openai-real`: opt-in only
 - verified:
   - `backend-nest` uses `ai-service` instead of internal mock when configured
   - `backend-nest` still stores generated images from `ai-service`
@@ -129,7 +143,8 @@ Use:
 Then run:
 - `python scripts/smoke_openai_provider.py`
 
-If the key is missing, the script skips instead of failing local/CI.
+If the flag is false, the script skips.
+If the flag is true but env is incomplete, the script fails.
 
 ## Docker Note
 Dockerfile remains present. If Docker daemon is not running locally, Docker runtime verification is blocked by environment, not by application code.

@@ -37,6 +37,7 @@ export class AiServiceRequestError extends Error {
     readonly retryable: boolean,
     readonly refundCredit: boolean,
     readonly statusCode?: number,
+    readonly safeErrorCode?: string,
   ) {
     super(message);
   }
@@ -122,7 +123,8 @@ export class AiServiceClientService {
       });
 
       if (!response.ok) {
-        const message = await this.extractErrorMessage(response);
+        const { message, safeErrorCode } =
+          await this.extractErrorMessage(response);
         const retryable =
           response.status >= 500 ||
           response.status === 429 ||
@@ -133,6 +135,7 @@ export class AiServiceClientService {
           retryable,
           true,
           response.status,
+          safeErrorCode,
         );
       }
 
@@ -254,12 +257,36 @@ export class AiServiceClientService {
   private async extractErrorMessage(response: Response) {
     try {
       const body = (await response.json()) as {
-        detail?: string;
+        detail?: string | { code?: string | null; message?: string };
         message?: string;
       };
-      return body.detail ?? body.message ?? response.statusText;
+      if (typeof body.detail === 'string') {
+        return {
+          message: body.detail,
+          safeErrorCode: undefined,
+        };
+      }
+      if (body.detail && typeof body.detail === 'object') {
+        const safeErrorCode =
+          typeof body.detail.code === 'string' ? body.detail.code : undefined;
+        const message =
+          typeof body.detail.message === 'string'
+            ? body.detail.message
+            : (body.message ?? response.statusText);
+        return {
+          message: safeErrorCode ? `${safeErrorCode}: ${message}` : message,
+          safeErrorCode,
+        };
+      }
+      return {
+        message: body.message ?? response.statusText,
+        safeErrorCode: undefined,
+      };
     } catch {
-      return response.statusText;
+      return {
+        message: response.statusText,
+        safeErrorCode: undefined,
+      };
     }
   }
 

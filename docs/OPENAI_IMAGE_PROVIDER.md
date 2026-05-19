@@ -14,6 +14,26 @@ Current verified seller runtime remains:
 - `AI_IMAGE_PROVIDER=mock`
 - `OPENAI real` is pending and opt-in only
 
+## Opt-In Only Runtime Verification
+
+Real OpenAI verification is never part of default tests.
+
+Required env:
+- `RUN_OPENAI_SMOKE=true`
+- `AI_WORKER_MODE=ai-service`
+- `AI_IMAGE_PROVIDER=openai`
+- `OPENAI_API_KEY=...`
+- `AI_SERVICE_INTERNAL_TOKEN=...`
+- valid `STORAGE_DRIVER`
+
+If `RUN_OPENAI_SMOKE=false`:
+- smoke scripts print `SKIPPED`
+- exit `0`
+
+If `RUN_OPENAI_SMOKE=true` but required env is missing:
+- smoke fails
+- exit is non-zero
+
 ## API Choice
 The implementation uses the OpenAI Images API.
 
@@ -72,20 +92,30 @@ If any check fails, `ai-service` returns a provider error and `backend-nest` can
 
 ## Error Mapping
 - missing `OPENAI_API_KEY`:
-  - provider error, non-retryable
+  - safe code: `OPENAI_UNAUTHORIZED`
 - rate limit:
-  - retryable provider error
+  - safe code: `OPENAI_RATE_LIMIT`
+- billing hard limit:
+  - safe code: `OPENAI_BILLING_HARD_LIMIT`
+- quota exhausted:
+  - safe code: `OPENAI_QUOTA_EXCEEDED`
 - timeout:
-  - retryable provider error
+  - safe code: `OPENAI_RATE_LIMIT`
 - malformed response:
-  - non-retryable provider error
+  - safe code: `AI_SERVICE_INVALID_RESPONSE`
 - bad request / policy-style rejection:
-  - non-retryable provider error
+  - safe code: `OPENAI_BAD_REQUEST`
+- storage write failure:
+  - safe code: `STORAGE_WRITE_FAILED`
 
 No API key is logged or returned.
 
 ## Seller UI Status
-- `/seller/ai-images` can surface `OpenAI real mode` only when `backend-nest` is configured for `ai-service` and `ai-service /health` reports `AI_IMAGE_PROVIDER=openai`.
+- `/seller/ai-images` can surface:
+  - `OpenAI real mode`
+  - `OpenAI real blocked`
+  - `AI service mock mode`
+  - `AI service offline`
 - Default tests remain mock-safe and do not call OpenAI.
 
 ## Storage Notes
@@ -113,13 +143,18 @@ No default test calls OpenAI directly.
 Run only when explicitly enabled:
 - `RUN_OPENAI_SMOKE=true`
 - `OPENAI_API_KEY=...`
+- `AI_IMAGE_PROVIDER=openai`
 
 Command:
 ```bash
 python scripts/smoke_openai_provider.py
 ```
 
-If the key is missing, the script prints `SKIP` and exits successfully.
+If the flag is false, the script prints `SKIP` and exits successfully.
+
+If the flag is true but the key, provider mode, or internal token is missing:
+- the script fails
+- no key is printed
 
 If it runs successfully, it verifies:
 - `taskId`

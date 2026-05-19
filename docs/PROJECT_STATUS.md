@@ -15,6 +15,20 @@
   - `ai-service python -m pytest -q`
 - OpenAI real remains pending and must not be treated as passed by default
 
+## OpenAI Real Verification Snapshot - 2026-05-19
+
+- OpenAI real verification is opt-in only
+- default CI and default local verification remain mock-safe
+- new manual entry points:
+  - `backend-nest npm run smoke:ai-service-openai-real`
+  - `ai-service python scripts/smoke_openai_provider.py`
+- runtime states now distinguish:
+  - `AI_SERVICE_MOCK`
+  - `AI_SERVICE_OPENAI_READY`
+  - `AI_SERVICE_OPENAI_BLOCKED`
+  - `INTERNAL_MOCK`
+  - `OFFLINE`
+
 ## Seller AI Images UI Snapshot - 2026-05-19
 
 - `/seller/ai-images` is now connected to the real seller AI task flow.

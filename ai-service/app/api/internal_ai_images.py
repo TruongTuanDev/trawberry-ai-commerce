@@ -21,4 +21,10 @@ async def generate_ai_images(
     try:
         return await service.generate(payload)
     except ProviderError as error:
-        raise HTTPException(status_code=error.status_code, detail=str(error)) from error
+        raise HTTPException(
+            status_code=error.status_code,
+            detail={
+                "code": error.code,
+                "message": str(error),
+            },
+        ) from error

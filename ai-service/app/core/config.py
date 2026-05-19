@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     openai_image_output_format: Literal["jpeg", "png", "webp"] = "jpeg"
     openai_image_timeout_seconds: int = 120
     openai_image_max_retries: int = 1
+    run_openai_smoke: bool = False
     openai_input_image_max_bytes: int = Field(
         default=15 * 1024 * 1024,
         validation_alias=AliasChoices(

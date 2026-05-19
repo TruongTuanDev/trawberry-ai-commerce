@@ -53,6 +53,7 @@
     "smoke:ai-service-mock-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-mock-images.ps1",
     "smoke:ai-service-integration": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-integration.ps1",
     "smoke:ai-service-openai": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-openai.ps1",
+    "smoke:ai-service-openai-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-openai.ps1",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

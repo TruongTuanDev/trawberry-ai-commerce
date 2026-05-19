@@ -28,6 +28,8 @@ Health response now includes safe runtime metadata for upstream diagnostics:
 - `aiImageProvider`
 - `storageDriver`
 - `openaiConfigured`
+- `openaiSmokeEnabled`
+- `safeErrorCode`
 - `tryOnReady`
 
 ## Internal auth
@@ -182,7 +184,11 @@ $env:OPENAI_API_KEY='...'
 python scripts/smoke_openai_provider.py
 ```
 
-If `RUN_OPENAI_SMOKE` is false or `OPENAI_API_KEY` is missing, the script prints `SKIP` and exits successfully.
+If `RUN_OPENAI_SMOKE` is false, the script prints `SKIP` and exits successfully.
+
+If `RUN_OPENAI_SMOKE` is true but required env is missing, the script fails clearly.
+
+If OpenAI billing, quota, auth, or storage fails, the script fails clearly with safe error output.
 
 ## Docker
 ```bash

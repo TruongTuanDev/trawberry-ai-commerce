@@ -11,29 +11,33 @@ export class AiRuntimeStatusResponseDto {
     enum: [
       'INTERNAL_MOCK',
       'AI_SERVICE_MOCK',
-      'OPENAI_REAL',
-      'AI_SERVICE_UNAVAILABLE',
+      'AI_SERVICE_OPENAI_READY',
+      'AI_SERVICE_OPENAI_BLOCKED',
+      'OFFLINE',
     ],
   })
   effectiveMode!:
     | 'INTERNAL_MOCK'
     | 'AI_SERVICE_MOCK'
-    | 'OPENAI_REAL'
-    | 'AI_SERVICE_UNAVAILABLE';
+    | 'AI_SERVICE_OPENAI_READY'
+    | 'AI_SERVICE_OPENAI_BLOCKED'
+    | 'OFFLINE';
 
   @ApiProperty({
     enum: [
       'INTERNAL_MOCK',
       'AI_SERVICE_MOCK',
-      'OPENAI_REAL',
-      'AI_SERVICE_UNAVAILABLE',
+      'AI_SERVICE_OPENAI_READY',
+      'AI_SERVICE_OPENAI_BLOCKED',
+      'OFFLINE',
     ],
   })
   sellerFlowEffectiveMode!:
     | 'INTERNAL_MOCK'
     | 'AI_SERVICE_MOCK'
-    | 'OPENAI_REAL'
-    | 'AI_SERVICE_UNAVAILABLE';
+    | 'AI_SERVICE_OPENAI_READY'
+    | 'AI_SERVICE_OPENAI_BLOCKED'
+    | 'OFFLINE';
 
   @ApiProperty()
   supportsTaskGeneration!: boolean;
@@ -69,7 +73,13 @@ export class AiRuntimeStatusResponseDto {
   openAiConfigured!: boolean;
 
   @ApiProperty()
+  openAiSmokeEnabled!: boolean;
+
+  @ApiProperty()
   openAiRealEnabled!: boolean;
+
+  @ApiProperty({ nullable: true })
+  safeErrorCode!: string | null;
 
   @ApiProperty()
   statusMessage!: string;
