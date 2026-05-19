@@ -833,6 +833,39 @@ describe('AiImagesController (e2e)', () => {
     expect(body.remainingCredits).toBe(AI_DEFAULT_DEV_CREDITS);
   });
 
+  it('returns seller-safe AI runtime status for the current shop', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/ai-images/runtime')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const body = readBody<{
+      shopId: string;
+      workerMode: string;
+      effectiveMode: string;
+      supportsTaskGeneration: boolean;
+      supportsTaskAttach: boolean;
+      supportsCredits: boolean;
+      supportsVirtualTryOn: boolean;
+      tryOnReady: boolean;
+    }>(response);
+
+    expect(body.shopId).toBe('shop-1');
+    expect(['internal-mock', 'ai-service']).toContain(body.workerMode);
+    expect([
+      'INTERNAL_MOCK',
+      'AI_SERVICE_MOCK',
+      'OPENAI_REAL',
+      'AI_SERVICE_UNAVAILABLE',
+    ]).toContain(body.effectiveMode);
+    expect(body.supportsTaskGeneration).toBe(true);
+    expect(body.supportsTaskAttach).toBe(true);
+    expect(body.supportsCredits).toBe(true);
+    expect(body.supportsVirtualTryOn).toBe(false);
+    expect(body.tryOnReady).toBe(false);
+  });
+
   it('rejects task creation when credits are insufficient', async () => {
     const token = await loginAndGetToken(app, 'seller2@example.com');
 

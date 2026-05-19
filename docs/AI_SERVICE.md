@@ -17,7 +17,11 @@ Current state:
 {
   "status": "OK",
   "ok": true,
-  "service": "strawberry-ai-service"
+  "service": "strawberry-ai-service",
+  "aiImageProvider": "mock",
+  "storageDriver": "mock",
+  "openaiConfigured": false,
+  "tryOnReady": false
 }
 ```
 
@@ -83,6 +87,8 @@ Response body:
 - OpenAI rate limit / connection / timeout: `503` or `504`
 
 This lets `backend-nest` keep its existing task failure and credit refund behavior.
+
+`/health` is also used by `backend-nest` to power seller-safe runtime badges for `/seller/ai-images`.
 
 ## Storage Drivers
 - `mock`

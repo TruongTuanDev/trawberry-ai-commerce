@@ -665,6 +665,28 @@ export type AiCredits = {
   updatedAt: string;
 };
 
+export type AiRuntimeStatus = {
+  shopId: string;
+  workerMode: "internal-mock" | "ai-service";
+  effectiveMode:
+    | "INTERNAL_MOCK"
+    | "AI_SERVICE_MOCK"
+    | "OPENAI_REAL"
+    | "AI_SERVICE_UNAVAILABLE";
+  supportsTaskGeneration: boolean;
+  supportsTaskAttach: boolean;
+  supportsCredits: boolean;
+  supportsTaskRetry: boolean;
+  supportsVirtualTryOn: boolean;
+  tryOnReady: boolean;
+  aiServiceConfigured: boolean;
+  aiServiceReachable: boolean;
+  aiServiceProvider: "mock" | "openai" | null;
+  aiServiceStorageDriver: "mock" | "local" | "s3" | null;
+  openAiConfigured: boolean;
+  statusMessage: string;
+};
+
 export type AiImageTask = {
   id: string;
   shopId: string;
@@ -1310,7 +1332,15 @@ export async function getAiCredits(shopId: string, token?: string) {
   });
 }
 
+export async function getAiRuntimeStatus(shopId: string, token?: string) {
+  return apiRequest<AiRuntimeStatus>(`/api/shops/${shopId}/ai-images/runtime`, {
+    method: "GET",
+    token,
+  });
+}
+
 export const createAiImageTask = createShopAiImageTask;
+export const getAiCreditsStatus = getAiCredits;
 
 export async function getShopAiImageTasks(
   shopId: string,
@@ -1352,6 +1382,8 @@ export async function getShopAiImageTaskById(
 }
 
 export const getAiImageTask = getShopAiImageTaskById;
+export const listAiImageTasks = getShopAiImageTasks;
+export const getAiImageTaskById = getShopAiImageTaskById;
 
 export async function attachAiGeneratedImageToProduct(
   shopId: string,
@@ -1369,6 +1401,7 @@ export async function attachAiGeneratedImageToProduct(
 }
 
 export const attachGeneratedImage = attachAiGeneratedImageToProduct;
+export const attachAiGeneratedImage = attachAiGeneratedImageToProduct;
 
 export async function getShopOrders(
   shopId: string,

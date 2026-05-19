@@ -1,5 +1,26 @@
 # Project Status
 
+## Seller AI Images UI Snapshot - 2026-05-19
+
+- `/seller/ai-images` is now connected to the real seller AI task flow.
+- The dedicated seller AI page now supports:
+  - current shop context
+  - runtime mode badge
+  - product search/selection
+  - AI task creation
+  - recent task list
+  - result gallery
+  - attach generated image back into product gallery
+- Virtual try-on is explicitly shown as `Coming soon` until a verified backend flow exists.
+- Current Docker runtime audit on `2026-05-19`:
+  - `backend-nest` effective seller AI mode: `INTERNAL_MOCK`
+  - `ai-service /health`: `aiImageProvider=openai`, `storageDriver=s3`
+  - implication: seller UI is real and mock-safe, but current compose runtime is not yet using `ai-service` as the effective worker path
+- Verification entry points:
+  - `backend-nest npm run smoke:ai-images-ui-flow`
+  - `frontend-next npm run test:e2e:seller-ai-images`
+  - `ai-service python -m pytest -q`
+
 ## CI Postgres Extension Fix Snapshot - 2026-05-19
 
 - GitHub Actions `backend` job was hardened for Prisma schema UUID defaults.

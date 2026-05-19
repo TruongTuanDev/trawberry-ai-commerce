@@ -79,6 +79,10 @@ If any check fails, `ai-service` returns a provider error and `backend-nest` can
 
 No API key is logged or returned.
 
+## Seller UI Status
+- `/seller/ai-images` can surface `OpenAI real mode` only when `backend-nest` is configured for `ai-service` and `ai-service /health` reports `AI_IMAGE_PROVIDER=openai`.
+- Default tests remain mock-safe and do not call OpenAI.
+
 ## Storage Notes
 Recommended when using OpenAI for real output:
 - `STORAGE_DRIVER=local`

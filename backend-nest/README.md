@@ -89,6 +89,7 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `POST /api/shops/:shopId/products/:productId/ai-images/tasks`
 - `GET /api/shops/:shopId/ai-images/tasks`
 - `GET /api/shops/:shopId/ai-images/tasks/:taskId`
+- `GET /api/shops/:shopId/ai-images/runtime`
 - `POST /api/shops/:shopId/ai-images/tasks/:taskId/retry`
 - `POST /api/shops/:shopId/products/:productId/images/:imageId/attach`
 - `POST /api/shops/:shopId/imports/wildberries/preview`
@@ -288,6 +289,8 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
 - Worker calls the separate `ai-service` over `POST /internal/ai-images/generate`.
 - Built-in retry and timeout handling are applied for the AI service call.
 - If `BULLMQ_DISABLED=true`, the task is still created and local asynchronous processing is triggered inside NestJS for bootstrap testing.
+- Seller-safe runtime diagnostics are exposed through `GET /api/shops/:shopId/ai-images/runtime`.
+- The dedicated seller UI route `/seller/ai-images` consumes this runtime endpoint to label mock, ai-service, OpenAI, or offline state without exposing secrets.
 # Cart Checkout Smoke
 
 Useful script:

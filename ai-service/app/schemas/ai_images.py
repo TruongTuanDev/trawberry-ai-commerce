@@ -19,6 +19,10 @@ class HealthResponse(ApiModel):
     status: Literal["OK"] = "OK"
     ok: bool = True
     service: str = "strawberry-ai-service"
+    ai_image_provider: Literal["mock", "openai"] = "mock"
+    storage_driver: Literal["mock", "local", "s3"] = "mock"
+    openai_configured: bool = False
+    try_on_ready: bool = False
 
 
 class InputImages(ApiModel):

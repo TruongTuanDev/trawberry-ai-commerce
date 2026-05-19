@@ -8,6 +8,8 @@ The AI image pipeline now spans:
 
 Flow:
 1. seller creates a task from `frontend-next`
+   - `/seller/ai-images`
+   - or `/seller/products/[id]/images`
 2. `frontend-next` calls `backend-nest`
 3. `backend-nest` validates shop access, product ownership, image ownership, and credits
 4. `backend-nest` stores the task as `PENDING`
@@ -78,3 +80,9 @@ The prompt builder now reinforces:
 - `backend-nest` integration smoke still passes
 - generated image attach back into product gallery still works
 - credits still decrease correctly under the existing backend flow
+- `/seller/ai-images` is now a real seller task hub, not placeholder-only
+
+## Try-on Status
+- `TRY_ON` still exists as a task/domain hint
+- no verified end-to-end seller/customer try-on flow is exposed in the current UI
+- `/seller/ai-images` intentionally labels try-on as `Coming soon`

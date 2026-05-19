@@ -23,6 +23,12 @@ FastAPI service for internal marketplace AI image generation orchestration.
 - `GET /health`
 - `POST /internal/ai-images/generate`
 
+Health response now includes safe runtime metadata for upstream diagnostics:
+- `aiImageProvider`
+- `storageDriver`
+- `openaiConfigured`
+- `tryOnReady`
+
 ## Internal auth
 All internal generation calls require:
 - header: `X-Internal-Token`

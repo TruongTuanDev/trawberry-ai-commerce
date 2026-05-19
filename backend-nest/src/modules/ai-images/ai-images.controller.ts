@@ -24,6 +24,7 @@ import { ProductImageResponseDto } from '../product-images/dto/product-image-res
 import { AiImagesService } from './ai-images.service';
 import { AiCreditResponseDto } from './dto/ai-credit-response.dto';
 import { AiImageTaskResponseDto } from './dto/ai-image-task-response.dto';
+import { AiRuntimeStatusResponseDto } from './dto/ai-runtime-status-response.dto';
 import { CreateAiImageTaskDto } from './dto/create-ai-image-task.dto';
 import { ListAiImageTasksQueryDto } from './dto/list-ai-image-tasks-query.dto';
 
@@ -70,6 +71,15 @@ export class AiImagesController {
   @ApiOkResponse({ type: AiCreditResponseDto })
   getCredits(@Param('shopId') shopId: string) {
     return this.aiImagesService.getCredits(shopId);
+  }
+
+  @Get('ai-images/runtime')
+  @ApiOperation({
+    summary: 'Get seller-safe runtime status for AI image generation.',
+  })
+  @ApiOkResponse({ type: AiRuntimeStatusResponseDto })
+  getRuntimeStatus(@Param('shopId') shopId: string) {
+    return this.aiImagesService.getRuntimeStatus(shopId);
   }
 
   @Post('ai-images/tasks/:taskId/retry')

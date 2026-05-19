@@ -65,6 +65,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/products`
 - `/seller/products/[id]`
 - `/seller/products/[id]/images`
+- `/seller/ai-images`
 - `/seller/import/wildberries`
 - `/seller/import/wildberries-api`
 - `/seller/ai-images`
@@ -162,6 +163,13 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - Generate AI Image modal
   - AI task polling
   - attach generated image back into product gallery
+- Seller AI hub page with:
+  - shop-scoped product search and selector
+  - runtime mode badge
+  - inline AI task creation form
+  - recent task list
+  - result gallery with attach action
+  - explicit `Coming soon` try-on card
 
 ## Local run
 
@@ -439,6 +447,23 @@ Current coverage:
 - calculates delivery offers from UI and verifies the recommended same-city offer is Yandex
 - creates and refreshes a mock shipment from UI
 - verifies customer `/orders/[id]` tracking shows provider, status, and tracking link
+
+## Playwright seller AI images flow
+With Docker runtime already healthy and backend available:
+
+```bash
+npm run test:e2e:seller-ai-images
+```
+
+Current coverage:
+- approved seller and shop setup through backend API
+- shop product with image setup through backend API
+- seller opens `/seller/ai-images`
+- seller selects product and creates AI task
+- task completes in mock-safe mode
+- seller attaches generated image into product gallery
+- seller image gallery shows `AI_GENERATED`
+- try-on card stays clearly non-interactive
 
 ## Playwright public smoke
 With the Docker stack or local frontend/backend already running:

@@ -149,6 +149,23 @@ Optional query params:
 ### `GET /api/shops/:shopId/ai-images/tasks/:taskId`
 Returns one task with generated images.
 
+### `GET /api/shops/:shopId/ai-images/runtime`
+Returns seller-safe runtime diagnostics for the current AI image path.
+
+Response fields include:
+- `workerMode`
+- `effectiveMode`
+- `aiServiceReachable`
+- `aiServiceProvider`
+- `aiServiceStorageDriver`
+- `openAiConfigured`
+- `tryOnReady`
+- `supportsTaskGeneration`
+- `supportsTaskAttach`
+- `supportsCredits`
+- `supportsTaskRetry`
+- `supportsVirtualTryOn`
+
 ### `POST /api/shops/:shopId/ai-images/tasks/:taskId/retry`
 Retries one task.
 
@@ -241,3 +258,7 @@ Smoke verifies:
 - verify product image has `imageType=AI_GENERATED`
 - verify credits drop by `2`
 - verify cross-shop access returns `403`
+
+Seller UI entry points:
+- `/seller/products/[id]/images`
+- `/seller/ai-images`

@@ -18,7 +18,12 @@ def test_health() -> None:
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "OK"
+    body = response.json()
+    assert body["status"] == "OK"
+    assert body["aiImageProvider"] == "mock"
+    assert body["storageDriver"] == "mock"
+    assert body["openaiConfigured"] is False
+    assert body["tryOnReady"] is False
 
 
 def test_generate_with_valid_token(monkeypatch) -> None:

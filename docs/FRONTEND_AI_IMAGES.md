@@ -3,20 +3,21 @@
 ## Scope
 `frontend-next` now exposes the seller-facing AI image creation flow on:
 - `/seller/products/[id]/images`
+- `/seller/ai-images`
 
 The frontend only talks to `backend-nest`. It does not call `ai-service` directly.
 
 ## UI Flow
-1. seller opens a product image page
-2. seller clicks `Generate AI Image`
-3. modal opens and shows:
+1. seller opens either `/seller/products/[id]/images` or `/seller/ai-images`
+2. seller selects one product and creates an AI task
+3. form/modal shows:
    - remaining AI credits
+   - runtime mode badge
    - front image selector
    - optional back image selector
    - optional model reference selector
-   - quantity `1..10`
-   - task type
-   - style preset
+   - quantity
+   - task mode / style
    - optional prompt
 4. frontend creates an AI task in `backend-nest`
 5. page polls task status every `2` seconds
@@ -25,10 +26,13 @@ The frontend only talks to `backend-nest`. It does not call `ai-service` directl
    - preview a generated image
    - attach it to the product gallery
 8. gallery refreshes and shows the attached image as `AI_GENERATED`
+9. virtual try-on remains `Coming soon` until a verified backend flow exists
 
 ## Backend APIs Used
 - `GET /api/shops/:shopId/ai-credits`
+- `GET /api/shops/:shopId/ai-images/runtime`
 - `POST /api/shops/:shopId/products/:productId/ai-images/tasks`
+- `GET /api/shops/:shopId/ai-images/tasks`
 - `GET /api/shops/:shopId/ai-images/tasks/:taskId`
 - `POST /api/shops/:shopId/products/:productId/ai-images/:generatedImageId/attach`
 - `GET /api/shops/:shopId/products/:productId/images`
@@ -51,6 +55,8 @@ The frontend only talks to `backend-nest`. It does not call `ai-service` directl
 - failed tasks display `errorMessage`
 
 ## Components
+- `src/app/seller/ai-images/page.tsx`
+- `src/components/ai/seller-ai-images-workspace.tsx`
 - `src/app/seller/products/[id]/images/page.tsx`
 - `src/components/products/ai-image-generate-modal.tsx`
 - `src/components/products/ai-task-panel.tsx`
@@ -60,4 +66,5 @@ The frontend only talks to `backend-nest`. It does not call `ai-service` directl
 ## Verification
 - `frontend-next npm run lint`: pass
 - `frontend-next npm run build`: pass
+- `frontend-next npm run test:e2e:seller-ai-images`: pass
 - `backend-nest npm run smoke:ai-service-integration`: pass

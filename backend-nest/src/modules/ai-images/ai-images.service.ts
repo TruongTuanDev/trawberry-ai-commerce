@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { QueueService } from '../../common/queue/queue.service';
 import { ProductImageResponseDto } from '../product-images/dto/product-image-response.dto';
@@ -26,7 +27,49 @@ export class AiImagesService {
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
     private readonly workerService: AiImagesWorkerService,
+    private readonly configService: ConfigService,
   ) {}
+
+  async getRuntimeStatus(shopId: string) {
+    const workerMode = this.configService.get<'internal-mock' | 'ai-service'>(
+      'AI_WORKER_MODE',
+      'internal-mock',
+    );
+    const aiServiceConfigured = workerMode === 'ai-service';
+    const aiServiceHealth = await this.getAiServiceHealth(workerMode);
+
+    return {
+      shopId,
+      workerMode,
+      effectiveMode:
+        workerMode === 'internal-mock'
+          ? 'INTERNAL_MOCK'
+          : !aiServiceHealth.reachable
+            ? 'AI_SERVICE_UNAVAILABLE'
+            : aiServiceHealth.provider === 'openai'
+              ? 'OPENAI_REAL'
+              : 'AI_SERVICE_MOCK',
+      supportsTaskGeneration: true,
+      supportsTaskAttach: true,
+      supportsCredits: true,
+      supportsTaskRetry: true,
+      supportsVirtualTryOn: false,
+      tryOnReady: false,
+      aiServiceConfigured,
+      aiServiceReachable: aiServiceHealth.reachable,
+      aiServiceProvider: aiServiceHealth.provider,
+      aiServiceStorageDriver: aiServiceHealth.storageDriver,
+      openAiConfigured: aiServiceHealth.openAiConfigured,
+      statusMessage:
+        workerMode === 'internal-mock'
+          ? 'NestJS is generating AI tasks with the internal mock worker path.'
+          : !aiServiceHealth.reachable
+            ? 'NestJS is configured for ai-service mode, but the ai-service health endpoint is unreachable.'
+            : aiServiceHealth.provider === 'openai'
+              ? 'NestJS is using ai-service with the OpenAI provider.'
+              : 'NestJS is using ai-service with the mock provider.',
+    };
+  }
 
   async createTask(
     shopId: string,
@@ -633,5 +676,64 @@ export class AiImagesService {
       createdAt: credits.createdAt.toISOString(),
       updatedAt: credits.updatedAt.toISOString(),
     };
+  }
+
+  private async getAiServiceHealth(
+    workerMode: 'internal-mock' | 'ai-service',
+  ): Promise<{
+    reachable: boolean;
+    provider: 'mock' | 'openai' | null;
+    storageDriver: 'mock' | 'local' | 's3' | null;
+    openAiConfigured: boolean;
+  }> {
+    if (workerMode !== 'ai-service') {
+      return {
+        reachable: false,
+        provider: null,
+        storageDriver: null,
+        openAiConfigured: false,
+      };
+    }
+
+    const baseUrl = this.configService.get<string>(
+      'AI_SERVICE_BASE_URL',
+      'http://localhost:8000',
+    );
+
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (!response.ok) {
+        return {
+          reachable: false,
+          provider: null,
+          storageDriver: null,
+          openAiConfigured: false,
+        };
+      }
+
+      const body = (await response.json()) as {
+        aiImageProvider?: 'mock' | 'openai';
+        storageDriver?: 'mock' | 'local' | 's3';
+        openaiConfigured?: boolean;
+      };
+
+      return {
+        reachable: true,
+        provider: body.aiImageProvider ?? null,
+        storageDriver: body.storageDriver ?? null,
+        openAiConfigured: body.openaiConfigured ?? false,
+      };
+    } catch {
+      return {
+        reachable: false,
+        provider: null,
+        storageDriver: null,
+        openAiConfigured: false,
+      };
+    }
   }
 }

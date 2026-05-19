@@ -1,5 +1,21 @@
 # Phase Report
 
+## 2026-05-19 Seller AI Images UI
+
+- Replaced the placeholder `/seller/ai-images` route with a real seller AI workspace.
+- Reused the existing `backend-nest` AI task orchestration instead of creating duplicate endpoints.
+- Added seller-safe runtime diagnostics at `GET /api/shops/:shopId/ai-images/runtime`.
+- Added safe `ai-service /health` metadata so the seller UI can label:
+  - internal mock
+  - ai-service mock
+  - OpenAI real
+  - ai-service unavailable
+- Added dedicated browser coverage:
+  - `frontend-next/tests/e2e/seller-ai-images.spec.ts`
+- Added backend smoke alias:
+  - `npm run smoke:ai-images-ui-flow`
+- Kept virtual try-on explicitly non-interactive because no verified backend flow is ready yet.
+
 ## 2026-05-19 CI Postgres Extension Fix
 
 - Fixed the GitHub Actions `backend` job failure at `npx prisma db push`.

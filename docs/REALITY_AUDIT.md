@@ -138,7 +138,7 @@ Overall verdict:
 | Admin | Payments/refunds operations | REAL_PARTIAL | payment queue visible in admin ops, but no refund tooling and no direct admin payment action page | HIGH | Decide admin payment authority model. |
 | Admin | Category management UI/API | REAL_PARTIAL | backend admin category APIs exist; no frontend admin route/component found | HIGH | Build admin category UI or document API-only ops mode. |
 | AI | Seller AI image generation from product gallery | REAL_WORKING | `/seller/products/[id]/images`, `AiImageGenerateModal`, `AiTaskPanel`, backend ai-images module, `ai-images.e2e-spec.ts`, `smoke-ai-service-integration.ps1` | MEDIUM | Add dedicated UI discovery so users do not miss real flow. |
-| AI | `/seller/ai-images` route | UI_ONLY | `frontend-next/src/app/seller/ai-images/page.tsx` says reserved/future and does not call backend | MEDIUM | Replace with redirect or real task hub. |
+| AI | `/seller/ai-images` route | REAL_WORKING | `frontend-next/src/app/seller/ai-images/page.tsx`, `frontend-next/src/components/ai/seller-ai-images-workspace.tsx`, `frontend-next/tests/e2e/seller-ai-images.spec.ts` | MEDIUM | Keep runtime mode messaging explicit and do not mislabel try-on as ready. |
 | AI | Mock provider | MOCK_ONLY | `ai-service/app/services/mock_image_provider.py`, `backend-nest/src/modules/ai-images/ai-image-provider.mock.ts` | LOW | Keep for local-only verification. |
 | AI | OpenAI real provider | REAL_PARTIAL | `ai-service/app/services/openai_image_provider.py`, `ai-service/tests/test_openai_provider.py`, optional smoke script only | HIGH | Verify with real credentials/quota in isolated env. |
 | AI | Credit deduction/refund | REAL_WORKING | `AiImagesService`, `AiImagesWorkerService`, backend tests, smoke ai-service integration docs/tests | MEDIUM | Add admin visibility/reporting if needed. |
@@ -436,7 +436,7 @@ Overall verdict:
   - mock provider: `MOCK_ONLY`
   - OpenAI real mode: `REAL_PARTIAL`
   - ai-service runtime reliability: `BROKEN_OR_UNVERIFIED`
-  - `/seller/ai-images`: `UI_ONLY`
+  - `/seller/ai-images`: `REAL_WORKING`
 - Evidence:
   - backend: `backend-nest/src/modules/ai-images/*`
   - frontend: `frontend-next/src/app/seller/products/[id]/images/page.tsx`, `src/components/products/ai-image-generate-modal.tsx`, `ai-task-panel.tsx`, `src/app/seller/ai-images/page.tsx`
