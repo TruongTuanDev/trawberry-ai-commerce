@@ -149,11 +149,14 @@ services:
       STORAGE_DRIVER: local
       S3_PUBLIC_BASE_URL: http://127.0.0.1:${MINIO_API_PORT:-9000}/${MINIO_BUCKET:-strawberry-ai-assets}
       AI_SERVICE_BASE_URL: http://ai-service:8000
+      AI_SERVICE_BASE_URL_HOST: http://127.0.0.1:${AI_SERVICE_PORT:-8000}
       AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-dev-internal-token}
       AI_WORKER_MODE: ${AI_WORKER_MODE:-ai-service}
       AI_SERVICE_TIMEOUT_MS: 45000
       AI_SERVICE_RETRY_ATTEMPTS: 3
       AI_SERVICE_RETRY_DELAY_MS: 1000
+      BACKEND_INTERNAL_BASE_URL: http://backend-nest:3001
+      BACKEND_PUBLIC_BASE_URL: http://127.0.0.1:${BACKEND_PORT:-3001}
       WB_SYNC_MODE: ${WB_SYNC_MODE:-mock}
       WB_API_BASE_URL: ${WB_API_BASE_URL:-https://content-api.wildberries.ru}
       WB_SYNC_TIMEOUT_MS: ${WB_SYNC_TIMEOUT_MS:-30000}

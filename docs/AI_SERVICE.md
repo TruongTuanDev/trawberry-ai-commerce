@@ -55,6 +55,8 @@ Response body:
 - `images[].width`
 - `images[].height`
 
+For Docker-based seller generation, upstream image URLs should be reachable from inside the `ai-service` container. `backend-nest` now rewrites local product image URLs to `BACKEND_INTERNAL_BASE_URL` before sending them to this endpoint.
+
 ## Provider Selection
 
 ### `AI_IMAGE_PROVIDER=mock`
@@ -71,6 +73,7 @@ Response body:
   - `images.generate` when no input image is present
 - automatically adjusts parameters based on whether the model is a GPT Image model (default) or DALL-E 2 (legacy fallback).
 - runs a quality guard on returned binaries before responding to `backend-nest`
+- returns safe request/error diagnostics when OpenAI rejects the request
 
 ## OpenAI Configuration
 - `OPENAI_IMAGE_MODEL`
@@ -100,6 +103,16 @@ Safe provider/runtime codes include:
 - `AI_SERVICE_UNREACHABLE`
 - `AI_SERVICE_INVALID_RESPONSE`
 - `STORAGE_WRITE_FAILED`
+
+Safe diagnostics can also include:
+- `safeOpenAiStatus`
+- `safeOpenAiErrorType`
+- `safeOpenAiErrorCode`
+- `safeOpenAiMessageSnippet`
+- `requestMode`
+- `hasReferenceImages`
+- `imageCount`
+- `model`
 
 This lets `backend-nest` keep its existing task failure and credit refund behavior.
 
@@ -133,6 +146,15 @@ Notes:
   - task moves `PENDING -> PROCESSING -> COMPLETED`
   - attach flow still works
   - credit decreases correctly
+
+### Host vs Docker URLs
+- container-to-container runtime:
+  - `AI_SERVICE_BASE_URL=http://ai-service:8000`
+  - `BACKEND_INTERNAL_BASE_URL=http://backend-nest:3001`
+- host-side smoke helpers:
+  - `AI_SERVICE_BASE_URL_HOST=http://127.0.0.1:8000`
+
+This keeps runtime URLs correct inside Docker while still allowing PowerShell smoke scripts to call the service from the host.
 
 ## Optional OpenAI Smoke
 Use:

@@ -52,6 +52,7 @@ If the token is missing or invalid, the service returns `401`.
 - chooses:
   - `images.edit` when reference images exist
   - `images.generate` when no reference image exists
+- GPT image edit requests intentionally avoid unsupported parameter combinations that caused prior `400` failures
 
 ## Important env
 - `ENVIRONMENT=development|test|production`
@@ -190,6 +191,13 @@ If `RUN_OPENAI_SMOKE` is true but required env is missing, the script fails clea
 
 If OpenAI billing, quota, auth, or storage fails, the script fails clearly with safe error output.
 
+## Host And Docker Reachability
+
+- `ai-service` receives image URLs from `backend-nest`
+- when both services run in Docker, those URLs must be reachable from inside the `ai-service` container
+- the backend now rewrites local product image URLs to `BACKEND_INTERNAL_BASE_URL` before sending them here
+- host-side smoke scripts should use `http://127.0.0.1:8000`, not `http://ai-service:8000`
+
 ## Docker
 ```bash
 docker build -t strawberry-ai-service .
@@ -200,3 +208,4 @@ docker run --rm -p 8000:8000 --env-file .env strawberry-ai-service
 - `frontend-next` still talks only to `backend-nest`.
 - `backend-nest` controls credits, task status, and retries.
 - OpenAI errors are surfaced as clear HTTP failures so `backend-nest` can mark the task `FAILED` and refund credit using the existing flow.
+- Current real-runtime blocker after contract repair is account-side `OPENAI_BILLING_HARD_LIMIT`, not the old request-contract `400` and not Docker image-download failure.

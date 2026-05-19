@@ -28,6 +28,10 @@
   - `AI_SERVICE_OPENAI_BLOCKED`
   - `INTERNAL_MOCK`
   - `OFFLINE`
+- current real provider debug result:
+  - request contract fixed
+  - Docker-internal backend image URL rewrite fixed
+  - remaining blocker is `OPENAI_BILLING_HARD_LIMIT`
 
 ## Seller AI Images UI Snapshot - 2026-05-19
 
@@ -41,10 +45,10 @@
   - result gallery
   - attach generated image back into product gallery
 - Virtual try-on is explicitly shown as `Coming soon` until a verified backend flow exists.
-- Current Docker runtime audit on `2026-05-19`:
-  - `backend-nest` effective seller AI mode: `INTERNAL_MOCK`
-  - `ai-service /health`: `aiImageProvider=openai`, `storageDriver=s3`
-  - implication: seller UI is real and mock-safe, but current compose runtime is not yet using `ai-service` as the effective worker path
+- Current verified defaults on `2026-05-19`:
+  - seller UI and seller task path work with `AI_SERVICE_MOCK`
+  - opt-in OpenAI real path now reaches the provider layer
+  - real pass is still blocked by account billing limit
 - Verification entry points:
   - `backend-nest npm run smoke:ai-images-ui-flow`
   - `frontend-next npm run test:e2e:seller-ai-images`

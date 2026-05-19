@@ -24,7 +24,7 @@ Flow:
 11. `frontend-next` polls task status and renders generated images
 12. seller can attach a generated image back into `product_images` as `AI_GENERATED`
 
-## Verified Runtime For This Phase
+## Default Verified Runtime
 
 - compose/runtime default for verification:
   - `backend-nest`: `AI_WORKER_MODE=ai-service`
@@ -62,6 +62,17 @@ If billing, quota, auth, or storage fails:
   - `STORAGE_DRIVER=local`
   - `STORAGE_DRIVER=s3`
   - or metadata-only `mock`
+
+## Internal Asset URL Rewriting
+
+When `backend-nest` sends seller product images to `ai-service`, it rewrites URLs only for internal provider calls:
+- `http://localhost:3001/uploads/...`
+  -> `http://backend-nest:3001/uploads/...`
+- relative `/uploads/...`
+  -> resolved against `BACKEND_INTERNAL_BASE_URL`
+- remote WB/CDN URLs remain unchanged
+
+This prevents the old Docker-network failure where `ai-service` could not download a backend product image because `localhost` inside the container pointed to itself.
 
 ## Prompt Behavior
 The prompt builder now reinforces:
@@ -102,6 +113,18 @@ The prompt builder now reinforces:
 - generated image attach back into product gallery still works
 - credits still decrease correctly under the existing backend flow
 - `/seller/ai-images` is now a real seller task hub, not placeholder-only
+
+## Opt-In Real Runtime Status
+
+On `2026-05-19`, controlled real verification showed:
+- `ai-service /health` in OpenAI mode was healthy
+- provider request contract was accepted by OpenAI after the fix
+- internal image URL download reached the backend successfully after the rewrite fix
+- current remaining real blocker is `OPENAI_BILLING_HARD_LIMIT`
+
+So the current classification is:
+- seller AI via `ai-service` mock: verified
+- seller AI via `ai-service` OpenAI real: implemented, blocked by account billing limit
 
 ## Try-on Status
 - `TRY_ON` still exists as a task/domain hint

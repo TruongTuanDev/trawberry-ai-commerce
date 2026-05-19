@@ -9,10 +9,10 @@ It is only active when:
 Default local/dev remains:
 - `AI_IMAGE_PROVIDER=mock`
 
-Current verified seller runtime remains:
+Current default verified seller runtime remains:
 - `AI_WORKER_MODE=ai-service`
 - `AI_IMAGE_PROVIDER=mock`
-- `OPENAI real` is pending and opt-in only
+- `OPENAI real` is opt-in only and not part of default pass
 
 ## Opt-In Only Runtime Verification
 
@@ -66,6 +66,9 @@ Downloaded references are validated for:
   - `image/webp`
 - maximum download size
 - request timeout
+- non-empty decodable image payload
+
+When `backend-nest` runs inside Docker, image URLs sent to `ai-service` should use an internal base such as `http://backend-nest:3001`, not `localhost`.
 
 ## Outputs
 The provider returns:
@@ -109,6 +112,16 @@ If any check fails, `ai-service` returns a provider error and `backend-nest` can
   - safe code: `STORAGE_WRITE_FAILED`
 
 No API key is logged or returned.
+
+Additional safe diagnostics now returned on provider failures:
+- `safeOpenAiStatus`
+- `safeOpenAiErrorType`
+- `safeOpenAiErrorCode`
+- `safeOpenAiMessageSnippet`
+- `requestMode`
+- `hasReferenceImages`
+- `imageCount`
+- `model`
 
 ## Seller UI Status
 - `/seller/ai-images` can surface:
@@ -163,3 +176,13 @@ If it runs successfully, it verifies:
 - `url`
 - `storageKey`
 - `provider=OPENAI`
+
+## 2026-05-19 Real Runtime Debug Result
+
+- request contract issue was fixed for `gpt-image-1`
+- internal Docker image URL reachability was fixed by rewriting backend asset URLs to `BACKEND_INTERNAL_BASE_URL`
+- current real runtime blocker is now account-side:
+  - `OPENAI_BILLING_HARD_LIMIT`
+  - `safeOpenAiErrorType=billing_limit_user_error`
+  - `safeOpenAiErrorCode=billing_hard_limit_reached`
+- this means the provider is now reached successfully and the previous `OPENAI_BAD_REQUEST` contract failure is no longer the active blocker

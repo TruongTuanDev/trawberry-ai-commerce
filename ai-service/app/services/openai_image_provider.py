@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import re
 import tempfile
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import httpx
 import openai
@@ -85,9 +87,14 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=500,
                 retryable=False,
                 code="OPENAI_UNAUTHORIZED",
+                diagnostics=self._build_request_diagnostics(
+                    request,
+                    downloaded_images=[],
+                ),
             )
 
         downloaded_images = await self._download_reference_images(request)
+        diagnostics = self._build_request_diagnostics(request, downloaded_images)
 
         try:
             response = await asyncio.to_thread(
@@ -103,6 +110,7 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=502,
                 retryable=False,
                 code="OPENAI_UNAUTHORIZED",
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.RateLimitError as error:
             code = self._classify_rate_limit_error(error)
@@ -111,6 +119,7 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=503,
                 retryable=True,
                 code=code,
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.APITimeoutError as error:
             raise ProviderError(
@@ -118,13 +127,16 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=504,
                 retryable=True,
                 code="OPENAI_RATE_LIMIT",
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.BadRequestError as error:
+            code = self._classify_bad_request_error(error)
             raise ProviderError(
-                "OpenAI rejected the image request.",
+                self._message_for_code(code),
                 status_code=422,
                 retryable=False,
-                code="OPENAI_BAD_REQUEST",
+                code=code,
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.PermissionDeniedError as error:
             raise ProviderError(
@@ -132,6 +144,7 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=403,
                 retryable=False,
                 code="OPENAI_UNAUTHORIZED",
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.APIConnectionError as error:
             raise ProviderError(
@@ -139,6 +152,7 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=503,
                 retryable=True,
                 code="AI_SERVICE_UNREACHABLE",
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.APIStatusError as error:
             retryable = error.status_code >= 500
@@ -148,6 +162,7 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=error.status_code,
                 retryable=retryable,
                 code=code,
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
         except openai.OpenAIError as error:
             raise ProviderError(
@@ -155,6 +170,7 @@ class OpenAIImageProvider(ImageProvider):
                 status_code=502,
                 retryable=False,
                 code="OPENAI_BAD_REQUEST",
+                diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
 
         return self._parse_response(response)
@@ -213,6 +229,23 @@ class OpenAIImageProvider(ImageProvider):
                         chunks.append(chunk)
 
                     raw_payload = b"".join(chunks)
+                    if not raw_payload:
+                        raise ProviderError(
+                            f"Input {label} image was empty.",
+                            status_code=400,
+                            retryable=False,
+                        )
+
+                    try:
+                        with Image.open(io.BytesIO(raw_payload)) as img:
+                            img.verify()
+                    except (UnidentifiedImageError, OSError) as error:
+                        raise ProviderError(
+                            f"Failed to decode the {label} image: invalid image data.",
+                            status_code=400,
+                            retryable=False,
+                        ) from error
+
                     if self._is_dalle2_model and content_type != "image/png":
                         try:
                             with Image.open(io.BytesIO(raw_payload)) as img:
@@ -263,20 +296,14 @@ class OpenAIImageProvider(ImageProvider):
         client = self._client_factory(self.settings)
         if downloaded_images:
             return self._call_openai_edit(client, request, downloaded_images)
-        
-        params = {
+
+        params: dict[str, Any] = {
             "model": self.settings.openai_image_model,
-            "prompt": request.prompt,
+            "prompt": self._normalize_prompt(request.prompt),
             "n": request.quantity,
-            "size": self.settings.openai_image_size,
-            "response_format": "b64_json",
-            "timeout": self.settings.openai_image_timeout_seconds,
         }
-        
-        if not self._is_dalle2_model:
-            params["quality"] = self.settings.openai_image_quality
-            params["extra_body"] = {"output_format": self.settings.openai_image_output_format}
-            
+
+        self._apply_generate_params(params)
         return client.images.generate(**params)
 
     def _call_openai_edit(
@@ -296,26 +323,40 @@ class OpenAIImageProvider(ImageProvider):
                     file_handles.append(handle)
                     files.append(handle)
 
-                params = {
+                params: dict[str, Any] = {
                     "model": self.settings.openai_image_model,
-                    "image": files[0],
-                    "prompt": request.prompt,
+                    "image": files if len(files) > 1 else files[0],
+                    "prompt": self._normalize_prompt(request.prompt),
                     "n": request.quantity,
-                    "size": self.settings.openai_image_size,
-                    "response_format": "b64_json",
-                    "timeout": self.settings.openai_image_timeout_seconds,
                 }
-                
-                if not self._is_dalle2_model:
-                    params["extra_body"] = {
-                        "quality": self.settings.openai_image_quality,
-                        "output_format": self.settings.openai_image_output_format,
-                    }
 
+                self._apply_edit_params(params)
                 return client.images.edit(**params)
             finally:
                 for handle in file_handles:
                     handle.close()
+
+    def _apply_generate_params(self, params: dict[str, Any]) -> None:
+        params["size"] = self.settings.openai_image_size
+        params["timeout"] = self.settings.openai_image_timeout_seconds
+        if self._is_dalle2_model:
+            params["response_format"] = "b64_json"
+            return
+
+        params["quality"] = self.settings.openai_image_quality
+        params["output_format"] = self.settings.openai_image_output_format
+
+    def _apply_edit_params(self, params: dict[str, Any]) -> None:
+        params["size"] = self.settings.openai_image_size
+        params["timeout"] = self.settings.openai_image_timeout_seconds
+        if self._is_dalle2_model:
+            params["response_format"] = "b64_json"
+            return
+
+        params["quality"] = self.settings.openai_image_quality
+        params["extra_body"] = {
+            "output_format": self.settings.openai_image_output_format,
+        }
 
     def _parse_response(self, response) -> list[ProviderImageResult]:
         data = getattr(response, "data", None)
@@ -382,6 +423,101 @@ class OpenAIImageProvider(ImageProvider):
         if not message:
             return error.__class__.__name__
         return message.replace(self.settings.openai_api_key or "", "[redacted]")
+
+    def _normalize_prompt(self, prompt: str) -> str:
+        return " ".join(prompt.split()).strip()
+
+    def _build_request_diagnostics(
+        self,
+        request: ProviderGenerateRequest,
+        downloaded_images: list[DownloadedImage],
+    ) -> dict[str, Any]:
+        return {
+            "requestMode": "edit" if downloaded_images else "generate",
+            "hasReferenceImages": bool(downloaded_images),
+            "imageCount": len(downloaded_images),
+            "model": self.settings.openai_image_model,
+            "safeInputImages": [
+                {
+                    "name": image.filename,
+                    "contentType": image.content_type,
+                    "bytes": len(image.payload),
+                    "sha256Prefix": sha256(image.payload).hexdigest()[:12],
+                }
+                for image in downloaded_images
+            ],
+            "safePromptLength": len(self._normalize_prompt(request.prompt)),
+        }
+
+    def _with_openai_error_details(
+        self,
+        diagnostics: dict[str, Any],
+        error: Exception,
+    ) -> dict[str, Any]:
+        merged = dict(diagnostics)
+        status_code = getattr(error, "status_code", None)
+        error_type, error_code, body_message = self._extract_error_fields(error)
+        message = self._safe_message(error)
+        if body_message:
+            message = self._safe_message(Exception(body_message))
+
+        merged["safeOpenAiStatus"] = status_code
+        merged["safeOpenAiErrorType"] = error_type
+        merged["safeOpenAiErrorCode"] = error_code
+        merged["safeOpenAiMessageSnippet"] = message[:240]
+        return merged
+
+    def _classify_bad_request_error(self, error: openai.BadRequestError) -> str:
+        _error_type, error_code, body_message = self._extract_error_fields(error)
+        message = " ".join(
+            part
+            for part in [
+                error_code or "",
+                body_message or "",
+                self._safe_message(error),
+            ]
+            if part
+        ).lower()
+        if "billing hard limit" in message or "billing_hard_limit" in message:
+            return "OPENAI_BILLING_HARD_LIMIT"
+        if "quota" in message:
+            return "OPENAI_QUOTA_EXCEEDED"
+        if "rate limit" in message:
+            return "OPENAI_RATE_LIMIT"
+        if "unauthorized" in message or "authentication" in message:
+            return "OPENAI_UNAUTHORIZED"
+        return "OPENAI_BAD_REQUEST"
+
+    def _extract_error_fields(
+        self,
+        error: Exception,
+    ) -> tuple[str | None, str | None, str | None]:
+        body = getattr(error, "body", None)
+        if isinstance(body, dict):
+            inner = body.get("error")
+            if isinstance(inner, dict):
+                return (
+                    self._as_string(inner.get("type")),
+                    self._as_string(inner.get("code")),
+                    self._as_string(inner.get("message")),
+                )
+
+        safe_message = self._safe_message(error)
+        type_match = re.search(r"'type': '([^']+)'", safe_message)
+        code_match = re.search(r"'code': '([^']+)'", safe_message)
+        message_match = re.search(r"'message': \"([^\"]+)\"", safe_message)
+        if not message_match:
+            message_match = re.search(r"'message': '([^']+)'", safe_message)
+        return (
+          type_match.group(1) if type_match else None,
+          code_match.group(1) if code_match else None,
+          message_match.group(1) if message_match else None,
+        )
+
+    def _as_string(self, value: object) -> str | None:
+        if isinstance(value, str) and value.strip():
+            return value
+        return None
 
     def _classify_rate_limit_error(self, error: openai.RateLimitError) -> str:
         message = self._safe_message(error).lower()

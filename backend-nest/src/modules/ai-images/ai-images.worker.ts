@@ -23,6 +23,7 @@ import {
   AI_IMAGE_QUEUE,
   AI_TASK_STATUSES,
 } from './ai-images.constants';
+import { rewriteUrlForAiService } from './ai-service-url.util';
 
 @Injectable()
 export class AiImagesWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -156,6 +157,13 @@ export class AiImagesWorkerService implements OnModuleInit, OnModuleDestroy {
     );
 
     if (workerMode === 'ai-service') {
+      const backendInternalBaseUrl = this.configService.get<string>(
+        'BACKEND_INTERNAL_BASE_URL',
+      );
+      const backendPublicBaseUrl =
+        this.configService.get<string>('BACKEND_PUBLIC_BASE_URL') ??
+        this.configService.get<string>('FILES_PUBLIC_BASE_URL') ??
+        null;
       const response = await this.aiServiceClient.generateImages({
         taskId: task.id,
         shopId: task.shopId,
@@ -165,9 +173,18 @@ export class AiImagesWorkerService implements OnModuleInit, OnModuleDestroy {
         stylePreset: task.stylePreset,
         prompt: task.prompt,
         inputImages: {
-          frontImageUrl,
-          backImageUrl,
-          modelImageUrl,
+          frontImageUrl: rewriteUrlForAiService(frontImageUrl, {
+            backendInternalBaseUrl,
+            backendPublicBaseUrl,
+          }),
+          backImageUrl: rewriteUrlForAiService(backImageUrl, {
+            backendInternalBaseUrl,
+            backendPublicBaseUrl,
+          }),
+          modelImageUrl: rewriteUrlForAiService(modelImageUrl, {
+            backendInternalBaseUrl,
+            backendPublicBaseUrl,
+          }),
         },
       });
 

@@ -83,6 +83,9 @@ def test_openai_provider_uses_generate_when_no_input_images() -> None:
     assert results[0].image_bytes == image_bytes
     assert results[0].provider == "OPENAI"
     assert images_api.generate_calls[0]["model"] == "gpt-image-1"
+    assert images_api.generate_calls[0]["quality"] == "medium"
+    assert images_api.generate_calls[0]["output_format"] == "jpeg"
+    assert "response_format" not in images_api.generate_calls[0]
     assert images_api.edit_calls == []
 
 
@@ -120,6 +123,8 @@ def test_openai_provider_uses_edit_when_input_images_are_present(monkeypatch) ->
     assert images_api.generate_calls == []
     assert len(images_api.edit_calls) == 1
     assert images_api.edit_calls[0]["extra_body"]["output_format"] == "png"
+    assert images_api.edit_calls[0]["quality"] == "medium"
+    assert "response_format" not in images_api.edit_calls[0]
 
 
 def test_provider_selection_respects_env(monkeypatch) -> None:
@@ -192,6 +197,40 @@ def test_openai_provider_maps_rate_limit_error() -> None:
     assert error.value.code == "OPENAI_RATE_LIMIT"
 
 
+def test_openai_provider_maps_bad_request_with_safe_diagnostics() -> None:
+    request = httpx.Request("POST", "https://api.openai.com/v1/images/edits")
+    response = httpx.Response(status_code=400, request=request)
+    images_api = FakeImagesApi(
+        error=openai.BadRequestError(
+            message="unsupported parameter",
+            response=response,
+            body={
+                "error": {
+                    "type": "invalid_request_error",
+                    "code": "invalid_parameter",
+                    "message": "Unknown parameter: response_format",
+                }
+            },
+        )
+    )
+    provider = OpenAIImageProvider(
+        Settings(
+            ai_image_provider="openai",
+            openai_api_key="test-key",
+        ),
+        client_factory=lambda _settings: FakeClient(images_api),
+    )
+
+    with pytest.raises(ProviderError) as error:
+        asyncio.run(provider.generate(build_request()))
+
+    assert error.value.code == "OPENAI_BAD_REQUEST"
+    assert error.value.diagnostics["safeOpenAiStatus"] == 400
+    assert error.value.diagnostics["safeOpenAiErrorType"] == "invalid_request_error"
+    assert error.value.diagnostics["safeOpenAiErrorCode"] == "invalid_parameter"
+    assert "response_format" in error.value.diagnostics["safeOpenAiMessageSnippet"]
+
+
 def test_openai_provider_maps_missing_key_to_safe_code() -> None:
     provider = OpenAIImageProvider(
         Settings(
@@ -228,7 +267,8 @@ def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:
     asyncio.run(provider_1.generate(build_request(front_image_url="https://cdn.example.com/front.jpg")))
     
     assert images_api.edit_calls[-1]["model"] == "gpt-image-1"
-    assert "quality" in images_api.edit_calls[-1]["extra_body"]
+    assert images_api.edit_calls[-1]["quality"] == "medium"
+    assert images_api.edit_calls[-1]["extra_body"]["output_format"] == "jpeg"
     
     provider_15 = OpenAIImageProvider(
         Settings(ai_image_provider="openai", openai_api_key="test", openai_image_model="gpt-image-1.5", openai_image_output_format="jpeg"),
@@ -238,6 +278,7 @@ def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:
     asyncio.run(provider_15.generate(build_request(front_image_url="https://cdn.example.com/front.jpg")))
     
     assert images_api.edit_calls[-1]["model"] == "gpt-image-1.5"
+    assert images_api.edit_calls[-1]["image"]
 
 
 def test_openai_provider_uses_dalle2_properly(monkeypatch) -> None:
@@ -262,5 +303,5 @@ def test_openai_provider_uses_dalle2_properly(monkeypatch) -> None:
     asyncio.run(provider.generate(build_request(front_image_url="https://cdn.example.com/front.png")))
     
     assert images_api.edit_calls[-1]["model"] == "dall-e-2"
-    assert "extra_body" not in images_api.edit_calls[-1]
+    assert images_api.edit_calls[-1]["response_format"] == "b64_json"
     assert "quality" not in images_api.edit_calls[-1]

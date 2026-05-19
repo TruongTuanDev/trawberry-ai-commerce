@@ -263,6 +263,15 @@ function createConfigService(mode: 'internal-mock' | 'ai-service') {
       if (key === 'AI_WORKER_MODE') {
         return mode;
       }
+      if (key === 'BACKEND_INTERNAL_BASE_URL') {
+        return 'http://backend-nest:3001';
+      }
+      if (
+        key === 'BACKEND_PUBLIC_BASE_URL' ||
+        key === 'FILES_PUBLIC_BASE_URL'
+      ) {
+        return 'http://127.0.0.1:3001';
+      }
       return fallback;
     }),
   } as unknown as ConfigService;
@@ -337,6 +346,11 @@ describe('AiImagesWorkerService', () => {
 
   it('uses ai-service mode and persists generated images from the HTTP response', async () => {
     const taskRecord = createTaskRecord('task-1');
+    taskRecord.inputFrontImage = {
+      wbUrl: 'https://cdn.example.com/product-front.jpg',
+      localUrl:
+        'http://127.0.0.1:3001/uploads/products/shop-1/prod-1/front.jpg',
+    };
     const context = createPrismaWorkerMock(taskRecord);
     const aiServiceClient = createAiServiceClientMock();
 
@@ -356,7 +370,8 @@ describe('AiImagesWorkerService', () => {
         productId: 'prod-1',
         quantity: 2,
         inputImages: {
-          frontImageUrl: 'https://cdn.example.com/product-front.jpg',
+          frontImageUrl:
+            'http://backend-nest:3001/uploads/products/shop-1/prod-1/front.jpg',
           backImageUrl: null,
           modelImageUrl: null,
         },

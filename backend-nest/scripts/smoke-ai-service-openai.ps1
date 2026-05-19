@@ -2,9 +2,19 @@ $ErrorActionPreference = 'Stop'
 
 $baseUrl = if ($env:BACKEND_BASE_URL) { $env:BACKEND_BASE_URL.TrimEnd('/') } else { 'http://127.0.0.1:3001' }
 $aiServiceBaseUrl = if ($env:AI_SERVICE_BASE_URL) { $env:AI_SERVICE_BASE_URL.TrimEnd('/') } else { 'http://127.0.0.1:8000' }
+$aiServiceBaseUrlHost = if ($env:AI_SERVICE_BASE_URL_HOST) { $env:AI_SERVICE_BASE_URL_HOST.TrimEnd('/') } else { 'http://127.0.0.1:8000' }
 $runOpenAiSmoke = if ($null -eq $env:RUN_OPENAI_SMOKE) { '' } else { $env:RUN_OPENAI_SMOKE }
 $aiWorkerMode = if ($null -eq $env:AI_WORKER_MODE) { '' } else { $env:AI_WORKER_MODE }
 $aiImageProvider = if ($null -eq $env:AI_IMAGE_PROVIDER) { '' } else { $env:AI_IMAGE_PROVIDER }
+
+try {
+  $parsedAiServiceUri = [System.Uri]$aiServiceBaseUrl
+  if ($parsedAiServiceUri.Host -eq 'ai-service') {
+    $aiServiceBaseUrl = $aiServiceBaseUrlHost
+  }
+} catch {
+  # Leave the configured value intact if it is not a valid URI.
+}
 
 if ($runOpenAiSmoke.Trim().ToLowerInvariant() -ne 'true') {
   Write-Output 'SKIPPED: RUN_OPENAI_SMOKE is not true.'

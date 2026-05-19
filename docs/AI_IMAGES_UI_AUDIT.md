@@ -12,6 +12,14 @@ Audit date: `2026-05-19`
 - seller runtime badge must show `AI service mock mode`
 - OpenAI real remains pending and is not part of default pass for this phase
 
+## Phase Addendum: OpenAI Real Debug
+
+- OpenAI real is still opt-in only
+- the old `OPENAI_BAD_REQUEST` provider-contract failure has been fixed
+- the old internal image download failure has been fixed by Docker-internal URL rewriting
+- current real-runtime blocker is account-side:
+  - `OPENAI_BILLING_HARD_LIMIT`
+
 ## Executive Result
 
 - `backend-nest` already had real seller AI task orchestration, credits, attach flow, and tests.
@@ -82,7 +90,7 @@ Credit refund path:
 - present in `backend-nest/src/modules/ai-images/ai-images.worker.ts`
 - failed provider calls can refund credits once
 
-Current verified target after this phase:
+Current default verified target:
 - `GET /api/shops/:shopId/ai-images/runtime`
   - `workerMode=ai-service`
   - `sellerFlowEffectiveMode=AI_SERVICE_MOCK`
@@ -93,6 +101,16 @@ Current verified target after this phase:
   - `aiImageProvider=mock`
   - `storageDriver=mock` or `local`
   - `openaiConfigured=false`
+
+Current real opt-in debug outcome on `2026-05-19`:
+- `GET http://localhost:8000/health`
+  - `aiImageProvider=openai`
+  - `storageDriver=mock`
+  - `openaiConfigured=true`
+  - `openaiSmokeEnabled=true`
+- `python scripts/smoke_openai_provider.py`
+  - fails with `OPENAI_BILLING_HARD_LIMIT`
+- direct internal generate call with rewritten backend URL reaches OpenAI successfully and returns the same billing-limit classification instead of an image-download error
 
 ## Frontend Status
 

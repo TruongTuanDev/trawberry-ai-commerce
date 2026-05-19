@@ -31,6 +31,29 @@
   - fails when the flag is on but required env is missing
   - never prints the API key
 
+## 2026-05-19 OpenAI Contract + Internal URL Repair
+
+- fixed the `gpt-image-1` request contract in `ai-service`
+  - `images.generate` is used for text-to-image
+  - `images.edit` is used only when reference images exist
+  - unsupported parameter combinations were removed from the GPT image edit path
+- added safe diagnostics for OpenAI failures:
+  - `safeOpenAiStatus`
+  - `safeOpenAiErrorType`
+  - `safeOpenAiErrorCode`
+  - `safeOpenAiMessageSnippet`
+  - `requestMode`
+  - `hasReferenceImages`
+  - `imageCount`
+  - `model`
+- fixed Docker-internal product image reachability by rewriting backend asset URLs for `ai-service`
+  - public `localhost` URLs are no longer passed directly into the container-to-container call
+  - internal generation now uses `BACKEND_INTERNAL_BASE_URL`
+- current real-runtime status after the repair:
+  - previous blockers `OPENAI_BAD_REQUEST` and `Failed to download the front input image` are resolved
+  - current real blocker is `OPENAI_BILLING_HARD_LIMIT`
+  - real OpenAI is still not counted as passed
+
 ## 2026-05-19 Seller AI Images UI
 
 - Replaced the placeholder `/seller/ai-images` route with a real seller AI workspace.

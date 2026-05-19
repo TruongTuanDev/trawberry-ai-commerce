@@ -139,7 +139,20 @@ Notes:
 - AI image task tables are defined in `prisma/migrations/20260510_add_ai_image_tables/migration.sql`.
 - Local non-Docker runtime should use `AI_SERVICE_BASE_URL=http://localhost:8000`.
 - Docker runtime should use `AI_SERVICE_BASE_URL=http://ai-service:8000`.
+- Host-side smoke scripts can use `AI_SERVICE_BASE_URL_HOST=http://127.0.0.1:8000`.
+- Docker runtime that sends product images to `ai-service` should also set:
+  - `BACKEND_PUBLIC_BASE_URL=http://127.0.0.1:3001`
+  - `BACKEND_INTERNAL_BASE_URL=http://backend-nest:3001`
 - Prisma maps existing legacy tables and does not change Spring Boot business logic.
+
+## AI Service Runtime Notes
+
+- `AI_WORKER_MODE=internal-mock`
+  - stays fully local to `backend-nest`
+- `AI_WORKER_MODE=ai-service`
+  - calls `POST /internal/ai-images/generate`
+  - rewrites local product image URLs for Docker-internal reachability before sending them to `ai-service`
+- real OpenAI verification is opt-in only and must never be part of default test runs
 
 ### 3. Generate Prisma client
 ```bash

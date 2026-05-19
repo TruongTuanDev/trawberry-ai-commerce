@@ -26,5 +26,6 @@ async def generate_ai_images(
             detail={
                 "code": error.code,
                 "message": str(error),
+                **error.diagnostics,
             },
         ) from error
