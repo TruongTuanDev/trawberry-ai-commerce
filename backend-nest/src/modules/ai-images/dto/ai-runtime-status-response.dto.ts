@@ -21,6 +21,20 @@ export class AiRuntimeStatusResponseDto {
     | 'OPENAI_REAL'
     | 'AI_SERVICE_UNAVAILABLE';
 
+  @ApiProperty({
+    enum: [
+      'INTERNAL_MOCK',
+      'AI_SERVICE_MOCK',
+      'OPENAI_REAL',
+      'AI_SERVICE_UNAVAILABLE',
+    ],
+  })
+  sellerFlowEffectiveMode!:
+    | 'INTERNAL_MOCK'
+    | 'AI_SERVICE_MOCK'
+    | 'OPENAI_REAL'
+    | 'AI_SERVICE_UNAVAILABLE';
+
   @ApiProperty()
   supportsTaskGeneration!: boolean;
 
@@ -53,6 +67,9 @@ export class AiRuntimeStatusResponseDto {
 
   @ApiProperty()
   openAiConfigured!: boolean;
+
+  @ApiProperty()
+  openAiRealEnabled!: boolean;
 
   @ApiProperty()
   statusMessage!: string;

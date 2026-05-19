@@ -1,5 +1,20 @@
 # Project Status
 
+## AI Service Mock Runtime Snapshot - 2026-05-19
+
+- seller AI runtime verification target is now `AI_SERVICE_MOCK`
+- expected compose/runtime shape:
+  - `backend-nest`: `AI_WORKER_MODE=ai-service`
+  - `ai-service`: `AI_IMAGE_PROVIDER=mock`
+  - `ai-service`: `STORAGE_DRIVER=mock`
+- seller runtime badge should show `AI service mock mode`
+- verification entry points:
+  - `backend-nest npm run smoke:ai-service-mock-images`
+  - `backend-nest npm run smoke:ai-images-ui-flow`
+  - `frontend-next npm run test:e2e:seller-ai-images`
+  - `ai-service python -m pytest -q`
+- OpenAI real remains pending and must not be treated as passed by default
+
 ## Seller AI Images UI Snapshot - 2026-05-19
 
 - `/seller/ai-images` is now connected to the real seller AI task flow.

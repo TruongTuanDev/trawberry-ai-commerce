@@ -8,6 +8,7 @@ Current state:
 - `OpenAIImageProvider` is now implemented
 - `backend-nest` can keep using the same HTTP contract
 - no frontend calls `ai-service` directly
+- current default verified runtime is `AI_SERVICE_MOCK`
 
 ## Internal Contract
 
@@ -57,6 +58,7 @@ Response body:
 - default local/dev path
 - never calls OpenAI
 - keeps all current smoke flows green
+- used by the verified seller runtime phase with `AI_WORKER_MODE=ai-service`
 
 ### `AI_IMAGE_PROVIDER=openai`
 - requires `OPENAI_API_KEY`
@@ -110,7 +112,9 @@ Notes:
 
 ### `backend-nest` integration
 - `npm run smoke:ai-service-integration`: pass
+- `npm run smoke:ai-service-mock-images`: required for the seller runtime phase
 - verified:
+  - `backend-nest` uses `ai-service` instead of internal mock when configured
   - `backend-nest` still stores generated images from `ai-service`
   - task moves `PENDING -> PROCESSING -> COMPLETED`
   - attach flow still works

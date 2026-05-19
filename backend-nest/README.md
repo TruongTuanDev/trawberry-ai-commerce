@@ -291,6 +291,10 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
 - If `BULLMQ_DISABLED=true`, the task is still created and local asynchronous processing is triggered inside NestJS for bootstrap testing.
 - Seller-safe runtime diagnostics are exposed through `GET /api/shops/:shopId/ai-images/runtime`.
 - The dedicated seller UI route `/seller/ai-images` consumes this runtime endpoint to label mock, ai-service, OpenAI, or offline state without exposing secrets.
+- Default verified seller runtime for this repo is:
+  - `AI_WORKER_MODE=ai-service`
+  - downstream `ai-service` with `AI_IMAGE_PROVIDER=mock`
+  - `npm run smoke:ai-service-mock-images`
 # Cart Checkout Smoke
 
 Useful script:

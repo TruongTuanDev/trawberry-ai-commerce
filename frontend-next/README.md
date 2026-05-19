@@ -459,6 +459,7 @@ Current coverage:
 - approved seller and shop setup through backend API
 - shop product with image setup through backend API
 - seller opens `/seller/ai-images`
+- runtime badge shows `AI service mock mode`
 - seller selects product and creates AI task
 - task completes in mock-safe mode
 - seller attaches generated image into product gallery

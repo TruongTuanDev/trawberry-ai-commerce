@@ -79,6 +79,7 @@ test("seller creates and attaches AI images from the dedicated seller AI page", 
   await page.goto("/seller/ai-images");
   await expect(page.getByTestId("seller-ai-images-page")).toBeVisible();
   await expect(page.getByTestId("ai-runtime-badge")).toBeVisible();
+  await expect(page.getByTestId("ai-runtime-badge")).toContainText("AI service mock mode");
 
   await page.getByTestId("seller-ai-product-search").fill(productName);
   const selectedCard = page.getByTestId("seller-ai-product-selected").filter({ hasText: productName });

@@ -1,5 +1,20 @@
 # Phase Report
 
+## 2026-05-19 Seller AI Runtime To ai-service Mock
+
+- set the verified seller AI runtime target to `backend-nest -> ai-service`
+- kept `ai-service` in mock-safe mode:
+  - `AI_IMAGE_PROVIDER=mock`
+  - `STORAGE_DRIVER=mock`
+  - `RUN_OPENAI_SMOKE=false`
+- added seller-safe runtime fields:
+  - `sellerFlowEffectiveMode`
+  - `openAiRealEnabled`
+- added backend smoke:
+  - `npm run smoke:ai-service-mock-images`
+- tightened seller browser verification so `/seller/ai-images` must show `AI service mock mode`
+- OpenAI real remains pending and not part of this phase pass
+
 ## 2026-05-19 Seller AI Images UI
 
 - Replaced the placeholder `/seller/ai-images` route with a real seller AI workspace.

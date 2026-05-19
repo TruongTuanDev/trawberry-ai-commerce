@@ -8,6 +8,7 @@ FastAPI service for internal marketplace AI image generation orchestration.
 - `OpenAIImageProvider` is now implemented and enabled only when `AI_IMAGE_PROVIDER=openai`
 - internal token protection
 - mock, local, or S3-compatible storage
+- current default verified marketplace runtime is `AI_IMAGE_PROVIDER=mock` with `backend-nest` calling this service
 
 ## Stack
 - Python

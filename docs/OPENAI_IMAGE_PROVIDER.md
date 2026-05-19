@@ -9,6 +9,11 @@ It is only active when:
 Default local/dev remains:
 - `AI_IMAGE_PROVIDER=mock`
 
+Current verified seller runtime remains:
+- `AI_WORKER_MODE=ai-service`
+- `AI_IMAGE_PROVIDER=mock`
+- `OPENAI real` is pending and opt-in only
+
 ## API Choice
 The implementation uses the OpenAI Images API.
 

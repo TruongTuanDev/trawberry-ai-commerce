@@ -2,6 +2,16 @@
 
 Audit date: `2026-05-19`
 
+## Phase Addendum: AI Service Mock Runtime
+
+- verified runtime target for seller AI is now `AI_SERVICE_MOCK`
+- expected compose/runtime shape:
+  - backend `AI_WORKER_MODE=ai-service`
+  - ai-service `AI_IMAGE_PROVIDER=mock`
+  - ai-service `STORAGE_DRIVER=mock` or `local`
+- seller runtime badge must show `AI service mock mode`
+- OpenAI real remains pending and is not part of default pass for this phase
+
 ## Executive Result
 
 - `backend-nest` already had real seller AI task orchestration, credits, attach flow, and tests.
@@ -72,16 +82,17 @@ Credit refund path:
 - present in `backend-nest/src/modules/ai-images/ai-images.worker.ts`
 - failed provider calls can refund credits once
 
-Observed runtime on `2026-05-19`:
-- `GET /api/shops/:shopId/ai-images/runtime` returned:
-  - `workerMode=internal-mock`
-  - `effectiveMode=INTERNAL_MOCK`
-- `GET http://localhost:8000/health` returned:
-  - `aiImageProvider=openai`
-  - `storageDriver=s3`
-- conclusion:
-  - `ai-service` real/openai code is running and healthy
-  - current Docker seller task path is still using the Nest internal mock worker unless `AI_WORKER_MODE=ai-service` is explicitly configured
+Current verified target after this phase:
+- `GET /api/shops/:shopId/ai-images/runtime`
+  - `workerMode=ai-service`
+  - `sellerFlowEffectiveMode=AI_SERVICE_MOCK`
+  - `aiServiceReachable=true`
+  - `aiServiceProvider=mock`
+  - `openAiRealEnabled=false`
+- `GET http://localhost:8000/health`
+  - `aiImageProvider=mock`
+  - `storageDriver=mock` or `local`
+  - `openaiConfigured=false`
 
 ## Frontend Status
 
@@ -127,7 +138,7 @@ After this phase:
 
 ## Known Limitations
 
-- default verified path is still mock-safe, not guaranteed real OpenAI
+- default verified path is now `ai-service mock`, not real OpenAI
 - `/seller/ai-images` does not expose a verified try-on execution flow
 - runtime can report `AI_SERVICE_UNAVAILABLE` if NestJS expects `ai-service` but the downstream service is offline
 

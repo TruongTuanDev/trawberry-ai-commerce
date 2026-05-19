@@ -41,6 +41,14 @@ export class AiImagesService {
     return {
       shopId,
       workerMode,
+      sellerFlowEffectiveMode:
+        workerMode === 'internal-mock'
+          ? 'INTERNAL_MOCK'
+          : !aiServiceHealth.reachable
+            ? 'AI_SERVICE_UNAVAILABLE'
+            : aiServiceHealth.provider === 'openai'
+              ? 'OPENAI_REAL'
+              : 'AI_SERVICE_MOCK',
       effectiveMode:
         workerMode === 'internal-mock'
           ? 'INTERNAL_MOCK'
@@ -60,6 +68,11 @@ export class AiImagesService {
       aiServiceProvider: aiServiceHealth.provider,
       aiServiceStorageDriver: aiServiceHealth.storageDriver,
       openAiConfigured: aiServiceHealth.openAiConfigured,
+      openAiRealEnabled:
+        workerMode === 'ai-service' &&
+        aiServiceHealth.reachable &&
+        aiServiceHealth.provider === 'openai' &&
+        aiServiceHealth.openAiConfigured,
       statusMessage:
         workerMode === 'internal-mock'
           ? 'NestJS is generating AI tasks with the internal mock worker path.'

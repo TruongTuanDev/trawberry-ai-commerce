@@ -73,8 +73,12 @@ function getProductTitle(product: ProductListItem) {
   return product.title || product.localTitle || product.wbTitle || "Untitled product";
 }
 
-function getModeBadge(runtimeStatus: AiRuntimeStatus | null) {
-  switch (runtimeStatus?.effectiveMode) {
+function getModeBadge(runtimeStatus: AiRuntimeStatus | null): {
+  label: string;
+  tone: string;
+  helper?: string;
+} {
+  switch (runtimeStatus?.sellerFlowEffectiveMode ?? runtimeStatus?.effectiveMode) {
     case "OPENAI_REAL":
       return {
         label: "OpenAI real mode",
@@ -84,6 +88,7 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null) {
       return {
         label: "AI service mock mode",
         tone: "bg-sky-100 text-sky-800",
+        helper: "AI service mock mode - no OpenAI billing used.",
       };
     case "AI_SERVICE_UNAVAILABLE":
       return {
@@ -424,6 +429,7 @@ export function SellerAiImagesWorkspace() {
               ) : null}
             </div>
             <p className="text-sm text-[var(--muted)]">{runtimeStatus?.statusMessage}</p>
+            {modeBadge.helper ? <p className="text-sm text-sky-700">{modeBadge.helper}</p> : null}
           </div>
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Credits</p>
@@ -450,7 +456,7 @@ export function SellerAiImagesWorkspace() {
           </div>
         ) : null}
 
-        {runtimeStatus && ["INTERNAL_MOCK", "AI_SERVICE_MOCK"].includes(runtimeStatus.effectiveMode) ? (
+        {runtimeStatus && ["INTERNAL_MOCK", "AI_SERVICE_MOCK"].includes(runtimeStatus.sellerFlowEffectiveMode ?? runtimeStatus.effectiveMode) ? (
           <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
             Mock generation is active for development. The UI and backend flow are real, but image generation is using a mock-safe provider.
           </div>

@@ -24,6 +24,14 @@ Flow:
 11. `frontend-next` polls task status and renders generated images
 12. seller can attach a generated image back into `product_images` as `AI_GENERATED`
 
+## Verified Runtime For This Phase
+
+- compose/runtime default for verification:
+  - `backend-nest`: `AI_WORKER_MODE=ai-service`
+  - `ai-service`: `AI_IMAGE_PROVIDER=mock`
+  - `ai-service`: `STORAGE_DRIVER=mock`
+- this proves the seller task path goes through `ai-service` without using OpenAI billing
+
 ## AI Service Provider Branches
 
 ### `AI_IMAGE_PROVIDER=mock`
@@ -78,6 +86,7 @@ The prompt builder now reinforces:
 ## Verified Runtime States
 - `PENDING -> PROCESSING -> COMPLETED` via `MockImageProvider`
 - `backend-nest` integration smoke still passes
+- `backend-nest` now has dedicated `smoke:ai-service-mock-images`
 - generated image attach back into product gallery still works
 - credits still decrease correctly under the existing backend flow
 - `/seller/ai-images` is now a real seller task hub, not placeholder-only

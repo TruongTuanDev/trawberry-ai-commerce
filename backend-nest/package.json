@@ -50,6 +50,7 @@
     "smoke:product-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-images.ps1",
     "smoke:ai-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-images.ps1",
     "smoke:ai-images-ui-flow": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-images.ps1",
+    "smoke:ai-service-mock-images": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-mock-images.ps1",
     "smoke:ai-service-integration": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-integration.ps1",
     "smoke:ai-service-openai": "powershell -ExecutionPolicy Bypass -File scripts/smoke-ai-service-openai.ps1",
     "start": "nest start",

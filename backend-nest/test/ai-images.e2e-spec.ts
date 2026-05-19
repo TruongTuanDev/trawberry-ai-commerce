@@ -844,6 +844,7 @@ describe('AiImagesController (e2e)', () => {
       shopId: string;
       workerMode: string;
       effectiveMode: string;
+      sellerFlowEffectiveMode: string;
       supportsTaskGeneration: boolean;
       supportsTaskAttach: boolean;
       supportsCredits: boolean;
@@ -859,6 +860,12 @@ describe('AiImagesController (e2e)', () => {
       'OPENAI_REAL',
       'AI_SERVICE_UNAVAILABLE',
     ]).toContain(body.effectiveMode);
+    expect([
+      'INTERNAL_MOCK',
+      'AI_SERVICE_MOCK',
+      'OPENAI_REAL',
+      'AI_SERVICE_UNAVAILABLE',
+    ]).toContain(body.sellerFlowEffectiveMode);
     expect(body.supportsTaskGeneration).toBe(true);
     expect(body.supportsTaskAttach).toBe(true);
     expect(body.supportsCredits).toBe(true);
