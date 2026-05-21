@@ -1,5 +1,20 @@
 # Project Status
 
+## Professional Marketplace Gap Audit - 2026-05-22
+
+- Status: documented
+- Added `docs/MARKETPLACE_PROFESSIONAL_GAP_AUDIT.md` as the current professional-gap benchmark for the active stack.
+- Current high-level verdict:
+  - demo-ready: yes
+  - internal manual operations: yes
+  - production-ready professional marketplace: no
+- Primary blockers remain:
+  - real payments
+  - refunds/disputes/returns
+  - seller finance, fees, and payouts
+  - real delivery automation
+  - production security and DevOps hardening
+
 ## Public Marketplace Visual Layout Copy Refresh - 2026-05-21
 
 - Status: implemented in `frontend-next` only

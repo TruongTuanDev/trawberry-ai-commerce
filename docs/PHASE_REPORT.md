@@ -1,5 +1,20 @@
 # Phase Report
 
+## 2026-05-22 Professional Marketplace Gap Audit
+
+- completed a repo-wide marketplace capability audit against a professional multi-seller benchmark
+- added `docs/MARKETPLACE_PROFESSIONAL_GAP_AUDIT.md`
+- classified features as:
+  - `PRODUCTION_READY`
+  - `MVP_WORKING`
+  - `MANUAL_WORKFLOW`
+  - `MOCK_ONLY`
+  - `UI_ONLY`
+  - `PARTIAL`
+  - `MISSING`
+  - `BLOCKER`
+- concluded the current stack is strong for demo/internal manual operations but not yet production-ready because payment, payout, refund/dispute, delivery automation, and production ops hardening remain the main gaps
+
 ## 2026-05-21 Public Marketplace Visual Layout Copy Refresh
 
 - refined the public marketplace copy and merchandising tone on `/` and `/products`
