@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -33,12 +34,20 @@ class CheckoutOrderItemDto {
 }
 
 class CheckoutCustomerDto {
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @ValidateIf(
+    (_, value) => value !== undefined && value !== null && value !== '',
+  )
   @IsString()
   @IsNotEmpty()
   fullName!: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @ValidateIf(
+    (_, value) => value !== undefined && value !== null && value !== '',
+  )
   @IsString()
   @IsNotEmpty()
   phone!: string;
@@ -48,7 +57,11 @@ class CheckoutCustomerDto {
   @IsEmail()
   email?: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @ValidateIf(
+    (_, value) => value !== undefined && value !== null && value !== '',
+  )
   @IsString()
   @IsNotEmpty()
   address!: string;
@@ -76,6 +89,12 @@ export class CreateCheckoutOrderDto {
   @ValidateNested()
   @Type(() => CheckoutCustomerDto)
   customer!: CheckoutCustomerDto;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  addressId?: string;
 
   @ApiProperty({ enum: ['MANUAL_TRANSFER', 'CASH_ON_DELIVERY'] })
   @IsString()

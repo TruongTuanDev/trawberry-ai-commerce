@@ -1,5 +1,29 @@
 # Phase Report
 
+## 2026-05-21 Customer Account Management
+
+- added a real customer account area in `frontend-next`:
+  - `/customer/account`
+  - `/customer/account/profile`
+  - `/customer/account/addresses`
+  - `/customer/account/security`
+  - `/customer/account/support`
+- kept `/customer/orders` and `/customer/orders/[checkoutCode]` and moved them into the same customer account shell
+- added NestJS customer account endpoints:
+  - `GET/PATCH /api/customer/profile`
+  - `POST /api/customer/change-password`
+  - `GET/POST/PATCH/DELETE /api/customer/addresses`
+  - `POST /api/customer/addresses/:addressId/default`
+- added Prisma `CustomerAddress` model with one-default-per-customer behavior
+- integrated optional checkout saved-address selection:
+  - checkout still supports manual address entry
+  - logged-in customers can send `addressId`
+  - backend snapshots the saved address into order shipping fields without changing the multi-shop checkout split contract
+- updated public header so logged-in customers enter the new account area instead of the old orders-only link
+- added backend customer account e2e coverage and checkout `addressId` coverage
+- added frontend Playwright coverage target:
+  - `npm run test:e2e:customer-account`
+
 ## 2026-05-20 Marketplace Hero Header + Promo Slider
 
 - redesigned the public marketplace header to follow a Wildberries-like layout:

@@ -13,6 +13,7 @@ import {
   createSyntheticEmailFromPhone,
   normalizePhone,
 } from '../../common/utils/phone.util';
+import { formatCustomerAddressSnapshot } from '../../common/utils/customer-address.util';
 import { CreateCheckoutOrderDto } from './dto/create-checkout-order.dto';
 import {
   CartValidationLine,
@@ -76,6 +77,7 @@ export class CheckoutService {
       this.toValidatedCheckoutItem(item),
     );
 
+    const checkoutCustomer = await this.resolveCheckoutCustomer(dto, user);
     const customerId = await this.resolveCustomerId(dto, user);
     const itemsByShop = this.groupItemsByShop(normalizedItems);
     const grandTotal = this.sumLineTotals(normalizedItems);
@@ -86,9 +88,9 @@ export class CheckoutService {
           id: randomUUID(),
           checkoutCode: this.buildCheckoutCode(),
           customerUserId: user?.userId ?? null,
-          customerName: dto.customer.fullName.trim(),
-          customerPhone: dto.customer.phone.trim(),
-          customerEmail: dto.customer.email?.trim() || null,
+          customerName: checkoutCustomer.fullName,
+          customerPhone: checkoutCustomer.phone,
+          customerEmail: checkoutCustomer.email,
           grandTotal,
           status: 'PENDING',
         },
@@ -141,11 +143,11 @@ export class CheckoutService {
             paymentStatus:
               dto.paymentMethod === 'CASH_ON_DELIVERY' ? 'UNPAID' : 'PENDING',
             totalAmount,
-            shippingAddress: dto.customer.address,
-            customerName: dto.customer.fullName.trim(),
-            customerPhone: dto.customer.phone.trim(),
-            customerEmail: dto.customer.email?.trim() || null,
-            customerNote: dto.customer.note?.trim() || null,
+            shippingAddress: checkoutCustomer.address,
+            customerName: checkoutCustomer.fullName,
+            customerPhone: checkoutCustomer.phone,
+            customerEmail: checkoutCustomer.email,
+            customerNote: checkoutCustomer.note,
             shippingCost: new Prisma.Decimal(0),
             shippingMethodName: dto.paymentMethod,
             items: {
@@ -206,10 +208,63 @@ export class CheckoutService {
       totalAmount: firstOrder.totalAmount.toString(),
       paymentInstructions: firstOrder.shop.paymentInstructions,
       trackingPath: `/orders/${firstOrder.id}`,
-      customerPhone: dto.customer.phone.trim(),
+      customerPhone: checkoutCustomer.phone,
       orders,
       orderCodes: orders.map((order) => order.orderCode),
       grandTotal: grandTotal.toString(),
+    };
+  }
+
+  private async resolveCheckoutCustomer(
+    dto: CreateCheckoutOrderDto,
+    user?: AuthenticatedUser | null,
+  ) {
+    const email = dto.customer.email?.trim().toLowerCase() || null;
+    const note = dto.customer.note?.trim() || null;
+
+    if (!dto.addressId) {
+      if (
+        !dto.customer.fullName.trim() ||
+        !dto.customer.phone.trim() ||
+        !dto.customer.address?.trim()
+      ) {
+        throw new BadRequestException(
+          'Full name, phone, and address are required.',
+        );
+      }
+
+      return {
+        fullName: dto.customer.fullName.trim(),
+        phone: normalizePhone(dto.customer.phone, 'Customer phone'),
+        email,
+        address: dto.customer.address.trim(),
+        note,
+      };
+    }
+
+    if (!user?.userId || user.role !== USER_ROLES.CUSTOMER) {
+      throw new BadRequestException(
+        'Saved addresses require an authenticated customer account.',
+      );
+    }
+
+    const address = await this.prisma.customerAddress.findFirst({
+      where: {
+        id: dto.addressId,
+        customerId: user.userId,
+      },
+    });
+
+    if (!address) {
+      throw new NotFoundException('Saved customer address was not found.');
+    }
+
+    return {
+      fullName: address.fullName,
+      phone: address.phone,
+      email,
+      address: formatCustomerAddressSnapshot(address),
+      note: note ?? address.comment ?? null,
     };
   }
 

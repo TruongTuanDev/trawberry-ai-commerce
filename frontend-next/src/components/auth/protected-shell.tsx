@@ -34,6 +34,8 @@ export function ProtectedShell({
   const sessionError = useAuthStore((state) => state.sessionError[role]);
   const refreshRole = useAuthStore((state) => state.refreshRole);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const roleLabel =
+    role === "customer" ? "customer" : role === "admin" ? "admin" : "seller";
 
   useEffect(() => {
     if (!hydrated || sessionChecked) {
@@ -85,7 +87,9 @@ export function ProtectedShell({
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-panel max-w-md rounded-[1.5rem] px-8 py-6 text-center">
           <p className="text-sm text-[var(--muted)]">
-            {!hydrated || sessionLoading ? "Restoring your seller session..." : "Redirecting to login..."}
+            {!hydrated || sessionLoading
+              ? `Restoring your ${roleLabel} session...`
+              : "Redirecting to login..."}
           </p>
           {sessionError ? (
             <p className="mt-3 text-sm text-[var(--accent-strong)]">

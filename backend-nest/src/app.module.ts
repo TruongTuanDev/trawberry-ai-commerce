@@ -20,6 +20,7 @@ import { SellerOnboardingModule } from './modules/seller-onboarding/seller-onboa
 import { WildberriesImportsModule } from './modules/wb-imports/wildberries-imports.module';
 import { WbSyncModule } from './modules/wb-sync/wb-sync.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { CustomerAccountModule } from './modules/customer-account/customer-account.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -49,6 +50,7 @@ import { HealthController } from './health.controller';
     WildberriesImportsModule,
     WbSyncModule,
     CategoriesModule,
+    CustomerAccountModule,
     PublicProductsModule,
     CheckoutModule,
     OrderTrackingModule,

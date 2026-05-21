@@ -155,6 +155,22 @@ describe('CheckoutController (e2e)', () => {
   let products: StoredProduct[];
   let orders: StoredOrder[];
   let marketplaceCheckouts: StoredMarketplaceCheckout[];
+  let customerAddresses: Array<{
+    id: string;
+    customerId: string;
+    fullName: string;
+    phone: string;
+    country: string;
+    city: string;
+    region: string;
+    street: string;
+    apartment: string | null;
+    postalCode: string | null;
+    comment: string | null;
+    isDefault: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 
   const decimal = (value: string): DecimalLike => {
     const numeric = Number(value);
@@ -201,6 +217,9 @@ describe('CheckoutController (e2e)', () => {
     marketplaceCheckout: {
       create: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    customerAddress: {
       findFirst: jest.fn(),
     },
     $transaction: jest.fn(),
@@ -398,6 +417,24 @@ describe('CheckoutController (e2e)', () => {
 
     orders = [];
     marketplaceCheckouts = [];
+    customerAddresses = [
+      {
+        id: 'address-1',
+        customerId: 'customer-user-1',
+        fullName: 'Address Book Customer',
+        phone: '+79990000055',
+        country: 'RU',
+        city: 'Moscow',
+        region: 'Moscow',
+        street: 'Arbat 10',
+        apartment: '9',
+        postalCode: '101000',
+        comment: 'Use intercom 55',
+        isDefault: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
 
     prismaMock.user.findUnique.mockImplementation(
       ({
@@ -730,6 +767,15 @@ describe('CheckoutController (e2e)', () => {
       },
     );
 
+    prismaMock.customerAddress.findFirst.mockImplementation(
+      ({ where }: { where: { id?: string; customerId?: string } }) =>
+        customerAddresses.find(
+          (address) =>
+            (!where.id || address.id === where.id) &&
+            (!where.customerId || address.customerId === where.customerId),
+        ) ?? null,
+    );
+
     prismaMock.order.findMany.mockImplementation(
       ({ where }: { where: { shopId?: string } }) =>
         orders.filter((order) =>
@@ -830,7 +876,7 @@ describe('CheckoutController (e2e)', () => {
 
     expect(detailBody.items).toHaveLength(1);
     expect(detailBody.items[0].quantity).toBe(2);
-    expect(detailBody.customer.phone).toBe('0123456789');
+    expect(detailBody.customer.phone).toBe('+0123456789');
   });
 
   it('creates a multi-variant order, sums trusted line totals, and deducts each variant', async () => {
@@ -996,7 +1042,9 @@ describe('CheckoutController (e2e)', () => {
     expect(detailBody.grandTotal).toBe('798');
 
     const publicResponse = await request(app.getHttpServer())
-      .get(`/api/public/checkouts/${createBody.checkoutCode}?phone=0123456789`)
+      .get(
+        `/api/public/checkouts/${createBody.checkoutCode}?phone=%2B0123456789`,
+      )
       .expect(200);
     expect(readBody<{ orders: unknown[] }>(publicResponse).orders).toHaveLength(
       2,
@@ -1005,6 +1053,38 @@ describe('CheckoutController (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/api/public/checkouts/${createBody.checkoutCode}?phone=wrong`)
       .expect(404);
+  });
+
+  it('uses a saved customer address snapshot when addressId is provided', async () => {
+    const customerToken = await loginAndGetToken(app, 'customer@example.com');
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 1 },
+        ],
+        customer: {
+          fullName: '',
+          phone: '',
+          email: 'customer@example.com',
+          address: '',
+        },
+        addressId: 'address-1',
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(201);
+
+    const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    expect(createBody.customerPhone).toBe('+79990000055');
+    expect(orders[0].shippingAddress).toBe(
+      'Arbat 10, 9, Moscow, Moscow, 101000, RU',
+    );
+    expect(orders[0].customerName).toBe('Address Book Customer');
+    expect(orders[0].customerPhone).toBe('+79990000055');
+    expect(orders[0].customerNote).toBe('Use intercom 55');
   });
 
   it('fails entire checkout when one variant has insufficient stock', async () => {

@@ -58,6 +58,11 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/products`
 - `/products/[id]`
 - `/checkout`
+- `/customer/account`
+- `/customer/account/profile`
+- `/customer/account/addresses`
+- `/customer/account/security`
+- `/customer/account/support`
 - `/orders/track`
 - `/orders/[id]`
 - `/login`
@@ -124,7 +129,15 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - header search that keeps the current `q` value visible after navigation
   - stale cart validation warnings for stock, price, and availability drift
   - checkout preflight before submit
+  - saved-address selector for logged-in customers during checkout
   - order tracking and payment proof upload UI
+- Customer account UI with:
+  - overview dashboard
+  - profile edit form
+  - saved address management
+  - password change
+  - support handoff page
+  - shared account shell around order history
 - Seller delivery operations with:
   - delivery settings form
   - order-level delivery offer calculation
@@ -279,6 +292,23 @@ Coverage:
 - checkout preflight blocking before submit
 - publish-if-ready result
 - public product visibility
+
+## Playwright Customer Account
+
+```bash
+npm run test:e2e:customer-account
+```
+
+Coverage:
+
+- customer header account entry
+- account dashboard
+- profile update with persistence
+- address create/edit/delete/default
+- password change
+- old-password login rejection
+- new-password login success
+- seller/admin redirect away from customer account routes
 
 ## Playwright Public Marketplace Contract
 

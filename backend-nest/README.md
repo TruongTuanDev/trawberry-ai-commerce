@@ -96,6 +96,14 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `POST /api/shops/:shopId/imports/wildberries/confirm`
 - `GET /api/shops/:shopId/imports/wildberries/:importId`
 - `GET /api/admin/dashboard/summary`
+- `GET /api/customer/profile`
+- `PATCH /api/customer/profile`
+- `POST /api/customer/change-password`
+- `GET /api/customer/addresses`
+- `POST /api/customer/addresses`
+- `PATCH /api/customer/addresses/:addressId`
+- `DELETE /api/customer/addresses/:addressId`
+- `POST /api/customer/addresses/:addressId/default`
 
 ## Seller Catalog Lifecycle
 
@@ -274,6 +282,22 @@ Then rebuild, login seller, open `/seller/import/wildberries-api`, select the ta
   - `MISSING_PRICE`
   - `PRICE_CHANGED`
 - Smoke: `npm run smoke:cart-validation`.
+
+## Customer Account Management
+
+- Customer-only account APIs live under `/api/customer`.
+- Profile:
+  - `GET /api/customer/profile`
+  - `PATCH /api/customer/profile`
+- Password:
+  - `POST /api/customer/change-password`
+- Saved addresses:
+  - `GET /api/customer/addresses`
+  - `POST /api/customer/addresses`
+  - `PATCH /api/customer/addresses/:addressId`
+  - `DELETE /api/customer/addresses/:addressId`
+  - `POST /api/customer/addresses/:addressId/default`
+- Checkout supports optional `addressId` for authenticated customers while keeping manual address entry for guest/manual flows.
 
 ## Admin operations dashboard
 - Admin-only summary endpoint: `GET /api/admin/dashboard/summary`.

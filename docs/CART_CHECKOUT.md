@@ -1,5 +1,16 @@
 # Cart + Multi-item Checkout
 
+## Saved Address Addendum
+
+- checkout now accepts optional `addressId` for authenticated customers
+- if `addressId` is present:
+  - backend loads the address owned by the current customer
+  - order shipping address is built from the saved address snapshot
+  - order customer name/phone use the saved address recipient details
+- if `addressId` is absent:
+  - existing manual checkout fields remain required
+  - guest checkout behavior is unchanged
+
 ## Public Buying UX Addendum
 
 - `/products` now supports quick cart UX:

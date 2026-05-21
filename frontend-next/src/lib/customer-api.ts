@@ -47,6 +47,42 @@ export type CustomerCheckoutReceipt = {
   }>;
 };
 
+export type CustomerProfile = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  role: string;
+  createdAt: string;
+};
+
+export type CustomerAddress = {
+  id: string;
+  fullName: string;
+  phone: string;
+  country: string;
+  city: string;
+  region: string;
+  street: string;
+  apartment: string | null;
+  postalCode: string | null;
+  comment: string | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomerAddressInput = {
+  fullName: string;
+  phone: string;
+  city: string;
+  region: string;
+  street: string;
+  apartment?: string;
+  postalCode?: string;
+  comment?: string;
+};
+
 export type CustomerSupportCase = {
   id: string;
   checkoutId: string;
@@ -88,6 +124,65 @@ export type CustomerSupportCase = {
 export async function getCustomerOrderHistory() {
   return apiRequest<{ items: CustomerCheckoutReceipt[] }>("/api/customer/orders", {
     method: "GET",
+  });
+}
+
+export async function getCustomerProfile() {
+  return apiRequest<CustomerProfile>("/api/customer/profile", {
+    method: "GET",
+  });
+}
+
+export async function updateCustomerProfile(body: {
+  name?: string;
+  email?: string;
+  phone?: string;
+}) {
+  return apiRequest<CustomerProfile>("/api/customer/profile", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function changeCustomerPassword(body: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  return apiRequest<{ success: boolean }>("/api/customer/change-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getCustomerAddresses() {
+  return apiRequest<{ items: CustomerAddress[] }>("/api/customer/addresses", {
+    method: "GET",
+  });
+}
+
+export async function createCustomerAddress(body: CustomerAddressInput) {
+  return apiRequest<CustomerAddress>("/api/customer/addresses", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateCustomerAddress(addressId: string, body: CustomerAddressInput) {
+  return apiRequest<CustomerAddress>(`/api/customer/addresses/${encodeURIComponent(addressId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteCustomerAddress(addressId: string) {
+  return apiRequest<{ success: boolean }>(`/api/customer/addresses/${encodeURIComponent(addressId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function setDefaultCustomerAddress(addressId: string) {
+  return apiRequest<CustomerAddress>(`/api/customer/addresses/${encodeURIComponent(addressId)}/default`, {
+    method: "POST",
   });
 }
 

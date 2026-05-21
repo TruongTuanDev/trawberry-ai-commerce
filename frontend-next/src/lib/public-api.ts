@@ -97,6 +97,7 @@ export type CheckoutOrderPayload = {
     address: string;
     note?: string;
   };
+  addressId?: string;
   paymentMethod: "MANUAL_TRANSFER" | "CASH_ON_DELIVERY";
 };
 

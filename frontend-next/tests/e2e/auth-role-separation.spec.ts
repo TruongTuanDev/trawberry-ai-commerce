@@ -8,7 +8,7 @@ test("auth role separation keeps admin hidden from public marketplace", async ({
   await expect(page.getByTestId("public-cart-link")).toBeVisible();
   await expect(page.getByTestId("public-customer-link")).toBeVisible();
   await expect(page.getByTestId("public-customer-register-link")).toBeVisible();
-  await expect(publicNav.getByRole("link", { name: "Sell on marketplace" })).toBeVisible();
+  await expect(publicNav.getByRole("link", { name: "Sell with trawberry" })).toBeVisible();
   await expect(publicNav.getByRole("link", { name: "Seller login" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Admin login/i })).toHaveCount(0);
 });
@@ -26,7 +26,7 @@ test("customer registration supports email/password and redirects to customer ar
   await page.getByTestId("customer-register-submit").click();
 
   await page.waitForURL("**/customer/orders");
-  await expect(page.getByTestId("public-customer-link")).toContainText("My orders");
+  await expect(page.getByTestId("public-customer-link")).toContainText("Auth Role Customer");
 });
 
 test("customer registration supports phone/password and customer login by phone works", async ({ page, context }) => {

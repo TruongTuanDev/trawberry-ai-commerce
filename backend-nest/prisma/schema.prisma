@@ -32,8 +32,31 @@ model User {
   paymentReviewLogs       PaymentReviewLog[]     @relation("PaymentReviewerLogs")
   productImportSessions   ProductImportSession[]
   wbSyncRuns              WbSyncRun[]            @relation("WbSyncRunSeller")
+  customerAddresses       CustomerAddress[]
 
   @@map("users")
+}
+
+model CustomerAddress {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  fullName    String   @map("full_name") @db.VarChar(255)
+  phone       String   @db.VarChar(50)
+  country     String   @default("RU") @db.VarChar(100)
+  city        String   @db.VarChar(255)
+  region      String   @db.VarChar(255)
+  street      String
+  apartment   String?  @db.VarChar(255)
+  postalCode  String?  @map("postal_code") @db.VarChar(50)
+  comment     String?  @db.VarChar(1000)
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer    User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([customerId, isDefault])
+  @@map("customer_addresses")
 }
 
 model SellerProfile {

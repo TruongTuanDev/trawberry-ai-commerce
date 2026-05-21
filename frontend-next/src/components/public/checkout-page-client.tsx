@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { formatCustomerAddress } from "@/components/customer/account/customer-account-utils";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import {
@@ -14,14 +15,18 @@ import {
   isBlockingCartStatus,
 } from "@/lib/cart-validation";
 import {
+  getCustomerAddresses,
+  type CustomerAddress,
+} from "@/lib/customer-api";
+import {
   createCheckoutOrder,
   getPublicProduct,
   validatePublicCart,
   type CheckoutOrderResponse,
   type PublicCartValidationResponse,
 } from "@/lib/public-api";
-import { type CartItem, useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { type CartItem, useCartStore } from "@/stores/cart-store";
 
 const initialCustomer = {
   fullName: "",
@@ -52,7 +57,8 @@ function groupItemsByShop(
       subtotal: 0,
     };
     existing.items.push(item);
-    existing.subtotal += lineTotals.get(cartItemKey(item.productId, item.variantId)) ??
+    existing.subtotal +=
+      lineTotals.get(cartItemKey(item.productId, item.variantId)) ??
       Number(item.unitPrice || 0) * item.quantity;
     groups.set(item.shopId, existing);
   }
@@ -91,6 +97,8 @@ export function CheckoutPageClient({
   const [validationLoading, setValidationLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [validationRequestKey, setValidationRequestKey] = useState(0);
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("manual");
 
   useEffect(() => {
     hydrateCart();
@@ -100,6 +108,43 @@ export function CheckoutPageClient({
     hydrateAuth();
     void refreshRole("customer");
   }, [hydrateAuth, refreshRole]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      if (authUser?.role !== "CUSTOMER") {
+        if (mounted) {
+          setSavedAddresses([]);
+          setSelectedAddressId("manual");
+        }
+        return;
+      }
+
+      try {
+        const response = await getCustomerAddresses();
+        if (!mounted) {
+          return;
+        }
+
+        setSavedAddresses(response.items);
+        const defaultAddress =
+          response.items.find((item) => item.isDefault) ?? response.items[0];
+        setSelectedAddressId(defaultAddress ? defaultAddress.id : "manual");
+      } catch {
+        if (mounted) {
+          setSavedAddresses([]);
+          setSelectedAddressId("manual");
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [authUser?.role]);
 
   const customerForm = {
     fullName:
@@ -113,6 +158,10 @@ export function CheckoutPageClient({
     address: customer.address,
     note: customer.note,
   };
+  const selectedSavedAddress =
+    selectedAddressId !== "manual"
+      ? savedAddresses.find((address) => address.id === selectedAddressId) ?? null
+      : null;
 
   useEffect(() => {
     let mounted = true;
@@ -154,10 +203,7 @@ export function CheckoutPageClient({
   }, [addItem, initialProductId, initialQuantity, initialVariantId]);
 
   useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    if (!items.length) {
+    if (!hydrated || !items.length) {
       return;
     }
 
@@ -207,7 +253,9 @@ export function CheckoutPageClient({
   const lineTotals = useMemo(() => {
     return new Map(
       items.map((item) => {
-        const validated = validationMap.get(cartItemKey(item.productId, item.variantId));
+        const validated = validationMap.get(
+          cartItemKey(item.productId, item.variantId),
+        );
         return [
           cartItemKey(item.productId, item.variantId),
           validated?.lineTotal ?? Number(item.unitPrice || 0) * item.quantity,
@@ -218,7 +266,9 @@ export function CheckoutPageClient({
   const shopNames = useMemo(() => {
     return new Map(
       items.map((item) => {
-        const validated = validationMap.get(cartItemKey(item.productId, item.variantId));
+        const validated = validationMap.get(
+          cartItemKey(item.productId, item.variantId),
+        );
         return [item.shopId, validated?.shopName ?? item.shopName] as const;
       }),
     );
@@ -234,7 +284,8 @@ export function CheckoutPageClient({
       0,
     );
   const hasBlockingIssues =
-    activeValidation?.items.some((item) => isBlockingCartStatus(item.status)) ?? false;
+    activeValidation?.items.some((item) => isBlockingCartStatus(item.status)) ??
+    false;
   const hasPriceChanges = (activeValidation?.summary.changedCount ?? 0) > 0;
   const submitDisabled =
     submitting ||
@@ -248,9 +299,10 @@ export function CheckoutPageClient({
       return;
     }
     if (
-      !customerForm.fullName.trim() ||
-      !customerForm.phone.trim() ||
-      !customerForm.address.trim()
+      !selectedSavedAddress &&
+      (!customerForm.fullName.trim() ||
+        !customerForm.phone.trim() ||
+        !customerForm.address.trim())
     ) {
       setError("Full name, phone, and address are required.");
       return;
@@ -329,12 +381,13 @@ export function CheckoutPageClient({
           quantity: item.quantity,
         })),
         customer: {
-          fullName: customerForm.fullName.trim(),
-          phone: customerForm.phone.trim(),
+          fullName: selectedSavedAddress ? "" : customerForm.fullName.trim(),
+          phone: selectedSavedAddress ? "" : customerForm.phone.trim(),
           email: customerForm.email.trim() || undefined,
-          address: customerForm.address.trim(),
+          address: selectedSavedAddress ? "" : customerForm.address.trim(),
           note: customerForm.note.trim() || undefined,
         },
+        addressId: selectedSavedAddress?.id,
         paymentMethod,
       });
       clearCart();
@@ -528,61 +581,119 @@ export function CheckoutPageClient({
                     Delivery details
                   </h1>
                   <div className="mt-6 grid gap-4">
-                    <Field label="Full name">
-                      <input
-                        value={customerForm.fullName}
-                        onChange={(event) =>
-                          setCustomer((current) => ({
-                            ...current,
-                            fullName: event.target.value,
-                          }))
-                        }
-                        className="public-input"
-                        data-testid="checkout-full-name"
-                      />
-                    </Field>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field label="Phone">
-                        <input
-                          value={customerForm.phone}
-                          onChange={(event) =>
-                            setCustomer((current) => ({
-                              ...current,
-                              phone: event.target.value,
-                            }))
-                          }
+                    {authUser?.role === "CUSTOMER" && savedAddresses.length ? (
+                      <Field label="Saved addresses">
+                        <select
+                          value={selectedAddressId}
+                          onChange={(event) => setSelectedAddressId(event.target.value)}
                           className="public-input"
-                          data-testid="checkout-phone"
-                        />
+                          data-testid="checkout-saved-address-select"
+                        >
+                          {savedAddresses.map((address) => (
+                            <option key={address.id} value={address.id}>
+                              {address.fullName} - {address.city}
+                              {address.isDefault ? " (default)" : ""}
+                            </option>
+                          ))}
+                          <option value="manual">Nhập địa chỉ mới</option>
+                        </select>
                       </Field>
-                      <Field label="Email">
-                        <input
-                          value={customerForm.email}
-                          onChange={(event) =>
-                            setCustomer((current) => ({
-                              ...current,
-                              email: event.target.value,
-                            }))
-                          }
-                          className="public-input"
-                          data-testid="checkout-email"
-                        />
-                      </Field>
-                    </div>
-                    <Field label="Address">
-                      <textarea
-                        value={customer.address}
-                        onChange={(event) =>
-                          setCustomer((current) => ({
-                            ...current,
-                            address: event.target.value,
-                          }))
-                        }
-                        rows={4}
-                        className="public-input min-h-32"
-                        data-testid="checkout-address"
-                      />
-                    </Field>
+                    ) : null}
+
+                    {selectedSavedAddress ? (
+                      <>
+                        <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-[var(--foreground)]">
+                              {selectedSavedAddress.fullName}
+                            </p>
+                            {selectedSavedAddress.isDefault ? (
+                              <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+                                Default
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-2 text-sm text-[var(--muted)]">
+                            {selectedSavedAddress.phone}
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                            {formatCustomerAddress(selectedSavedAddress)}
+                          </p>
+                        </div>
+                        <Field label="Email">
+                          <input
+                            value={customerForm.email}
+                            onChange={(event) =>
+                              setCustomer((current) => ({
+                                ...current,
+                                email: event.target.value,
+                              }))
+                            }
+                            className="public-input"
+                            data-testid="checkout-email"
+                          />
+                        </Field>
+                      </>
+                    ) : (
+                      <>
+                        <Field label="Full name">
+                          <input
+                            value={customerForm.fullName}
+                            onChange={(event) =>
+                              setCustomer((current) => ({
+                                ...current,
+                                fullName: event.target.value,
+                              }))
+                            }
+                            className="public-input"
+                            data-testid="checkout-full-name"
+                          />
+                        </Field>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Field label="Phone">
+                            <input
+                              value={customerForm.phone}
+                              onChange={(event) =>
+                                setCustomer((current) => ({
+                                  ...current,
+                                  phone: event.target.value,
+                                }))
+                              }
+                              className="public-input"
+                              data-testid="checkout-phone"
+                            />
+                          </Field>
+                          <Field label="Email">
+                            <input
+                              value={customerForm.email}
+                              onChange={(event) =>
+                                setCustomer((current) => ({
+                                  ...current,
+                                  email: event.target.value,
+                                }))
+                              }
+                              className="public-input"
+                              data-testid="checkout-email"
+                            />
+                          </Field>
+                        </div>
+                        <Field label="Address">
+                          <textarea
+                            value={customer.address}
+                            onChange={(event) =>
+                              setCustomer((current) => ({
+                                ...current,
+                                address: event.target.value,
+                              }))
+                            }
+                            rows={4}
+                            className="public-input min-h-32"
+                            data-testid="checkout-address"
+                          />
+                        </Field>
+                      </>
+                    )}
+
                     <Field label="Note">
                       <textarea
                         value={customer.note}
@@ -611,10 +722,7 @@ export function CheckoutPageClient({
                       Checking latest marketplace price and stock...
                     </p>
                   ) : null}
-                  <div
-                    className="mt-5 space-y-4"
-                    data-testid="checkout-order-items"
-                  >
+                  <div className="mt-5 space-y-4" data-testid="checkout-order-items">
                     {shopGroups.map((group) => (
                       <section
                         key={group.shopId}
@@ -735,7 +843,7 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`rounded-[1.35rem] border px-4 py-4 transition-all duration-200 cursor-pointer ${checked ? "border-[var(--accent)] bg-[var(--accent-soft)]/30 shadow-[0_4px_14px_rgba(203,17,171,0.1)]" : "border-[var(--border)] bg-white/70 hover:border-[var(--muted)]"}`}
+      className={`cursor-pointer rounded-[1.35rem] border px-4 py-4 transition-all duration-200 ${checked ? "border-[var(--accent)] bg-[var(--accent-soft)]/30 shadow-[0_4px_14px_rgba(203,17,171,0.1)]" : "border-[var(--border)] bg-white/70 hover:border-[var(--muted)]"}`}
     >
       <input
         type="radio"

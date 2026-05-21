@@ -20,6 +20,7 @@
     "test:e2e:public-marketplace-contract": "playwright test public-marketplace-contract",
     "test:e2e:public-empty-fallbacks": "playwright test public-empty-fallbacks",
     "test:e2e:multi-shop-checkout": "playwright test multi-shop-checkout",
+    "test:e2e:customer-account": "playwright test customer-account",
     "test:e2e:customer-order-history": "playwright test customer-order-history",
     "test:e2e:support-cases": "playwright test support-cases",
     "test:e2e:manual-delivery": "playwright test manual-delivery",

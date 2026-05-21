@@ -9,17 +9,17 @@ import { useCartStore } from "@/stores/cart-store";
 
 const primaryLinks = [
   { href: "/", label: "Home", tone: "primary" },
-  { href: "/products", label: "Catalog", tone: "primary" },
+  { href: "/products", label: "Shop", tone: "primary" },
   { href: "/orders/track", label: "Track order", tone: "primary" },
-  { href: "/seller/register", label: "Sell on marketplace", tone: "soft" },
+  { href: "/seller/register", label: "Sell with trawberry", tone: "soft" },
   { href: "/seller/login", label: "Seller login", tone: "ghost" },
 ];
 
 const utilityLinks = [
-  { href: "/products?q=new", label: "Новинки" },
+  { href: "/products?q=new", label: "New arrivals" },
   { href: "/products?sort=price_desc", label: "Brands" },
   { href: "/products?inStock=true", label: "For business" },
-  { href: "/seller/register", label: "Seller" },
+  { href: "/seller/register", label: "Sellers" },
 ];
 
 function MenuIcon() {
@@ -105,12 +105,39 @@ export function PublicHeader() {
   );
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const user = useAuthStore((state) => state.customerUser);
+  const authHydrated = useAuthStore((state) => state.hydrated);
+  const customerSessionLoading = useAuthStore(
+    (state) => state.sessionLoading.customer,
+  );
+  const customerSessionError = useAuthStore(
+    (state) => state.sessionError.customer,
+  );
+  const refreshRole = useAuthStore((state) => state.refreshRole);
   const logoutRole = useAuthStore((state) => state.logoutRole);
 
   useEffect(() => {
     hydrateCart();
     hydrateAuth();
   }, [hydrateAuth, hydrateCart]);
+
+  useEffect(() => {
+    if (
+      !authHydrated ||
+      user ||
+      customerSessionLoading ||
+      customerSessionError
+    ) {
+      return;
+    }
+
+    void refreshRole("customer");
+  }, [
+    authHydrated,
+    customerSessionError,
+    customerSessionLoading,
+    refreshRole,
+    user,
+  ]);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -123,7 +150,7 @@ export function PublicHeader() {
     router.push(`/products${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
-  const customerHref = user?.role === "CUSTOMER" ? "/customer/orders" : "/customer/login";
+  const customerHref = user?.role === "CUSTOMER" ? "/customer/account" : "/customer/login";
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/15 bg-gradient-primary text-white shadow-[0_18px_48px_rgba(122,0,112,0.28)]">
@@ -156,7 +183,7 @@ export function PublicHeader() {
                   trawberry
                 </p>
                 <p className="hidden text-[11px] uppercase tracking-[0.26em] text-white/72 sm:block">
-                  public marketplace
+                  multi-seller marketplace
                 </p>
               </div>
             </Link>
@@ -182,7 +209,7 @@ export function PublicHeader() {
                   id="public-header-search"
                   name="q"
                   defaultValue={searchParams.get("q") ?? ""}
-                  placeholder="Search products, brands, articles, categories"
+                  placeholder="Search products, brands, styles, categories"
                   className="min-w-0 flex-1 border-none bg-transparent p-0 text-sm outline-none placeholder:text-[var(--muted)] md:text-base"
                   data-testid="public-header-search"
                 />
@@ -209,8 +236,8 @@ export function PublicHeader() {
                     data-testid="public-customer-link"
                   >
                     <AccountIcon />
-                    <span className="hidden sm:inline">My orders</span>
-                    <span className="sm:hidden">Account</span>
+                    <span className="hidden sm:inline">{user.fullName || "Tài khoản"}</span>
+                    <span className="sm:hidden">Tài khoản</span>
                   </Link>
                   <button
                     type="button"
@@ -218,7 +245,7 @@ export function PublicHeader() {
                     className="hidden h-12 items-center rounded-2xl border border-white/16 bg-white/10 px-4 text-sm font-semibold text-white/90 backdrop-blur md:inline-flex"
                     data-testid="public-customer-logout"
                   >
-                    Logout
+                    Log out
                   </button>
                 </>
               ) : (
@@ -302,7 +329,7 @@ export function PublicHeader() {
                 href={customerHref}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl border border-white/18 bg-white/12 px-4 text-sm font-semibold text-white backdrop-blur"
               >
-                Customer login
+                Login
               </Link>
               <Link
                 href="/customer/register"

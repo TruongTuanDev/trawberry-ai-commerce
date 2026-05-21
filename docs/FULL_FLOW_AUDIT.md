@@ -1,5 +1,13 @@
 # Full Commerce Flow Audit
 
+## Customer Account Management Addendum
+
+- customer profile, password change, and saved-address management are now implemented in the active new stack
+- logged-in customers now have a dedicated account area at `/customer/account`
+- existing customer order history and parent receipt detail remain intact and are linked from the same account shell
+- checkout now supports optional saved-address selection through `addressId` without removing the manual-address path
+- seller/admin sessions still do not gain access to customer account functionality
+
 ## Auth UX Separation Addendum
 
 - Public `/`, `/products`, `/cart`, and `/checkout` now expose customer and seller entry points only.

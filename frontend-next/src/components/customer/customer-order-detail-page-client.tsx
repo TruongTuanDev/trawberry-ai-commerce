@@ -3,13 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
 import { CheckoutReceiptView } from "@/components/customer/checkout-receipt-view";
 import { CustomerSupportSection } from "@/components/customer/customer-support-section";
-import { PublicShell } from "@/components/public/public-shell";
-import { getCustomerOrderReceipt, type CustomerCheckoutReceipt } from "@/lib/customer-api";
+import {
+  getCustomerOrderReceipt,
+  type CustomerCheckoutReceipt,
+} from "@/lib/customer-api";
 import { useAuthStore } from "@/stores/auth-store";
 
-export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: string }) {
+export function CustomerOrderDetailPageClient({
+  checkoutCode,
+}: {
+  checkoutCode: string;
+}) {
   const router = useRouter();
   const user = useAuthStore((state) => state.customerUser);
   const hydrated = useAuthStore((state) => state.hydrated);
@@ -39,9 +46,13 @@ export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: 
         setReceipt(response);
         setError(null);
       } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : "Unable to load receipt.");
+        if (mounted) {
+          setError(err instanceof Error ? err.message : "Unable to load receipt.");
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
     void run();
@@ -51,16 +62,30 @@ export function CustomerOrderDetailPageClient({ checkoutCode }: { checkoutCode: 
   }, [checkoutCode, hydrated, refreshRole, router, user]);
 
   return (
-    <PublicShell>
-      <main className="px-4 py-8 sm:px-6">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <Link href="/customer/orders" className="public-button-secondary inline-flex px-4 py-2 text-sm">Back to my orders</Link>
-          {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
-          {loading ? <section className="card-panel rounded-[2rem] px-6 py-8 text-sm text-[var(--muted)]">Loading receipt...</section> : null}
-          {receipt ? <CheckoutReceiptView receipt={receipt} phone={receipt.customer.phone} /> : null}
-          {receipt ? <CustomerSupportSection receipt={receipt} /> : null}
+    <CustomerAccountShell
+      title={checkoutCode}
+      description="Receipt customer chi tiết cho parent checkout, kèm support section đang dùng trong flow order history hiện tại."
+      actions={
+        <Link
+          href="/customer/orders"
+          className="public-button-secondary inline-flex px-4 py-2 text-sm"
+        >
+          Back to my orders
+        </Link>
+      }
+    >
+      {error ? (
+        <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
+          {error}
         </div>
-      </main>
-    </PublicShell>
+      ) : null}
+      {loading ? (
+        <section className="card-panel rounded-[2rem] px-6 py-8 text-sm text-[var(--muted)]">
+          Loading receipt...
+        </section>
+      ) : null}
+      {receipt ? <CheckoutReceiptView receipt={receipt} phone={receipt.customer.phone} /> : null}
+      {receipt ? <CustomerSupportSection receipt={receipt} /> : null}
+    </CustomerAccountShell>
   );
 }

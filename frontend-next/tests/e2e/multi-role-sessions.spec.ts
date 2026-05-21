@@ -64,7 +64,7 @@ test("same browser keeps isolated admin, seller, and customer sessions", async (
   expect(cookieNames).toContain("customer_access_token");
 
   await page.goto("/products");
-  await expect(page.getByTestId("public-customer-link")).toContainText("My orders");
+  await expect(page.getByTestId("public-customer-link")).toContainText(/demo customer/i);
   await expect(page.getByTestId("public-admin-dashboard-link")).toHaveCount(0);
   await expect(page.getByTestId("public-seller-dashboard-link")).toHaveCount(0);
 

@@ -1,5 +1,23 @@
 # Project Status
 
+## Customer Account Management - 2026-05-21
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Added customer-only account APIs for:
+  - profile read/update
+  - password change
+  - saved-address CRUD
+  - default address selection
+- Added new customer account routes:
+  - `/customer/account`
+  - `/customer/account/profile`
+  - `/customer/account/addresses`
+  - `/customer/account/security`
+  - `/customer/account/support`
+- Existing `/customer/orders` history and receipt detail remain active and now live inside the same customer account shell.
+- Public header now routes authenticated customers into `/customer/account`.
+- Checkout now supports optional saved-address selection through `addressId` while preserving guest/manual checkout behavior.
+
 ## Public Marketplace Header / Promo Refresh - 2026-05-20
 
 - `/` and `/products` now follow a stronger marketplace-first composition closer to Wildberries:
