@@ -4,10 +4,10 @@ test("seeded public customer flow completes checkout, tracking, and proof upload
   test.setTimeout(60000);
 
   await page.goto("/");
-  await page.getByRole("link", { name: "Explore products" }).click();
+  await page.getByRole("link", { name: "Shop now" }).click();
   await page.waitForURL("**/products");
-  await page.getByLabel("Search catalog").fill("Linen Bloom Dress");
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByTestId("marketplace-search").fill("Linen Bloom Dress");
+  await page.getByTestId("marketplace-apply").click();
 
   const seededCard = page.getByTestId("product-card").filter({ hasText: "Linen Bloom Dress" });
   await expect(seededCard).toHaveCount(1);

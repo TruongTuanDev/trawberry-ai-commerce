@@ -5,7 +5,7 @@ test("public marketplace routes load and basic navigation works", async ({ page 
   await expect(page.getByTestId("public-shell")).toBeVisible();
   await expect(page.getByTestId("public-logo")).toBeVisible();
 
-  await page.getByRole("link", { name: "Explore products" }).click();
+  await page.getByRole("link", { name: "Shop now" }).click();
   await page.waitForURL("**/products");
   await expect(page.getByTestId("products-grid")).toBeVisible();
 

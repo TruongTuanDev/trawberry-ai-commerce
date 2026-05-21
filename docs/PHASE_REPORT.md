@@ -1,5 +1,16 @@
 # Phase Report
 
+## 2026-05-21 Public Marketplace Visual Layout Copy Refresh
+
+- refined the public marketplace copy and merchandising tone on `/` and `/products`
+- kept scope strictly frontend-only:
+  - `frontend-next/src/app/page.tsx`
+  - `frontend-next/src/app/products/page.tsx`
+  - `frontend-next/src/components/public/promo-slider.tsx`
+  - `frontend-next/src/components/public/public-footer.tsx`
+- updated public smoke/full Playwright checks to follow the new CTA and search labels
+- preserved backend contracts, Prisma schema, checkout logic, auth/session architecture, and legacy apps unchanged
+
 ## 2026-05-21 Customer Account Management
 
 - added a real customer account area in `frontend-next`:

@@ -34,7 +34,15 @@ function readFilters(searchParams: { get(name: string): string | null }) {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<PublicShell><main className="px-4 py-8 sm:px-6 sm:py-10"><div className="mx-auto max-w-7xl">Loading products...</div></main></PublicShell>}>
+    <Suspense
+      fallback={
+        <PublicShell>
+          <main className="px-4 py-8 sm:px-6 sm:py-10">
+            <div className="mx-auto max-w-7xl">Loading products...</div>
+          </main>
+        </PublicShell>
+      }
+    >
       <ProductsPageClient />
     </Suspense>
   );
@@ -88,18 +96,18 @@ function ProductsPageContent({
   const activeFilterSummary = useMemo(
     () =>
       [
-        filters.q.trim() ? `Search: ${filters.q.trim()}` : null,
+        filters.q.trim() ? `Keyword: ${filters.q.trim()}` : null,
         filters.categorySlug ? `Category: ${filters.categorySlug}` : null,
         filters.brand.trim() ? `Brand: ${filters.brand.trim()}` : null,
         filters.color.trim() ? `Color: ${filters.color.trim()}` : null,
         filters.gender.trim() ? `Gender: ${filters.gender.trim()}` : null,
         filters.inStock === "true"
-          ? "In stock only"
+          ? "In-stock items only"
           : filters.inStock === "false"
-            ? "Out of stock only"
+            ? "Out-of-stock items only"
             : null,
-        filters.minPrice ? `Min: ${filters.minPrice}` : null,
-        filters.maxPrice ? `Max: ${filters.maxPrice}` : null,
+        filters.minPrice ? `Min price: ${filters.minPrice}` : null,
+        filters.maxPrice ? `Max price: ${filters.maxPrice}` : null,
         filters.sort !== "newest" ? `Sort: ${filters.sort}` : null,
       ].filter(Boolean) as string[],
     [filters],
@@ -193,67 +201,132 @@ function ProductsPageContent({
           <section className="card-panel overflow-hidden rounded-[2.25rem]">
             <div className="grid gap-8 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,241,255,0.96))] px-6 py-8 sm:px-8 lg:grid-cols-[1.02fr_0.98fr] lg:px-10">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Marketplace catalog</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+                  Shop all
+                </p>
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl">
-                  Product grid ngay dưới promo, giống nhịp marketplace thật.
+                  Find the right products faster with smart filters and clear pricing.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-                  Search và filter vẫn giữ nguyên theo backend hiện tại: category, brand, color, gender, stock, price, sort. Chỉ thay đổi cấu trúc nhìn và độ ưu tiên thị giác.
+                  Search by product name, brand, color, gender, price range, and stock status
+                  to narrow the catalog quickly.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-2">
                   <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
-                    public only
+                    Live listings
                   </span>
                   <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                    backend data
+                    Updated pricing
                   </span>
                   <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                    cart logic unchanged
+                    Smooth checkout
                   </span>
                 </div>
               </div>
 
-              <form onSubmit={handleSearch} className="public-muted-card grid gap-3 rounded-[1.8rem] border-white/70 bg-white/92 p-4 shadow-[0_22px_46px_rgba(161,0,255,0.08)] sm:grid-cols-2">
+              <form
+                onSubmit={handleSearch}
+                className="public-muted-card grid gap-3 rounded-[1.8rem] border-white/70 bg-white/92 p-4 shadow-[0_22px_46px_rgba(161,0,255,0.08)] sm:grid-cols-2"
+              >
                 <div className="space-y-2 text-sm font-semibold text-[var(--foreground)] sm:col-span-2">
-                  <label htmlFor="catalog-search" className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    Search catalog
+                  <label
+                    htmlFor="catalog-search"
+                    className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]"
+                  >
+                    Search products
                   </label>
                   <input
                     id="catalog-search"
                     value={filters.q}
                     onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
-                    placeholder="Product name, article, brand, category"
+                    placeholder="Product name, SKU, brand, category"
                     className="public-input"
                     data-testid="marketplace-search"
                   />
                 </div>
-                <select value={filters.categorySlug} onChange={(event) => setFilters((current) => ({ ...current, categorySlug: event.target.value }))} className="public-input" data-testid="marketplace-category">
+                <select
+                  value={filters.categorySlug}
+                  onChange={(event) => setFilters((current) => ({ ...current, categorySlug: event.target.value }))}
+                  className="public-input"
+                  data-testid="marketplace-category"
+                >
                   <option value="">All categories</option>
                   {categoryOptions.map((category) => (
-                    <option key={category.id || category.name} value={category.slug ?? ""}>{category.name}</option>
+                    <option key={category.id || category.name} value={category.slug ?? ""}>
+                      {category.name}
+                    </option>
                   ))}
                 </select>
-                <input value={filters.brand} onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))} placeholder="Brand" className="public-input" data-testid="marketplace-brand" />
-                <input value={filters.color} onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))} placeholder="Color" className="public-input" data-testid="marketplace-color" />
-                <input value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))} placeholder="Gender" className="public-input" data-testid="marketplace-gender" />
-                <select value={filters.inStock} onChange={(event) => setFilters((current) => ({ ...current, inStock: event.target.value }))} className="public-input" data-testid="marketplace-stock">
-                  <option value="">Any stock</option>
+                <input
+                  value={filters.brand}
+                  onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
+                  placeholder="Brand"
+                  className="public-input"
+                  data-testid="marketplace-brand"
+                />
+                <input
+                  value={filters.color}
+                  onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))}
+                  placeholder="Color"
+                  className="public-input"
+                  data-testid="marketplace-color"
+                />
+                <input
+                  value={filters.gender}
+                  onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))}
+                  placeholder="Gender"
+                  className="public-input"
+                  data-testid="marketplace-gender"
+                />
+                <select
+                  value={filters.inStock}
+                  onChange={(event) => setFilters((current) => ({ ...current, inStock: event.target.value }))}
+                  className="public-input"
+                  data-testid="marketplace-stock"
+                >
+                  <option value="">Stock status</option>
                   <option value="true">In stock</option>
                   <option value="false">Out of stock</option>
                 </select>
-                <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value }))} className="public-input" data-testid="marketplace-sort">
+                <select
+                  value={filters.sort}
+                  onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value }))}
+                  className="public-input"
+                  data-testid="marketplace-sort"
+                >
                   <option value="newest">Newest</option>
                   <option value="price_asc">Price low to high</option>
                   <option value="price_desc">Price high to low</option>
                   <option value="name_asc">Name A-Z</option>
-                  <option value="stock_desc">Stock high to low</option>
+                  <option value="stock_desc">Most stock</option>
                 </select>
-                <input value={filters.minPrice} onChange={(event) => setFilters((current) => ({ ...current, minPrice: event.target.value }))} placeholder="Min price" type="number" className="public-input" />
-                <input value={filters.maxPrice} onChange={(event) => setFilters((current) => ({ ...current, maxPrice: event.target.value }))} placeholder="Max price" type="number" className="public-input" />
-                <button type="submit" className="public-button-primary px-5 py-3 text-sm" data-testid="marketplace-apply">
+                <input
+                  value={filters.minPrice}
+                  onChange={(event) => setFilters((current) => ({ ...current, minPrice: event.target.value }))}
+                  placeholder="Min price"
+                  type="number"
+                  className="public-input"
+                />
+                <input
+                  value={filters.maxPrice}
+                  onChange={(event) => setFilters((current) => ({ ...current, maxPrice: event.target.value }))}
+                  placeholder="Max price"
+                  type="number"
+                  className="public-input"
+                />
+                <button
+                  type="submit"
+                  className="public-button-primary px-5 py-3 text-sm"
+                  data-testid="marketplace-apply"
+                >
                   Search
                 </button>
-                <button type="button" onClick={clearFilters} className="public-button-secondary px-5 py-3 text-sm" data-testid="marketplace-clear">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="public-button-secondary px-5 py-3 text-sm"
+                  data-testid="marketplace-clear"
+                >
                   Clear filters
                 </button>
               </form>
@@ -265,7 +338,7 @@ function ProductsPageContent({
               className="rounded-[1.75rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-5 py-5 text-sm text-[var(--accent-strong)]"
               data-testid="products-error-state"
             >
-              <p className="font-semibold">Unable to load public products.</p>
+              <p className="font-semibold">Unable to load the product catalog.</p>
               <p className="mt-2 text-[var(--muted)]">{error}</p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
@@ -274,7 +347,7 @@ function ProductsPageContent({
                   className="public-button-primary px-5 py-3 text-sm"
                   data-testid="products-error-retry"
                 >
-                  Retry
+                  Try again
                 </button>
                 <button
                   type="button"
@@ -290,21 +363,21 @@ function ProductsPageContent({
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                Marketplace results
+                Results
               </p>
               <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)]">
-                Сетка товаров
+                Products for you
               </h2>
             </div>
             <p className="hidden text-sm text-[var(--muted)] md:block">
-              {meta.total} public products
+              {meta.total} products available
             </p>
           </div>
 
           {loading ? (
             <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4" data-testid="products-grid">
               {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="card-panel animate-pulse rounded-[1.75rem] overflow-hidden">
+                <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
                   <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
                   <div className="space-y-3 px-5 py-5">
                     <div className="h-3 w-28 rounded bg-[var(--panel-strong)]" />
@@ -327,15 +400,15 @@ function ProductsPageContent({
               data-testid={hasActiveFilters ? "products-no-results-state" : "products-empty-state"}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                {hasActiveFilters ? "Search results" : "Marketplace"}
+                {hasActiveFilters ? "Search results" : "Catalog"}
               </p>
               <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-                {hasActiveFilters ? "Không tìm thấy sản phẩm phù hợp" : "Пока нет товаров"}
+                {hasActiveFilters ? "No matching products found" : "No products available yet"}
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
                 {hasActiveFilters
-                  ? "Try another keyword, relax a filter, or return to the full public catalog."
-                  : "Public products will appear here after a seller publishes marketplace-ready items."}
+                  ? "Try a different keyword or remove some filters to see more products."
+                  : "Products will appear here once sellers publish items that are ready for sale."}
               </p>
               {activeFilterSummary.length ? (
                 <div className="mt-5 flex flex-wrap justify-center gap-2" data-testid="products-filter-summary">
@@ -371,7 +444,7 @@ function ProductsPageContent({
 
           <div className="public-muted-card flex flex-col gap-4 rounded-[1.5rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[var(--muted)]">
-              Page {meta.page} of {Math.max(meta.totalPages, 1)}. {meta.total} public products found.
+              Page {meta.page} of {Math.max(meta.totalPages, 1)}. {meta.total} products found.
             </p>
             <div className="flex gap-3">
               <button

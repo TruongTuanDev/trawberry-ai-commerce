@@ -1,5 +1,17 @@
 # Project Status
 
+## Public Marketplace Visual Layout Copy Refresh - 2026-05-21
+
+- Status: implemented in `frontend-next` only
+- `/` now uses clearer shopper-facing English copy for hero, quick links, and featured product preview blocks
+- `/products` keeps the same API/filter behavior but now uses cleaner catalog-first messaging in the hero, filters, and empty/error states
+- `promo-slider` and `public-footer` now match the current marketplace merchandising tone
+- `public-smoke` and `public-full` E2E selectors were updated to the new public CTA labels
+- Guardrails preserved:
+  - no backend/API/database changes
+  - no changes to checkout contract
+  - no legacy app edits
+
 ## Customer Account Management - 2026-05-21
 
 - Status: implemented in `backend-nest` and `frontend-next`

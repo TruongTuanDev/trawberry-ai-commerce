@@ -16,53 +16,48 @@ type PromoSlide = {
 const slides: PromoSlide[] = [
   {
     id: "heroes",
-    eyebrow: "Promo",
-    title: "Герои распродажи",
-    subtitle: "Новые дропы, заметные бренды и самые кликабельные позиции недели.",
+    eyebrow: "Deals",
+    title: "Sale highlights",
+    subtitle: "Standout products, popular brands, and high-visibility offers shoppers notice first.",
     badge: "-35%",
-    accent: "от 999 ₽",
-    background:
-      "linear-gradient(135deg, #cb11ab 0%, #8e1cff 48%, #5b34ff 100%)",
+    accent: "From 999 RUB",
+    background: "linear-gradient(135deg, #cb11ab 0%, #8e1cff 48%, #5b34ff 100%)",
   },
   {
     id: "discounts",
-    eyebrow: "Реклама",
-    title: "Скидки до 80%",
-    subtitle: "Лови маркетплейс-настроение с яркими предложениями и быстрым поиском.",
-    badge: "до 80%",
-    accent: "limited time",
-    background:
-      "linear-gradient(135deg, #f52ba7 0%, #c212dc 38%, #7e31ff 100%)",
+    eyebrow: "Promo",
+    title: "Up to 80% off",
+    subtitle: "Big markdowns across top-selling categories to keep the storefront lively and clear.",
+    badge: "Up to 80%",
+    accent: "Shop today",
+    background: "linear-gradient(135deg, #f52ba7 0%, #c212dc 38%, #7e31ff 100%)",
   },
   {
     id: "new",
-    eyebrow: "Новинки",
-    title: "Новинки недели",
-    subtitle: "Проверяй свежие товары от продавцов, уже готовые к публичной витрине.",
-    badge: "new",
-    accent: "drop every week",
-    background:
-      "linear-gradient(135deg, #9b2bff 0%, #cb11ab 45%, #ff5d85 100%)",
+    eyebrow: "New this week",
+    title: "New this week",
+    subtitle: "Fresh arrivals from active sellers help customers discover what is new faster.",
+    badge: "New",
+    accent: "Weekly update",
+    background: "linear-gradient(135deg, #9b2bff 0%, #cb11ab 45%, #ff5d85 100%)",
   },
   {
     id: "delivery",
-    eyebrow: "Fast lane",
-    title: "Быстрая доставка",
-    subtitle: "Открывай карточки, выбирай вариант и отправляй в корзину без лишних экранов.",
+    eyebrow: "Fast flow",
+    title: "Fast delivery",
+    subtitle: "From search to cart, the journey stays simple so shoppers move through the catalog smoothly.",
     badge: "24/7",
-    accent: "checkout ready",
-    background:
-      "linear-gradient(135deg, #6e2dff 0%, #a100ff 36%, #cb11ab 100%)",
+    accent: "Easy checkout",
+    background: "linear-gradient(135deg, #6e2dff 0%, #a100ff 36%, #cb11ab 100%)",
   },
   {
     id: "sellers",
-    eyebrow: "Marketplace",
-    title: "Товары от продавцов",
-    subtitle: "Каталог остаётся реальным: показываем только опубликованные товары из backend.",
-    badge: "real data",
-    accent: "safe frontend promo",
-    background:
-      "linear-gradient(135deg, #cb11ab 0%, #8f14d6 55%, #4f6dff 100%)",
+    eyebrow: "Seller picks",
+    title: "Products from sellers",
+    subtitle: "Products from multiple sellers come together in one consistent marketplace view.",
+    badge: "More choice",
+    accent: "Many sellers",
+    background: "linear-gradient(135deg, #cb11ab 0%, #8f14d6 55%, #4f6dff 100%)",
   },
 ];
 
@@ -121,9 +116,7 @@ export function PromoSlider({
             <span className="rounded-full border border-white/20 bg-white/12 px-4 py-2 text-sm font-semibold text-white/90">
               {activeSlide.accent}
             </span>
-            <span className="text-sm font-medium text-white/74">
-              header + promo + grid layout
-            </span>
+            <span className="text-sm font-medium text-white/74">Fresh highlights every day</span>
           </div>
         </div>
 
@@ -131,20 +124,20 @@ export function PromoSlider({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[1.7rem] border border-white/14 bg-white/12 p-5 backdrop-blur">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
-                Search-first
+                Search faster
               </p>
-              <p className="mt-3 text-xl font-bold">Big white search bar</p>
+              <p className="mt-3 text-xl font-bold">Large search bar</p>
               <p className="mt-2 text-sm leading-6 text-white/80">
-                Giữ trải nghiệm giống marketplace thật, tập trung vào tìm kiếm và khám phá.
+                Shoppers can type a keyword quickly and jump into the right products in seconds.
               </p>
             </div>
             <div className="rounded-[1.7rem] border border-white/14 bg-[#ffcf33] p-5 text-[#5e0a66] shadow-[0_18px_36px_rgba(74,0,90,0.16)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7a1276]/70">
-                Seller ready
+                Shop with confidence
               </p>
-              <p className="mt-3 text-xl font-black">Public storefront</p>
+              <p className="mt-3 text-xl font-black">Clear offers and discovery</p>
               <p className="mt-2 text-sm leading-6 text-[#5e0a66]/86">
-                Promo chỉ là static frontend; grid sản phẩm vẫn lấy dữ liệu thật từ backend.
+                Promotions, categories, and products stay visible in one strong marketplace layout.
               </p>
             </div>
           </div>
@@ -174,7 +167,7 @@ export function PromoSlider({
                 }
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/12 text-white backdrop-blur transition hover:bg-white/18"
               >
-                <span aria-hidden="true">←</span>
+                <span aria-hidden="true">&larr;</span>
               </button>
               <button
                 type="button"
@@ -182,7 +175,7 @@ export function PromoSlider({
                 onClick={() => setActiveIndex((current) => (current + 1) % slides.length)}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/12 text-white backdrop-blur transition hover:bg-white/18"
               >
-                <span aria-hidden="true">→</span>
+                <span aria-hidden="true">&rarr;</span>
               </button>
             </div>
           </div>

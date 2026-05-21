@@ -118,6 +118,10 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - document status list
   - pending/rejected CTA in seller shell
 - Public marketplace UI with:
+  - shopper-facing homepage hero with direct marketplace CTA copy
+  - promo slider with static merchandising slides
+  - catalog-first products page with clearer search/filter language
+  - simplified footer copy for browse / track / register flows
   - polished home page
   - responsive product grid
   - quick add vs select-size product cards

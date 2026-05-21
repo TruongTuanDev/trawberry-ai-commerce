@@ -5,10 +5,10 @@ import { PublicShell } from "@/components/public/public-shell";
 import { getPublicProducts, type PublicProduct } from "@/lib/public-api";
 
 const quickLinks = [
-  { title: "Женщинам", href: "/products?gender=female" },
-  { title: "Мужчинам", href: "/products?gender=male" },
-  { title: "В наличии", href: "/products?inStock=true" },
-  { title: "Новые продавцы", href: "/products?sort=newest" },
+  { title: "Women's fashion", href: "/products?gender=female" },
+  { title: "Men's fashion", href: "/products?gender=male" },
+  { title: "In stock now", href: "/products?inStock=true" },
+  { title: "New seller picks", href: "/products?sort=newest" },
 ];
 
 async function loadFeaturedProducts() {
@@ -32,27 +32,27 @@ export default async function HomePage() {
           <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <article className="card-panel rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(249,244,255,0.96))] px-6 py-7 sm:px-8">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                Marketplace mood
+                Shopping made easy
               </p>
               <h1 className="mt-3 max-w-xl text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl">
-                Header lớn, promo nổi bật, rồi vào thẳng product grid.
+                Discover standout deals and shop top products in one place.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)] sm:text-base">
-                Giao diện public bây giờ đi theo cấu trúc marketplace thực tế hơn: tìm kiếm là trung tâm,
-                khuyến mãi nằm ngay dưới header, và sản phẩm thật từ backend xuất hiện ngay bên dưới.
+                Large search, bold promotions, and live seller products put customers straight
+                into the shopping flow without extra distractions.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/products"
                   className="public-button-primary inline-flex items-center justify-center px-6 py-3 text-sm"
                 >
-                  Explore products
+                  Shop now
                 </Link>
                 <Link
                   href="/orders/track"
                   className="public-button-secondary inline-flex items-center justify-center px-6 py-3 text-sm"
                 >
-                  Track an order
+                  Track order
                 </Link>
               </div>
             </article>
@@ -68,7 +68,10 @@ export default async function HomePage() {
                     0{index + 1}
                   </p>
                   <p className="mt-4 text-2xl font-bold text-[var(--foreground)]">{link.title}</p>
-                  <p className="mt-2 text-sm text-[var(--muted)]">Jump into the catalog with a ready-made discovery path.</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Open a focused shopping view so customers can jump into the right category
+                    faster.
+                  </p>
                 </Link>
               ))}
             </div>
@@ -78,17 +81,17 @@ export default async function HomePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Public catalog
+                  Featured for you
                 </p>
                 <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)] sm:text-4xl">
-                  Популярные товары
+                  Popular products
                 </h2>
               </div>
               <Link
                 href="/products"
                 className="inline-flex items-center rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] shadow-[0_12px_26px_rgba(31,31,41,0.05)] transition hover:-translate-y-0.5"
               >
-                View full catalog
+                View all products
               </Link>
             </div>
 
@@ -104,20 +107,20 @@ export default async function HomePage() {
                 data-testid="products-empty-state"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                  Marketplace
+                  Marketplace catalog
                 </p>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-[var(--foreground)]">
-                  Пока нет товаров
+                  No products available right now
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-                  Public products will appear here after a seller publishes marketplace-ready items.
+                  Products will appear here once sellers publish items that are ready for sale.
                 </p>
                 <div className="mt-6 flex justify-center">
                   <Link
                     href="/products"
                     className="public-button-primary inline-flex px-5 py-3 text-sm"
                   >
-                    Open catalog
+                    Browse catalog
                   </Link>
                 </div>
               </section>

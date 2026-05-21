@@ -12,6 +12,20 @@
 - Product data remains real backend data from the existing public products API.
 - Promo content is static frontend-safe marketing content only.
 
+## Public Copy Direction
+
+- Hero, promo, and footer copy now use concise shopper-facing English instead of mixed internal/demo wording.
+- Homepage CTA language is intentionally direct:
+  - `Shop now`
+  - `Track order`
+  - `View all products`
+- Catalog filter labels now prioritize customer comprehension over internal terminology:
+  - `Search products`
+  - `Stock status`
+  - `Min price`
+  - `Max price`
+- Empty/error states use marketplace language that fits a real storefront instead of migration/demo phrasing.
+
 ## Color Palette
 
 - Primary gradient: `linear-gradient(90deg, #CB11AB 0%, #A100FF 100%)`
