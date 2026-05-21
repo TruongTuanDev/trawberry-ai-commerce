@@ -30,4 +30,24 @@ export class ListShopPaymentsQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    enum: [
+      'NOT_SUBMITTED',
+      'BUYER_MARKED_PAID',
+      'SELLER_CONFIRMED',
+      'SELLER_REJECTED',
+      'ADMIN_REVIEW',
+    ],
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn([
+    'NOT_SUBMITTED',
+    'BUYER_MARKED_PAID',
+    'SELLER_CONFIRMED',
+    'SELLER_REJECTED',
+    'ADMIN_REVIEW',
+  ])
+  proofStatus?: string;
 }

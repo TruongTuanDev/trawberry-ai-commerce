@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
 import { AddPaymentNoteDto } from './dto/add-payment-note.dto';
 import { ListShopPaymentsQueryDto } from './dto/list-shop-payments-query.dto';
 import { MarkPaymentPaidDto } from './dto/mark-payment-paid.dto';
@@ -28,17 +29,35 @@ type PaymentOrderRecord = {
   customerPhone: string;
   customerEmail: string | null;
   customerNote: string | null;
+  paymentModeSnapshot: string | null;
+  paymentBankNameSnapshot: string | null;
+  paymentRecipientNameSnapshot: string | null;
+  paymentRecipientPhoneSnapshot: string | null;
+  paymentRecipientAccountSnapshot: string | null;
+  paymentSbpPhoneSnapshot: string | null;
+  paymentQrImageUrlSnapshot: string | null;
+  paymentInstructionSnapshot: string | null;
   paymentProofUrl: string | null;
   paymentProofOriginalName: string | null;
   paymentProofMimeType: string | null;
   paymentProofSize: number | null;
   paymentProofUploadedAt: Date | null;
+  paymentProofStatus: string;
+  paymentProofBuyerNote: string | null;
   createdAt: Date;
   updatedAt: Date;
   shop: {
     id: string;
     name: string;
     paymentInstructions: string | null;
+    bankName: string | null;
+    accountHolderName: string | null;
+    accountNumber: string | null;
+    recipientPhone: string | null;
+    sbpPhone: string | null;
+    staticQrImageUrl: string | null;
+    paymentMode: string | null;
+    paymentConfigStatus: string;
   };
   items: Array<{
     id: string;
@@ -73,8 +92,8 @@ export class PaymentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listByShop(shopId: string, query: ListShopPaymentsQueryDto) {
-    const page = query.page ?? 1;
-    const size = query.size ?? 20;
+    const page = Number(query.page ?? 1);
+    const size = Number(query.size ?? 20);
     const skip = (page - 1) * size;
     const where = this.buildWhere(shopId, query);
 
@@ -105,6 +124,53 @@ export class PaymentsService {
     return this.toPaymentResponse(order);
   }
 
+  async listForAdmin(query: ListShopPaymentsQueryDto & { shopId?: string }) {
+    const page = Number(query.page ?? 1);
+    const size = Number(query.size ?? 20);
+    const skip = (page - 1) * size;
+    const where: Prisma.OrderWhereInput = {
+      ...(query.shopId ? { shopId: query.shopId } : {}),
+      ...(query.status
+        ? { paymentStatus: query.status }
+        : { paymentStatus: { in: [...PENDING_PAYMENT_STATUSES] } }),
+      ...(query.proofStatus ? { paymentProofStatus: query.proofStatus } : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: this.paymentInclude,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: size,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      items: items.map((order) => this.toPaymentResponse(order)),
+      meta: {
+        page,
+        size,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / size)),
+      },
+    };
+  }
+
+  async findOneForAdmin(orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+      include: this.paymentInclude,
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+
+    return this.toPaymentResponse(order);
+  }
+
   async markPaid(
     shopId: string,
     orderId: string,
@@ -128,10 +194,12 @@ export class PaymentsService {
         where: { id: orderId },
         data: {
           paymentStatus: 'PAID',
+          paymentProofStatus: 'SELLER_CONFIRMED',
+          sellerConfirmedPaidAt: new Date(),
           paymentReviewLogs: {
             create: {
               id: randomUUID(),
-              action: 'MARK_PAID',
+              action: 'SELLER_CONFIRMED',
               fromStatus: order.paymentStatus,
               toStatus: 'PAID',
               note: dto.note?.trim() || null,
@@ -196,10 +264,12 @@ export class PaymentsService {
         data: {
           paymentStatus: 'REJECTED',
           status: nextOrderStatus,
+          paymentProofStatus: 'SELLER_REJECTED',
+          sellerRejectedPaidAt: new Date(),
           paymentReviewLogs: {
             create: {
               id: randomUUID(),
-              action: 'REJECT_PAYMENT',
+              action: 'SELLER_REJECTED',
               fromStatus: order.paymentStatus,
               toStatus: 'REJECTED',
               note: dto.note?.trim() || null,
@@ -274,6 +344,38 @@ export class PaymentsService {
     return this.toPaymentResponse(updated);
   }
 
+  async adminConfirm(
+    orderId: string,
+    user: AuthenticatedUser,
+    dto: MarkPaymentPaidDto,
+  ) {
+    const order = await this.findPaymentOrderForAdminOrThrow(orderId);
+    return this.transitionAdminPayment(
+      order,
+      user,
+      'PAID',
+      'SELLER_CONFIRMED',
+      'ADMIN_CONFIRMED',
+      dto.note?.trim() || null,
+    );
+  }
+
+  async adminReject(
+    orderId: string,
+    user: AuthenticatedUser,
+    dto: RejectPaymentDto,
+  ) {
+    const order = await this.findPaymentOrderForAdminOrThrow(orderId);
+    return this.transitionAdminPayment(
+      order,
+      user,
+      'REJECTED',
+      'SELLER_REJECTED',
+      'ADMIN_REJECTED',
+      dto.note?.trim() || null,
+    );
+  }
+
   private buildWhere(
     shopId: string,
     query: ListShopPaymentsQueryDto,
@@ -298,6 +400,10 @@ export class PaymentsService {
       ];
     }
 
+    if (query.proofStatus) {
+      where.paymentProofStatus = query.proofStatus;
+    }
+
     return where;
   }
 
@@ -316,7 +422,88 @@ export class PaymentsService {
     return order;
   }
 
+  private async findPaymentOrderForAdminOrThrow(orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+      include: this.paymentInclude,
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+
+    return order;
+  }
+
+  private async transitionAdminPayment(
+    order: PaymentOrderRecord,
+    user: AuthenticatedUser,
+    paymentStatus: 'PAID' | 'REJECTED',
+    proofStatus: 'SELLER_CONFIRMED' | 'SELLER_REJECTED',
+    action: 'ADMIN_CONFIRMED' | 'ADMIN_REJECTED',
+    note: string | null,
+  ) {
+    if (paymentStatus === 'PAID') {
+      if (PAID_PAYMENT_STATUSES.includes(order.paymentStatus as 'PAID')) {
+        throw new BadRequestException('Payment is already marked as paid.');
+      }
+    } else if (paymentStatus === 'REJECTED') {
+      if (order.status === 'SHIPPING' || order.status === 'DELIVERED') {
+        throw new BadRequestException(
+          'Cannot reject payment for shipped or delivered orders.',
+        );
+      }
+    }
+
+    const nextOrderStatus =
+      paymentStatus === 'REJECTED' &&
+      (order.status === 'PENDING' || order.status === 'NEW')
+        ? 'CANCELLED'
+        : order.status;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus,
+          status: nextOrderStatus,
+          paymentProofStatus: proofStatus,
+          ...(paymentStatus === 'PAID'
+            ? { sellerConfirmedPaidAt: new Date() }
+            : { sellerRejectedPaidAt: new Date() }),
+          paymentReviewLogs: {
+            create: {
+              id: randomUUID(),
+              action,
+              fromStatus: order.paymentStatus,
+              toStatus: paymentStatus,
+              note,
+              shop: {
+                connect: { id: order.shop.id },
+              },
+              reviewer: {
+                connect: { id: user.userId },
+              },
+            },
+          },
+        },
+      });
+
+      return tx.order.findFirst({
+        where: { id: order.id },
+        include: this.paymentInclude,
+      });
+    });
+
+    if (!updated) {
+      throw new NotFoundException(`Order ${order.id} was not found.`);
+    }
+
+    return this.toPaymentResponse(updated);
+  }
+
   private toPaymentResponse(order: PaymentOrderRecord) {
+    const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
     return {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -325,7 +512,8 @@ export class PaymentsService {
       status: order.status,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.shippingMethodName,
-      paymentInstructions: order.shop.paymentInstructions,
+      paymentInstructions: paymentDetails.paymentInstruction,
+      paymentDetails,
       totalAmount: order.totalAmount.toString(),
       shippingAddress: order.shippingAddress,
       customer: {
@@ -361,6 +549,8 @@ export class PaymentsService {
             uploadedAt: order.paymentProofUploadedAt?.toISOString() ?? null,
           }
         : null,
+      paymentProofStatus: order.paymentProofStatus,
+      buyerPaymentNote: order.paymentProofBuyerNote,
       reviewLogs: order.paymentReviewLogs.map((log) =>
         this.toPaymentLogResponse(log),
       ),
@@ -389,6 +579,14 @@ export class PaymentsService {
           id: true,
           name: true,
           paymentInstructions: true,
+          bankName: true,
+          accountHolderName: true,
+          accountNumber: true,
+          recipientPhone: true,
+          sbpPhone: true,
+          staticQrImageUrl: true,
+          paymentMode: true,
+          paymentConfigStatus: true,
         },
       },
       items: {

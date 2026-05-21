@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCustomerAddress } from "@/components/customer/account/customer-account-utils";
+import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import {
@@ -462,13 +463,14 @@ export function CheckoutPageClient({
                         <span className="font-semibold text-[var(--foreground)]">
                           {splitOrder.orderCode}
                         </span>{" "}
-                        · ID {splitOrder.orderId} · {splitOrder.itemsCount} item(s) ·{" "}
+                        - ID {splitOrder.orderId} - {splitOrder.itemsCount} item(s) -{" "}
                         {splitOrder.totalAmount}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        {splitOrder.paymentInstructions ??
-                          "This shop did not provide additional payment instructions."}
-                      </p>
+                      <PaymentDetailsPanel
+                        details={splitOrder.paymentDetails}
+                        title={`Pay ${splitOrder.shopName} directly`}
+                        className="mt-4"
+                      />
                     </div>
                     <div className="flex items-center">
                       <Link
@@ -595,7 +597,7 @@ export function CheckoutPageClient({
                               {address.isDefault ? " (default)" : ""}
                             </option>
                           ))}
-                          <option value="manual">Nhập địa chỉ mới</option>
+                          <option value="manual">Enter a new address</option>
                         </select>
                       </Field>
                     ) : null}

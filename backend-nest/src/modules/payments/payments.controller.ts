@@ -63,6 +63,19 @@ export class PaymentsController {
     return this.paymentsService.markPaid(shopId, orderId, user, dto);
   }
 
+  @Post(':orderId/confirm')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Confirm a buyer-marked payment for one order.' })
+  @ApiOkResponse({ type: PaymentResponseDto })
+  confirm(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: MarkPaymentPaidDto,
+  ) {
+    return this.paymentsService.markPaid(shopId, orderId, user, dto);
+  }
+
   @Post(':orderId/reject')
   @HttpCode(200)
   @ApiOperation({ summary: 'Reject a manual payment.' })

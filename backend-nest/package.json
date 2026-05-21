@@ -43,6 +43,7 @@
     "smoke:bulk-product-edit": "powershell -ExecutionPolicy Bypass -File scripts/smoke-bulk-product-edit.ps1",
     "smoke:order-tracking": "powershell -ExecutionPolicy Bypass -File scripts/smoke-order-tracking.ps1",
     "smoke:payments": "powershell -ExecutionPolicy Bypass -File scripts/smoke-payments.ps1",
+    "smoke:direct-seller-qr-payment": "powershell -ExecutionPolicy Bypass -File scripts/smoke-direct-seller-qr-payment.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",
     "smoke:seller-approval": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-approval.ps1",
     "smoke:seller-onboarding": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-onboarding.ps1",

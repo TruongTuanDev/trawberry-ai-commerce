@@ -70,6 +70,20 @@ export class FilesService {
     return this.storePaymentProofInS3(file, context);
   }
 
+  async storeShopPaymentQr(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeShopPaymentQrLocally(file, context);
+    }
+
+    return this.storeShopPaymentQrInS3(file, context);
+  }
+
   async storeSellerDocument(
     file: ProductImageUploadFile,
     context: {
@@ -286,6 +300,36 @@ export class FilesService {
     };
   }
 
+  private async storeShopPaymentQrLocally(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'shop-payment-qr',
+      context.shopId,
+    );
+    const extension = extname(file.originalname) || '.bin';
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const absolutePath = join(targetDirectory, filename);
+    const storageKey = ['shop-payment-qr', context.shopId, filename].join('/');
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
   private async storeSellerDocumentInS3(
     file: ProductImageUploadFile,
     context: {
@@ -296,6 +340,38 @@ export class FilesService {
     const storageKey = [
       'seller-documents',
       context.userId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+
+    const client = this.createS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.getS3Bucket(),
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeShopPaymentQrInS3(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const extension = extname(file.originalname) || '.bin';
+    const storageKey = [
+      'shop-payment-qr',
+      context.shopId,
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
 

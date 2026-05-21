@@ -58,6 +58,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               Delivery supervision
             </Link>
             <Link
+              href="/admin/payments-supervision"
+              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                pathname.startsWith("/admin/payments-supervision") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              Payments supervision
+            </Link>
+            <Link
               href="/admin/queues"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
                 pathname.startsWith("/admin/queues") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"

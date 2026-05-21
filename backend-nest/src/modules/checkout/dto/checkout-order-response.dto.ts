@@ -1,5 +1,31 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class CheckoutPaymentDetailsDto {
+  @ApiProperty({ nullable: true })
+  mode!: string | null;
+
+  @ApiProperty({ nullable: true })
+  bankName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientAccount!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sbpPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  staticQrImageUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  paymentInstruction!: string | null;
+}
+
 class CheckoutSplitOrderResponseDto {
   @ApiProperty()
   orderId!: string;
@@ -24,6 +50,9 @@ class CheckoutSplitOrderResponseDto {
 
   @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
+
+  @ApiProperty({ type: CheckoutPaymentDetailsDto })
+  paymentDetails!: CheckoutPaymentDetailsDto;
 
   @ApiProperty()
   trackingPath!: string;
@@ -56,6 +85,9 @@ export class CheckoutOrderResponseDto {
 
   @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
+
+  @ApiProperty({ type: CheckoutPaymentDetailsDto })
+  paymentDetails!: CheckoutPaymentDetailsDto;
 
   @ApiProperty()
   trackingPath!: string;

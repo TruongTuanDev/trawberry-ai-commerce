@@ -37,6 +37,14 @@ type StoredShop = {
   slug: string;
   status: string;
   paymentInstructions: string | null;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountNumber?: string | null;
+  recipientPhone?: string | null;
+  sbpPhone?: string | null;
+  staticQrImageUrl?: string | null;
+  paymentMode?: string | null;
+  paymentConfigStatus?: string;
   sellerProfile: { userId: string };
 };
 
@@ -54,12 +62,22 @@ type StoredOrder = {
   customerPhone: string;
   customerEmail: string | null;
   customerNote: string | null;
+  paymentModeSnapshot?: string | null;
+  paymentBankNameSnapshot?: string | null;
+  paymentRecipientNameSnapshot?: string | null;
+  paymentRecipientPhoneSnapshot?: string | null;
+  paymentRecipientAccountSnapshot?: string | null;
+  paymentSbpPhoneSnapshot?: string | null;
+  paymentQrImageUrlSnapshot?: string | null;
+  paymentInstructionSnapshot?: string | null;
   paymentProofUrl: string | null;
   paymentProofStorageKey: string | null;
   paymentProofOriginalName: string | null;
   paymentProofMimeType: string | null;
   paymentProofSize: number | null;
   paymentProofUploadedAt: Date | null;
+  paymentProofStatus?: string;
+  paymentProofBuyerNote?: string | null;
   createdAt: Date;
   updatedAt: Date;
   shop: {
@@ -173,6 +191,14 @@ describe('OrderTrackingController (e2e)', () => {
         slug: 'shop-one',
         status: 'ACTIVE',
         paymentInstructions: 'Transfer to account 123.',
+        bankName: 'T-Bank',
+        accountHolderName: 'Seller One',
+        accountNumber: '123',
+        recipientPhone: '+79990000001',
+        sbpPhone: '+79990000001',
+        staticQrImageUrl: 'https://example.com/qr-shop-1.png',
+        paymentMode: 'STATIC_QR',
+        paymentConfigStatus: 'READY',
         sellerProfile: { userId: 'seller-user-1' },
       },
     ];
@@ -192,12 +218,22 @@ describe('OrderTrackingController (e2e)', () => {
         customerPhone: '123456',
         customerEmail: 'alice@example.com',
         customerNote: 'Ring bell',
+        paymentModeSnapshot: 'STATIC_QR',
+        paymentBankNameSnapshot: 'T-Bank',
+        paymentRecipientNameSnapshot: 'Seller One',
+        paymentRecipientPhoneSnapshot: '+79990000001',
+        paymentRecipientAccountSnapshot: '123',
+        paymentSbpPhoneSnapshot: '+79990000001',
+        paymentQrImageUrlSnapshot: 'https://example.com/qr-shop-1.png',
+        paymentInstructionSnapshot: 'Transfer to account 123.',
         paymentProofUrl: null,
         paymentProofStorageKey: null,
         paymentProofOriginalName: null,
         paymentProofMimeType: null,
         paymentProofSize: null,
         paymentProofUploadedAt: null,
+        paymentProofStatus: 'NOT_SUBMITTED',
+        paymentProofBuyerNote: null,
         createdAt: new Date('2025-01-10T10:00:00Z'),
         updatedAt: new Date('2025-01-10T10:00:00Z'),
         shop: {
@@ -294,6 +330,8 @@ describe('OrderTrackingController (e2e)', () => {
           paymentProofMimeType?: string;
           paymentProofSize?: number;
           paymentProofUploadedAt?: Date;
+          paymentProofStatus?: string;
+          paymentProofBuyerNote?: string | null;
           paymentReviewLogs?: {
             create: {
               id: string;
@@ -319,6 +357,12 @@ describe('OrderTrackingController (e2e)', () => {
           target.paymentProofMimeType = data.paymentProofMimeType ?? null;
           target.paymentProofSize = data.paymentProofSize ?? null;
           target.paymentProofUploadedAt = data.paymentProofUploadedAt ?? null;
+        }
+        if (data.paymentProofStatus !== undefined) {
+          target.paymentProofStatus = data.paymentProofStatus;
+        }
+        if (data.paymentProofBuyerNote !== undefined) {
+          target.paymentProofBuyerNote = data.paymentProofBuyerNote;
         }
         if (data.paymentReviewLogs?.create) {
           const reviewerId = data.paymentReviewLogs.create.reviewer.connect.id;
@@ -393,6 +437,9 @@ describe('OrderTrackingController (e2e)', () => {
     expect(body.orderId).toBe('order-1');
     expect(body.customer.phone).toBe('123456');
     expect(body.paymentInstructions).toBe('Transfer to account 123.');
+    expect(body.paymentDetails.staticQrImageUrl).toBe(
+      'https://example.com/qr-shop-1.png',
+    );
   });
 
   it('fails tracking when phone does not match', async () => {
@@ -405,6 +452,7 @@ describe('OrderTrackingController (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/public/orders/order-1/payment-proof')
       .field('phone', '123456')
+      .field('buyerNote', 'Transferred from T-Bank.')
       .attach('file', Buffer.from([137, 80, 78, 71]), {
         filename: 'proof.png',
         contentType: 'image/png',
@@ -413,7 +461,9 @@ describe('OrderTrackingController (e2e)', () => {
 
     const body = readBody<PublicOrderTrackingResponseDto>(response);
     expect(body.paymentProof?.url).toContain('/payment-proofs/');
-    expect(body.paymentLogs[0].action).toBe('UPLOAD_PROOF');
+    expect(body.paymentProofStatus).toBe('BUYER_MARKED_PAID');
+    expect(body.buyerPaymentNote).toBe('Transferred from T-Bank.');
+    expect(body.paymentLogs[0].action).toBe('BUYER_MARKED_PAID');
   });
 
   it('fails payment proof upload when phone does not match', async () => {
@@ -502,6 +552,7 @@ describe('OrderTrackingController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/public/orders/order-1/payment-proof')
       .field('phone', '123456')
+      .field('buyerNote', 'Transferred now.')
       .attach('file', Buffer.from([137, 80, 78, 71]), {
         filename: 'proof.png',
         contentType: 'image/png',
@@ -515,7 +566,9 @@ describe('OrderTrackingController (e2e)', () => {
       .expect(200);
     const detailBody = readBody<PaymentResponseDto>(detailResponse);
     expect(detailBody.paymentProof?.url).toContain('/payment-proofs/');
-    expect(detailBody.reviewLogs[0].action).toBe('UPLOAD_PROOF');
+    expect(detailBody.paymentProofStatus).toBe('BUYER_MARKED_PAID');
+    expect(detailBody.buyerPaymentNote).toBe('Transferred now.');
+    expect(detailBody.reviewLogs[0].action).toBe('BUYER_MARKED_PAID');
 
     await request(app.getHttpServer())
       .post('/api/shops/shop-1/payments/order-1/mark-paid')
@@ -529,6 +582,7 @@ describe('OrderTrackingController (e2e)', () => {
     const trackedBody =
       readBody<PublicOrderTrackingResponseDto>(trackedResponse);
     expect(trackedBody.paymentStatus).toBe('PAID');
+    expect(trackedBody.paymentProofStatus).toBe('SELLER_CONFIRMED');
   });
 });
 

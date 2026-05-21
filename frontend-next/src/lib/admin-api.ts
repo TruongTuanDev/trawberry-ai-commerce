@@ -1,6 +1,11 @@
 import { API_URL, apiRequest } from "@/lib/api";
 import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
-import type { DeliveryCommentVisibility, DeliveryExceptionReasonCode } from "@/lib/seller-api";
+import type {
+  DeliveryCommentVisibility,
+  DeliveryExceptionReasonCode,
+  PaymentDetails,
+  SellerPaymentItem,
+} from "@/lib/seller-api";
 
 export type SellerApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -407,6 +412,10 @@ export type AdminPaymentAgingReportRow = {
   actionUrl: string;
 };
 
+export type AdminPaymentSupervisionRow = SellerPaymentItem & {
+  paymentDetails: PaymentDetails;
+};
+
 export async function getAdminDashboardSummary(query?: {
   dateFrom?: string;
   dateTo?: string;
@@ -495,6 +504,48 @@ export async function listAdminPaymentAgingReport(query?: {
 }) {
   return apiRequest<AdminReportResponse<AdminPaymentAgingReportRow>>(`/api/admin/reports/payment-aging${reportSuffix(query)}`, {
     method: "GET",
+  });
+}
+
+export async function listAdminPayments(query?: {
+  status?: string;
+  proofStatus?: string;
+  shopId?: string;
+  page?: number;
+  size?: number;
+}) {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.proofStatus) params.set("proofStatus", query.proofStatus);
+  if (query?.shopId) params.set("shopId", query.shopId);
+  if (query?.page) params.set("page", String(query.page));
+  if (query?.size) params.set("size", String(query.size));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<{ items: AdminPaymentSupervisionRow[]; meta: { page: number; size: number; total: number; totalPages: number } }>(
+    `/api/admin/payments${suffix}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getAdminPayment(orderId: string) {
+  return apiRequest<AdminPaymentSupervisionRow>(`/api/admin/payments/${orderId}`, {
+    method: "GET",
+  });
+}
+
+export async function adminConfirmPayment(orderId: string, payload?: { note?: string }) {
+  return apiRequest<AdminPaymentSupervisionRow>(`/api/admin/payments/${orderId}/confirm`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export async function adminRejectPayment(orderId: string, payload?: { note?: string }) {
+  return apiRequest<AdminPaymentSupervisionRow>(`/api/admin/payments/${orderId}/reject`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
   });
 }
 

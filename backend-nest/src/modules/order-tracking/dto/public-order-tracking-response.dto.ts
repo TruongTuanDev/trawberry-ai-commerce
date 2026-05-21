@@ -89,6 +89,32 @@ class PublicOrderReviewLogDto {
   createdAt!: string;
 }
 
+class PublicOrderPaymentDetailsDto {
+  @ApiProperty({ nullable: true })
+  mode!: string | null;
+
+  @ApiProperty({ nullable: true })
+  bankName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientAccount!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sbpPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  staticQrImageUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  paymentInstruction!: string | null;
+}
+
 class PublicOrderDeliveryDto {
   @ApiProperty()
   provider!: string;
@@ -149,6 +175,9 @@ export class PublicOrderTrackingResponseDto {
   @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
 
+  @ApiProperty({ type: PublicOrderPaymentDetailsDto })
+  paymentDetails!: PublicOrderPaymentDetailsDto;
+
   @ApiProperty({ type: PublicOrderCustomerDto })
   customer!: PublicOrderCustomerDto;
 
@@ -166,6 +195,12 @@ export class PublicOrderTrackingResponseDto {
 
   @ApiProperty({ type: PublicOrderPaymentProofDto, nullable: true })
   paymentProof!: PublicOrderPaymentProofDto | null;
+
+  @ApiProperty()
+  paymentProofStatus!: string;
+
+  @ApiProperty({ nullable: true })
+  buyerPaymentNote!: string | null;
 
   @ApiProperty({ type: PublicOrderReviewLogDto, isArray: true })
   paymentLogs!: PublicOrderReviewLogDto[];

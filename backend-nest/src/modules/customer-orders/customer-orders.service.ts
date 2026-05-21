@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
 import { SupportCasesService } from '../support-cases/support-cases.service';
 
 @Injectable()
@@ -77,33 +78,40 @@ export class CustomerOrdersService {
   }
 
   private toReceiptResponse(checkout: CheckoutWithOrders) {
-    const orders = checkout.orders.map((order) => ({
-      orderId: order.id,
-      orderCode: order.orderNumber,
-      shopId: order.shop.id,
-      shopName: order.shop.name,
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-      totalAmount: order.totalAmount.toString(),
-      paymentInstructions: order.shop.paymentInstructions,
-      trackingPath: `/orders/${order.id}`,
-      deliveryStatus: order.deliveryShipments[0]?.internalStatus ?? null,
-      itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-      items: order.items.map((item) => ({
-        id: item.id,
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        unitPrice: (item.unitPrice ?? item.priceAtPurchase).toString(),
-        lineTotal: (
-          item.lineTotal ??
-          new Prisma.Decimal(item.priceAtPurchase.toString()).mul(item.quantity)
-        ).toString(),
-        productTitleSnapshot: item.productTitleSnapshot,
-        productImageSnapshot: item.productImageSnapshot,
-        variantNameSnapshot: item.variantNameSnapshot,
-      })),
-    }));
+    const orders = checkout.orders.map((order) => {
+      const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
+
+      return {
+        orderId: order.id,
+        orderCode: order.orderNumber,
+        shopId: order.shop.id,
+        shopName: order.shop.name,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        totalAmount: order.totalAmount.toString(),
+        paymentInstructions: paymentDetails.paymentInstruction,
+        paymentDetails,
+        trackingPath: `/orders/${order.id}`,
+        deliveryStatus: order.deliveryShipments[0]?.internalStatus ?? null,
+        itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+        items: order.items.map((item) => ({
+          id: item.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          unitPrice: (item.unitPrice ?? item.priceAtPurchase).toString(),
+          lineTotal: (
+            item.lineTotal ??
+            new Prisma.Decimal(item.priceAtPurchase.toString()).mul(
+              item.quantity,
+            )
+          ).toString(),
+          productTitleSnapshot: item.productTitleSnapshot,
+          productImageSnapshot: item.productImageSnapshot,
+          variantNameSnapshot: item.variantNameSnapshot,
+        })),
+      };
+    });
 
     return {
       checkoutId: checkout.id,
@@ -152,6 +160,14 @@ export class CustomerOrdersService {
               id: true,
               name: true,
               paymentInstructions: true,
+              bankName: true,
+              accountHolderName: true,
+              accountNumber: true,
+              recipientPhone: true,
+              sbpPhone: true,
+              staticQrImageUrl: true,
+              paymentMode: true,
+              paymentConfigStatus: true,
             },
           },
           items: {

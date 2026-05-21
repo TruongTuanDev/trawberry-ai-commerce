@@ -32,6 +32,14 @@ export type CartValidationProductRecord = {
     id: string;
     name: string;
     paymentInstructions: string | null;
+    bankName: string | null;
+    accountHolderName: string | null;
+    accountNumber: string | null;
+    recipientPhone: string | null;
+    sbpPhone: string | null;
+    staticQrImageUrl: string | null;
+    paymentMode: string | null;
+    paymentConfigStatus: string;
     status: string;
     sellerProfile: {
       approvalStatus: string;
@@ -113,6 +121,14 @@ export class CartValidationService {
             id: true,
             name: true,
             paymentInstructions: true,
+            bankName: true,
+            accountHolderName: true,
+            accountNumber: true,
+            recipientPhone: true,
+            sbpPhone: true,
+            staticQrImageUrl: true,
+            paymentMode: true,
+            paymentConfigStatus: true,
             status: true,
             sellerProfile: {
               select: {

@@ -147,6 +147,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
   }
   paymentMethod = 'MANUAL_TRANSFER'
 } | ConvertTo-Json -Depth 6)
+$trackedPhone = [uri]::EscapeDataString($checkout.customerPhone)
 
 if (-not $checkout.checkoutCode) { throw 'Expected checkoutCode.' }
 if (@($checkout.orders).Count -ne 2) { throw 'Expected two child orders.' }
@@ -160,7 +161,7 @@ $detail = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/customer/orders/$($ch
 if (@($detail.orders).Count -ne 2) { throw 'Customer detail does not show two child orders.' }
 if ($detail.grandTotal -ne '800') { throw 'Customer detail grand total mismatch.' }
 
-$publicReceipt = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/checkouts/$($checkout.checkoutCode)?phone=$phone"
+$publicReceipt = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/checkouts/$($checkout.checkoutCode)?phone=$trackedPhone"
 if (@($publicReceipt.orders).Count -ne 2) { throw 'Public receipt lookup failed.' }
 
 $wrongPhoneFailed = $false
@@ -172,7 +173,7 @@ try {
 if (-not $wrongPhoneFailed) { throw 'Wrong phone should not access receipt.' }
 
 $firstOrder = @($checkout.orders)[0]
-$tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($firstOrder.orderId)/track?phone=$phone"
+$tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($firstOrder.orderId)/track?phone=$trackedPhone"
 if ($tracked.orderCode -ne $firstOrder.orderCode) { throw 'Individual order tracking failed.' }
 
 [pscustomobject]@{

@@ -14,6 +14,7 @@ import {
   normalizePhone,
 } from '../../common/utils/phone.util';
 import { formatCustomerAddressSnapshot } from '../../common/utils/customer-address.util';
+import { resolveShopPaymentPanel } from '../../common/utils/shop-payment.util';
 import { CreateCheckoutOrderDto } from './dto/create-checkout-order.dto';
 import {
   CartValidationLine,
@@ -42,8 +43,15 @@ type CreatedCheckoutOrder = {
   shop: {
     id: string;
     name: string;
-    paymentInstructions: string | null;
   };
+  paymentModeSnapshot: string | null;
+  paymentBankNameSnapshot: string | null;
+  paymentRecipientNameSnapshot: string | null;
+  paymentRecipientPhoneSnapshot: string | null;
+  paymentRecipientAccountSnapshot: string | null;
+  paymentSbpPhoneSnapshot: string | null;
+  paymentQrImageUrlSnapshot: string | null;
+  paymentInstructionSnapshot: string | null;
   itemsCount: number;
 };
 
@@ -130,7 +138,14 @@ export class CheckoutService {
       const createdOrders: CreatedCheckoutOrder[] = [];
       for (const [, shopItems] of itemsByShop) {
         const shop = shopItems[0].product.shop;
+        const paymentPanel = resolveShopPaymentPanel(shop);
         const totalAmount = this.sumLineTotals(shopItems);
+
+        if (dto.paymentMethod === 'MANUAL_TRANSFER' && !paymentPanel.isReady) {
+          throw new BadRequestException(
+            `Shop ${shop.name} does not have direct seller payment instructions configured yet.`,
+          );
+        }
 
         const order = await tx.order.create({
           data: {
@@ -150,6 +165,14 @@ export class CheckoutService {
             customerNote: checkoutCustomer.note,
             shippingCost: new Prisma.Decimal(0),
             shippingMethodName: dto.paymentMethod,
+            paymentModeSnapshot: paymentPanel.mode,
+            paymentBankNameSnapshot: paymentPanel.bankName,
+            paymentRecipientNameSnapshot: paymentPanel.recipientName,
+            paymentRecipientPhoneSnapshot: paymentPanel.recipientPhone,
+            paymentRecipientAccountSnapshot: paymentPanel.recipientAccount,
+            paymentSbpPhoneSnapshot: paymentPanel.sbpPhone,
+            paymentQrImageUrlSnapshot: paymentPanel.staticQrImageUrl,
+            paymentInstructionSnapshot: paymentPanel.paymentInstruction,
             items: {
               create: shopItems.map((item) => this.buildOrderItemCreate(item)),
             },
@@ -164,9 +187,16 @@ export class CheckoutService {
               select: {
                 id: true,
                 name: true,
-                paymentInstructions: true,
               },
             },
+            paymentModeSnapshot: true,
+            paymentBankNameSnapshot: true,
+            paymentRecipientNameSnapshot: true,
+            paymentRecipientPhoneSnapshot: true,
+            paymentRecipientAccountSnapshot: true,
+            paymentSbpPhoneSnapshot: true,
+            paymentQrImageUrlSnapshot: true,
+            paymentInstructionSnapshot: true,
           },
         });
         createdOrders.push({
@@ -193,7 +223,17 @@ export class CheckoutService {
       status: order.status,
       paymentStatus: order.paymentStatus,
       totalAmount: order.totalAmount.toString(),
-      paymentInstructions: order.shop.paymentInstructions,
+      paymentInstructions: order.paymentInstructionSnapshot,
+      paymentDetails: {
+        mode: order.paymentModeSnapshot,
+        bankName: order.paymentBankNameSnapshot,
+        recipientName: order.paymentRecipientNameSnapshot,
+        recipientPhone: order.paymentRecipientPhoneSnapshot,
+        recipientAccount: order.paymentRecipientAccountSnapshot,
+        sbpPhone: order.paymentSbpPhoneSnapshot,
+        staticQrImageUrl: order.paymentQrImageUrlSnapshot,
+        paymentInstruction: order.paymentInstructionSnapshot,
+      },
       trackingPath: `/orders/${order.id}`,
       itemsCount: order.itemsCount,
     }));
@@ -206,7 +246,17 @@ export class CheckoutService {
       status: firstOrder.status,
       paymentStatus: firstOrder.paymentStatus,
       totalAmount: firstOrder.totalAmount.toString(),
-      paymentInstructions: firstOrder.shop.paymentInstructions,
+      paymentInstructions: firstOrder.paymentInstructionSnapshot,
+      paymentDetails: {
+        mode: firstOrder.paymentModeSnapshot,
+        bankName: firstOrder.paymentBankNameSnapshot,
+        recipientName: firstOrder.paymentRecipientNameSnapshot,
+        recipientPhone: firstOrder.paymentRecipientPhoneSnapshot,
+        recipientAccount: firstOrder.paymentRecipientAccountSnapshot,
+        sbpPhone: firstOrder.paymentSbpPhoneSnapshot,
+        staticQrImageUrl: firstOrder.paymentQrImageUrlSnapshot,
+        paymentInstruction: firstOrder.paymentInstructionSnapshot,
+      },
       trackingPath: `/orders/${firstOrder.id}`,
       customerPhone: checkoutCustomer.phone,
       orders,

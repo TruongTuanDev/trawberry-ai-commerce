@@ -49,6 +49,32 @@ class PaymentProofDto {
   uploadedAt!: string | null;
 }
 
+class PaymentDetailsDto {
+  @ApiProperty({ nullable: true })
+  mode!: string | null;
+
+  @ApiProperty({ nullable: true })
+  bankName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientAccount!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sbpPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  staticQrImageUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  paymentInstruction!: string | null;
+}
+
 export class PaymentResponseDto {
   @ApiProperty()
   id!: string;
@@ -74,6 +100,9 @@ export class PaymentResponseDto {
   @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
 
+  @ApiProperty({ type: PaymentDetailsDto })
+  paymentDetails!: PaymentDetailsDto;
+
   @ApiProperty()
   totalAmount!: string;
 
@@ -97,6 +126,12 @@ export class PaymentResponseDto {
 
   @ApiProperty({ type: PaymentProofDto, nullable: true })
   paymentProof!: PaymentProofDto | null;
+
+  @ApiProperty()
+  paymentProofStatus!: string;
+
+  @ApiProperty({ nullable: true })
+  buyerPaymentNote!: string | null;
 
   @ApiProperty({ type: PaymentReviewLogResponseDto, isArray: true })
   reviewLogs!: PaymentReviewLogResponseDto[];

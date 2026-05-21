@@ -1,5 +1,49 @@
 # Phase Report
 
+## 2026-05-22 Direct Seller QR Payment Foundation
+
+- implemented direct-to-seller static QR payment foundation for the active marketplace stack without introducing a real payment provider
+- sellers now configure per-shop payment destination data and upload a static QR image
+- checkout now snapshots per-shop direct payment details into each created child order so buyer confirmation and later receipt/tracking pages stay stable
+- buyer payment flow is now:
+  - view seller QR at checkout / receipt / tracking
+  - click the buyer-side transfer proof action
+  - upload payment proof and optional buyer note
+  - wait for seller confirmation
+- seller payment flow is now:
+  - `/seller/payment-settings`
+  - `/seller/payments-to-confirm`
+  - confirm or reject buyer-marked proofs
+- admin supervision flow is now:
+  - `/admin/payments-supervision`
+  - admin marketplace-wide payment queue/detail
+  - admin confirm/reject override APIs
+- audit trail now distinguishes:
+  - `BUYER_MARKED_PAID`
+  - `SELLER_CONFIRMED`
+  - `SELLER_REJECTED`
+  - `ADMIN_CONFIRMED`
+  - `ADMIN_REJECTED`
+- verification for this phase:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run seed:demo`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:direct-seller-qr-payment`: pass
+  - `backend-nest npm run smoke:payments`: pass
+  - `backend-nest npm run smoke:cart-checkout`: pass
+  - `backend-nest npm run smoke:multi-shop-checkout`: pass
+  - `backend-nest npm run smoke:customer-order-history`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:direct-seller-qr-payment`: pass
+  - `frontend-next npm run test:e2e:public-payment-review`: pass
+  - `frontend-next npm run test:e2e:cart-checkout`: pass
+  - `frontend-next npm run test:e2e:multi-shop-checkout`: pass
+  - `frontend-next npm run test:e2e:customer-order-history`: pass after isolated rerun; a batch run hit auth rate limiting `429` on rapid repeated seller setup
+
 ## 2026-05-22 Professional Marketplace Gap Audit
 
 - completed a repo-wide marketplace capability audit against a professional multi-seller benchmark

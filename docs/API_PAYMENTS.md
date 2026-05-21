@@ -7,7 +7,10 @@ Current scope includes:
 - seller payment review queue
 - payment detail with customer/order snapshots
 - payment proof visibility in seller detail
-- mark manual payment as paid
+- direct seller static QR / bank payment configuration per shop
+- buyer-side "marked as paid" proof upload
+- seller confirm / reject after buyer proof
+- admin payment supervision and override
 - reject a pending payment
 - add payment review notes
 - basic audit logging in `payment_review_logs`
@@ -16,6 +19,7 @@ Current scope does not include:
 - payment provider integration
 - automatic reconciliation
 - refunds, chargebacks, or provider webhooks
+- automatic bank verification
 
 ## Schema Notes
 
@@ -56,6 +60,29 @@ Query params:
 - `size`
 - `status`
 - `search`
+- `proofStatus`
+
+### `GET /api/shops/:shopId/payment-settings`
+
+Return one shop direct-payment configuration.
+
+### `PATCH /api/shops/:shopId/payment-settings`
+
+Update one shop direct-payment configuration.
+
+Key body fields:
+- `paymentMode=STATIC_QR`
+- `status`
+- `bankName`
+- `recipientName`
+- `recipientPhone`
+- `recipientAccount`
+- `sbpPhone`
+- `paymentInstruction`
+
+### `POST /api/shops/:shopId/payment-settings/qr-image`
+
+Upload a static QR image for direct seller payment.
 
 ### `GET /api/shops/:shopId/payments/:orderId`
 
@@ -65,10 +92,20 @@ Return payment review detail for one order, including:
 - payment status
 - payment method
 - payment instructions
+- payment details snapshot:
+  - mode
+  - bankName
+  - recipientName
+  - recipientPhone
+  - recipientAccount
+  - sbpPhone
+  - staticQrImageUrl
 - totals
 - customer snapshot
 - item snapshots
 - payment proof metadata when present
+- payment proof status
+- buyer payment note
 - payment review logs
 
 ### `POST /api/shops/:shopId/payments/:orderId/mark-paid`
@@ -79,7 +116,11 @@ Behavior:
 - `paymentStatus -> PAID`
 - order status remains unchanged in this MVP
 - seller fulfillment can still continue because the Orders module now accepts `PAID` the same way it accepts legacy `APPROVED`
-- creates a `MARK_PAID` audit log
+- creates a `SELLER_CONFIRMED` audit log
+
+### `POST /api/shops/:shopId/payments/:orderId/confirm`
+
+Alias for seller confirmation in the direct seller QR flow.
 
 Validation:
 - fails if payment is already `PAID` or legacy `APPROVED`
@@ -91,8 +132,9 @@ Reject a payment.
 
 Behavior:
 - `paymentStatus -> REJECTED`
+- `paymentProofStatus -> SELLER_REJECTED`
 - if order status is still `PENDING` or `NEW`, order status is set to `CANCELLED`
-- creates a `REJECT_PAYMENT` audit log
+- creates a `SELLER_REJECTED` audit log
 
 Validation:
 - fails if payment is already `PAID` or legacy `APPROVED`
@@ -111,6 +153,29 @@ Validation:
 - `note` is required
 - `note` max length is `1000`
 
+### `GET /api/admin/payments`
+
+Admin marketplace-wide payment supervision queue.
+
+Query params:
+- `page`
+- `size`
+- `status`
+- `proofStatus`
+- `shopId`
+
+### `GET /api/admin/payments/:orderId`
+
+Admin marketplace-wide payment detail.
+
+### `POST /api/admin/payments/:orderId/confirm`
+
+Admin override that confirms a payment and writes `ADMIN_CONFIRMED`.
+
+### `POST /api/admin/payments/:orderId/reject`
+
+Admin override that rejects a payment and writes `ADMIN_REJECTED`.
+
 ## Runtime Verification
 
 Coverage currently includes:
@@ -120,11 +185,21 @@ Coverage currently includes:
   - mark paid
   - reject
   - add note
+  - seller queue by `proofStatus`
+  - admin list / confirm / reject
   - cross-shop `403`
   - invalid transition
 - `backend-nest/test/order-tracking.e2e-spec.ts`
   - seller payment detail sees customer-uploaded proof
-  - seller mark paid still works after proof upload
+  - buyer proof upload writes `BUYER_MARKED_PAID`
+  - seller confirmation works after proof upload
+- `backend-nest/scripts/smoke-direct-seller-qr-payment.ps1`
+  - seller payment settings
+  - QR upload
+  - checkout QR snapshot
+  - buyer proof upload
+  - seller confirm
+  - admin supervision
 - `backend-nest/scripts/smoke-payments.ps1`
   - register seller
   - approve seller
@@ -143,5 +218,6 @@ Coverage currently includes:
 ## Known Limitations
 
 - `paymentMethod` currently reuses the order snapshot from `shippingMethodName`, because the schema does not yet have a dedicated payment-method column.
-- customer proof upload is public and phone-based; richer customer account history still does not exist yet.
+- customer proof upload is still public and phone-based even though customer account history now exists.
 - provider-backed statuses and true settlement are still future work.
+- this phase supports static QR / bank instructions only; it does not verify real incoming bank transactions.

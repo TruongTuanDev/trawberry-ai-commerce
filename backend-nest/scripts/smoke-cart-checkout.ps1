@@ -137,6 +137,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
   }
   paymentMethod = 'MANUAL_TRANSFER'
 } | ConvertTo-Json -Depth 6)
+$trackedPhone = [uri]::EscapeDataString($checkout.customerPhone)
 
 if ($checkout.totalAmount -ne '528') {
   throw "Expected totalAmount 528, got $($checkout.totalAmount)"
@@ -147,7 +148,7 @@ if (@($detail.items).Count -ne 2) {
   throw "Expected 2 order items, got $(@($detail.items).Count)"
 }
 
-$tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($checkout.orderId)/track?phone=0123456789"
+$tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($checkout.orderId)/track?phone=$trackedPhone"
 if (@($tracked.items).Count -ne 2) {
   throw "Expected 2 tracked items, got $(@($tracked.items).Count)"
 }

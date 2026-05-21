@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { PublicShell } from "@/components/public/public-shell";
 import {
@@ -19,6 +20,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const [phone, setPhone] = useState(initialPhone);
   const [order, setOrder] = useState<PublicTrackedOrder | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [buyerNote, setBuyerNote] = useState("");
   const [loading, setLoading] = useState(Boolean(initialPhone));
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,10 +94,16 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
     setSuccessMessage(null);
 
     try {
-      const updated = await uploadPaymentProof(orderId, phone.trim(), file);
+      const updated = await uploadPaymentProof(
+        orderId,
+        phone.trim(),
+        file,
+        buyerNote,
+      );
       setOrder(updated);
       setFile(null);
-      setSuccessMessage("Payment proof uploaded. Seller can review it now.");
+      setBuyerNote("");
+      setSuccessMessage("Marked as paid. Seller can review the proof now.");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to upload payment proof.",
@@ -199,15 +207,11 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                     </Metric>
                     <Metric label="Total">{order.totalAmount}</Metric>
                   </div>
-                  <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">
-                      Payment instructions
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                      {order.paymentInstructions ??
-                        "This shop did not provide manual payment instructions."}
-                    </p>
-                  </div>
+                  <PaymentDetailsPanel
+                    details={order.paymentDetails}
+                    title="Direct seller payment"
+                    className="mt-6"
+                  />
                   <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-2">
                     <TextMetric label="Customer" value={order.customer.name} />
                     <TextMetric label="Phone" value={order.customer.phone} />
@@ -309,6 +313,15 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   )}
 
                   <div className="mt-6 grid gap-4">
+                    <Field label="Buyer note">
+                      <textarea
+                        value={buyerNote}
+                        onChange={(event) => setBuyerNote(event.target.value)}
+                        rows={3}
+                        className="public-input min-h-24"
+                        placeholder="Optional bank transfer reference or note for the seller"
+                      />
+                    </Field>
                     <Field label="Upload proof">
                       <input
                         type="file"
@@ -327,9 +340,14 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                       data-testid="payment-proof-submit"
                     >
-                      {uploading ? "Uploading..." : "Upload payment proof"}
+                      {uploading ? "Submitting..." : "I transferred the money"}
                     </button>
                   </div>
+                  {order.buyerPaymentNote ? (
+                    <p className="mt-4 text-sm text-[var(--muted)]">
+                      Latest buyer note: {order.buyerPaymentNote}
+                    </p>
+                  ) : null}
                 </section>
 
                 <section className="card-panel rounded-[2rem] px-6 py-8">

@@ -1,25 +1,201 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
-const demoSeller = {
-  email: "demo-seller@trawberry.local",
-  password: "DemoSeller123!",
-};
+const backendBaseUrl =
+  process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
-test("customer uploads proof, seller marks paid, customer sees paid status", async ({ browser }) => {
-  test.setTimeout(90000);
+const pngBuffer = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=",
+  "base64",
+);
+
+async function backendJson<T>(
+  request: APIRequestContext,
+  url: string,
+  options?: Parameters<APIRequestContext["fetch"]>[1],
+) {
+  const response = await request.fetch(`${backendBaseUrl}${url}`, options);
+  expect(
+    response.ok(),
+    `${options?.method ?? "GET"} ${url} -> ${response.status()}: ${await response.text()}`,
+  ).toBeTruthy();
+  return (await response.json()) as T;
+}
+
+async function approveSeller(
+  request: APIRequestContext,
+  email: string,
+  fullName: string,
+) {
+  const password = "password123";
+  const register = await backendJson<{ userId: string }>(
+    request,
+    "/api/auth/register",
+    {
+      method: "POST",
+      data: {
+        email,
+        password,
+        fullName,
+        role: "SELLER",
+      },
+    },
+  );
+  const sellerLogin = await backendJson<{ accessToken: string }>(
+    request,
+    "/api/auth/login",
+    {
+      method: "POST",
+      data: { email, password },
+    },
+  );
+  await backendJson(request, "/api/seller/onboarding/profile", {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
+    data: {
+      legalType: "IP",
+      legalName: `${fullName} IP`,
+      inn: "123456789012",
+      ogrn: "1234567890123",
+      legalAddress: "Moscow, Payment Review Street 1",
+      contactName: fullName,
+      contactPhone: "+79990000009",
+      contactEmail: email,
+    },
+  });
+  const document = await backendJson<{ id: string }>(
+    request,
+    "/api/seller/onboarding/documents",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
+      multipart: {
+        documentType: "INN",
+        file: {
+          name: "seller-payment-review.pdf",
+          mimeType: "application/pdf",
+          buffer: Buffer.from("%PDF-1.4\n% public payment review e2e\n"),
+        },
+      },
+    },
+  );
+  const adminLogin = await backendJson<{ accessToken: string }>(
+    request,
+    "/api/auth/login",
+    {
+      method: "POST",
+      data: {
+        email: "demo-admin@trawberry.local",
+        password: "DemoAdmin123!",
+      },
+    },
+  );
+  await backendJson(
+    request,
+    `/api/admin/sellers/${register.userId}/documents/${document.id}/approve`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
+      data: {},
+    },
+  );
+  await backendJson(request, `/api/admin/sellers/${register.userId}/approve`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
+    data: {},
+  });
+  return { token: sellerLogin.accessToken, password };
+}
+
+async function createPublishedProduct(
+  request: APIRequestContext,
+  input: {
+    token: string;
+    shopName: string;
+    shopSlug: string;
+    productName: string;
+    wbNmId: number;
+  },
+) {
+  const shop = await backendJson<{ id: string; name: string }>(
+    request,
+    "/api/shops",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+      data: {
+        name: input.shopName,
+        slug: input.shopSlug,
+        paymentInstructions: `Manual transfer for ${input.shopName}`,
+      },
+    },
+  );
+
+  const product = await backendJson<{
+    id: string;
+    variants: Array<{ id: string }>;
+  }>(request, `/api/shops/${shop.id}/products`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {
+      wbNmId: input.wbNmId,
+      wbTitle: input.productName,
+      localTitle: input.productName,
+      localDescription: `${input.productName} payment review product`,
+      categoryName: "Payment Review Category",
+      visibility: "ACTIVE",
+      variants: [
+        {
+          chrtId: input.wbNmId + 10,
+          techSize: "Default",
+          basePrice: 125,
+          stockQuantity: 10,
+          trackInventory: true,
+          isActive: true,
+        },
+      ],
+    },
+  });
+
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/images`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    multipart: {
+      files: {
+        name: "payment-review-product.png",
+        mimeType: "image/png",
+        buffer: pngBuffer,
+      },
+    },
+  });
+
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {},
+  });
+
+  return { shop, product };
+}
+
+test("customer uploads proof, seller marks paid, customer sees paid status", async ({ browser, request }) => {
+  test.setTimeout(120000);
+
+  const stamp = Date.now();
+  const sellerEmail = `payment-review-${stamp}@example.com`;
+  const seller = await approveSeller(request, sellerEmail, "Payment Review Seller");
+  const created = await createPublishedProduct(request, {
+    token: seller.token,
+    shopName: `Payment Review Shop ${stamp}`,
+    shopSlug: `payment-review-shop-${stamp}`,
+    productName: `Payment Review Product ${stamp}`,
+    wbNmId: 8600000 + (stamp % 100000),
+  });
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();
   const phone = `+7999${Date.now().toString().slice(-7)}`;
 
-  await customerPage.goto("/products");
-  await customerPage.getByLabel("Search catalog").fill("Linen Bloom Dress");
-  await customerPage.getByRole("button", { name: "Search" }).click();
-  const seededCard = customerPage.getByTestId("product-card").filter({ hasText: "Linen Bloom Dress" });
-  await expect(seededCard).toHaveCount(1);
-  await seededCard.getByRole("link", { name: "View" }).click();
-
-  await expect(customerPage).toHaveURL(/\/products\/.+/);
+  await customerPage.goto(`/products/${created.product.id}`);
   await customerPage.getByTestId("continue-to-checkout").click();
 
   await customerPage.waitForURL(/\/checkout/);
@@ -53,24 +229,21 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
   await customerPage.getByTestId("payment-proof-input").setInputFiles({
     name: "payment-proof.png",
     mimeType: "image/png",
-    buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=",
-      "base64",
-    ),
+    buffer: pngBuffer,
   });
   await customerPage.getByTestId("payment-proof-submit").click();
 
-  await expect(customerPage.getByText("Payment proof uploaded. Seller can review it now.")).toBeVisible();
+  await expect(customerPage.getByText("Marked as paid. Seller can review the proof now.")).toBeVisible();
   await expect(customerPage.getByTestId("tracked-payment-proof-link")).toBeVisible();
-  await expect(customerPage.getByText("UPLOAD_PROOF")).toBeVisible();
+  await expect(customerPage.getByText("BUYER_MARKED_PAID")).toBeVisible();
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
 
   await sellerPage.goto("/login");
   await expect(sellerPage.getByTestId("login-form")).toBeVisible();
-  await sellerPage.getByTestId("login-email").fill(demoSeller.email);
-  await sellerPage.getByTestId("login-password").fill(demoSeller.password);
+  await sellerPage.getByTestId("login-email").fill(sellerEmail);
+  await sellerPage.getByTestId("login-password").fill(seller.password);
   await sellerPage.getByTestId("login-submit").click();
 
   await sellerPage.waitForURL("**/seller/dashboard");
@@ -83,9 +256,9 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
   sellerPage.once("dialog", (dialog) => dialog.accept());
   await sellerPage.getByTestId("seller-mark-paid-button").click();
 
-  await expect(sellerPage.getByText("Payment marked as paid.")).toBeVisible();
+  await expect(sellerPage.getByText("Payment confirmed.")).toBeVisible();
   await expect(sellerPage.getByTestId("seller-payment-status")).toHaveText("PAID");
-  await expect(sellerPage.getByText("MARK_PAID")).toBeVisible();
+  await expect(sellerPage.locator("span").filter({ hasText: "SELLER_CONFIRMED" }).first()).toBeVisible();
 
   await customerPage.reload();
   await expect(customerPage.getByTestId("tracked-order-page")).toBeVisible();

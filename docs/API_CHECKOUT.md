@@ -7,6 +7,7 @@ Current scope includes:
 - public product browsing
 - anonymous or logged-in customer order creation
 - seller visibility of newly created orders through the existing seller Orders API
+- direct seller payment details snapshot for manual QR/bank transfer flows
 
 Current scope does not include:
 - real payment provider integration
@@ -121,6 +122,16 @@ Response:
   "paymentStatus": "PENDING",
   "totalAmount": "198",
   "paymentInstructions": "Transfer to bank account 123.",
+  "paymentDetails": {
+    "mode": "STATIC_QR",
+    "bankName": "T-Bank",
+    "recipientName": "Seller One",
+    "recipientPhone": "+79990000001",
+    "recipientAccount": "40817810000000000123",
+    "sbpPhone": "+79990000001",
+    "staticQrImageUrl": "http://localhost:3001/uploads/shop-payment-qr/...",
+    "paymentInstruction": "Scan the seller QR and transfer the exact order total."
+  },
   "trackingPath": "/orders/<orderId>",
   "customerPhone": "0123456789",
   "orders": [
@@ -133,6 +144,16 @@ Response:
       "paymentStatus": "PENDING",
       "totalAmount": "198",
       "paymentInstructions": "Transfer to bank account 123.",
+      "paymentDetails": {
+        "mode": "STATIC_QR",
+        "bankName": "T-Bank",
+        "recipientName": "Seller One",
+        "recipientPhone": "+79990000001",
+        "recipientAccount": "40817810000000000123",
+        "sbpPhone": "+79990000001",
+        "staticQrImageUrl": "http://localhost:3001/uploads/shop-payment-qr/...",
+        "paymentInstruction": "Scan the seller QR and transfer the exact order total."
+      },
       "trackingPath": "/orders/<orderId>",
       "itemsCount": 2
     }
@@ -144,6 +165,7 @@ Response:
 
 Compatibility:
 - `orderId`, `orderCode`, `status`, `paymentStatus`, `totalAmount`, `paymentInstructions`, and `trackingPath` describe the first created order for legacy single-order consumers.
+- `paymentDetails` follows the same compatibility rule and describes the first created order for legacy single-order consumers.
 - New cart consumers should read `checkoutCode`, `orders[]`, `orderCodes[]`, and `grandTotal`.
 
 ## Customer Receipt APIs
@@ -156,6 +178,7 @@ Tracking follow-up:
 - customer can continue directly to `/orders/:orderId`
 - customer can also use `/orders/track` later with `orderCode + phone`
 - manual transfer proof upload is now documented in `docs/API_ORDER_TRACKING.md`
+- when a shop is configured for direct seller QR payment, checkout confirmation can render the seller QR and bank/SBP snapshot directly from `paymentDetails`
 
 ## Runtime Verification
 
@@ -177,10 +200,13 @@ Coverage currently includes:
   - seed a priced variant
   - create anonymous checkout order
   - verify seller list/detail can see the new order
+- `backend-nest/scripts/smoke-direct-seller-qr-payment.ps1`
+  - verifies seller QR config is present in checkout response snapshot
 
 ## Known Limitations
 
 - Payment flow is still manual and informational only.
+- direct seller QR payment is static and snapshot-based; checkout does not call any bank API.
 - Checkout chooses the requested `variantId` when provided, otherwise it falls back to the first active priced variant for legacy callers.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
 - Payment proof and delivery remain per created shop order; parent receipt is for combined customer view/history.

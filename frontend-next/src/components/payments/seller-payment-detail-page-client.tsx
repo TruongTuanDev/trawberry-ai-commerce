@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { SectionCard } from "@/components/seller/section-card";
 import {
   addPaymentNote,
+  confirmPayment,
   getPaymentDetail,
-  markPaymentPaid,
   rejectPayment,
   type SellerPaymentItem,
 } from "@/lib/seller-api";
@@ -87,13 +88,13 @@ export function SellerPaymentDetailPageClient({
     try {
       let updated: SellerPaymentItem;
       if (action === "markPaid") {
-        updated = await markPaymentPaid(
+        updated = await confirmPayment(
           currentShopId,
           payment.id,
           note.trim() ? { note: note.trim() } : undefined,
           "",
         );
-        setSuccessMessage("Payment marked as paid.");
+        setSuccessMessage("Payment confirmed.");
       } else if (action === "reject") {
         updated = await rejectPayment(
           currentShopId,
@@ -173,7 +174,7 @@ export function SellerPaymentDetailPageClient({
         <SectionCard
           eyebrow="Payment"
           title={payment.orderNumber}
-          description="Manual payment review state for the selected order."
+          description="Direct seller QR payment review state for the selected order."
         >
           <div className="grid gap-4 md:grid-cols-2">
             <Metric label="Customer" value={payment.customer.name} />
@@ -182,6 +183,7 @@ export function SellerPaymentDetailPageClient({
               label="Payment method"
               value={payment.paymentMethod ?? "Unknown"}
             />
+            <Metric label="Proof status" value={payment.paymentProofStatus} />
             <Metric label="Total" value={payment.totalAmount} />
             <Metric
               label="Created"
@@ -208,16 +210,11 @@ export function SellerPaymentDetailPageClient({
             </div>
           </div>
 
-          <div className="mt-6 space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-            <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                Payment instructions
-              </p>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                {payment.paymentInstructions ??
-                  "This shop did not set manual payment instructions."}
-              </p>
-            </div>
+          <div className="mt-6 space-y-4">
+            <PaymentDetailsPanel
+              details={payment.paymentDetails}
+              title="Seller direct payment details"
+            />
             <div>
               <p className="text-sm font-semibold text-[var(--foreground)]">
                 Shipping address
@@ -229,6 +226,11 @@ export function SellerPaymentDetailPageClient({
             {payment.customerNote ? (
               <p className="text-sm text-[var(--muted)]">
                 Customer note: {payment.customerNote}
+              </p>
+            ) : null}
+            {payment.buyerPaymentNote ? (
+              <p className="text-sm text-[var(--muted)]">
+                Buyer payment note: {payment.buyerPaymentNote}
               </p>
             ) : null}
             {payment.paymentProof ? (
@@ -262,7 +264,7 @@ export function SellerPaymentDetailPageClient({
         <SectionCard
           eyebrow="Review actions"
           title="Seller review"
-          description="Add notes, mark the payment as paid, or reject it when the transition is still valid."
+          description="Add notes, confirm direct seller payment after checking your bank account, or reject the proof."
         >
           <div className="space-y-4">
             <textarea
@@ -288,7 +290,7 @@ export function SellerPaymentDetailPageClient({
                 className="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 data-testid="seller-mark-paid-button"
               >
-                {saving ? "Saving..." : "Mark as paid"}
+                {saving ? "Saving..." : "Confirm payment received"}
               </button>
               <button
                 type="button"
@@ -296,7 +298,7 @@ export function SellerPaymentDetailPageClient({
                 disabled={saving}
                 className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? "Saving..." : "Reject payment"}
+                {saving ? "Saving..." : "Reject proof"}
               </button>
             </div>
             {error ? (

@@ -34,6 +34,14 @@ type StoredShop = {
   slug: string;
   status: string;
   paymentInstructions: string | null;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountNumber?: string | null;
+  recipientPhone?: string | null;
+  sbpPhone?: string | null;
+  staticQrImageUrl?: string | null;
+  paymentMode?: string | null;
+  paymentConfigStatus?: string;
   sellerProfile: { userId: string };
 };
 
@@ -69,12 +77,30 @@ type StoredOrder = {
   customerPhone: string;
   customerEmail: string | null;
   customerNote: string | null;
+  paymentModeSnapshot?: string | null;
+  paymentBankNameSnapshot?: string | null;
+  paymentRecipientNameSnapshot?: string | null;
+  paymentRecipientPhoneSnapshot?: string | null;
+  paymentRecipientAccountSnapshot?: string | null;
+  paymentSbpPhoneSnapshot?: string | null;
+  paymentQrImageUrlSnapshot?: string | null;
+  paymentInstructionSnapshot?: string | null;
+  paymentProofStatus?: string;
+  paymentProofBuyerNote?: string | null;
   createdAt: Date;
   updatedAt: Date;
   shop: {
     id: string;
     name: string;
     paymentInstructions: string | null;
+    bankName?: string | null;
+    accountHolderName?: string | null;
+    accountNumber?: string | null;
+    recipientPhone?: string | null;
+    sbpPhone?: string | null;
+    staticQrImageUrl?: string | null;
+    paymentMode?: string | null;
+    paymentConfigStatus?: string;
   };
   items: Array<{
     id: string;
@@ -110,6 +136,7 @@ type OrderWhere = {
   id?: string;
   shopId?: string;
   paymentStatus?: string | { in?: string[] };
+  paymentProofStatus?: string;
   OR?: Array<{
     orderNumber?: { contains: string };
     customerName?: { contains: string };
@@ -156,6 +183,17 @@ describe('PaymentsController (e2e)', () => {
           approvalStatus: 'APPROVED',
           currentShopId: 'shop-1',
         },
+      },
+      {
+        id: 'admin-user-1',
+        email: 'demo-admin@trawberry.local',
+        passwordHash: bcrypt.hashSync('DemoAdmin123!', 10),
+        fullName: 'Demo Admin',
+        phone: null,
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: null,
       },
       {
         id: 'seller-user-2',
@@ -211,12 +249,29 @@ describe('PaymentsController (e2e)', () => {
         customerPhone: '123456',
         customerEmail: 'alice@example.com',
         customerNote: 'Ring bell',
+        paymentModeSnapshot: 'STATIC_QR',
+        paymentBankNameSnapshot: 'T-Bank',
+        paymentRecipientNameSnapshot: 'Seller One',
+        paymentRecipientPhoneSnapshot: '+79990000001',
+        paymentRecipientAccountSnapshot: '123',
+        paymentSbpPhoneSnapshot: '+79990000001',
+        paymentQrImageUrlSnapshot: 'https://example.com/qr-shop-1.png',
+        paymentInstructionSnapshot: 'Transfer to account 123.',
+        paymentProofStatus: 'NOT_SUBMITTED',
         createdAt: new Date('2025-01-10T10:00:00Z'),
         updatedAt: new Date('2025-01-10T10:00:00Z'),
         shop: {
           id: 'shop-1',
           name: 'Shop One',
           paymentInstructions: 'Transfer to account 123.',
+          bankName: 'T-Bank',
+          accountHolderName: 'Seller One',
+          accountNumber: '123',
+          recipientPhone: '+79990000001',
+          sbpPhone: '+79990000001',
+          staticQrImageUrl: 'https://example.com/qr-shop-1.png',
+          paymentMode: 'STATIC_QR',
+          paymentConfigStatus: 'READY',
         },
         items: [
           {
@@ -244,12 +299,23 @@ describe('PaymentsController (e2e)', () => {
         customerPhone: '987654',
         customerEmail: 'bob@example.com',
         customerNote: null,
+        paymentModeSnapshot: 'STATIC_QR',
+        paymentInstructionSnapshot: 'Transfer to account 123.',
+        paymentProofStatus: 'NOT_SUBMITTED',
         createdAt: new Date('2025-01-12T10:00:00Z'),
         updatedAt: new Date('2025-01-12T10:00:00Z'),
         shop: {
           id: 'shop-1',
           name: 'Shop One',
           paymentInstructions: 'Transfer to account 123.',
+          bankName: 'T-Bank',
+          accountHolderName: 'Seller One',
+          accountNumber: '123',
+          recipientPhone: '+79990000001',
+          sbpPhone: '+79990000001',
+          staticQrImageUrl: 'https://example.com/qr-shop-1.png',
+          paymentMode: 'STATIC_QR',
+          paymentConfigStatus: 'READY',
         },
         items: [],
         paymentReviewLogs: [],
@@ -268,12 +334,23 @@ describe('PaymentsController (e2e)', () => {
         customerPhone: '555123',
         customerEmail: 'carol@example.com',
         customerNote: null,
+        paymentModeSnapshot: 'STATIC_QR',
+        paymentInstructionSnapshot: 'Transfer to account 123.',
+        paymentProofStatus: 'SELLER_CONFIRMED',
         createdAt: new Date('2025-01-13T10:00:00Z'),
         updatedAt: new Date('2025-01-13T10:00:00Z'),
         shop: {
           id: 'shop-1',
           name: 'Shop One',
           paymentInstructions: 'Transfer to account 123.',
+          bankName: 'T-Bank',
+          accountHolderName: 'Seller One',
+          accountNumber: '123',
+          recipientPhone: '+79990000001',
+          sbpPhone: '+79990000001',
+          staticQrImageUrl: 'https://example.com/qr-shop-1.png',
+          paymentMode: 'STATIC_QR',
+          paymentConfigStatus: 'READY',
         },
         items: [],
         paymentReviewLogs: [],
@@ -292,12 +369,21 @@ describe('PaymentsController (e2e)', () => {
         customerPhone: '999000',
         customerEmail: 'dave@example.com',
         customerNote: null,
+        paymentProofStatus: 'NOT_SUBMITTED',
         createdAt: new Date('2025-01-11T10:00:00Z'),
         updatedAt: new Date('2025-01-11T10:00:00Z'),
         shop: {
           id: 'shop-2',
           name: 'Shop Two',
           paymentInstructions: null,
+          bankName: null,
+          accountHolderName: null,
+          accountNumber: null,
+          recipientPhone: null,
+          sbpPhone: null,
+          staticQrImageUrl: null,
+          paymentMode: 'STATIC_QR',
+          paymentConfigStatus: 'PENDING_REVIEW',
         },
         items: [],
         paymentReviewLogs: [],
@@ -365,6 +451,7 @@ describe('PaymentsController (e2e)', () => {
         data: {
           paymentStatus?: string;
           status?: string;
+          paymentProofStatus?: string;
           paymentReviewLogs?: {
             create: {
               id: string;
@@ -406,6 +493,9 @@ describe('PaymentsController (e2e)', () => {
         }
         if (data.status !== undefined) {
           target.status = data.status;
+        }
+        if (data.paymentProofStatus !== undefined) {
+          target.paymentProofStatus = data.paymentProofStatus;
         }
         target.updatedAt = new Date();
         return Promise.resolve(target);
@@ -464,6 +554,9 @@ describe('PaymentsController (e2e)', () => {
     expect(body.id).toBe('order-1');
     expect(body.paymentMethod).toBe('MANUAL_TRANSFER');
     expect(body.paymentInstructions).toBe('Transfer to account 123.');
+    expect(body.paymentDetails.staticQrImageUrl).toBe(
+      'https://example.com/qr-shop-1.png',
+    );
     expect(body.customer.name).toBe('Alice');
   });
 
@@ -477,7 +570,8 @@ describe('PaymentsController (e2e)', () => {
 
     const body = readBody<PaymentResponseDto>(response);
     expect(body.paymentStatus).toBe('PAID');
-    expect(body.reviewLogs[0].action).toBe('MARK_PAID');
+    expect(body.paymentProofStatus).toBe('SELLER_CONFIRMED');
+    expect(body.reviewLogs[0].action).toBe('SELLER_CONFIRMED');
     expect(body.reviewLogs[0].note).toBe('Manual transfer confirmed.');
   });
 
@@ -492,7 +586,8 @@ describe('PaymentsController (e2e)', () => {
     const body = readBody<PaymentResponseDto>(response);
     expect(body.paymentStatus).toBe('REJECTED');
     expect(body.status).toBe('CANCELLED');
-    expect(body.reviewLogs[0].action).toBe('REJECT_PAYMENT');
+    expect(body.paymentProofStatus).toBe('SELLER_REJECTED');
+    expect(body.reviewLogs[0].action).toBe('SELLER_REJECTED');
   });
 
   it('adds note without changing payment status', async () => {
@@ -525,12 +620,98 @@ describe('PaymentsController (e2e)', () => {
       .send({ note: 'Too late.' })
       .expect(400);
   });
+
+  it('lists buyer-marked payments in seller confirmation queue', async () => {
+    orders[0].paymentProofStatus = 'BUYER_MARKED_PAID';
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/shops/shop-1/payments?page=1&size=10&proofStatus=BUYER_MARKED_PAID',
+      )
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = readBody<PaginatedPaymentsResponseDto>(response);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].id).toBe('order-1');
+  });
+
+  it('allows admin to list marketplace payments for supervision', async () => {
+    orders[0].paymentProofStatus = 'BUYER_MARKED_PAID';
+
+    const token = await loginAndGetToken(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+    const response = await request(app.getHttpServer())
+      .get('/api/admin/payments?page=1&size=10&proofStatus=BUYER_MARKED_PAID')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = readBody<PaginatedPaymentsResponseDto>(response);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].id).toBe('order-1');
+  });
+
+  it('allows admin to confirm a buyer-marked payment', async () => {
+    orders[0].paymentProofStatus = 'BUYER_MARKED_PAID';
+
+    const token = await loginAndGetToken(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+    const response = await request(app.getHttpServer())
+      .post('/api/admin/payments/order-1/confirm')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Admin verified seller confirmation.' })
+      .expect(200);
+
+    const body = readBody<PaymentResponseDto>(response);
+    expect(body.paymentStatus).toBe('PAID');
+    expect(body.paymentProofStatus).toBe('SELLER_CONFIRMED');
+    expect(body.reviewLogs[0].action).toBe('ADMIN_CONFIRMED');
+  });
+
+  it('allows admin to reject a buyer-marked payment', async () => {
+    orders[0].paymentProofStatus = 'BUYER_MARKED_PAID';
+
+    const token = await loginAndGetToken(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+    const response = await request(app.getHttpServer())
+      .post('/api/admin/payments/order-1/reject')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Proof does not match the transfer.' })
+      .expect(200);
+
+    const body = readBody<PaymentResponseDto>(response);
+    expect(body.paymentStatus).toBe('REJECTED');
+    expect(body.paymentProofStatus).toBe('SELLER_REJECTED');
+    expect(body.reviewLogs[0].action).toBe('ADMIN_REJECTED');
+  });
+
+  it('forbids sellers from accessing admin payment supervision routes', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .get('/api/admin/payments')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
 });
 
-async function loginAndGetToken(app: INestApplication<App>, email: string) {
+async function loginAndGetToken(
+  app: INestApplication<App>,
+  email: string,
+  password = 'password123',
+) {
   const response = await request(app.getHttpServer())
     .post('/api/auth/login')
-    .send({ email, password: 'password123' })
+    .send({ email, password })
     .expect(200);
 
   return readBody<AuthResponseDto>(response).accessToken;
@@ -553,6 +734,12 @@ function filterOrders(orders: StoredOrder[], where: OrderWhere) {
         if (!where.paymentStatus.in.includes(order.paymentStatus)) {
           return false;
         }
+      }
+      if (
+        where.paymentProofStatus &&
+        order.paymentProofStatus !== where.paymentProofStatus
+      ) {
+        return false;
       }
 
       if (where.OR?.length) {

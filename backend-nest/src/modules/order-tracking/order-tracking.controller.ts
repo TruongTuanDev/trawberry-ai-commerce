@@ -68,6 +68,9 @@ export class OrderTrackingController {
         phone: {
           type: 'string',
         },
+        buyerNote: {
+          type: 'string',
+        },
         file: {
           type: 'string',
           format: 'binary',
@@ -90,6 +93,7 @@ export class OrderTrackingController {
     return this.orderTrackingService.uploadPaymentProof(
       orderId,
       dto.phone,
+      dto.buyerNote,
       file,
     );
   }

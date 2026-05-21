@@ -8,7 +8,15 @@ import { listPayments, type SellerPaymentItem } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
-export function SellerPaymentsPageClient() {
+export function SellerPaymentsPageClient({
+  initialProofStatus = "",
+  title = "Payments",
+  description = "Review direct seller transfers and COD orders before the fulfillment workflow moves forward.",
+}: {
+  initialProofStatus?: string;
+  title?: string;
+  description?: string;
+}) {
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [payments, setPayments] = useState<SellerPaymentItem[]>([]);
@@ -17,6 +25,7 @@ export function SellerPaymentsPageClient() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [proofStatus, setProofStatus] = useState(initialProofStatus);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +47,7 @@ export function SellerPaymentsPageClient() {
             size,
             search: search || undefined,
             status: status || undefined,
+            proofStatus: proofStatus || undefined,
           },
           "",
         );
@@ -60,16 +70,16 @@ export function SellerPaymentsPageClient() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, page, search, size, status, user]);
+  }, [currentShopId, page, proofStatus, search, size, status, user]);
 
   return (
     <div className="space-y-6">
       <SectionCard
         eyebrow="Payment review"
-        title="Payments"
-        description="Review manual transfers and COD orders before the fulfillment workflow moves forward."
+        title={title}
+        description={description}
       >
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_220px]">
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_220px_220px]">
           <input
             value={search}
             onChange={(event) => {
@@ -93,6 +103,21 @@ export function SellerPaymentsPageClient() {
             <option value="PAID">Paid</option>
             <option value="REJECTED">Rejected</option>
           </select>
+          <select
+            value={proofStatus}
+            onChange={(event) => {
+              setProofStatus(event.target.value);
+              setPage(1);
+            }}
+            className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+            data-testid="seller-payment-proof-status-filter"
+          >
+            <option value="">All proof states</option>
+            <option value="BUYER_MARKED_PAID">Buyer marked paid</option>
+            <option value="NOT_SUBMITTED">No proof yet</option>
+            <option value="SELLER_CONFIRMED">Seller confirmed</option>
+            <option value="SELLER_REJECTED">Seller rejected</option>
+          </select>
         </div>
       </SectionCard>
 
@@ -104,12 +129,13 @@ export function SellerPaymentsPageClient() {
         {error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
 
         <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-          <div className="hidden grid-cols-[170px_1.1fr_180px_160px_160px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
+          <div className="hidden grid-cols-[170px_1.1fr_180px_160px_160px_170px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
             <div>Order</div>
             <div>Customer</div>
             <div>Payment</div>
             <div>Total</div>
             <div>Created</div>
+            <div>Proof</div>
           </div>
 
           <div className="divide-y divide-[var(--border)]">
@@ -117,7 +143,7 @@ export function SellerPaymentsPageClient() {
               <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading payments...</div>
             ) : payments.length ? (
               payments.map((payment) => (
-                <article key={payment.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[170px_1.1fr_180px_160px_160px] lg:px-5">
+                <article key={payment.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[170px_1.1fr_180px_160px_160px_170px] lg:px-5">
                   <div>
                     <Link href={`/seller/payments/${payment.id}`} className="text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)]">
                       {payment.orderNumber}
@@ -135,6 +161,7 @@ export function SellerPaymentsPageClient() {
                   </div>
                   <div className="text-sm font-semibold text-[var(--foreground)]">{payment.totalAmount}</div>
                   <div className="text-sm text-[var(--muted)]">{new Date(payment.createdAt).toLocaleDateString()}</div>
+                  <div className="text-sm text-[var(--muted)]">{payment.paymentProofStatus}</div>
                 </article>
               ))
             ) : (

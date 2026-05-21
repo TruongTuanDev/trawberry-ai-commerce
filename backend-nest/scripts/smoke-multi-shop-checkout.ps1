@@ -143,6 +143,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
   }
   paymentMethod = 'MANUAL_TRANSFER'
 } | ConvertTo-Json -Depth 6)
+$trackedPhone = [uri]::EscapeDataString($checkout.customerPhone)
 
 if (@($checkout.orders).Count -ne 2) { throw "Expected 2 orders, got $(@($checkout.orders).Count)" }
 if ($checkout.grandTotal -ne '800') { throw "Expected grandTotal 800, got $($checkout.grandTotal)" }
@@ -161,8 +162,8 @@ if (@($sellerBOrders.items).Count -ne 1) { throw 'Seller B cannot see its order.
 if (@($sellerAWrongOrder.items).Count -ne 0) { throw 'Seller A can see seller B order.' }
 if (@($sellerBWrongOrder.items).Count -ne 0) { throw 'Seller B can see seller A order.' }
 
-$trackedA = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($orderA.orderId)/track?phone=0123456789"
-$trackedB = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($orderB.orderId)/track?phone=0123456789"
+$trackedA = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($orderA.orderId)/track?phone=$trackedPhone"
+$trackedB = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($orderB.orderId)/track?phone=$trackedPhone"
 if ($trackedA.orderCode -ne $orderA.orderCode) { throw 'Tracking A failed.' }
 if ($trackedB.orderCode -ne $orderB.orderCode) { throw 'Tracking B failed.' }
 

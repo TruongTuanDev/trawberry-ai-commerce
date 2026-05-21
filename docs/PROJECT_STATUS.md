@@ -1,5 +1,31 @@
 # Project Status
 
+## Direct Seller QR Payment Foundation - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Marketplace payment posture remains manual, but it now supports direct-to-seller SBP/bank QR flows without routing funds through the platform.
+- Seller payment setup now includes:
+  - per-shop static QR upload
+  - bank / recipient / SBP metadata
+  - readiness status
+- Buyer payment UX now includes:
+  - seller QR and payment instructions during checkout confirmation
+  - buyer proof upload and buyer note
+  - seller-confirmed proof state instead of auto-paid on upload
+- Seller payment operations now include:
+  - `/seller/payment-settings`
+  - `/seller/payments-to-confirm`
+  - confirm / reject proof actions
+- Admin operations now include:
+  - `/admin/payments-supervision`
+  - marketplace-wide payment queue/detail
+  - admin confirm / reject override
+- Current limitation remains intentional:
+  - no real bank API
+  - no provider webhook
+  - no automatic reconciliation
+  - no platform-held funds
+
 ## Professional Marketplace Gap Audit - 2026-05-22
 
 - Status: documented

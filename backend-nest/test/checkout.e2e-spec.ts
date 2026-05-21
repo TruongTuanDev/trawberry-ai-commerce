@@ -43,6 +43,14 @@ type StoredShop = {
   slug: string;
   status: string;
   paymentInstructions: string | null;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountNumber?: string | null;
+  recipientPhone?: string | null;
+  sbpPhone?: string | null;
+  staticQrImageUrl?: string | null;
+  paymentMode?: string | null;
+  paymentConfigStatus?: string;
   sellerProfile: { userId: string; approvalStatus: string };
 };
 
@@ -116,6 +124,14 @@ type StoredOrder = {
   customerPhone: string;
   customerEmail: string | null;
   customerNote: string | null;
+  paymentModeSnapshot?: string | null;
+  paymentBankNameSnapshot?: string | null;
+  paymentRecipientNameSnapshot?: string | null;
+  paymentRecipientPhoneSnapshot?: string | null;
+  paymentRecipientAccountSnapshot?: string | null;
+  paymentSbpPhoneSnapshot?: string | null;
+  paymentQrImageUrlSnapshot?: string | null;
+  paymentInstructionSnapshot?: string | null;
   createdAt: Date;
   updatedAt: Date;
   customerCompletedAt: Date | null;
@@ -198,6 +214,7 @@ describe('CheckoutController (e2e)', () => {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
     shop: {
       findUnique: jest.fn(),
@@ -280,6 +297,8 @@ describe('CheckoutController (e2e)', () => {
         slug: 'shop-one',
         status: 'ACTIVE',
         paymentInstructions: 'Transfer to bank account 123.',
+        paymentMode: 'STATIC_QR',
+        paymentConfigStatus: 'LEGACY_READY',
         sellerProfile: { userId: 'seller-user-1', approvalStatus: 'APPROVED' },
       },
       {
@@ -289,6 +308,8 @@ describe('CheckoutController (e2e)', () => {
         slug: 'shop-two',
         status: 'ACTIVE',
         paymentInstructions: 'Transfer to bank account 456.',
+        paymentMode: 'STATIC_QR',
+        paymentConfigStatus: 'LEGACY_READY',
         sellerProfile: { userId: 'seller-user-2', approvalStatus: 'APPROVED' },
       },
     ];
@@ -322,6 +343,8 @@ describe('CheckoutController (e2e)', () => {
           id: 'shop-1',
           name: 'Shop One',
           paymentInstructions: 'Transfer to bank account 123.',
+          paymentMode: 'STATIC_QR',
+          paymentConfigStatus: 'LEGACY_READY',
           status: 'ACTIVE',
           sellerProfile: {
             approvalStatus: 'APPROVED',
@@ -392,6 +415,8 @@ describe('CheckoutController (e2e)', () => {
           id: 'shop-2',
           name: 'Shop Two',
           paymentInstructions: 'Transfer to bank account 456.',
+          paymentMode: 'STATIC_QR',
+          paymentConfigStatus: 'LEGACY_READY',
           status: 'ACTIVE',
           sellerProfile: {
             approvalStatus: 'APPROVED',
@@ -442,7 +467,7 @@ describe('CheckoutController (e2e)', () => {
         select,
         include,
       }: {
-        where: { email?: string; id?: string };
+        where: { email?: string; id?: string; phone?: string };
         select?: { id?: boolean };
         include?: {
           sellerProfile?: boolean | { select: Record<string, boolean> };
@@ -451,7 +476,9 @@ describe('CheckoutController (e2e)', () => {
         const user = users.find((entry) =>
           where.email
             ? entry.email === where.email.toLowerCase()
-            : entry.id === where.id,
+            : where.phone
+              ? entry.phone === where.phone
+              : entry.id === where.id,
         );
         if (!user) {
           return null;
@@ -503,6 +530,35 @@ describe('CheckoutController (e2e)', () => {
       },
     );
 
+    prismaMock.user.update.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { id: string };
+        data: {
+          fullName?: string;
+          phone?: string;
+          email?: string;
+        };
+      }) => {
+        const target = users.find((entry) => entry.id === where.id);
+        if (!target) {
+          throw new Error('User not found');
+        }
+        if (data.fullName !== undefined) {
+          target.fullName = data.fullName;
+        }
+        if (data.phone !== undefined) {
+          target.phone = data.phone;
+        }
+        if (data.email !== undefined) {
+          target.email = data.email;
+        }
+        return target;
+      },
+    );
+
     prismaMock.shop.findUnique.mockImplementation(
       ({
         where,
@@ -521,6 +577,14 @@ describe('CheckoutController (e2e)', () => {
             id: shop.id,
             name: shop.name,
             paymentInstructions: shop.paymentInstructions,
+            bankName: shop.bankName ?? null,
+            accountHolderName: shop.accountHolderName ?? null,
+            accountNumber: shop.accountNumber ?? null,
+            recipientPhone: shop.recipientPhone ?? null,
+            sbpPhone: shop.sbpPhone ?? null,
+            staticQrImageUrl: shop.staticQrImageUrl ?? null,
+            paymentMode: shop.paymentMode ?? 'STATIC_QR',
+            paymentConfigStatus: shop.paymentConfigStatus ?? 'PENDING_REVIEW',
             status: shop.status,
             sellerProfile: shop.sellerProfile,
           };
@@ -530,6 +594,14 @@ describe('CheckoutController (e2e)', () => {
           id: shop.id,
           name: shop.name,
           paymentInstructions: shop.paymentInstructions,
+          bankName: shop.bankName ?? null,
+          accountHolderName: shop.accountHolderName ?? null,
+          accountNumber: shop.accountNumber ?? null,
+          recipientPhone: shop.recipientPhone ?? null,
+          sbpPhone: shop.sbpPhone ?? null,
+          staticQrImageUrl: shop.staticQrImageUrl ?? null,
+          paymentMode: shop.paymentMode ?? 'STATIC_QR',
+          paymentConfigStatus: shop.paymentConfigStatus ?? 'PENDING_REVIEW',
           status: shop.status,
         };
       },
@@ -605,6 +677,14 @@ describe('CheckoutController (e2e)', () => {
           customerNote: string | null;
           shippingCost: DecimalLike;
           shippingMethodName: string;
+          paymentModeSnapshot?: string | null;
+          paymentBankNameSnapshot?: string | null;
+          paymentRecipientNameSnapshot?: string | null;
+          paymentRecipientPhoneSnapshot?: string | null;
+          paymentRecipientAccountSnapshot?: string | null;
+          paymentSbpPhoneSnapshot?: string | null;
+          paymentQrImageUrlSnapshot?: string | null;
+          paymentInstructionSnapshot?: string | null;
           items: {
             create: Array<{
               id: string;
@@ -645,6 +725,18 @@ describe('CheckoutController (e2e)', () => {
           customerPhone: data.customerPhone,
           customerEmail: data.customerEmail,
           customerNote: data.customerNote,
+          paymentModeSnapshot: data.paymentModeSnapshot ?? 'STATIC_QR',
+          paymentBankNameSnapshot: data.paymentBankNameSnapshot ?? null,
+          paymentRecipientNameSnapshot:
+            data.paymentRecipientNameSnapshot ?? null,
+          paymentRecipientPhoneSnapshot:
+            data.paymentRecipientPhoneSnapshot ?? null,
+          paymentRecipientAccountSnapshot:
+            data.paymentRecipientAccountSnapshot ?? null,
+          paymentSbpPhoneSnapshot: data.paymentSbpPhoneSnapshot ?? null,
+          paymentQrImageUrlSnapshot: data.paymentQrImageUrlSnapshot ?? null,
+          paymentInstructionSnapshot:
+            data.paymentInstructionSnapshot ?? shop.paymentInstructions,
           createdAt: new Date(),
           updatedAt: new Date(),
           customerCompletedAt: null,
@@ -683,6 +775,19 @@ describe('CheckoutController (e2e)', () => {
               name: shop.name,
               paymentInstructions: shop.paymentInstructions,
             },
+            paymentModeSnapshot: created.paymentModeSnapshot ?? null,
+            paymentBankNameSnapshot: created.paymentBankNameSnapshot ?? null,
+            paymentRecipientNameSnapshot:
+              created.paymentRecipientNameSnapshot ?? null,
+            paymentRecipientPhoneSnapshot:
+              created.paymentRecipientPhoneSnapshot ?? null,
+            paymentRecipientAccountSnapshot:
+              created.paymentRecipientAccountSnapshot ?? null,
+            paymentSbpPhoneSnapshot: created.paymentSbpPhoneSnapshot ?? null,
+            paymentQrImageUrlSnapshot:
+              created.paymentQrImageUrlSnapshot ?? null,
+            paymentInstructionSnapshot:
+              created.paymentInstructionSnapshot ?? null,
           };
         }
 
@@ -854,6 +959,9 @@ describe('CheckoutController (e2e)', () => {
     expect(createBody.paymentInstructions).toBe(
       'Transfer to bank account 123.',
     );
+    expect(createBody.paymentDetails.paymentInstruction).toBe(
+      'Transfer to bank account 123.',
+    );
     expect(products[0].variants[0].stockQuantity).toBe(8);
     expect(products[0].variants[0].reservedStock).toBe(3);
 
@@ -966,8 +1074,14 @@ describe('CheckoutController (e2e)', () => {
     );
     expect(shopOneOrder?.totalAmount).toBe('198');
     expect(shopOneOrder?.itemsCount).toBe(2);
+    expect(shopOneOrder?.paymentDetails.paymentInstruction).toBe(
+      'Transfer to bank account 123.',
+    );
     expect(shopTwoOrder?.totalAmount).toBe('600');
     expect(shopTwoOrder?.itemsCount).toBe(3);
+    expect(shopTwoOrder?.paymentDetails.paymentInstruction).toBe(
+      'Transfer to bank account 456.',
+    );
     expect(products[0].variants[0].stockQuantity).toBe(8);
     expect(products[1].variants[0].stockQuantity).toBe(4);
 
@@ -1217,6 +1331,29 @@ describe('CheckoutController (e2e)', () => {
         paymentMethod: 'MANUAL_TRANSFER',
       })
       .expect(400);
+  });
+
+  it('blocks manual transfer checkout when the seller has no payment config', async () => {
+    shops[0].paymentInstructions = null;
+    shops[0].paymentConfigStatus = 'PENDING_REVIEW';
+    products[0].shop.paymentInstructions = null;
+    products[0].shop.paymentConfigStatus = 'PENDING_REVIEW';
+
+    await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .send({
+        shopId: 'shop-1',
+        items: [{ productId: 'product-1', quantity: 1 }],
+        customer: {
+          fullName: 'Alice Checkout',
+          phone: '0123456789',
+          address: '123 Main St',
+        },
+        paymentMethod: 'MANUAL_TRANSFER',
+      })
+      .expect(400);
+
+    expect(orders).toHaveLength(0);
   });
 });
 

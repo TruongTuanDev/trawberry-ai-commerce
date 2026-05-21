@@ -1,0 +1,209 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { SectionCard } from "@/components/seller/section-card";
+import {
+  getShopPaymentSettings,
+  updateShopPaymentSettings,
+  uploadShopPaymentQr,
+} from "@/lib/seller-api";
+import { useAuthStore } from "@/stores/auth-store";
+import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+
+export function SellerPaymentSettingsPageClient() {
+  const user = useAuthStore((state) => state.sellerUser);
+  const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [form, setForm] = useState({
+    bankName: "",
+    recipientName: "",
+    recipientPhone: "",
+    recipientAccount: "",
+    sbpPhone: "",
+    paymentInstruction: "",
+    status: "PENDING_REVIEW" as "READY" | "DISABLED" | "PENDING_REVIEW",
+    staticQrImageUrl: "",
+    isReady: false,
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      if (!user || !currentShopId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const settings = await getShopPaymentSettings(currentShopId, "");
+        if (!mounted) return;
+        setForm({
+          bankName: settings.bankName ?? "",
+          recipientName: settings.recipientName ?? "",
+          recipientPhone: settings.recipientPhone ?? "",
+          recipientAccount: settings.recipientAccount ?? "",
+          sbpPhone: settings.sbpPhone ?? "",
+          paymentInstruction: settings.paymentInstruction ?? "",
+          status: settings.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+          staticQrImageUrl: settings.staticQrImageUrl ?? "",
+          isReady: settings.isReady,
+        });
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : "Unable to load payment settings.");
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [currentShopId, user]);
+
+  const handleSave = async () => {
+    if (!currentShopId) return;
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const saved = await updateShopPaymentSettings(
+        currentShopId,
+        {
+          paymentMode: "STATIC_QR",
+          status: form.status,
+          bankName: form.bankName,
+          recipientName: form.recipientName,
+          recipientPhone: form.recipientPhone,
+          recipientAccount: form.recipientAccount,
+          sbpPhone: form.sbpPhone,
+          paymentInstruction: form.paymentInstruction,
+        },
+        "",
+      );
+      setForm((current) => ({
+        ...current,
+        status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+        staticQrImageUrl: saved.staticQrImageUrl ?? "",
+        isReady: saved.isReady,
+      }));
+      setMessage("Payment settings saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save payment settings.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!currentShopId || !file) return;
+    setUploading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const saved = await uploadShopPaymentQr(currentShopId, file, "");
+      setForm((current) => ({
+        ...current,
+        staticQrImageUrl: saved.staticQrImageUrl ?? "",
+        status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+        isReady: saved.isReady,
+      }));
+      setFile(null);
+      setMessage("Static QR uploaded.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to upload QR image.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <SectionCard
+      eyebrow="Direct seller payment"
+      title="Payment settings"
+      description="Configure the static SBP or bank QR the buyer will see at checkout for this shop."
+    >
+      {loading ? (
+        <p className="text-sm text-[var(--muted)]">Loading...</p>
+      ) : (
+        <div className="space-y-6" data-testid="seller-payment-settings-page">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Bank name">
+              <input value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} className="public-input" data-testid="payment-settings-bank-name" />
+            </Field>
+            <Field label="Recipient name">
+              <input value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} className="public-input" data-testid="payment-settings-recipient-name" />
+            </Field>
+            <Field label="Recipient phone">
+              <input value={form.recipientPhone} onChange={(event) => setForm((current) => ({ ...current, recipientPhone: event.target.value }))} className="public-input" data-testid="payment-settings-recipient-phone" />
+            </Field>
+            <Field label="SBP phone">
+              <input value={form.sbpPhone} onChange={(event) => setForm((current) => ({ ...current, sbpPhone: event.target.value }))} className="public-input" data-testid="payment-settings-sbp-phone" />
+            </Field>
+            <Field label="Recipient account">
+              <input value={form.recipientAccount} onChange={(event) => setForm((current) => ({ ...current, recipientAccount: event.target.value }))} className="public-input" data-testid="payment-settings-recipient-account" />
+            </Field>
+            <Field label="Status">
+              <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as "READY" | "DISABLED" | "PENDING_REVIEW" }))} className="public-input" data-testid="payment-settings-status">
+                <option value="PENDING_REVIEW">Pending setup</option>
+                <option value="READY">Ready</option>
+                <option value="DISABLED">Disabled</option>
+              </select>
+            </Field>
+          </div>
+
+          <Field label="Buyer payment instruction">
+            <textarea value={form.paymentInstruction} onChange={(event) => setForm((current) => ({ ...current, paymentInstruction: event.target.value }))} rows={4} className="public-input min-h-32" data-testid="payment-settings-instruction" />
+          </Field>
+
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+            <p className="text-sm font-semibold text-[var(--foreground)]">Static QR image</p>
+            {form.staticQrImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={form.staticQrImageUrl} alt="Seller payment QR" className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
+            ) : (
+              <p className="mt-3 text-sm text-[var(--muted)]">No QR uploaded yet.</p>
+            )}
+            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="public-input" data-testid="payment-settings-qr-file" />
+              <button type="button" onClick={() => void handleUpload()} disabled={uploading || !file} className="public-button-secondary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-qr-upload">
+                {uploading ? "Uploading..." : "Upload QR"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => void handleSave()} disabled={saving} className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-save">
+              {saving ? "Saving..." : "Save payment settings"}
+            </button>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${form.isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+              {form.isReady ? "Ready for checkout" : "Not checkout-ready yet"}
+            </span>
+          </div>
+
+          {error ? <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+          {message ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}

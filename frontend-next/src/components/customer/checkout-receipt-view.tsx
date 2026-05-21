@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import type { CustomerCheckoutReceipt } from "@/lib/customer-api";
 
@@ -58,6 +59,11 @@ export function CheckoutReceiptView({
                 </div>
               ))}
             </div>
+            <PaymentDetailsPanel
+              details={order.paymentDetails}
+              title={`Pay ${order.shopName} directly`}
+              className="mt-4"
+            />
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-[var(--foreground)]">Order total {order.totalAmount}</p>
               <Link href={`${order.trackingPath}${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`} className="public-button-secondary px-4 py-2 text-sm" data-testid="receipt-track-link">

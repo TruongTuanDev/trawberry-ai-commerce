@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api";
+import type { PaymentDetails } from "@/lib/seller-api";
 
 export type PublicProduct = {
   id: string;
@@ -110,6 +111,7 @@ export type CheckoutOrderResponse = {
   paymentStatus: string;
   totalAmount: string;
   paymentInstructions: string | null;
+  paymentDetails: PaymentDetails;
   trackingPath: string;
   customerPhone: string;
   orders: Array<{
@@ -121,6 +123,7 @@ export type CheckoutOrderResponse = {
     paymentStatus: string;
     totalAmount: string;
     paymentInstructions: string | null;
+    paymentDetails: PaymentDetails;
     trackingPath: string;
     itemsCount: number;
   }>;
@@ -182,6 +185,7 @@ export type PublicTrackedOrder = {
   totalAmount: string;
   paymentMethod: string | null;
   paymentInstructions: string | null;
+  paymentDetails: PaymentDetails;
   customer: {
     name: string;
     phone: string;
@@ -211,6 +215,8 @@ export type PublicTrackedOrder = {
     size: number | null;
     uploadedAt: string | null;
   } | null;
+  paymentProofStatus: string;
+  buyerPaymentNote: string | null;
   paymentLogs: Array<{
     id: string;
     action: string;
@@ -340,9 +346,13 @@ export async function uploadPaymentProof(
   orderId: string,
   phone: string,
   file: File,
+  buyerNote?: string,
 ) {
   const formData = new FormData();
   formData.append("phone", phone);
+  if (buyerNote?.trim()) {
+    formData.append("buyerNote", buyerNote.trim());
+  }
   formData.append("file", file);
 
   return apiRequest<PublicTrackedOrder>(

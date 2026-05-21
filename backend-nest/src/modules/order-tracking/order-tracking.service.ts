@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
 import { FilesService } from '../files/files.service';
 import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
 import { TrackPublicOrderQueryDto } from './dto/track-public-order-query.dto';
@@ -31,17 +32,35 @@ type TrackableOrderRecord = {
   customerEmail: string | null;
   customerNote: string | null;
   customerId: string;
+  paymentModeSnapshot: string | null;
+  paymentBankNameSnapshot: string | null;
+  paymentRecipientNameSnapshot: string | null;
+  paymentRecipientPhoneSnapshot: string | null;
+  paymentRecipientAccountSnapshot: string | null;
+  paymentSbpPhoneSnapshot: string | null;
+  paymentQrImageUrlSnapshot: string | null;
+  paymentInstructionSnapshot: string | null;
   paymentProofUrl: string | null;
   paymentProofStorageKey: string | null;
   paymentProofOriginalName: string | null;
   paymentProofMimeType: string | null;
   paymentProofSize: number | null;
   paymentProofUploadedAt: Date | null;
+  paymentProofStatus: string;
+  paymentProofBuyerNote: string | null;
   createdAt: Date;
   updatedAt: Date;
   shop: {
     id: string;
     paymentInstructions: string | null;
+    bankName: string | null;
+    accountHolderName: string | null;
+    accountNumber: string | null;
+    recipientPhone: string | null;
+    sbpPhone: string | null;
+    staticQrImageUrl: string | null;
+    paymentMode: string | null;
+    paymentConfigStatus: string;
   };
   deliveryShipments?: Array<{
     provider: string;
@@ -131,6 +150,7 @@ export class OrderTrackingService {
   async uploadPaymentProof(
     orderId: string,
     phone: string,
+    buyerNote?: string | null,
     file?: ProductImageUploadFile | null,
   ) {
     const normalizedPhone = phone.trim();
@@ -174,13 +194,19 @@ export class OrderTrackingService {
         paymentProofMimeType: stored.mimeType,
         paymentProofSize: stored.size,
         paymentProofUploadedAt: new Date(),
+        paymentProofStatus: 'BUYER_MARKED_PAID',
+        paymentProofBuyerNote: buyerNote?.trim() || null,
+        paymentProofAmount: trackableOrder.totalAmount,
+        buyerMarkedPaidAt: new Date(),
         paymentReviewLogs: {
           create: {
             id: randomUUID(),
-            action: 'UPLOAD_PROOF',
+            action: 'BUYER_MARKED_PAID',
             fromStatus: trackableOrder.paymentStatus,
             toStatus: trackableOrder.paymentStatus,
-            note: `Customer uploaded payment proof: ${stored.originalName}`,
+            note: buyerNote?.trim()
+              ? `Customer marked as paid and uploaded proof: ${stored.originalName}. Note: ${buyerNote.trim()}`
+              : `Customer marked as paid and uploaded proof: ${stored.originalName}`,
             shop: {
               connect: { id: trackableOrder.shop.id },
             },
@@ -248,6 +274,7 @@ export class OrderTrackingService {
 
   private toTrackingResponse(order: TrackableOrderRecord) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
+    const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
     return {
       orderId: order.id,
       orderCode: order.orderNumber,
@@ -255,7 +282,8 @@ export class OrderTrackingService {
       paymentStatus: order.paymentStatus,
       totalAmount: order.totalAmount.toString(),
       paymentMethod: order.shippingMethodName,
-      paymentInstructions: order.shop.paymentInstructions,
+      paymentInstructions: paymentDetails.paymentInstruction,
+      paymentDetails,
       customer: {
         name: order.customerName,
         phone: order.customerPhone,
@@ -290,6 +318,8 @@ export class OrderTrackingService {
             uploadedAt: order.paymentProofUploadedAt?.toISOString() ?? null,
           }
         : null,
+      paymentProofStatus: order.paymentProofStatus,
+      buyerPaymentNote: order.paymentProofBuyerNote,
       paymentLogs: order.paymentReviewLogs.map((log) => ({
         id: log.id,
         action: log.action,
@@ -342,6 +372,14 @@ export class OrderTrackingService {
         select: {
           id: true,
           paymentInstructions: true,
+          bankName: true,
+          accountHolderName: true,
+          accountNumber: true,
+          recipientPhone: true,
+          sbpPhone: true,
+          staticQrImageUrl: true,
+          paymentMode: true,
+          paymentConfigStatus: true,
         },
       },
       deliveryShipments: {
@@ -377,7 +415,17 @@ export class OrderTrackingService {
       paymentReviewLogs: {
         where: {
           action: {
-            in: ['UPLOAD_PROOF', 'MARK_PAID', 'REJECT_PAYMENT', 'ADD_NOTE'],
+            in: [
+              'UPLOAD_PROOF',
+              'BUYER_MARKED_PAID',
+              'MARK_PAID',
+              'SELLER_CONFIRMED',
+              'REJECT_PAYMENT',
+              'SELLER_REJECTED',
+              'ADD_NOTE',
+              'ADMIN_CONFIRMED',
+              'ADMIN_REJECTED',
+            ],
           },
         },
         orderBy: { createdAt: 'desc' as const },

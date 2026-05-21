@@ -122,10 +122,37 @@ async function createPublicProduct(
       data: {
         name: input.shopName,
         slug: input.shopSlug,
-        paymentInstructions: `Manual transfer for ${input.shopName}`,
       },
     },
   );
+  await backendJson(request, `/api/shops/${shop.id}/payment-settings`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {
+      paymentMode: "STATIC_QR",
+      status: "READY",
+      bankName: `${input.shopName} Bank`,
+      recipientName: input.shopName,
+      recipientPhone: "+79990000008",
+      recipientAccount: `ACC-${input.wbNmId}`,
+      sbpPhone: "+79990000008",
+      paymentInstruction: `Pay ${input.shopName} directly via seller QR`,
+    },
+  });
+  await backendJson(request, `/api/shops/${shop.id}/payment-settings/qr-image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    multipart: {
+      file: {
+        name: `${input.shopSlug}-qr.png`,
+        mimeType: "image/png",
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      },
+    },
+  });
   const product = await backendJson<{
     id: string;
     variants: Array<{ id: string }>;
@@ -240,6 +267,9 @@ test("customer checks out products from two shops into split orders", async ({
   const orderBCard = page.getByTestId("checkout-order-card").filter({ hasText: productB.shop.name });
   await expect(orderACard).toBeVisible();
   await expect(orderBCard).toBeVisible();
+  await expect(page.getByAltText("Seller payment QR")).toHaveCount(2);
+  await expect(orderACard.getByText(`Pay ${productA.shop.name} directly via seller QR`)).toBeVisible();
+  await expect(orderBCard.getByText(`Pay ${productB.shop.name} directly via seller QR`)).toBeVisible();
   const orderACode = (await orderACard.innerText()).match(/ORD-\d+-\d+/)?.[0];
   const orderBCode = (await orderBCard.innerText()).match(/ORD-\d+-\d+/)?.[0];
   expect(orderACode).toBeTruthy();

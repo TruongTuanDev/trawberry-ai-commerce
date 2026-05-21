@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api";
+import type { PaymentDetails } from "@/lib/seller-api";
 
 export type CustomerCheckoutReceipt = {
   checkoutId: string;
@@ -30,6 +31,7 @@ export type CustomerCheckoutReceipt = {
     paymentStatus: string;
     totalAmount: string;
     paymentInstructions: string | null;
+    paymentDetails: PaymentDetails;
     trackingPath: string;
     deliveryStatus: string | null;
     itemsCount: number;

@@ -158,7 +158,7 @@ try {
   detailPaymentMethod = $detail.paymentMethod
   noteLogCreated = @($noted.reviewLogs | Where-Object { $_.action -eq 'ADD_NOTE' }).Count -gt 0
   paidStatus = $paid.paymentStatus
-  paidLogCreated = @($paid.reviewLogs | Where-Object { $_.action -eq 'MARK_PAID' }).Count -gt 0
+  paidLogCreated = @($paid.reviewLogs | Where-Object { $_.action -eq 'SELLER_CONFIRMED' }).Count -gt 0
   reviewLogCount = @($paid.reviewLogs).Count
   orderDetailPaymentStatus = $orderDetail.paymentStatus
   crossShopStatus = $crossShopStatus

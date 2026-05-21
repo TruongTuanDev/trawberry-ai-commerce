@@ -9,9 +9,31 @@ export type SellerOrderStatus =
   | "CANCELLED";
 export type PaymentReviewAction =
   | "MARK_PAID"
-  | "REJECT_PAYMENT"
+  | "SELLER_CONFIRMED"
+  | "SELLER_REJECTED"
+  | "ADMIN_CONFIRMED"
+  | "ADMIN_REJECTED"
   | "ADD_NOTE"
-  | "UPLOAD_PROOF";
+  | "UPLOAD_PROOF"
+  | "BUYER_MARKED_PAID";
+
+export type SellerPaymentProofStatus =
+  | "NOT_SUBMITTED"
+  | "BUYER_MARKED_PAID"
+  | "SELLER_CONFIRMED"
+  | "SELLER_REJECTED"
+  | "ADMIN_REVIEW";
+
+export type PaymentDetails = {
+  mode: string | null;
+  bankName: string | null;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  recipientAccount: string | null;
+  sbpPhone: string | null;
+  staticQrImageUrl: string | null;
+  paymentInstruction: string | null;
+};
 export type StockStatus =
   | "IN_STOCK"
   | "LOW_STOCK"
@@ -252,6 +274,7 @@ export type SellerPaymentItem = {
   paymentStatus: string;
   paymentMethod: string | null;
   paymentInstructions: string | null;
+  paymentDetails: PaymentDetails;
   totalAmount: string;
   shippingAddress: string;
   customer: {
@@ -282,7 +305,24 @@ export type SellerPaymentItem = {
     size: number | null;
     uploadedAt: string | null;
   } | null;
+  paymentProofStatus: SellerPaymentProofStatus | string;
+  buyerPaymentNote: string | null;
   reviewLogs: PaymentReviewLog[];
+};
+
+export type ShopPaymentSettings = {
+  shopId: string;
+  paymentMode: string;
+  status: string;
+  bankName: string | null;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  recipientAccount: string | null;
+  sbpPhone: string | null;
+  staticQrImageUrl: string | null;
+  paymentInstruction: string | null;
+  isReady: boolean;
+  usesLegacyInstructions: boolean;
 };
 
 export type SellerPaymentsResponse = {
@@ -1473,6 +1513,7 @@ export async function listPayments(
     size: number;
     search?: string;
     status?: string;
+    proofStatus?: string;
   },
   token?: string,
 ) {
@@ -1485,6 +1526,9 @@ export async function listPayments(
   }
   if (query.status) {
     params.set("status", query.status);
+  }
+  if (query.proofStatus) {
+    params.set("proofStatus", query.proofStatus);
   }
 
   return apiRequest<SellerPaymentsResponse>(
@@ -1526,6 +1570,22 @@ export async function markPaymentPaid(
   );
 }
 
+export async function confirmPayment(
+  shopId: string,
+  orderId: string,
+  payload?: { note?: string },
+  token?: string,
+) {
+  return apiRequest<SellerPaymentItem>(
+    `/api/shops/${shopId}/payments/${orderId}/confirm`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+}
+
 export async function rejectPayment(
   shopId: string,
   orderId: string,
@@ -1554,6 +1614,58 @@ export async function addPaymentNote(
       method: "POST",
       token,
       body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getShopPaymentSettings(shopId: string, token?: string) {
+  return apiRequest<ShopPaymentSettings>(
+    `/api/shops/${shopId}/payment-settings`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function updateShopPaymentSettings(
+  shopId: string,
+  payload: {
+    paymentMode?: "STATIC_QR";
+    status?: "READY" | "DISABLED" | "PENDING_REVIEW";
+    bankName?: string;
+    recipientName?: string;
+    recipientPhone?: string;
+    recipientAccount?: string;
+    sbpPhone?: string;
+    paymentInstruction?: string;
+  },
+  token?: string,
+) {
+  return apiRequest<ShopPaymentSettings>(
+    `/api/shops/${shopId}/payment-settings`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function uploadShopPaymentQr(
+  shopId: string,
+  file: File,
+  token?: string,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<ShopPaymentSettings>(
+    `/api/shops/${shopId}/payment-settings/qr-image`,
+    {
+      method: "POST",
+      token,
+      body: formData,
     },
   );
 }

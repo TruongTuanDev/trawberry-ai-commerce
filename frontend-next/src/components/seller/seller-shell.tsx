@@ -18,6 +18,8 @@ const navigation = [
   { href: "/seller/orders", label: "Orders" },
   { href: "/seller/support-cases", label: "Support" },
   { href: "/seller/payments", label: "Payments" },
+  { href: "/seller/payments-to-confirm", label: "To confirm" },
+  { href: "/seller/payment-settings", label: "Payment settings" },
   { href: "/seller/onboarding", label: "Onboarding" },
   { href: "/seller/settings", label: "Settings" },
 ];
