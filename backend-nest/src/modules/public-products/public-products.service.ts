@@ -24,6 +24,8 @@ type PublicProductRecord = {
   averageRating: Prisma.Decimal | null;
   feedbackCount: number | null;
   categoryId: bigint | null;
+  createdAt: Date;
+  publishedAt: Date | null;
   updatedAt: Date;
   images: ProductImage[];
   variants: ProductVariant[];
@@ -490,7 +492,17 @@ export class PublicProductsService {
           ? left.comparedTo(right)
           : right.comparedTo(left);
       }
-      return b.updatedAt.getTime() - a.updatedAt.getTime();
+      const leftFreshness = (
+        b.publishedAt ??
+        b.createdAt ??
+        b.updatedAt
+      ).getTime();
+      const rightFreshness = (
+        a.publishedAt ??
+        a.createdAt ??
+        a.updatedAt
+      ).getTime();
+      return leftFreshness - rightFreshness;
     });
   }
 
