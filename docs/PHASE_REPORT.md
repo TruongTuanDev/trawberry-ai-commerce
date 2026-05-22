@@ -1,5 +1,39 @@
 # Phase Report
 
+## 2026-05-22 Admin Seller Fee Settings + Seller Revenue Dashboard
+
+- added manual marketplace fee accounting for the direct-to-seller payment model
+- added Prisma finance models:
+  - `ShopCommissionSetting`
+  - `PlatformCommissionSetting`
+  - `SellerFeeLedgerEntry`
+  - `SellerMonthlyInvoice`
+- added backend finance endpoints:
+  - `GET /api/admin/finance/seller-fees`
+  - `PATCH /api/admin/finance/shops/:shopId/commission`
+  - `POST /api/admin/finance/shops/:shopId/invoices/generate`
+  - `POST /api/admin/finance/invoices/:invoiceId/mark-paid`
+  - `GET /api/admin/finance/invoices`
+  - `GET /api/seller/shops/:shopId/dashboard-metrics`
+  - `GET /api/seller/shops/:shopId/finance-ledger`
+  - `GET /api/seller/shops/:shopId/invoices`
+- final payment confirmation now creates idempotent fee ledger entries
+- commission percent is snapshotted at ledger-entry creation time, so later commission changes do not rewrite history
+- cancelled finance cases now use adjustment logic instead of deleting prior fee history
+- added admin finance page:
+  - `/admin/finance/seller-fees`
+- added seller finance visibility:
+  - real `/seller/dashboard` metrics
+  - `/seller/finance` ledger and invoice tables
+- added verification targets:
+  - `backend-nest npm run smoke:seller-fee-dashboard`
+  - `frontend-next npm run test:e2e:seller-fee-dashboard`
+- current limitation remains manual by design:
+  - no seller payout automation
+  - no automatic seller bank debit
+  - no refund settlement automation
+  - deposit flow does not yet have a separate deposit-vs-final ledger lifecycle
+
 ## 2026-05-22 Payment Method Strategy For Yandex Delivery
 
 - split marketplace payment choice into explicit strategy methods instead of legacy `MANUAL_TRANSFER` / `CASH_ON_DELIVERY`

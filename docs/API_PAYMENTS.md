@@ -1,5 +1,40 @@
 # Payments API
 
+## 2026-05-22 Seller Fee Ledger For Direct-to-Seller Payment
+
+Direct-to-seller payment now has a separate finance layer.
+
+Important rule:
+
+- the marketplace still does not hold buyer funds in this phase
+- platform fees are calculated from confirmed seller revenue through ledger entries
+
+New finance-facing models:
+
+- `ShopCommissionSetting`
+- `PlatformCommissionSetting`
+- `SellerFeeLedgerEntry`
+- `SellerMonthlyInvoice`
+
+Ledger entries are created only on final confirmed seller payment:
+
+- prepaid seller QR -> seller confirmed prepaid payment
+- pay on delivery seller QR -> seller confirmed delivery payment
+- deposit then delivery -> seller confirmed final payment
+
+Excluded from fee calculation:
+
+- cancelled orders
+- rejected orders
+- refund-reversal situations after adjustment
+- delivery fee when it is separated from product revenue
+
+Manual invoice behavior:
+
+- admin can generate one invoice per `shopId + billingPeriod`
+- admin can mark invoice paid manually
+- no automatic bank debit is attempted
+
 ## 2026-05-22 Payment Method Strategy For Yandex Delivery
 
 Current buyer-facing payment methods are now:

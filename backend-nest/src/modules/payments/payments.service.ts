@@ -16,6 +16,7 @@ import { AddPaymentNoteDto } from './dto/add-payment-note.dto';
 import { ListShopPaymentsQueryDto } from './dto/list-shop-payments-query.dto';
 import { MarkPaymentPaidDto } from './dto/mark-payment-paid.dto';
 import { RejectPaymentDto } from './dto/reject-payment.dto';
+import { SellerFinanceService } from '../seller-finance/seller-finance.service';
 
 const PENDING_PAYMENT_STATUSES = [
   'PENDING',
@@ -115,7 +116,10 @@ type PaymentOrderRecord = {
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sellerFinanceService: SellerFinanceService,
+  ) {}
 
   async listByShop(shopId: string, query: ListShopPaymentsQueryDto) {
     const page = Number(query.page ?? 1);
@@ -264,6 +268,10 @@ export class PaymentsService {
           },
         },
       });
+
+      if (!isSellerAcceptingCod) {
+        await this.sellerFinanceService.syncConfirmedOrderLedger(tx, orderId);
+      }
 
       return tx.order.findFirst({
         where: { id: orderId, shopId },
@@ -573,6 +581,13 @@ export class PaymentsService {
           },
         },
       });
+
+      if (
+        paymentStatus === 'PAID' ||
+        paymentStatus === 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
+      ) {
+        await this.sellerFinanceService.syncConfirmedOrderLedger(tx, order.id);
+      }
 
       return tx.order.findFirst({
         where: { id: order.id },

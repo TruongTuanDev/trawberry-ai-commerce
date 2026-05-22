@@ -46,6 +46,21 @@ Readiness breakdown:
 
 The system is already beyond a toy demo. Auth, seller onboarding, seller catalog curation, public marketplace, cart validation, multi-shop split checkout, customer account, support cases, manual payment review, manual delivery supervision, and admin ops all have real code paths plus meaningful backend and browser verification. The main gap is not breadth. The main gap is production-grade operational depth: real payment execution, seller finance, refund/dispute lifecycle, automated delivery integration, richer admin controls, compliance posture, and production platform hardening.
 
+Update on 2026-05-22 after the seller finance phase:
+
+- seller finance is no longer fully missing
+- the stack now has:
+  - shop commission settings
+  - platform default commission
+  - seller fee ledger entries
+  - manual monthly invoices
+  - seller dashboard metrics and seller finance UI
+- remaining finance blocker is now narrower:
+  - no payout execution
+  - no seller balance / reserve management
+  - no refund reconciliation automation
+  - no bank auto-debit or settlement automation
+
 ### Top 10 Blockers
 
 1. No real payment provider, webhook ingestion, settlement, retry, reconciliation, refund, or dispute execution.

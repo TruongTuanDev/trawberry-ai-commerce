@@ -201,6 +201,52 @@ export type ShopSummary = {
   productCount: number;
 };
 
+export type SellerDashboardMetrics = {
+  ordersToday: number;
+  revenueToday: string;
+  confirmedRevenueToday: string;
+  ordersThisMonth: number;
+  revenueThisMonth: string;
+  confirmedRevenueThisMonth: string;
+  pendingPaymentOrders: number;
+  deliveryInProgressOrders: number;
+  commissionPercent: string;
+  estimatedPlatformFeeThisMonth: string;
+  billingPeriod: string;
+  daysLeftInMonth: number;
+};
+
+export type SellerFinanceLedgerEntry = {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  billingPeriod: string;
+  productRevenueAmount: string;
+  deliveryFeeAmount: string;
+  commissionPercent: string;
+  commissionAmount: string;
+  status: string;
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+  invoiceId: string | null;
+};
+
+export type SellerFinanceInvoice = {
+  id: string;
+  sellerId: string;
+  shopId: string;
+  billingPeriod: string;
+  totalRevenue: string;
+  totalCommission: string;
+  status: string;
+  dueDate: string | null;
+  issuedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type SellerOrderListItem = {
   id: string;
   orderNumber: string;
@@ -901,6 +947,42 @@ export async function getSellerShops(token?: string) {
     method: "GET",
     token,
   });
+}
+
+export async function getSellerDashboardMetrics(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<SellerDashboardMetrics>(
+    `/api/seller/shops/${shopId}/dashboard-metrics`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function getSellerFinanceLedger(shopId: string, token?: string) {
+  return apiRequest<SellerFinanceLedgerEntry[]>(
+    `/api/seller/shops/${shopId}/finance-ledger`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function getSellerFinanceInvoices(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<SellerFinanceInvoice[]>(
+    `/api/seller/shops/${shopId}/invoices`,
+    {
+      method: "GET",
+      token,
+    },
+  );
 }
 
 export async function getShopProducts(

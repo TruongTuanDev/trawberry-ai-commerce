@@ -1,5 +1,28 @@
 # Project Status
 
+## Admin Seller Fee Settings + Seller Revenue Dashboard - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Marketplace direct-to-seller payment now has a manual fee-accounting layer.
+- Admin finance operations now include:
+  - `/admin/finance/seller-fees`
+  - per-shop commission percent
+  - monthly invoice generation
+  - manual invoice paid marking
+- Seller finance visibility now includes:
+  - `/seller/dashboard` live revenue/fee cards
+  - `/seller/finance` ledger and invoice history
+- Fee engine behavior:
+  - only final confirmed seller-paid orders count
+  - product revenue excludes separate delivery fee
+  - commission percent is snapshotted into each ledger row
+  - historical billing periods are retained
+- Current limitation remains intentional:
+  - no automatic payout
+  - no automatic seller bank debit
+  - manual invoice workflow only
+  - refund reconciliation is still a future phase
+
 ## Payment Method Strategy For Yandex Delivery - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

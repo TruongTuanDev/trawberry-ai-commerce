@@ -21,6 +21,7 @@ import { WildberriesImportsModule } from './modules/wb-imports/wildberries-impor
 import { WbSyncModule } from './modules/wb-sync/wb-sync.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CustomerAccountModule } from './modules/customer-account/customer-account.module';
+import { SellerFinanceModule } from './modules/seller-finance/seller-finance.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -51,6 +52,7 @@ import { HealthController } from './health.controller';
     WbSyncModule,
     CategoriesModule,
     CustomerAccountModule,
+    SellerFinanceModule,
     PublicProductsModule,
     CheckoutModule,
     OrderTrackingModule,

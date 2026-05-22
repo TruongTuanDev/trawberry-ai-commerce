@@ -33,6 +33,9 @@ model User {
   productImportSessions   ProductImportSession[]
   wbSyncRuns              WbSyncRun[]            @relation("WbSyncRunSeller")
   customerAddresses       CustomerAddress[]
+  createdShopCommissionSettings ShopCommissionSetting[] @relation("ShopCommissionSettingAdmin")
+  sellerFeeLedgerEntries  SellerFeeLedgerEntry[] @relation("SellerFeeLedgerSeller")
+  sellerMonthlyInvoices   SellerMonthlyInvoice[] @relation("SellerMonthlyInvoiceSeller")
 
   @@map("users")
 }
@@ -229,6 +232,9 @@ model Shop {
   productImportSessions ProductImportSession[]
   wbCredentials         ShopWbCredential?
   wbSyncRuns            WbSyncRun[]
+  commissionSettings    ShopCommissionSetting[]
+  sellerFeeLedgerEntries SellerFeeLedgerEntry[]
+  sellerMonthlyInvoices SellerMonthlyInvoice[]
 
   @@map("shops")
 }
@@ -520,6 +526,7 @@ model Order {
   deliveryShipments        DeliveryShipment[]
   deliveryEvents           DeliveryEvent[]
   deliveryComments         DeliveryComment[]
+  sellerFeeLedgerEntries   SellerFeeLedgerEntry[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
@@ -541,10 +548,91 @@ model MarketplaceCheckout {
   customer       User?    @relation("CustomerMarketplaceCheckouts", fields: [customerUserId], references: [id], onDelete: SetNull)
   orders         Order[]
   supportCases   SupportCase[]
+  sellerFeeLedgerEntries SellerFeeLedgerEntry[]
 
   @@index([customerUserId, createdAt])
   @@index([customerPhone, checkoutCode])
   @@map("marketplace_checkouts")
+}
+
+model ShopCommissionSetting {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId            String   @map("shop_id") @db.Uuid
+  commissionPercent Decimal  @map("commission_percent") @db.Decimal(5, 2)
+  activeFrom        DateTime @map("active_from") @db.Timestamptz(6)
+  activeTo          DateTime? @map("active_to") @db.Timestamptz(6)
+  createdByAdminId  String   @map("created_by_admin_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop              Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdByAdmin    User     @relation("ShopCommissionSettingAdmin", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, activeFrom, activeTo])
+  @@map("shop_commission_settings")
+}
+
+model PlatformCommissionSetting {
+  id                       String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  defaultCommissionPercent Decimal  @map("default_commission_percent") @db.Decimal(5, 2)
+  activeFrom               DateTime @map("active_from") @db.Timestamptz(6)
+  activeTo                 DateTime? @map("active_to") @db.Timestamptz(6)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([activeFrom, activeTo])
+  @@map("platform_commission_settings")
+}
+
+model SellerMonthlyInvoice {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sellerId        String   @map("seller_id") @db.Uuid
+  shopId          String   @map("shop_id") @db.Uuid
+  billingPeriod   String   @map("billing_period") @db.VarChar(7)
+  totalRevenue    Decimal  @map("total_revenue") @db.Decimal(12, 2)
+  totalCommission Decimal  @map("total_commission") @db.Decimal(12, 2)
+  status          String   @default("DRAFT") @db.VarChar(50)
+  dueDate         DateTime? @map("due_date") @db.Timestamptz(6)
+  issuedAt        DateTime? @map("issued_at") @db.Timestamptz(6)
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  seller          User     @relation("SellerMonthlyInvoiceSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  ledgerEntries   SellerFeeLedgerEntry[]
+
+  @@unique([shopId, billingPeriod])
+  @@index([sellerId, billingPeriod])
+  @@index([status, billingPeriod])
+  @@map("seller_monthly_invoices")
+}
+
+model SellerFeeLedgerEntry {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sellerId             String   @map("seller_id") @db.Uuid
+  shopId               String   @map("shop_id") @db.Uuid
+  orderId              String   @map("order_id") @db.Uuid
+  checkoutId           String?  @map("checkout_id") @db.Uuid
+  invoiceId            String?  @map("invoice_id") @db.Uuid
+  billingPeriod        String   @map("billing_period") @db.VarChar(7)
+  productRevenueAmount Decimal  @map("product_revenue_amount") @db.Decimal(12, 2)
+  deliveryFeeAmount    Decimal? @map("delivery_fee_amount") @db.Decimal(12, 2)
+  commissionPercent    Decimal  @map("commission_percent") @db.Decimal(5, 2)
+  commissionAmount     Decimal  @map("commission_amount") @db.Decimal(12, 2)
+  status               String   @default("PENDING") @db.VarChar(50)
+  source               String   @db.VarChar(50)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  seller               User     @relation("SellerFeeLedgerSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  shop                 Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  checkout             MarketplaceCheckout? @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+  invoice              SellerMonthlyInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([sellerId, billingPeriod, status])
+  @@index([shopId, billingPeriod, status])
+  @@index([orderId, source])
+  @@index([invoiceId])
+  @@map("seller_fee_ledger_entries")
 }
 
 model SupportCase {

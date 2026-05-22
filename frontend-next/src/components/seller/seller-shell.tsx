@@ -20,6 +20,7 @@ const navigation = [
   { href: "/seller/payments", label: "Payments" },
   { href: "/seller/payments-to-confirm", label: "To confirm" },
   { href: "/seller/payment-settings", label: "Payment settings" },
+  { href: "/seller/finance", label: "Finance" },
   { href: "/seller/onboarding", label: "Onboarding" },
   { href: "/seller/settings", label: "Settings" },
 ];

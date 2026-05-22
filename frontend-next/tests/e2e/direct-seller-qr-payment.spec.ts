@@ -324,7 +324,18 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   await buyerPage.reload();
   await expect(buyerPage.getByTestId("tracked-payment-status")).toHaveText("PAID");
 
-  await sellerReviewContext.close();
-  await adminContext.close();
-  await buyerContext.close();
+  await safeCloseContext(sellerReviewContext);
+  await safeCloseContext(adminContext);
+  await safeCloseContext(buyerContext);
 });
+
+async function safeCloseContext(context: { close: () => Promise<void> }) {
+  try {
+    await context.close();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ENOENT")) {
+      return;
+    }
+    throw error;
+  }
+}

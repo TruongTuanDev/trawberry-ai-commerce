@@ -1,5 +1,24 @@
 # backend-nest
 
+## Seller Finance
+
+- Direct-to-seller payment now has a ledger-based fee model.
+- Admin finance endpoints:
+  - `GET /api/admin/finance/seller-fees`
+  - `PATCH /api/admin/finance/shops/:shopId/commission`
+  - `POST /api/admin/finance/shops/:shopId/invoices/generate`
+  - `POST /api/admin/finance/invoices/:invoiceId/mark-paid`
+  - `GET /api/admin/finance/invoices`
+- Seller finance endpoints:
+  - `GET /api/seller/shops/:shopId/dashboard-metrics`
+  - `GET /api/seller/shops/:shopId/finance-ledger`
+  - `GET /api/seller/shops/:shopId/invoices`
+- Verification entry:
+
+```bash
+npm run smoke:seller-fee-dashboard
+```
+
 ## Payment Method Strategy For Yandex Delivery
 
 - Checkout payment method choices are now:

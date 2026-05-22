@@ -1,5 +1,18 @@
 # frontend-next
 
+## Seller Finance
+
+- Admin finance UI route:
+  - `/admin/finance/seller-fees`
+- Seller finance UI routes:
+  - `/seller/dashboard`
+  - `/seller/finance`
+- Browser verification entry:
+
+```bash
+npm run test:e2e:seller-fee-dashboard
+```
+
 ## Payment Method Strategy For Yandex Delivery
 
 - Checkout now distinguishes:

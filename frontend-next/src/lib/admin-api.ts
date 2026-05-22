@@ -435,6 +435,43 @@ export type AdminPaymentSupervisionRow = SellerPaymentItem & {
   paymentMethodLabel?: string | null;
 };
 
+export type AdminSellerFeeRow = {
+  shopId: string;
+  shopName: string;
+  sellerName: string | null;
+  sellerEmail: string;
+  sellerPhone: string | null;
+  ordersToday: number;
+  revenueToday: string;
+  ordersThisMonth: number;
+  revenueThisMonth: string;
+  confirmedRevenueThisMonth: string;
+  commissionPercent: string;
+  platformFeeDue: string;
+  billingPeriod: string;
+  daysLeftInMonth: number;
+  invoiceStatus: string | null;
+};
+
+export type AdminSellerFeeInvoice = {
+  id: string;
+  sellerId: string;
+  shopId: string;
+  shopName: string;
+  sellerName: string | null;
+  sellerEmail: string;
+  sellerPhone: string | null;
+  billingPeriod: string;
+  totalRevenue: string;
+  totalCommission: string;
+  status: string;
+  dueDate: string | null;
+  issuedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export async function getAdminDashboardSummary(query?: {
   dateFrom?: string;
   dateTo?: string;
@@ -546,6 +583,56 @@ export async function listAdminPayments(query?: {
       method: "GET",
     },
   );
+}
+
+export async function listAdminSellerFees() {
+  return apiRequest<AdminSellerFeeRow[]>("/api/admin/finance/seller-fees", {
+    method: "GET",
+  });
+}
+
+export async function updateAdminShopCommission(
+  shopId: string,
+  payload: { commissionPercent: number },
+) {
+  return apiRequest<{
+    shopId: string;
+    shopName: string;
+    commissionPercent: string;
+    activeFrom: string;
+  }>(`/api/admin/finance/shops/${shopId}/commission`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function generateAdminSellerFeeInvoice(
+  shopId: string,
+  payload: { billingPeriod: string },
+) {
+  return apiRequest<AdminSellerFeeInvoice>(
+    `/api/admin/finance/shops/${shopId}/invoices/generate`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function markAdminSellerFeeInvoicePaid(invoiceId: string) {
+  return apiRequest<AdminSellerFeeInvoice>(
+    `/api/admin/finance/invoices/${invoiceId}/mark-paid`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  );
+}
+
+export async function listAdminSellerFeeInvoices() {
+  return apiRequest<AdminSellerFeeInvoice[]>("/api/admin/finance/invoices", {
+    method: "GET",
+  });
 }
 
 export async function getAdminPayment(orderId: string) {

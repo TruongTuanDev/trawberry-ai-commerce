@@ -66,6 +66,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               Payments supervision
             </Link>
             <Link
+              href="/admin/finance/seller-fees"
+              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                pathname.startsWith("/admin/finance") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              Finance / Seller fees
+            </Link>
+            <Link
               href="/admin/queues"
               className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
                 pathname.startsWith("/admin/queues") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"

@@ -7,10 +7,14 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { SellerFinanceService } from '../seller-finance/seller-finance.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sellerFinanceService: SellerFinanceService,
+  ) {}
 
   async listByShop(shopId: string, query: ListShopOrdersQueryDto) {
     const page = query.page ?? 1;
@@ -180,7 +184,7 @@ export class OrdersService {
         }
       }
 
-      return tx.order.update({
+      const updatedOrder = await tx.order.update({
         where: { id: order.id },
         data: {
           status: dto.status,
@@ -215,6 +219,15 @@ export class OrdersService {
           },
         },
       });
+
+      if (dto.status === 'CANCELLED') {
+        await this.sellerFinanceService.syncCancellationAdjustment(
+          tx,
+          order.id,
+        );
+      }
+
+      return updatedOrder;
     });
 
     return this.toOrderResponse(updated);

@@ -316,19 +316,36 @@ test("pay on delivery via seller QR works with manual Yandex flow", async ({
   await page.getByTestId("seller-confirm-delivery-payment").click();
   await expect(page.getByText("Payment step updated.")).toBeVisible();
 
-  const adminPage = await browser.newPage();
-  await adminPage.goto("/admin-login");
-  await adminPage.getByTestId("admin-login-email").fill(
-    "demo-admin@trawberry.local",
+  const adminToken = (
+    await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
+      method: "POST",
+      data: {
+        email: "demo-admin@trawberry.local",
+        password: "DemoAdmin123!",
+      },
+    })
+  ).accessToken;
+  const adminQueue = await backendJson<{ items: Array<{ id: string }> }>(
+    request,
+    `/api/admin/payments?page=1&size=10&shopId=${shop.id}&status=SELLER_CONFIRMED_DELIVERY_PAYMENT`,
+    {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    },
   );
-  await adminPage.getByTestId("admin-login-password").fill("DemoAdmin123!");
-  await adminPage.getByTestId("admin-login-submit").click();
-  await adminPage.waitForURL("**/admin/dashboard");
-  await adminPage.goto("/admin/payments-supervision");
-  await expect(
-    adminPage.getByTestId("admin-payments-supervision-page"),
-  ).toBeVisible();
+  expect(
+    adminQueue.items.some((item) => item.id === orderId),
+  ).toBeTruthy();
 
-  await adminPage.close();
-  await buyerContext.close();
+  await safeCloseContext(buyerContext);
 });
+
+async function safeCloseContext(context: { close: () => Promise<void> }) {
+  try {
+    await context.close();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("ENOENT")) {
+      return;
+    }
+    throw error;
+  }
+}
