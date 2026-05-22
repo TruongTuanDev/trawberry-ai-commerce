@@ -7,6 +7,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -70,6 +71,18 @@ class CheckoutCustomerDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiProperty({ nullable: true, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number;
+
+  @ApiProperty({ nullable: true, required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number;
 }
 
 export class CreateCheckoutOrderDto {

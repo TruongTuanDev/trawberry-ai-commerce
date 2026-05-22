@@ -58,6 +58,11 @@ type PaymentOrderRecord = {
     staticQrImageUrl: string | null;
     paymentMode: string | null;
     paymentConfigStatus: string;
+    deliverySettings?: {
+      defaultCarrier: string;
+      sameCityPreferredCarrier: string;
+      enabledCarriers: Prisma.JsonValue;
+    } | null;
   };
   items: Array<{
     id: string;
@@ -194,6 +199,7 @@ export class PaymentsService {
         where: { id: orderId },
         data: {
           paymentStatus: 'PAID',
+          status: this.nextPaidOrderStatus(order),
           paymentProofStatus: 'SELLER_CONFIRMED',
           sellerConfirmedPaidAt: new Date(),
           paymentReviewLogs: {
@@ -459,7 +465,9 @@ export class PaymentsService {
       paymentStatus === 'REJECTED' &&
       (order.status === 'PENDING' || order.status === 'NEW')
         ? 'CANCELLED'
-        : order.status;
+        : paymentStatus === 'PAID'
+          ? this.nextPaidOrderStatus(order)
+          : order.status;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.order.update({
@@ -587,6 +595,13 @@ export class PaymentsService {
           staticQrImageUrl: true,
           paymentMode: true,
           paymentConfigStatus: true,
+          deliverySettings: {
+            select: {
+              defaultCarrier: true,
+              sameCityPreferredCarrier: true,
+              enabledCarriers: true,
+            },
+          },
         },
       },
       items: {
@@ -604,5 +619,28 @@ export class PaymentsService {
         },
       },
     };
+  }
+
+  private nextPaidOrderStatus(order: PaymentOrderRecord) {
+    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
+      return order.status;
+    }
+
+    const deliverySettings = order.shop.deliverySettings;
+    const enabledCarriers = Array.isArray(deliverySettings?.enabledCarriers)
+      ? deliverySettings.enabledCarriers.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : [];
+    const prefersYandex =
+      deliverySettings?.defaultCarrier === 'YANDEX' ||
+      deliverySettings?.sameCityPreferredCarrier === 'YANDEX' ||
+      enabledCarriers.includes('YANDEX');
+
+    if (prefersYandex) {
+      return 'READY_TO_CREATE_YANDEX';
+    }
+
+    return order.status === 'PENDING' ? 'NEW' : order.status;
   }
 }

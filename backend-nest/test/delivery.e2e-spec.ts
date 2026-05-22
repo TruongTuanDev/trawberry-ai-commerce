@@ -127,8 +127,14 @@ type StoredDeliveryShipment = {
   priceCurrency: string;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierName?: string | null;
   courierPhone: string | null;
   estimatedDeliveryAt: Date | null;
+  packagePreset?: string | null;
+  packageWeightGram?: number | null;
+  packageLengthCm?: number | null;
+  packageWidthCm?: number | null;
+  packageHeightCm?: number | null;
   deliveryNote: string | null;
   failureReasonCode: string | null;
   failureReasonText: string | null;
@@ -137,7 +143,18 @@ type StoredDeliveryShipment = {
   lastAdminNote: string | null;
   lastSellerNote: string | null;
   pickupAddress: string;
+  pickupLatitude?: DecimalLike | null;
+  pickupLongitude?: DecimalLike | null;
   dropoffAddress: string;
+  dropoffLatitude?: DecimalLike | null;
+  dropoffLongitude?: DecimalLike | null;
+  recipientName?: string | null;
+  recipientPhone?: string | null;
+  manualYandexOrderId?: string | null;
+  yandexClaimId?: string | null;
+  yandexStatus?: string | null;
+  yandexPrice?: DecimalLike | null;
+  yandexTrackingLink?: string | null;
   rawProviderPayload: Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
@@ -175,7 +192,7 @@ describe('DeliveryController (e2e)', () => {
   const prismaMock = {
     user: { findUnique: jest.fn() },
     shop: { findUnique: jest.fn() },
-    order: { findFirst: jest.fn(), findMany: jest.fn() },
+    order: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
     shopDeliverySetting: { findUnique: jest.fn(), upsert: jest.fn() },
     deliveryOffer: { deleteMany: jest.fn(), create: jest.fn() },
     deliveryShipment: {
@@ -441,6 +458,18 @@ describe('DeliveryController (e2e)', () => {
       if (where?.shopId) {
         rows = rows.filter((entry) => entry.shopId === where.shopId);
       }
+      if (where?.status) {
+        if (typeof where.status === 'string') {
+          rows = rows.filter((entry) => entry.status === where.status);
+        } else if ('notIn' in where.status) {
+          rows = rows.filter(
+            (entry) =>
+              !(where.status.notIn as string[]).includes(
+                entry.status ?? 'NEW',
+              ),
+          );
+        }
+      }
       rows = rows.filter((entry) => {
         const activeShipment = shipments.find(
           (shipment) =>
@@ -452,6 +481,26 @@ describe('DeliveryController (e2e)', () => {
         return !activeShipment;
       });
       return Promise.resolve(rows.map((order) => adminOrderFor(order.id)));
+    });
+
+    prismaMock.order.update.mockImplementation(({ where, data }) => {
+      const index = orders.findIndex((entry) => entry.id === where.id);
+      if (index === -1) {
+        throw new Error('Order not found');
+      }
+
+      orders[index] = {
+        ...orders[index],
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.paymentStatus !== undefined
+          ? { paymentStatus: data.paymentStatus }
+          : {}),
+      };
+
+      return Promise.resolve({
+        ...orders[index],
+        status: orders[index].status ?? 'NEW',
+      });
     });
 
     prismaMock.deliveryOffer.deleteMany.mockImplementation(({ where }) => {
@@ -495,8 +544,14 @@ describe('DeliveryController (e2e)', () => {
         priceCurrency: data.priceCurrency,
         trackingNumber: data.trackingNumber ?? null,
         trackingUrl: data.trackingUrl ?? null,
+        courierName: data.courierName ?? null,
         courierPhone: data.courierPhone ?? null,
         estimatedDeliveryAt: data.estimatedDeliveryAt ?? null,
+        packagePreset: data.packagePreset ?? null,
+        packageWeightGram: data.packageWeightGram ?? null,
+        packageLengthCm: data.packageLengthCm ?? null,
+        packageWidthCm: data.packageWidthCm ?? null,
+        packageHeightCm: data.packageHeightCm ?? null,
         deliveryNote: data.deliveryNote ?? null,
         failureReasonCode: data.failureReasonCode ?? null,
         failureReasonText: data.failureReasonText ?? null,
@@ -505,7 +560,18 @@ describe('DeliveryController (e2e)', () => {
         lastAdminNote: data.lastAdminNote ?? null,
         lastSellerNote: data.lastSellerNote ?? null,
         pickupAddress: data.pickupAddress,
+        pickupLatitude: data.pickupLatitude ?? null,
+        pickupLongitude: data.pickupLongitude ?? null,
         dropoffAddress: data.dropoffAddress,
+        dropoffLatitude: data.dropoffLatitude ?? null,
+        dropoffLongitude: data.dropoffLongitude ?? null,
+        recipientName: data.recipientName ?? null,
+        recipientPhone: data.recipientPhone ?? null,
+        manualYandexOrderId: data.manualYandexOrderId ?? null,
+        yandexClaimId: data.yandexClaimId ?? null,
+        yandexStatus: data.yandexStatus ?? null,
+        yandexPrice: data.yandexPrice ?? null,
+        yandexTrackingLink: data.yandexTrackingLink ?? null,
         rawProviderPayload: data.rawProviderPayload ?? null,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -854,7 +920,7 @@ describe('DeliveryController (e2e)', () => {
       .expect(201);
 
     const created = readBody<DeliveryShipmentResponseDto>(createResponse);
-    expect(created.internalStatus).toBe('CREATED_MANUALLY');
+    expect(created.internalStatus).toBe('YANDEX_MANUAL_CREATED');
     expect(created.trackingNumber).toBe('YANDEX-MANUAL-1');
     expect(events.at(-1)?.actorUserId).toBe('seller-user-1');
     expect(events.at(-1)?.oldStatus).toBe('NOT_CREATED');
@@ -929,10 +995,10 @@ describe('DeliveryController (e2e)', () => {
       .expect(201);
 
     expect(readBody<{ internalStatus: string }>(response).internalStatus).toBe(
-      'IN_TRANSIT',
+      'ON_THE_WAY',
     );
     expect(events.at(-1)?.actorRole).toBe('ADMIN');
-    expect(events.at(-1)?.oldStatus).toBe('CREATED_MANUALLY');
+    expect(events.at(-1)?.oldStatus).toBe('YANDEX_MANUAL_CREATED');
   });
 
   it('seller marks delivery failed with reason and audit event', async () => {

@@ -22,6 +22,7 @@
     "smoke:support-cases": "powershell -ExecutionPolicy Bypass -File scripts/smoke-support-cases.ps1",
     "smoke:delivery": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery.ps1",
     "smoke:manual-delivery": "powershell -ExecutionPolicy Bypass -File scripts/smoke-manual-delivery.ps1",
+    "smoke:manual-yandex-workbench": "powershell -ExecutionPolicy Bypass -File scripts/smoke-manual-yandex-workbench.ps1",
     "smoke:delivery-exceptions": "powershell -ExecutionPolicy Bypass -File scripts/smoke-delivery-exceptions.ps1",
     "smoke:admin-delivery-supervision": "powershell -ExecutionPolicy Bypass -File scripts/smoke-admin-delivery-supervision.ps1",
     "smoke:admin-dashboard": "powershell -ExecutionPolicy Bypass -File scripts/smoke-admin-dashboard.ps1",

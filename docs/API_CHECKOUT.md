@@ -67,6 +67,8 @@ Request body:
     "phone": "0123456789",
     "email": "alice@example.com",
     "address": "123 Main St",
+    "latitude": 55.751244,
+    "longitude": 37.618423,
     "note": "Ring the bell"
   },
   "paymentMethod": "MANUAL_TRANSFER"
@@ -86,6 +88,7 @@ Validation:
 - active checkout variant price must be greater than `0`
 - requested quantity must be within available stock
 - customer `fullName`, `phone`, and `address` are required
+- `customer.latitude` and `customer.longitude` are optional and are stored as shipping coordinate snapshots when present
 - frontend-supplied totals or seller-only fields are ignored because they are not accepted by the DTO
 
 Order creation behavior:
@@ -207,6 +210,7 @@ Coverage currently includes:
 
 - Payment flow is still manual and informational only.
 - direct seller QR payment is static and snapshot-based; checkout does not call any bank API.
+- delivery routing can now snapshot optional shipping coordinates for downstream manual Yandex workbench usage, but checkout still does not call any carrier API.
 - Checkout chooses the requested `variantId` when provided, otherwise it falls back to the first active priced variant for legacy callers.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
 - Payment proof and delivery remain per created shop order; parent receipt is for combined customer view/history.

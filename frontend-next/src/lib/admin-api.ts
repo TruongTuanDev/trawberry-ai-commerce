@@ -65,8 +65,14 @@ export type AdminDeliveryRow = {
   internalStatus: string;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierName: string | null;
   courierPhone: string | null;
   estimatedDeliveryAt: string | null;
+  packagePreset: string | null;
+  packageWeightGram: number | null;
+  packageLengthCm: number | null;
+  packageWidthCm: number | null;
+  packageHeightCm: number | null;
   deliveryNote: string | null;
   failureReasonCode: string | null;
   failureReasonText: string | null;
@@ -74,6 +80,18 @@ export type AdminDeliveryRow = {
   customerVisibleMessage: string | null;
   lastAdminNote: string | null;
   lastSellerNote: string | null;
+  pickupAddress: string | null;
+  pickupLatitude: string | null;
+  pickupLongitude: string | null;
+  dropoffLatitude: string | null;
+  dropoffLongitude: string | null;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  manualYandexOrderId: string | null;
+  yandexClaimId: string | null;
+  yandexStatus: string | null;
+  yandexPrice: string | null;
+  yandexTrackingLink: string | null;
   createdAt: string;
   updatedAt: string;
   events: Array<{
@@ -733,6 +751,26 @@ export async function adminMarkDeliveryInTransit(deliveryShipmentId: string, not
   return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/mark-in-transit`, {
     method: "POST",
     body: JSON.stringify({ note }),
+  });
+}
+
+export async function adminMarkDeliveryCourierAssigned(
+  deliveryShipmentId: string,
+  payload?: { note?: string; courierName?: string | null; courierPhone?: string | null; estimatedDeliveryAt?: string | null },
+) {
+  return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/mark-courier-assigned`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export async function adminMarkDeliveryPickedUp(
+  deliveryShipmentId: string,
+  payload?: { note?: string; courierName?: string | null; courierPhone?: string | null; estimatedDeliveryAt?: string | null },
+) {
+  return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/mark-picked-up`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
   });
 }
 

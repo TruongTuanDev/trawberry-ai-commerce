@@ -1,5 +1,28 @@
 # Full Commerce Flow Audit
 
+## Seller Manual Yandex Delivery Workbench Addendum
+
+- direct-seller payment confirmation can now move Yandex-preferred orders into `READY_TO_CREATE_YANDEX`
+- seller order detail now supports a manual Yandex workbench instead of only a generic manual tracking form
+- seller can save:
+  - pickup / dropoff / package context
+  - manual Yandex order id / claim id
+  - courier identity
+  - ETA and delivery price
+  - note and tracking link
+- seller/admin can move manual Yandex shipment states through:
+  - `YANDEX_MANUAL_CREATED`
+  - `COURIER_ASSIGNED`
+  - `PICKED_UP`
+  - `ON_THE_WAY`
+  - `DELIVERED`
+  - `FAILED`
+  - `CANCELLED`
+- admin supervision now has two important manual-ops queues:
+  - `READY_TO_CREATE_YANDEX`
+  - `OVERDUE`
+- buyer tracking now shows a simpler manual Yandex timeline instead of only raw provider status
+
 ## Customer Account Management Addendum
 
 - customer profile, password change, and saved-address management are now implemented in the active new stack

@@ -144,10 +144,64 @@ class PublicOrderDeliveryDto {
   trackingUrl!: string | null;
 
   @ApiProperty({ nullable: true })
+  courierName!: string | null;
+
+  @ApiProperty({ nullable: true })
   courierPhone!: string | null;
 
   @ApiProperty({ nullable: true })
   estimatedDeliveryAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  packagePreset!: string | null;
+
+  @ApiProperty({ nullable: true })
+  packageWeightGram!: number | null;
+
+  @ApiProperty({ nullable: true })
+  packageLengthCm!: number | null;
+
+  @ApiProperty({ nullable: true })
+  packageWidthCm!: number | null;
+
+  @ApiProperty({ nullable: true })
+  packageHeightCm!: number | null;
+
+  @ApiProperty({ nullable: true })
+  pickupAddress!: string | null;
+
+  @ApiProperty({ nullable: true })
+  pickupLatitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  pickupLongitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffLatitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffLongitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  recipientPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  manualYandexOrderId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  yandexClaimId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  yandexStatus!: string | null;
+
+  @ApiProperty({ nullable: true })
+  yandexPrice!: string | null;
+
+  @ApiProperty({ nullable: true })
+  yandexTrackingLink!: string | null;
 
   @ApiProperty({ nullable: true })
   deliveryNote!: string | null;

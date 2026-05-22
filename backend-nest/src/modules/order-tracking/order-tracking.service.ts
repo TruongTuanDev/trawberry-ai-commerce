@@ -69,8 +69,26 @@ type TrackableOrderRecord = {
     providerStatus: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierName: string | null;
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
+    packagePreset: string | null;
+    packageWeightGram: number | null;
+    packageLengthCm: number | null;
+    packageWidthCm: number | null;
+    packageHeightCm: number | null;
+    pickupAddress: string;
+    pickupLatitude: Prisma.Decimal | null;
+    pickupLongitude: Prisma.Decimal | null;
+    dropoffLatitude: Prisma.Decimal | null;
+    dropoffLongitude: Prisma.Decimal | null;
+    recipientName: string | null;
+    recipientPhone: string | null;
+    manualYandexOrderId: string | null;
+    yandexClaimId: string | null;
+    yandexStatus: string | null;
+    yandexPrice: Prisma.Decimal | null;
+    yandexTrackingLink: string | null;
     deliveryNote: string | null;
     failureReasonCode: string | null;
     customerVisibleMessage: string | null;
@@ -344,9 +362,28 @@ export class OrderTrackingService {
             providerShipmentId: latestShipment.providerShipmentId,
             trackingNumber: latestShipment.trackingNumber,
             trackingUrl: latestShipment.trackingUrl,
+            courierName: latestShipment.courierName,
             courierPhone: latestShipment.courierPhone,
             estimatedDeliveryAt:
               latestShipment.estimatedDeliveryAt?.toISOString() ?? null,
+            packagePreset: latestShipment.packagePreset,
+            packageWeightGram: latestShipment.packageWeightGram,
+            packageLengthCm: latestShipment.packageLengthCm,
+            packageWidthCm: latestShipment.packageWidthCm,
+            packageHeightCm: latestShipment.packageHeightCm,
+            pickupAddress: latestShipment.pickupAddress,
+            pickupLatitude: latestShipment.pickupLatitude?.toString() ?? null,
+            pickupLongitude: latestShipment.pickupLongitude?.toString() ?? null,
+            dropoffLatitude: latestShipment.dropoffLatitude?.toString() ?? null,
+            dropoffLongitude:
+              latestShipment.dropoffLongitude?.toString() ?? null,
+            recipientName: latestShipment.recipientName,
+            recipientPhone: latestShipment.recipientPhone,
+            manualYandexOrderId: latestShipment.manualYandexOrderId,
+            yandexClaimId: latestShipment.yandexClaimId,
+            yandexStatus: latestShipment.yandexStatus,
+            yandexPrice: latestShipment.yandexPrice?.toString() ?? null,
+            yandexTrackingLink: latestShipment.yandexTrackingLink,
             deliveryNote: latestShipment.deliveryNote,
             failureReasonCode: this.customerSafeFailureReason(
               latestShipment.failureReasonCode,
@@ -392,8 +429,26 @@ export class OrderTrackingService {
           providerShipmentId: true,
           trackingNumber: true,
           trackingUrl: true,
+          courierName: true,
           courierPhone: true,
           estimatedDeliveryAt: true,
+          packagePreset: true,
+          packageWeightGram: true,
+          packageLengthCm: true,
+          packageWidthCm: true,
+          packageHeightCm: true,
+          pickupAddress: true,
+          pickupLatitude: true,
+          pickupLongitude: true,
+          dropoffLatitude: true,
+          dropoffLongitude: true,
+          recipientName: true,
+          recipientPhone: true,
+          manualYandexOrderId: true,
+          yandexClaimId: true,
+          yandexStatus: true,
+          yandexPrice: true,
+          yandexTrackingLink: true,
           deliveryNote: true,
           failureReasonCode: true,
           customerVisibleMessage: true,
@@ -442,7 +497,12 @@ export class OrderTrackingService {
 
   private deliveryStatusLabel(status: string) {
     const labels: Record<string, string> = {
+      READY_TO_CREATE_YANDEX: 'Ready to create Yandex',
       CREATED_MANUALLY: 'Delivery created',
+      YANDEX_MANUAL_CREATED: 'Created in Yandex manually',
+      COURIER_ASSIGNED: 'Courier assigned',
+      PICKED_UP: 'Picked up',
+      ON_THE_WAY: 'On the way',
       CREATED: 'Delivery created',
       IN_TRANSIT: 'In transit',
       DELIVERED: 'Delivered',
@@ -454,8 +514,14 @@ export class OrderTrackingService {
 
   private deliveryStatusMessage(status: string) {
     const messages: Record<string, string> = {
+      READY_TO_CREATE_YANDEX:
+        'Payment is confirmed. The seller is preparing manual Yandex delivery.',
       CREATED_MANUALLY:
         'The seller has created delivery in their carrier dashboard.',
+      YANDEX_MANUAL_CREATED: 'The seller created the order manually in Yandex.',
+      COURIER_ASSIGNED: 'A courier has been assigned to your order.',
+      PICKED_UP: 'The courier picked up the package from the seller.',
+      ON_THE_WAY: 'The order is on the way to you.',
       CREATED: 'The seller has created delivery.',
       IN_TRANSIT: 'The order is on the way.',
       DELIVERED: 'The order has been delivered.',

@@ -1,5 +1,46 @@
 # Phase Report
 
+## 2026-05-22 Seller Manual Yandex Delivery Workbench
+
+- extended the seller-managed delivery flow into a dedicated manual Yandex workbench without calling the real Yandex API
+- when a seller confirms direct payment for a Yandex-preferred shop order, the backend can now move the order into `READY_TO_CREATE_YANDEX`
+- seller order detail now exposes a real `Create Yandex manually` panel with:
+  - pickup and dropoff summary
+  - package preset support for fashion parcels
+  - sender / recipient / shipment brief copy actions
+  - optional Yandex Maps deep links when coordinates are available
+  - manual fields for Yandex order id, claim id, tracking, courier, ETA, delivery price, and note
+- manual Yandex shipment statuses now include:
+  - `READY_TO_CREATE_YANDEX`
+  - `YANDEX_MANUAL_CREATED`
+  - `COURIER_ASSIGNED`
+  - `PICKED_UP`
+  - `ON_THE_WAY`
+  - `DELIVERED`
+  - `FAILED`
+  - `CANCELLED`
+- admin delivery supervision now includes:
+  - `READY_TO_CREATE_YANDEX` queue
+  - `OVERDUE` queue
+  - seller payment confirmed but shipment not yet created visibility
+  - seller/admin transition actions for courier assigned, picked up, on the way, delivered, failed, and cancelled
+- checkout and customer addresses now support optional `latitude` / `longitude` snapshots used by the manual Yandex workbench
+- future-real-Yandex placeholder fields were added to delivery shipments:
+  - `yandexClaimId`
+  - `yandexStatus`
+  - `yandexPrice`
+  - `yandexTrackingLink`
+- verification for this phase:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm run smoke:manual-yandex-workbench`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npm run test:e2e:seller-manual-yandex-workbench`: pass
+
 ## 2026-05-22 Direct Seller QR Payment Foundation
 
 - implemented direct-to-seller static QR payment foundation for the active marketplace stack without introducing a real payment provider

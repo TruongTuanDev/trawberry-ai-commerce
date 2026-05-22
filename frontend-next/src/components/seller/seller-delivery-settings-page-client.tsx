@@ -19,6 +19,8 @@ export function SellerDeliverySettingsPageClient() {
     pickupPostalCode: "",
     pickupContactPhone: "",
     pickupContactName: "",
+    pickupLatitude: "",
+    pickupLongitude: "",
     enabledCdek: true,
     enabledYandex: true,
     defaultCarrier: "YANDEX" as "CDEK" | "YANDEX",
@@ -49,6 +51,8 @@ export function SellerDeliverySettingsPageClient() {
           pickupPostalCode: settings.pickupPostalCode ?? "",
           pickupContactPhone: settings.pickupContactPhone,
           pickupContactName: settings.pickupContactName,
+          pickupLatitude: settings.pickupLatitude ?? "",
+          pickupLongitude: settings.pickupLongitude ?? "",
           enabledCdek: settings.enabledCarriers.includes("CDEK"),
           enabledYandex: settings.enabledCarriers.includes("YANDEX"),
           defaultCarrier: settings.defaultCarrier as "CDEK" | "YANDEX",
@@ -100,6 +104,8 @@ export function SellerDeliverySettingsPageClient() {
           pickupCity: form.pickupCity,
           pickupPostalCode: form.pickupPostalCode || undefined,
           pickupContactPhone: form.pickupContactPhone,
+          pickupLatitude: form.pickupLatitude ? Number(form.pickupLatitude) : undefined,
+          pickupLongitude: form.pickupLongitude ? Number(form.pickupLongitude) : undefined,
           pickupContactName: form.pickupContactName,
           enabledCarriers,
           defaultCarrier: form.defaultCarrier,
@@ -151,6 +157,12 @@ export function SellerDeliverySettingsPageClient() {
             </Field>
             <Field label="Pickup phone">
               <input value={form.pickupContactPhone} onChange={(event) => setForm((current) => ({ ...current, pickupContactPhone: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-contact-phone" />
+            </Field>
+            <Field label="Pickup latitude">
+              <input value={form.pickupLatitude} onChange={(event) => setForm((current) => ({ ...current, pickupLatitude: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-latitude" />
+            </Field>
+            <Field label="Pickup longitude">
+              <input value={form.pickupLongitude} onChange={(event) => setForm((current) => ({ ...current, pickupLongitude: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-longitude" />
             </Field>
             <Field label="Pickup contact">
               <input value={form.pickupContactName} onChange={(event) => setForm((current) => ({ ...current, pickupContactName: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-contact-name" />

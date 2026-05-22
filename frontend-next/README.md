@@ -55,6 +55,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/admin/queues`
 - `/admin/reports`
 - `/admin/deliveries`
+- `/admin/payments-supervision`
 - `/products`
 - `/products/[id]`
 - `/checkout`
@@ -76,6 +77,8 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
 - `/seller/ai-images`
 - `/seller/orders`
 - `/seller/orders/[id]`
+- `/seller/payment-settings`
+- `/seller/payments-to-confirm`
 - `/seller/payments`
 - `/seller/payments/[orderId]`
 - `/seller/onboarding`
@@ -135,6 +138,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - checkout preflight before submit
   - saved-address selector for logged-in customers during checkout
   - order tracking and payment proof upload UI
+  - manual Yandex delivery timeline on tracking detail when seller uses the manual workbench
 - Customer account UI with:
   - overview dashboard
   - profile edit form
@@ -142,10 +146,15 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - password change
   - support handoff page
   - shared account shell around order history
+  - optional latitude / longitude capture on customer addresses
 - Seller delivery operations with:
   - delivery settings form
   - order-level delivery offer calculation
   - shipment create / refresh / cancel in mock mode
+  - manual Yandex workbench on `/seller/orders/[id]`
+  - sender / recipient / package summary copy actions
+  - pickup / dropoff map links when coordinates exist
+  - courier assigned / picked up / on the way / delivered transitions
 - Seller center layout with sidebar, header, and shop switcher
 - Seller shop/product lifecycle UI with:
   - first-shop creation from `/seller/products`
@@ -218,6 +227,7 @@ With the Docker stack or local frontend/backend already running:
 
 ```bash
 npm run test:e2e:auth
+npm run test:e2e:seller-manual-yandex-workbench
 ```
 
 ## Playwright WB Import Checkout Flow

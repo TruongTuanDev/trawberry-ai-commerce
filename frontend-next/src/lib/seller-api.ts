@@ -3,6 +3,8 @@ import { apiRequest } from "@/lib/api";
 export type SellerOrderStatus =
   | "PENDING"
   | "NEW"
+  | "READY_TO_CREATE_YANDEX"
+  | "YANDEX_MANUAL_CREATED"
   | "ASSEMBLING"
   | "SHIPPING"
   | "DELIVERED"
@@ -132,8 +134,25 @@ export type DeliveryShipment = {
   priceCurrency: string;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierName: string | null;
   courierPhone: string | null;
   estimatedDeliveryAt: string | null;
+  packagePreset: string | null;
+  packageWeightGram: number | null;
+  packageLengthCm: number | null;
+  packageWidthCm: number | null;
+  packageHeightCm: number | null;
+  pickupLatitude: string | null;
+  pickupLongitude: string | null;
+  dropoffLatitude: string | null;
+  dropoffLongitude: string | null;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  manualYandexOrderId: string | null;
+  yandexClaimId: string | null;
+  yandexStatus: string | null;
+  yandexPrice: string | null;
+  yandexTrackingLink: string | null;
   deliveryNote: string | null;
   failureReasonCode: DeliveryExceptionReasonCode | string | null;
   failureReasonText: string | null;
@@ -1847,10 +1866,27 @@ export type ManualDeliveryPayload = {
   provider: DeliveryProviderName;
   providerShipmentId?: string | null;
   providerOrderNumber?: string | null;
+  manualYandexOrderId?: string | null;
   trackingNumber?: string | null;
   trackingUrl?: string | null;
+  courierName?: string | null;
   courierPhone?: string | null;
   estimatedDeliveryAt?: string | null;
+  packagePreset?: string | null;
+  packageWeightGram?: number | null;
+  packageLengthCm?: number | null;
+  packageWidthCm?: number | null;
+  packageHeightCm?: number | null;
+  pickupLatitude?: number | null;
+  pickupLongitude?: number | null;
+  dropoffLatitude?: number | null;
+  dropoffLongitude?: number | null;
+  recipientName?: string | null;
+  recipientPhone?: string | null;
+  deliveryPrice?: number | null;
+  yandexClaimId?: string | null;
+  yandexStatus?: string | null;
+  yandexTrackingLink?: string | null;
   deliveryNote?: string | null;
   pickupAddress?: string | null;
   note?: string | null;
@@ -1893,11 +1929,45 @@ export async function markManualDeliveryInTransit(
   shopId: string,
   orderId: string,
   shipmentId: string,
-  payload?: { note?: string | null },
+  payload?: { note?: string | null; courierName?: string | null; courierPhone?: string | null; estimatedDeliveryAt?: string | null },
   token?: string,
 ) {
   return apiRequest<DeliveryShipment>(
     `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/mark-in-transit`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+}
+
+export async function markManualDeliveryCourierAssigned(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload?: { note?: string | null; courierName?: string | null; courierPhone?: string | null; estimatedDeliveryAt?: string | null },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/mark-courier-assigned`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload ?? {}),
+    },
+  );
+}
+
+export async function markManualDeliveryPickedUp(
+  shopId: string,
+  orderId: string,
+  shipmentId: string,
+  payload?: { note?: string | null; courierName?: string | null; courierPhone?: string | null; estimatedDeliveryAt?: string | null },
+  token?: string,
+) {
+  return apiRequest<DeliveryShipment>(
+    `/api/shops/${shopId}/orders/${orderId}/delivery/shipments/${shipmentId}/mark-picked-up`,
     {
       method: "POST",
       token,

@@ -69,6 +69,8 @@ export type CustomerAddress = {
   apartment: string | null;
   postalCode: string | null;
   comment: string | null;
+  latitude: string | null;
+  longitude: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -83,6 +85,8 @@ export type CustomerAddressInput = {
   apartment?: string;
   postalCode?: string;
   comment?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type CustomerSupportCase = {

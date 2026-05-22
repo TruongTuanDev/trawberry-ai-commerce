@@ -15,9 +15,11 @@ import {
   getDeliverySettings,
   getOrderDelivery,
   getShopOrderById,
+  markManualDeliveryCourierAssigned,
   markManualDeliveryDelivered,
   markManualDeliveryFailed,
   markManualDeliveryInTransit,
+  markManualDeliveryPickedUp,
   refreshDeliveryShipment,
   updateShopOrderStatus,
   updateManualDelivery,
@@ -33,11 +35,20 @@ import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 const statusOptions = [
   "PENDING",
   "NEW",
+  "READY_TO_CREATE_YANDEX",
+  "YANDEX_MANUAL_CREATED",
   "ASSEMBLING",
   "SHIPPING",
   "DELIVERED",
   "CANCELLED",
 ] as const;
+
+const fashionPackagePresets = {
+  FASHION_BAG: { label: "Fashion bag", weightGram: "700", lengthCm: "35", widthCm: "25", heightCm: "8" },
+  SHOE_BOX: { label: "Shoe box", weightGram: "1200", lengthCm: "36", widthCm: "24", heightCm: "14" },
+  OUTERWEAR_BOX: { label: "Outerwear box", weightGram: "1800", lengthCm: "42", widthCm: "32", heightCm: "16" },
+  CUSTOM: { label: "Custom", weightGram: "", lengthCm: "", widthCm: "", heightCm: "" },
+} as const;
 const exceptionReasons: DeliveryExceptionReasonCode[] = [
   "CUSTOMER_UNAVAILABLE",
   "WRONG_ADDRESS",
@@ -74,7 +85,13 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     useState<DeliveryProviderName>("YANDEX");
   const [manualTrackingNumber, setManualTrackingNumber] = useState("");
   const [manualTrackingUrl, setManualTrackingUrl] = useState("");
+  const [manualCourierName, setManualCourierName] = useState("");
   const [manualCourierPhone, setManualCourierPhone] = useState("");
+  const [manualYandexOrderId, setManualYandexOrderId] = useState("");
+  const [manualYandexClaimId, setManualYandexClaimId] = useState("");
+  const [manualDeliveryPrice, setManualDeliveryPrice] = useState("");
+  const [packagePreset, setPackagePreset] =
+    useState<keyof typeof fashionPackagePresets>("FASHION_BAG");
   const [manualEstimatedDeliveryAt, setManualEstimatedDeliveryAt] =
     useState("");
   const [manualDeliveryNote, setManualDeliveryNote] = useState("");
@@ -90,7 +107,15 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     setManualProvider((shipment.provider as DeliveryProviderName) ?? "YANDEX");
     setManualTrackingNumber(shipment.trackingNumber ?? "");
     setManualTrackingUrl(shipment.trackingUrl ?? "");
+    setManualCourierName(shipment.courierName ?? "");
     setManualCourierPhone(shipment.courierPhone ?? "");
+    setManualYandexOrderId(shipment.manualYandexOrderId ?? "");
+    setManualYandexClaimId(shipment.yandexClaimId ?? "");
+    setManualDeliveryPrice(shipment.yandexPrice ?? shipment.priceAmount ?? "");
+    setPackagePreset(
+      (shipment.packagePreset as keyof typeof fashionPackagePresets) ??
+        "FASHION_BAG",
+    );
     setManualEstimatedDeliveryAt(
       shipment.estimatedDeliveryAt
         ? shipment.estimatedDeliveryAt.slice(0, 16)
@@ -197,6 +222,18 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     heightCm: Number(heightCm || "0"),
   });
 
+  const applyPackagePreset = (
+    preset: keyof typeof fashionPackagePresets,
+  ) => {
+    setPackagePreset(preset);
+    const value = fashionPackagePresets[preset];
+    if (preset === "CUSTOM") return;
+    setWeightGram(value.weightGram);
+    setLengthCm(value.lengthCm);
+    setWidthCm(value.widthCm);
+    setHeightCm(value.heightCm);
+  };
+
   const refreshDeliverySnapshot = async () => {
     if (!currentShopId || !order) return;
     const [orderResult, deliveryResult] = await Promise.all([
@@ -211,14 +248,40 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
   const buildManualPayload = () => ({
     provider: manualProvider,
+    manualYandexOrderId: manualYandexOrderId.trim() || null,
+    yandexClaimId: manualYandexClaimId.trim() || null,
     trackingNumber: manualTrackingNumber.trim() || null,
     trackingUrl: manualTrackingUrl.trim() || null,
+    courierName: manualCourierName.trim() || null,
     courierPhone: manualCourierPhone.trim() || null,
+    deliveryPrice: manualDeliveryPrice.trim()
+      ? Number(manualDeliveryPrice)
+      : null,
     estimatedDeliveryAt: manualEstimatedDeliveryAt
       ? new Date(manualEstimatedDeliveryAt).toISOString()
       : null,
+    packagePreset,
+    packageWeightGram: Number(weightGram || "0") || null,
+    packageLengthCm: Number(lengthCm || "0") || null,
+    packageWidthCm: Number(widthCm || "0") || null,
+    packageHeightCm: Number(heightCm || "0") || null,
     deliveryNote: manualDeliveryNote.trim() || null,
     pickupAddress: pickupAddress.trim() || null,
+    pickupLatitude: delivery?.activeShipment?.pickupLatitude
+      ? Number(delivery.activeShipment.pickupLatitude)
+      : undefined,
+    pickupLongitude: delivery?.activeShipment?.pickupLongitude
+      ? Number(delivery.activeShipment.pickupLongitude)
+      : undefined,
+    dropoffLatitude: delivery?.activeShipment?.dropoffLatitude
+      ? Number(delivery.activeShipment.dropoffLatitude)
+      : undefined,
+    dropoffLongitude: delivery?.activeShipment?.dropoffLongitude
+      ? Number(delivery.activeShipment.dropoffLongitude)
+      : undefined,
+    recipientName: order?.customer.name ?? null,
+    recipientPhone: order?.customer.phone ?? null,
+    yandexTrackingLink: manualTrackingUrl.trim() || null,
     note: "Seller updated manual delivery from order detail.",
   });
 
@@ -329,7 +392,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   };
 
   const handleManualDeliveryAction = async (
-    action: "save" | "in-transit" | "delivered" | "cancel",
+    action: "save" | "courier-assigned" | "picked-up" | "in-transit" | "delivered" | "cancel",
   ) => {
     if (!currentShopId || !order) return;
     setDeliveryLoading(true);
@@ -362,10 +425,49 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             currentShopId,
             order.id,
             activeShipment.id,
-            { note: "Seller marked manual delivery in transit." },
+            {
+              note: "Seller marked manual Yandex delivery on the way.",
+              courierName: manualCourierName.trim() || null,
+              courierPhone: manualCourierPhone.trim() || null,
+              estimatedDeliveryAt: manualEstimatedDeliveryAt
+                ? new Date(manualEstimatedDeliveryAt).toISOString()
+                : null,
+            },
             "",
           );
-          setDeliveryMessage("Manual delivery marked in transit.");
+          setDeliveryMessage("Manual Yandex delivery marked on the way.");
+        } else if (action === "courier-assigned") {
+          await markManualDeliveryCourierAssigned(
+            currentShopId,
+            order.id,
+            activeShipment.id,
+            {
+              note: "Seller assigned courier in manual Yandex workbench.",
+              courierName: manualCourierName.trim() || null,
+              courierPhone: manualCourierPhone.trim() || null,
+              estimatedDeliveryAt: manualEstimatedDeliveryAt
+                ? new Date(manualEstimatedDeliveryAt).toISOString()
+                : null,
+            },
+            "",
+          );
+          setDeliveryMessage("Courier assigned.");
+        } else if (action === "picked-up") {
+          await markManualDeliveryPickedUp(
+            currentShopId,
+            order.id,
+            activeShipment.id,
+            {
+              note: "Seller marked package picked up.",
+              courierName: manualCourierName.trim() || null,
+              courierPhone: manualCourierPhone.trim() || null,
+              estimatedDeliveryAt: manualEstimatedDeliveryAt
+                ? new Date(manualEstimatedDeliveryAt).toISOString()
+                : null,
+            },
+            "",
+          );
+          setDeliveryMessage("Package marked picked up.");
         } else if (action === "delivered") {
           await markManualDeliveryDelivered(
             currentShopId,
@@ -479,6 +581,49 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   }
 
   const activeShipment = delivery?.activeShipment ?? null;
+  const pickupLat = activeShipment?.pickupLatitude
+    ? Number(activeShipment.pickupLatitude)
+    : null;
+  const pickupLng = activeShipment?.pickupLongitude
+    ? Number(activeShipment.pickupLongitude)
+    : null;
+  const dropoffLat = activeShipment?.dropoffLatitude
+    ? Number(activeShipment.dropoffLatitude)
+    : null;
+  const dropoffLng = activeShipment?.dropoffLongitude
+    ? Number(activeShipment.dropoffLongitude)
+    : null;
+  const senderText = [
+    `Pickup: ${pickupAddress}`,
+    pickupLat !== null && pickupLng !== null
+      ? `GPS: ${pickupLat}, ${pickupLng}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const recipientText = [
+    `Recipient: ${order.customer.name}`,
+    `Phone: ${order.customer.phone}`,
+    `Address: ${order.shippingAddress}`,
+    dropoffLat !== null && dropoffLng !== null
+      ? `GPS: ${dropoffLat}, ${dropoffLng}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const packageText = [
+    `Preset: ${packagePreset}`,
+    `Weight: ${weightGram} g`,
+    `Size: ${lengthCm} x ${widthCm} x ${heightCm} cm`,
+  ].join("\n");
+  const copyToClipboard = async (value: string, label: string) => {
+    await navigator.clipboard.writeText(value);
+    setDeliveryMessage(`${label} copied.`);
+  };
+  const openMaps = (lat: number | null, lng: number | null) => {
+    if (lat === null || lng === null) return;
+    window.open(`https://yandex.ru/maps/?pt=${lng},${lat}&z=16`, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="space-y-6">
@@ -522,7 +667,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                 Status
               </p>
-              <div className="mt-3">
+              <div className="mt-3" data-testid="seller-order-status">
                 <OrderStatusBadge status={order.status} />
               </div>
             </div>
@@ -596,8 +741,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
       <SectionCard
         eyebrow="Delivery"
-        title="Multi-carrier shipment"
-        description="Yandex is recommended for same-city express. CDEK stays available for fallback, pickup, and inter-city delivery."
+        title="Create Yandex manually"
+        description="Use this workbench after payment is confirmed to create and supervise a manual Yandex shipment without calling the real Yandex API."
       >
         <div data-testid="seller-order-delivery-section">
           <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -619,6 +764,26 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     <option value="MANUAL">Manual</option>
                   </select>
                 </Field>
+                <Field label="Manual Yandex order id">
+                  <input
+                    value={manualYandexOrderId}
+                    onChange={(event) =>
+                      setManualYandexOrderId(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="manual-yandex-order-id"
+                  />
+                </Field>
+                <Field label="Yandex claim id">
+                  <input
+                    value={manualYandexClaimId}
+                    onChange={(event) =>
+                      setManualYandexClaimId(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="manual-yandex-claim-id"
+                  />
+                </Field>
                 <Field label="Tracking number">
                   <input
                     value={manualTrackingNumber}
@@ -639,6 +804,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-tracking-url"
                   />
                 </Field>
+                <Field label="Courier name">
+                  <input
+                    value={manualCourierName}
+                    onChange={(event) =>
+                      setManualCourierName(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="manual-delivery-courier-name"
+                  />
+                </Field>
                 <Field label="Courier phone">
                   <input
                     value={manualCourierPhone}
@@ -647,6 +822,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     }
                     className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="manual-delivery-courier-phone"
+                  />
+                </Field>
+                <Field label="Delivery price">
+                  <input
+                    value={manualDeliveryPrice}
+                    onChange={(event) =>
+                      setManualDeliveryPrice(event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="manual-delivery-price"
                   />
                 </Field>
                 <Field label="Estimated delivery">
@@ -677,6 +862,24 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="delivery-order-pickup-address"
                   />
+                </Field>
+                <Field label="Package preset">
+                  <select
+                    value={packagePreset}
+                    onChange={(event) =>
+                      applyPackagePreset(
+                        event.target.value as keyof typeof fashionPackagePresets,
+                      )
+                    }
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                    data-testid="manual-delivery-package-preset"
+                  >
+                    {Object.entries(fashionPackagePresets).map(([value, item]) => (
+                      <option key={value} value={value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Weight (g)">
                   <input
@@ -729,7 +932,32 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 </Field>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => void copyToClipboard(senderText, "Sender")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    Copy sender
+                  </button>
+                  <button type="button" onClick={() => void copyToClipboard(recipientText, "Recipient")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    Copy recipient
+                  </button>
+                  <button type="button" onClick={() => void copyToClipboard([senderText, recipientText, packageText].join("\n\n"), "Shipment brief")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    Copy all
+                  </button>
+                  <button type="button" onClick={() => openMaps(pickupLat, pickupLng)} disabled={pickupLat === null || pickupLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
+                    Open pickup map
+                  </button>
+                  <button type="button" onClick={() => openMaps(dropoffLat, dropoffLng)} disabled={dropoffLat === null || dropoffLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
+                    Open dropoff map
+                  </button>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm text-[var(--muted)]">
+                  <p>{senderText}</p>
+                  <p>{recipientText}</p>
+                  <p>{packageText}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                 <button
                   type="button"
                   onClick={() => void handleManualDeliveryAction("save")}
@@ -741,12 +969,30 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 </button>
                 <button
                   type="button"
+                  onClick={() => void handleManualDeliveryAction("courier-assigned")}
+                  disabled={deliveryLoading || !activeShipment}
+                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="manual-delivery-mark-courier-assigned"
+                >
+                  Courier assigned
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleManualDeliveryAction("picked-up")}
+                  disabled={deliveryLoading || !activeShipment}
+                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="manual-delivery-mark-picked-up"
+                >
+                  Picked up
+                </button>
+                <button
+                  type="button"
                   onClick={() => void handleManualDeliveryAction("in-transit")}
                   disabled={deliveryLoading || !activeShipment}
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-in-transit"
                 >
-                  Mark in transit
+                  On the way
                 </button>
                 <button
                   type="button"

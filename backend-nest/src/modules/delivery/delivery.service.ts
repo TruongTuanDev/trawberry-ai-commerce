@@ -40,8 +40,11 @@ type OrderRecord = {
   id: string;
   shopId: string;
   orderNumber: string;
+  status: string;
   paymentStatus: string;
   shippingAddress: string;
+  shippingLatitude?: Prisma.Decimal | null;
+  shippingLongitude?: Prisma.Decimal | null;
   customerName: string;
   customerPhone: string;
   shop: {
@@ -97,8 +100,25 @@ type OrderRecord = {
     priceCurrency: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierName: string | null;
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
+    packagePreset: string | null;
+    packageWeightGram: number | null;
+    packageLengthCm: number | null;
+    packageWidthCm: number | null;
+    packageHeightCm: number | null;
+    pickupLatitude: Prisma.Decimal | null;
+    pickupLongitude: Prisma.Decimal | null;
+    dropoffLatitude: Prisma.Decimal | null;
+    dropoffLongitude: Prisma.Decimal | null;
+    recipientName: string | null;
+    recipientPhone: string | null;
+    manualYandexOrderId: string | null;
+    yandexClaimId: string | null;
+    yandexStatus: string | null;
+    yandexPrice: Prisma.Decimal | null;
+    yandexTrackingLink: string | null;
     deliveryNote: string | null;
     failureReasonCode: string | null;
     failureReasonText: string | null;
@@ -512,30 +532,84 @@ export class DeliveryService {
         orderId: order.id,
         provider: dto.provider,
         providerShipmentId: this.clean(dto.providerShipmentId),
-        providerOrderNumber: this.clean(dto.providerOrderNumber),
-        providerStatus: 'CREATED_MANUALLY',
-        internalStatus: 'CREATED_MANUALLY',
-        priceAmount: null,
+        providerOrderNumber:
+          this.clean(dto.providerOrderNumber) ??
+          this.clean(dto.manualYandexOrderId),
+        providerStatus:
+          dto.provider === 'YANDEX'
+            ? 'YANDEX_MANUAL_CREATED'
+            : 'CREATED_MANUALLY',
+        internalStatus:
+          dto.provider === 'YANDEX'
+            ? 'YANDEX_MANUAL_CREATED'
+            : 'CREATED_MANUALLY',
+        priceAmount:
+          dto.deliveryPrice !== undefined && dto.deliveryPrice !== null
+            ? new Prisma.Decimal(dto.deliveryPrice)
+            : null,
         priceCurrency: this.configService.get<string>(
           'MANUAL_DELIVERY_DEFAULT_CURRENCY',
           'RUB',
         ),
         trackingNumber: this.clean(dto.trackingNumber),
         trackingUrl: this.clean(dto.trackingUrl),
+        courierName: this.clean(dto.courierName),
         courierPhone: this.clean(dto.courierPhone),
         estimatedDeliveryAt: dto.estimatedDeliveryAt
           ? new Date(dto.estimatedDeliveryAt)
           : null,
+        packagePreset: this.clean(dto.packagePreset),
+        packageWeightGram: dto.packageWeightGram ?? null,
+        packageLengthCm: dto.packageLengthCm ?? null,
+        packageWidthCm: dto.packageWidthCm ?? null,
+        packageHeightCm: dto.packageHeightCm ?? null,
         deliveryNote: this.clean(dto.deliveryNote),
         pickupAddress:
           this.clean(dto.pickupAddress) ??
           order.shop.deliverySettings?.pickupAddress ??
           'Seller-managed pickup',
+        pickupLatitude:
+          dto.pickupLatitude !== undefined && dto.pickupLatitude !== null
+            ? new Prisma.Decimal(dto.pickupLatitude)
+            : (order.shop.deliverySettings?.pickupLatitude ?? null),
+        pickupLongitude:
+          dto.pickupLongitude !== undefined && dto.pickupLongitude !== null
+            ? new Prisma.Decimal(dto.pickupLongitude)
+            : (order.shop.deliverySettings?.pickupLongitude ?? null),
         dropoffAddress: order.shippingAddress,
+        dropoffLatitude:
+          dto.dropoffLatitude !== undefined && dto.dropoffLatitude !== null
+            ? new Prisma.Decimal(dto.dropoffLatitude)
+            : (order.shippingLatitude ?? null),
+        dropoffLongitude:
+          dto.dropoffLongitude !== undefined && dto.dropoffLongitude !== null
+            ? new Prisma.Decimal(dto.dropoffLongitude)
+            : (order.shippingLongitude ?? null),
+        recipientName: this.clean(dto.recipientName) ?? order.customerName,
+        recipientPhone: this.clean(dto.recipientPhone) ?? order.customerPhone,
+        manualYandexOrderId: this.clean(dto.manualYandexOrderId),
+        yandexClaimId: this.clean(dto.yandexClaimId),
+        yandexStatus:
+          this.clean(dto.yandexStatus) ??
+          (dto.provider === 'YANDEX' ? 'MANUAL_CREATED' : null),
+        yandexPrice:
+          dto.deliveryPrice !== undefined && dto.deliveryPrice !== null
+            ? new Prisma.Decimal(dto.deliveryPrice)
+            : null,
+        yandexTrackingLink:
+          this.clean(dto.yandexTrackingLink) ?? this.clean(dto.trackingUrl),
         rawProviderPayload: this.toJsonInput({
           source: 'seller_manual',
           note: this.clean(dto.note),
         }),
+      },
+    });
+
+    await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status:
+          dto.provider === 'YANDEX' ? 'YANDEX_MANUAL_CREATED' : 'ASSEMBLING',
       },
     });
 
@@ -577,15 +651,65 @@ export class DeliveryService {
       data: {
         provider: dto.provider,
         providerShipmentId: this.clean(dto.providerShipmentId),
-        providerOrderNumber: this.clean(dto.providerOrderNumber),
+        providerOrderNumber:
+          this.clean(dto.providerOrderNumber) ??
+          this.clean(dto.manualYandexOrderId),
         trackingNumber: this.clean(dto.trackingNumber),
         trackingUrl: this.clean(dto.trackingUrl),
+        courierName: this.clean(dto.courierName),
         courierPhone: this.clean(dto.courierPhone),
         estimatedDeliveryAt: dto.estimatedDeliveryAt
           ? new Date(dto.estimatedDeliveryAt)
           : null,
+        packagePreset: this.clean(dto.packagePreset),
+        packageWeightGram: dto.packageWeightGram ?? shipment.packageWeightGram,
+        packageLengthCm: dto.packageLengthCm ?? shipment.packageLengthCm,
+        packageWidthCm: dto.packageWidthCm ?? shipment.packageWidthCm,
+        packageHeightCm: dto.packageHeightCm ?? shipment.packageHeightCm,
         deliveryNote: this.clean(dto.deliveryNote),
         pickupAddress: this.clean(dto.pickupAddress) ?? shipment.pickupAddress,
+        pickupLatitude:
+          dto.pickupLatitude !== undefined
+            ? dto.pickupLatitude !== null
+              ? new Prisma.Decimal(dto.pickupLatitude)
+              : null
+            : shipment.pickupLatitude,
+        pickupLongitude:
+          dto.pickupLongitude !== undefined
+            ? dto.pickupLongitude !== null
+              ? new Prisma.Decimal(dto.pickupLongitude)
+              : null
+            : shipment.pickupLongitude,
+        dropoffLatitude:
+          dto.dropoffLatitude !== undefined
+            ? dto.dropoffLatitude !== null
+              ? new Prisma.Decimal(dto.dropoffLatitude)
+              : null
+            : shipment.dropoffLatitude,
+        dropoffLongitude:
+          dto.dropoffLongitude !== undefined
+            ? dto.dropoffLongitude !== null
+              ? new Prisma.Decimal(dto.dropoffLongitude)
+              : null
+            : shipment.dropoffLongitude,
+        recipientName: this.clean(dto.recipientName) ?? shipment.recipientName,
+        recipientPhone:
+          this.clean(dto.recipientPhone) ?? shipment.recipientPhone,
+        manualYandexOrderId:
+          this.clean(dto.manualYandexOrderId) ?? shipment.manualYandexOrderId,
+        yandexClaimId: this.clean(dto.yandexClaimId) ?? shipment.yandexClaimId,
+        yandexStatus:
+          this.clean(dto.yandexStatus) ??
+          shipment.yandexStatus ??
+          (dto.provider === 'YANDEX' ? shipment.internalStatus : null),
+        yandexPrice:
+          dto.deliveryPrice !== undefined && dto.deliveryPrice !== null
+            ? new Prisma.Decimal(dto.deliveryPrice)
+            : shipment.yandexPrice,
+        yandexTrackingLink:
+          this.clean(dto.yandexTrackingLink) ??
+          this.clean(dto.trackingUrl) ??
+          shipment.yandexTrackingLink,
       },
     });
 
@@ -620,9 +744,48 @@ export class DeliveryService {
       orderId,
       shipmentId,
       user,
-      'IN_TRANSIT',
-      'MANUAL_DELIVERY_IN_TRANSIT',
-      this.clean(dto.note) ?? 'Manual delivery marked in transit.',
+      'ON_THE_WAY',
+      'MANUAL_DELIVERY_ON_THE_WAY',
+      this.clean(dto.note) ?? 'Manual Yandex delivery is on the way.',
+      dto,
+    );
+  }
+
+  async markManualCourierAssigned(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    return this.transitionManualShipment(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      'COURIER_ASSIGNED',
+      'MANUAL_DELIVERY_COURIER_ASSIGNED',
+      this.clean(dto.note) ?? 'Courier assigned in Yandex manual workbench.',
+      dto,
+    );
+  }
+
+  async markManualPickedUp(
+    shopId: string,
+    orderId: string,
+    shipmentId: string,
+    user: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    return this.transitionManualShipment(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      'PICKED_UP',
+      'MANUAL_DELIVERY_PICKED_UP',
+      this.clean(dto.note) ?? 'Courier picked up the package.',
+      dto,
     );
   }
 
@@ -670,7 +833,10 @@ export class DeliveryService {
   }
 
   async listAdminDeliveries(query: ListAdminDeliveriesQueryDto) {
-    if (query.paidWithoutDelivery) {
+    if (
+      query.paidWithoutDelivery ||
+      query.status === 'READY_TO_CREATE_YANDEX'
+    ) {
       const orders = await this.prisma.order.findMany({
         where: this.buildPaidWithoutDeliveryWhere(query),
         orderBy: { createdAt: 'desc' },
@@ -770,9 +936,44 @@ export class DeliveryService {
     const updated = await this.transitionLoadedShipment(
       shipment,
       admin,
-      'IN_TRANSIT',
-      'ADMIN_DELIVERY_IN_TRANSIT',
-      this.clean(dto.note) ?? 'Admin marked delivery in transit.',
+      'ON_THE_WAY',
+      'ADMIN_DELIVERY_ON_THE_WAY',
+      this.clean(dto.note) ?? 'Admin marked manual Yandex delivery on the way.',
+      dto,
+    );
+    return this.getAdminDelivery(updated.id);
+  }
+
+  async adminMarkCourierAssigned(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    const updated = await this.transitionLoadedShipment(
+      shipment,
+      admin,
+      'COURIER_ASSIGNED',
+      'ADMIN_DELIVERY_COURIER_ASSIGNED',
+      this.clean(dto.note) ?? 'Admin marked courier assigned.',
+      dto,
+    );
+    return this.getAdminDelivery(updated.id);
+  }
+
+  async adminMarkPickedUp(
+    deliveryShipmentId: string,
+    admin: AuthenticatedUser,
+    dto: DeliveryTransitionDto,
+  ) {
+    const shipment = await this.findAdminShipmentOrThrow(deliveryShipmentId);
+    const updated = await this.transitionLoadedShipment(
+      shipment,
+      admin,
+      'PICKED_UP',
+      'ADMIN_DELIVERY_PICKED_UP',
+      this.clean(dto.note) ?? 'Admin marked package picked up.',
+      dto,
     );
     return this.getAdminDelivery(updated.id);
   }
@@ -1034,6 +1235,7 @@ export class DeliveryService {
     nextStatus: string,
     eventType: string,
     message: string,
+    dto?: DeliveryTransitionDto,
   ) {
     const shipment = await this.findShipmentOrThrow(
       shopId,
@@ -1046,6 +1248,7 @@ export class DeliveryService {
       nextStatus,
       eventType,
       message,
+      dto,
     );
   }
 
@@ -1057,11 +1260,15 @@ export class DeliveryService {
       provider: string;
       internalStatus: string;
       providerStatus: string;
+      courierName?: string | null;
+      courierPhone?: string | null;
+      estimatedDeliveryAt?: Date | null;
     },
     user: AuthenticatedUser,
     nextStatus: string,
     eventType: string,
     message: string,
+    dto?: DeliveryTransitionDto,
   ) {
     this.assertAllowedStatusTransition(
       shipment.internalStatus,
@@ -1074,9 +1281,44 @@ export class DeliveryService {
       data: {
         providerStatus: nextStatus,
         internalStatus: nextStatus,
-        acceptedAt: nextStatus === 'IN_TRANSIT' ? now : undefined,
+        yandexStatus: shipment.provider === 'YANDEX' ? nextStatus : undefined,
+        courierName:
+          dto?.courierName !== undefined
+            ? this.clean(dto.courierName)
+            : undefined,
+        courierPhone:
+          dto?.courierPhone !== undefined
+            ? this.clean(dto.courierPhone)
+            : undefined,
+        estimatedDeliveryAt:
+          dto?.estimatedDeliveryAt !== undefined
+            ? dto.estimatedDeliveryAt
+              ? new Date(dto.estimatedDeliveryAt)
+              : null
+            : undefined,
+        acceptedAt:
+          nextStatus === 'ON_THE_WAY' || nextStatus === 'IN_TRANSIT'
+            ? now
+            : undefined,
         deliveredAt: nextStatus === 'DELIVERED' ? now : undefined,
         cancelledAt: nextStatus === 'CANCELLED' ? now : undefined,
+      },
+    });
+
+    await this.prisma.order.update({
+      where: { id: shipment.orderId },
+      data: {
+        status:
+          nextStatus === 'DELIVERED'
+            ? 'DELIVERED'
+            : nextStatus === 'ON_THE_WAY' ||
+                nextStatus === 'IN_TRANSIT' ||
+                nextStatus === 'PICKED_UP'
+              ? 'SHIPPING'
+              : nextStatus === 'YANDEX_MANUAL_CREATED' ||
+                  nextStatus === 'COURIER_ASSIGNED'
+                ? 'YANDEX_MANUAL_CREATED'
+                : undefined,
       },
     });
 
@@ -1129,6 +1371,7 @@ export class DeliveryService {
       data: {
         providerStatus: nextStatus,
         internalStatus: nextStatus,
+        yandexStatus: shipment.provider === 'YANDEX' ? nextStatus : undefined,
         failureReasonCode: dto.reasonCode,
         failureReasonText: reasonText,
         customerVisibleMessage,
@@ -1136,6 +1379,14 @@ export class DeliveryService {
         cancelledAt: nextStatus === 'CANCELLED' ? now : undefined,
         lastAdminNote: user.role === 'ADMIN' ? reasonText : undefined,
         lastSellerNote: user.role !== 'ADMIN' ? reasonText : undefined,
+      },
+    });
+
+    await this.prisma.order.update({
+      where: { id: shipment.orderId },
+      data: {
+        status:
+          shipment.provider === 'YANDEX' ? 'READY_TO_CREATE_YANDEX' : undefined,
       },
     });
 
@@ -1271,7 +1522,25 @@ export class DeliveryService {
     query: ListAdminDeliveriesQueryDto,
   ): Prisma.DeliveryShipmentWhereInput {
     const where: Prisma.DeliveryShipmentWhereInput = {};
-    if (query.status) where.internalStatus = query.status;
+    if (
+      query.status &&
+      query.status !== 'OVERDUE' &&
+      query.status !== 'READY_TO_CREATE_YANDEX'
+    ) {
+      where.internalStatus = query.status;
+    }
+    if (query.status === 'OVERDUE') {
+      where.internalStatus = {
+        in: [
+          'YANDEX_MANUAL_CREATED',
+          'COURIER_ASSIGNED',
+          'PICKED_UP',
+          'ON_THE_WAY',
+          'IN_TRANSIT',
+        ],
+      };
+      where.estimatedDeliveryAt = { lt: new Date() };
+    }
     if (query.exceptionOnly) {
       where.internalStatus = { in: [...DELIVERY_EXCEPTION_STATUSES] };
     }
@@ -1315,6 +1584,9 @@ export class DeliveryService {
         },
       },
     };
+    if (query.status === 'READY_TO_CREATE_YANDEX') {
+      where.status = 'READY_TO_CREATE_YANDEX';
+    }
     if (query.shopId) where.shopId = query.shopId;
     if (query.sellerId) {
       where.shop = { sellerProfile: { userId: query.sellerId } };
@@ -1616,8 +1888,14 @@ export class DeliveryService {
     priceCurrency: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierName: string | null;
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
+    packagePreset: string | null;
+    packageWeightGram: number | null;
+    packageLengthCm: number | null;
+    packageWidthCm: number | null;
+    packageHeightCm: number | null;
     deliveryNote: string | null;
     failureReasonCode: string | null;
     failureReasonText: string | null;
@@ -1626,7 +1904,18 @@ export class DeliveryService {
     lastAdminNote: string | null;
     lastSellerNote: string | null;
     pickupAddress: string;
+    pickupLatitude: Prisma.Decimal | null;
+    pickupLongitude: Prisma.Decimal | null;
     dropoffAddress: string;
+    dropoffLatitude: Prisma.Decimal | null;
+    dropoffLongitude: Prisma.Decimal | null;
+    recipientName: string | null;
+    recipientPhone: string | null;
+    manualYandexOrderId: string | null;
+    yandexClaimId: string | null;
+    yandexStatus: string | null;
+    yandexPrice: Prisma.Decimal | null;
+    yandexTrackingLink: string | null;
     createdAt: Date;
     updatedAt: Date;
     acceptedAt: Date | null;
@@ -1644,8 +1933,14 @@ export class DeliveryService {
       priceCurrency: shipment.priceCurrency,
       trackingNumber: shipment.trackingNumber,
       trackingUrl: shipment.trackingUrl,
+      courierName: shipment.courierName,
       courierPhone: shipment.courierPhone,
       estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
+      packagePreset: shipment.packagePreset,
+      packageWeightGram: shipment.packageWeightGram,
+      packageLengthCm: shipment.packageLengthCm,
+      packageWidthCm: shipment.packageWidthCm,
+      packageHeightCm: shipment.packageHeightCm,
       deliveryNote: shipment.deliveryNote,
       failureReasonCode: shipment.failureReasonCode,
       failureReasonText: shipment.failureReasonText,
@@ -1654,7 +1949,18 @@ export class DeliveryService {
       lastAdminNote: shipment.lastAdminNote,
       lastSellerNote: shipment.lastSellerNote,
       pickupAddress: shipment.pickupAddress,
+      pickupLatitude: shipment.pickupLatitude?.toString() ?? null,
+      pickupLongitude: shipment.pickupLongitude?.toString() ?? null,
       dropoffAddress: shipment.dropoffAddress,
+      dropoffLatitude: shipment.dropoffLatitude?.toString() ?? null,
+      dropoffLongitude: shipment.dropoffLongitude?.toString() ?? null,
+      recipientName: shipment.recipientName,
+      recipientPhone: shipment.recipientPhone,
+      manualYandexOrderId: shipment.manualYandexOrderId,
+      yandexClaimId: shipment.yandexClaimId,
+      yandexStatus: shipment.yandexStatus,
+      yandexPrice: shipment.yandexPrice?.toString() ?? null,
+      yandexTrackingLink: shipment.yandexTrackingLink,
       createdAt: shipment.createdAt.toISOString(),
       updatedAt: shipment.updatedAt.toISOString(),
       acceptedAt: shipment.acceptedAt?.toISOString() ?? null,
@@ -1674,8 +1980,14 @@ export class DeliveryService {
     internalStatus: string;
     trackingNumber: string | null;
     trackingUrl: string | null;
+    courierName: string | null;
     courierPhone: string | null;
     estimatedDeliveryAt: Date | null;
+    packagePreset: string | null;
+    packageWeightGram: number | null;
+    packageLengthCm: number | null;
+    packageWidthCm: number | null;
+    packageHeightCm: number | null;
     deliveryNote: string | null;
     failureReasonCode: string | null;
     failureReasonText: string | null;
@@ -1683,6 +1995,18 @@ export class DeliveryService {
     customerVisibleMessage: string | null;
     lastAdminNote: string | null;
     lastSellerNote: string | null;
+    pickupAddress: string;
+    pickupLatitude: Prisma.Decimal | null;
+    pickupLongitude: Prisma.Decimal | null;
+    dropoffLatitude: Prisma.Decimal | null;
+    dropoffLongitude: Prisma.Decimal | null;
+    recipientName: string | null;
+    recipientPhone: string | null;
+    manualYandexOrderId: string | null;
+    yandexClaimId: string | null;
+    yandexStatus: string | null;
+    yandexPrice: Prisma.Decimal | null;
+    yandexTrackingLink: string | null;
     createdAt: Date;
     updatedAt: Date;
     acceptedAt: Date | null;
@@ -1755,8 +2079,14 @@ export class DeliveryService {
       internalStatus: shipment.internalStatus,
       trackingNumber: shipment.trackingNumber,
       trackingUrl: shipment.trackingUrl,
+      courierName: shipment.courierName,
       courierPhone: shipment.courierPhone,
       estimatedDeliveryAt: shipment.estimatedDeliveryAt?.toISOString() ?? null,
+      packagePreset: shipment.packagePreset,
+      packageWeightGram: shipment.packageWeightGram,
+      packageLengthCm: shipment.packageLengthCm,
+      packageWidthCm: shipment.packageWidthCm,
+      packageHeightCm: shipment.packageHeightCm,
       deliveryNote: shipment.deliveryNote,
       failureReasonCode: shipment.failureReasonCode,
       failureReasonText: shipment.failureReasonText,
@@ -1764,6 +2094,18 @@ export class DeliveryService {
       customerVisibleMessage: shipment.customerVisibleMessage,
       lastAdminNote: shipment.lastAdminNote,
       lastSellerNote: shipment.lastSellerNote,
+      pickupAddress: shipment.pickupAddress,
+      pickupLatitude: shipment.pickupLatitude?.toString() ?? null,
+      pickupLongitude: shipment.pickupLongitude?.toString() ?? null,
+      dropoffLatitude: shipment.dropoffLatitude?.toString() ?? null,
+      dropoffLongitude: shipment.dropoffLongitude?.toString() ?? null,
+      recipientName: shipment.recipientName,
+      recipientPhone: shipment.recipientPhone,
+      manualYandexOrderId: shipment.manualYandexOrderId,
+      yandexClaimId: shipment.yandexClaimId,
+      yandexStatus: shipment.yandexStatus,
+      yandexPrice: shipment.yandexPrice?.toString() ?? null,
+      yandexTrackingLink: shipment.yandexTrackingLink,
       createdAt: shipment.createdAt.toISOString(),
       updatedAt: shipment.updatedAt.toISOString(),
       acceptedAt: shipment.acceptedAt?.toISOString() ?? null,
@@ -1837,11 +2179,20 @@ export class DeliveryService {
       providerShipmentId: null,
       providerOrderNumber: null,
       providerStatus: 'NOT_CREATED',
-      internalStatus: 'NOT_CREATED',
+      internalStatus:
+        order.status === 'READY_TO_CREATE_YANDEX'
+          ? 'READY_TO_CREATE_YANDEX'
+          : 'NOT_CREATED',
       trackingNumber: null,
       trackingUrl: null,
+      courierName: null,
       courierPhone: null,
       estimatedDeliveryAt: null,
+      packagePreset: null,
+      packageWeightGram: null,
+      packageLengthCm: null,
+      packageWidthCm: null,
+      packageHeightCm: null,
       deliveryNote: null,
       failureReasonCode: null,
       failureReasonText: null,
@@ -1849,6 +2200,18 @@ export class DeliveryService {
       customerVisibleMessage: null,
       lastAdminNote: null,
       lastSellerNote: null,
+      pickupAddress: null,
+      pickupLatitude: null,
+      pickupLongitude: null,
+      dropoffLatitude: null,
+      dropoffLongitude: null,
+      recipientName: order.customerName,
+      recipientPhone: order.customerPhone,
+      manualYandexOrderId: null,
+      yandexClaimId: null,
+      yandexStatus: null,
+      yandexPrice: null,
+      yandexTrackingLink: null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.createdAt.toISOString(),
       acceptedAt: null,

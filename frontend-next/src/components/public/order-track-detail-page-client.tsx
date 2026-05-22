@@ -428,6 +428,11 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             Courier phone: {order.delivery.courierPhone}
                           </p>
                         ) : null}
+                        {order.delivery.courierName ? (
+                          <p className="mt-3 text-sm text-[var(--muted)]">
+                            Courier: {order.delivery.courierName}
+                          </p>
+                        ) : null}
                         {order.delivery.estimatedDeliveryAt ? (
                           <p
                             className="mt-3 text-sm text-[var(--muted)]"
@@ -447,6 +452,23 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             {order.delivery.deliveryNote}
                           </p>
                         ) : null}
+                        <div className="mt-4 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                            Timeline
+                          </p>
+                          <ol className="mt-3 space-y-2 text-sm text-[var(--foreground)]">
+                            {[
+                              "Payment confirmed",
+                              order.delivery.status === "YANDEX_MANUAL_CREATED" || order.delivery.status === "COURIER_ASSIGNED" || order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "Yandex order created" : null,
+                              order.delivery.status === "COURIER_ASSIGNED" || order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "Courier assigned" : null,
+                              order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "Package picked up" : null,
+                              order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "On the way" : null,
+                              order.delivery.status === "DELIVERED" ? "Delivered" : null,
+                            ].filter(Boolean).map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ol>
+                        </div>
                         {order.delivery.deliveryComments.length ? (
                           <div
                             className="mt-4 space-y-3"

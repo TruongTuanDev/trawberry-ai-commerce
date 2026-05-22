@@ -23,6 +23,8 @@ const emptyForm: CustomerAddressInput = {
   apartment: "",
   postalCode: "",
   comment: "",
+  latitude: null,
+  longitude: null,
 };
 
 export function CustomerAccountAddressesPageClient() {
@@ -45,9 +47,7 @@ export function CustomerAccountAddressesPageClient() {
     const run = async () => {
       try {
         const response = await getCustomerAddresses();
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setAddresses(response.items);
         setError(null);
       } catch (issue) {
@@ -62,7 +62,6 @@ export function CustomerAccountAddressesPageClient() {
     };
 
     void run();
-
     return () => {
       mounted = false;
     };
@@ -86,10 +85,10 @@ export function CustomerAccountAddressesPageClient() {
 
       if (editingAddressId) {
         await updateCustomerAddress(editingAddressId, payload);
-        setSuccess("Địa chỉ đã được cập nhật.");
+        setSuccess("Address updated.");
       } else {
         await createCustomerAddress(payload);
-        setSuccess("Địa chỉ mới đã được thêm.");
+        setSuccess("Address created.");
       }
 
       await loadAddresses();
@@ -112,6 +111,8 @@ export function CustomerAccountAddressesPageClient() {
       apartment: address.apartment || "",
       postalCode: address.postalCode || "",
       comment: address.comment || "",
+      latitude: address.latitude ? Number(address.latitude) : null,
+      longitude: address.longitude ? Number(address.longitude) : null,
     });
     setSuccess(null);
     setError(null);
@@ -127,7 +128,7 @@ export function CustomerAccountAddressesPageClient() {
       if (editingAddressId === addressId) {
         resetForm();
       }
-      setSuccess("Địa chỉ đã được xoá.");
+      setSuccess("Address deleted.");
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : "Unable to delete address.");
     }
@@ -140,7 +141,7 @@ export function CustomerAccountAddressesPageClient() {
     try {
       await setDefaultCustomerAddress(addressId);
       await loadAddresses();
-      setSuccess("Địa chỉ mặc định đã được cập nhật.");
+      setSuccess("Default address updated.");
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : "Unable to update default address.");
     }
@@ -148,8 +149,8 @@ export function CustomerAccountAddressesPageClient() {
 
   return (
     <CustomerAccountShell
-      title="Địa chỉ giao hàng"
-      description="Lưu sổ địa chỉ giao hàng cho customer, đặt một địa chỉ mặc định và tái sử dụng địa chỉ đó trong checkout khi cần."
+      title="Shipping addresses"
+      description="Save reusable delivery addresses, coordinates, and notes for checkout."
     >
       {error ? (
         <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -164,15 +165,13 @@ export function CustomerAccountAddressesPageClient() {
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
         <section className="card-panel rounded-[1.8rem] px-6 py-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Sổ địa chỉ
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-                Danh sách địa chỉ đã lưu
-              </h2>
-            </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Address book
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
+              Saved addresses
+            </h2>
           </div>
 
           <div className="mt-5 grid gap-4" data-testid="customer-address-list">
@@ -203,6 +202,11 @@ export function CustomerAccountAddressesPageClient() {
                       <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                         {formatCustomerAddress(address)}
                       </p>
+                      {address.latitude || address.longitude ? (
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          GPS: {address.latitude ?? "?"}, {address.longitude ?? "?"}
+                        </p>
+                      ) : null}
                       {address.comment ? (
                         <p className="mt-2 text-sm text-[var(--muted)]">{address.comment}</p>
                       ) : null}
@@ -215,7 +219,7 @@ export function CustomerAccountAddressesPageClient() {
                           className="public-button-secondary px-4 py-2 text-sm"
                           data-testid={`customer-address-default-${address.id}`}
                         >
-                          Đặt mặc định
+                          Set default
                         </button>
                       ) : null}
                       <button
@@ -224,7 +228,7 @@ export function CustomerAccountAddressesPageClient() {
                         className="public-button-secondary px-4 py-2 text-sm"
                         data-testid={`customer-address-edit-${address.id}`}
                       >
-                        Sửa
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -232,7 +236,7 @@ export function CustomerAccountAddressesPageClient() {
                         className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
                         data-testid={`customer-address-delete-${address.id}`}
                       >
-                        Xoá
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -240,7 +244,7 @@ export function CustomerAccountAddressesPageClient() {
               ))
             ) : (
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-5 text-sm text-[var(--muted)]">
-                Chưa có địa chỉ nào được lưu.
+                No saved addresses yet.
               </div>
             )}
           </div>
@@ -250,46 +254,54 @@ export function CustomerAccountAddressesPageClient() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                {editingAddressId ? "Chỉnh sửa" : "Thêm mới"}
+                {editingAddressId ? "Edit" : "Add"}
               </p>
               <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-                {editingAddressId ? "Cập nhật địa chỉ" : "Thêm địa chỉ giao hàng"}
+                {editingAddressId ? "Update address" : "Add shipping address"}
               </h2>
             </div>
             {editingAddressId ? (
               <button type="button" onClick={resetForm} className="public-button-secondary px-4 py-2 text-sm">
-                Huỷ
+                Cancel
               </button>
             ) : null}
           </div>
 
           <div className="mt-5 grid gap-4">
-            <AddressField label="Người nhận">
+            <AddressField label="Recipient name">
               <input value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="public-input" data-testid="customer-address-fullName" />
             </AddressField>
-            <AddressField label="Số điện thoại">
+            <AddressField label="Phone">
               <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="customer-address-phone" />
             </AddressField>
             <div className="grid gap-4 sm:grid-cols-2">
-              <AddressField label="Thành phố">
+              <AddressField label="City">
                 <input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} className="public-input" data-testid="customer-address-city" />
               </AddressField>
-              <AddressField label="Khu vực / tỉnh">
+              <AddressField label="Region">
                 <input value={form.region} onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))} className="public-input" data-testid="customer-address-region" />
               </AddressField>
             </div>
-            <AddressField label="Đường / số nhà">
+            <AddressField label="Street / house">
               <textarea value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} rows={3} className="public-input min-h-28" data-testid="customer-address-street" />
             </AddressField>
             <div className="grid gap-4 sm:grid-cols-2">
-              <AddressField label="Căn hộ / tầng">
+              <AddressField label="Apartment / floor">
                 <input value={form.apartment || ""} onChange={(event) => setForm((current) => ({ ...current, apartment: event.target.value }))} className="public-input" data-testid="customer-address-apartment" />
               </AddressField>
-              <AddressField label="Mã bưu chính">
+              <AddressField label="Postal code">
                 <input value={form.postalCode || ""} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} className="public-input" data-testid="customer-address-postalCode" />
               </AddressField>
             </div>
-            <AddressField label="Ghi chú giao hàng">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AddressField label="Latitude">
+                <input value={form.latitude ?? ""} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value ? Number(event.target.value) : null }))} className="public-input" data-testid="customer-address-latitude" />
+              </AddressField>
+              <AddressField label="Longitude">
+                <input value={form.longitude ?? ""} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value ? Number(event.target.value) : null }))} className="public-input" data-testid="customer-address-longitude" />
+              </AddressField>
+            </div>
+            <AddressField label="Delivery note">
               <textarea value={form.comment || ""} onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))} rows={3} className="public-input min-h-24" data-testid="customer-address-comment" />
             </AddressField>
           </div>
@@ -301,7 +313,7 @@ export function CustomerAccountAddressesPageClient() {
             className="public-button-primary mt-6 px-5 py-3 text-sm disabled:opacity-60"
             data-testid="customer-address-save"
           >
-            {saving ? "Đang lưu..." : editingAddressId ? "Lưu cập nhật" : "Thêm địa chỉ"}
+            {saving ? "Saving..." : editingAddressId ? "Save changes" : "Add address"}
           </button>
         </section>
       </div>

@@ -55,6 +55,16 @@ type CreatedCheckoutOrder = {
   itemsCount: number;
 };
 
+type ResolvedCheckoutCustomer = {
+  fullName: string;
+  phone: string;
+  email: string | null;
+  address: string;
+  note: string | null;
+  latitude: number | null;
+  longitude: number | null;
+};
+
 @Injectable()
 export class CheckoutService {
   constructor(
@@ -159,6 +169,14 @@ export class CheckoutService {
               dto.paymentMethod === 'CASH_ON_DELIVERY' ? 'UNPAID' : 'PENDING',
             totalAmount,
             shippingAddress: checkoutCustomer.address,
+            shippingLatitude:
+              checkoutCustomer.latitude !== null
+                ? new Prisma.Decimal(checkoutCustomer.latitude)
+                : null,
+            shippingLongitude:
+              checkoutCustomer.longitude !== null
+                ? new Prisma.Decimal(checkoutCustomer.longitude)
+                : null,
             customerName: checkoutCustomer.fullName,
             customerPhone: checkoutCustomer.phone,
             customerEmail: checkoutCustomer.email,
@@ -268,7 +286,7 @@ export class CheckoutService {
   private async resolveCheckoutCustomer(
     dto: CreateCheckoutOrderDto,
     user?: AuthenticatedUser | null,
-  ) {
+  ): Promise<ResolvedCheckoutCustomer> {
     const email = dto.customer.email?.trim().toLowerCase() || null;
     const note = dto.customer.note?.trim() || null;
 
@@ -289,6 +307,8 @@ export class CheckoutService {
         email,
         address: dto.customer.address.trim(),
         note,
+        latitude: dto.customer.latitude ?? null,
+        longitude: dto.customer.longitude ?? null,
       };
     }
 
@@ -315,6 +335,10 @@ export class CheckoutService {
       email,
       address: formatCustomerAddressSnapshot(address),
       note: note ?? address.comment ?? null,
+      latitude: address.latitude ? Number(address.latitude.toString()) : null,
+      longitude: address.longitude
+        ? Number(address.longitude.toString())
+        : null,
     };
   }
 

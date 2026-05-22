@@ -24,6 +24,7 @@
     "test:e2e:customer-order-history": "playwright test customer-order-history",
     "test:e2e:support-cases": "playwright test support-cases",
     "test:e2e:manual-delivery": "playwright test manual-delivery",
+    "test:e2e:seller-manual-yandex-workbench": "playwright test seller-manual-yandex-workbench",
     "test:e2e:delivery-exceptions": "playwright test delivery-exceptions",
     "test:e2e:admin-delivery-supervision": "playwright test admin-delivery-supervision",
     "test:e2e:admin-dashboard": "playwright test admin-dashboard",

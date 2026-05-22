@@ -1,5 +1,28 @@
 # Project Status
 
+## Seller Manual Yandex Delivery Workbench - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Seller delivery operations now support a no-provider manual Yandex path on `/seller/orders/[id]`.
+- Direct-seller payment confirmation can now move Yandex-preferred orders into `READY_TO_CREATE_YANDEX`.
+- Seller workbench capabilities now include:
+  - pickup/dropoff/package summary
+  - copy sender / recipient / all shipment brief
+  - optional Yandex Maps linkout when coordinates exist
+  - manual Yandex order id / claim id / tracking / courier / ETA / note entry
+  - transitions to `YANDEX_MANUAL_CREATED`, `COURIER_ASSIGNED`, `PICKED_UP`, `ON_THE_WAY`, `DELIVERED`, `FAILED`, or `CANCELLED`
+- Admin delivery supervision now includes:
+  - `READY_TO_CREATE_YANDEX`
+  - `OVERDUE`
+  - manual Yandex shipment status filters
+  - override status actions
+- Customer-visible tracking now renders a clearer manual Yandex delivery timeline.
+- Current limitation remains intentional:
+  - no real Yandex API calls
+  - no shipment webhook or polling integration
+  - no automatic courier creation from the marketplace
+  - this is an operational workbench for seller-entered manual fulfillment
+
 ## Direct Seller QR Payment Foundation - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

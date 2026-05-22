@@ -387,6 +387,12 @@ export function CheckoutPageClient({
           email: customerForm.email.trim() || undefined,
           address: selectedSavedAddress ? "" : customerForm.address.trim(),
           note: customerForm.note.trim() || undefined,
+          latitude: selectedSavedAddress?.latitude
+            ? Number(selectedSavedAddress.latitude)
+            : undefined,
+          longitude: selectedSavedAddress?.longitude
+            ? Number(selectedSavedAddress.longitude)
+            : undefined,
         },
         addressId: selectedSavedAddress?.id,
         paymentMethod,

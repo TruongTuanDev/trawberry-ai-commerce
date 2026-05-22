@@ -184,6 +184,8 @@ export class CustomerAccountService {
       apartment: dto.apartment?.trim() || null,
       postalCode: dto.postalCode?.trim() || null,
       comment: dto.comment?.trim() || null,
+      latitude: dto.latitude ?? null,
+      longitude: dto.longitude ?? null,
     };
     const existingCount = await this.prisma.customerAddress.count({
       where: { customerId: userId },
@@ -328,6 +330,8 @@ export class CustomerAccountService {
       ...(dto.comment !== undefined
         ? { comment: dto.comment.trim() || null }
         : {}),
+      ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
+      ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
     };
 
     if (partial) {
@@ -351,6 +355,8 @@ export class CustomerAccountService {
     apartment: string | null;
     postalCode: string | null;
     comment: string | null;
+    latitude: { toString(): string } | null;
+    longitude: { toString(): string } | null;
     isDefault: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -366,6 +372,8 @@ export class CustomerAccountService {
       apartment: address.apartment,
       postalCode: address.postalCode,
       comment: address.comment,
+      latitude: address.latitude?.toString() ?? null,
+      longitude: address.longitude?.toString() ?? null,
       isDefault: address.isDefault,
       createdAt: address.createdAt.toISOString(),
       updatedAt: address.updatedAt.toISOString(),

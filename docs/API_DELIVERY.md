@@ -106,9 +106,24 @@ Seller creates the real shipment outside the marketplace and saves tracking data
 ```json
 {
   "provider": "YANDEX",
+  "manualYandexOrderId": "YANDEX-ORDER-123",
+  "yandexClaimId": "claim-123",
   "trackingNumber": "YANDEX-123",
   "trackingUrl": "https://track.example/yandex-123",
+  "courierName": "Courier Ivan",
   "courierPhone": "+79991112233",
+  "deliveryPrice": 450,
+  "packagePreset": "FASHION_BAG",
+  "packageWeightGram": 700,
+  "packageLengthCm": 35,
+  "packageWidthCm": 25,
+  "packageHeightCm": 8,
+  "pickupLatitude": 55.7558,
+  "pickupLongitude": 37.6176,
+  "dropoffLatitude": 55.751244,
+  "dropoffLongitude": 37.618423,
+  "recipientName": "Alice Checkout",
+  "recipientPhone": "+79990000001",
   "estimatedDeliveryAt": "2026-05-15T12:00:00.000Z",
   "deliveryNote": "Created manually in Yandex dashboard"
 }
@@ -116,14 +131,18 @@ Seller creates the real shipment outside the marketplace and saves tracking data
 
 Seller status actions:
 
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-courier-assigned`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-picked-up`
 - `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-in-transit`
 - `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-delivered`
 - `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel`
 
 Manual status values:
-- `NOT_CREATED`
-- `CREATED_MANUALLY`
-- `IN_TRANSIT`
+- `READY_TO_CREATE_YANDEX`
+- `YANDEX_MANUAL_CREATED`
+- `COURIER_ASSIGNED`
+- `PICKED_UP`
+- `ON_THE_WAY`
 - `DELIVERED`
 - `CANCELLED`
 - `FAILED`
@@ -133,6 +152,8 @@ Validation:
 - order must be `PAID`
 - seller cannot cancel `DELIVERED`
 - `trackingUrl` must be a valid URL when provided
+- future Yandex API placeholders are stored now: `yandexClaimId`, `yandexStatus`, `yandexPrice`, and `yandexTrackingLink`
+- Yandex-preferred orders can enter `READY_TO_CREATE_YANDEX` before a shipment record exists
 
 ## Admin Supervision
 
@@ -152,11 +173,17 @@ Query filters:
 Admin actions:
 - `GET /api/admin/deliveries/:deliveryShipmentId`
 - `PATCH /api/admin/deliveries/:deliveryShipmentId`
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-courier-assigned`
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-picked-up`
 - `POST /api/admin/deliveries/:deliveryShipmentId/mark-in-transit`
 - `POST /api/admin/deliveries/:deliveryShipmentId/mark-delivered`
 - `POST /api/admin/deliveries/:deliveryShipmentId/cancel`
 
 `paidWithoutDelivery=true` returns paid orders with no active delivery shipment and non-terminal order status.
+
+Additional queue filters:
+- `status=READY_TO_CREATE_YANDEX`
+- `status=OVERDUE`
 
 ## Delivery Detail
 
@@ -195,9 +222,13 @@ Public order tracking exposes latest delivery projection:
 - provider shipment id
 - tracking number
 - tracking URL
+- manual Yandex order id / claim id
+- courier name
 - courier phone
 - estimated delivery
 - delivery note
+- pickup / dropoff coordinates when stored
+- customer-friendly timeline states for payment confirmed, Yandex created, courier assigned, picked up, on the way, and delivered
 
 ## Browser UI Coverage
 
@@ -210,6 +241,7 @@ The Next.js seller UI exposes the delivery MVP at:
 
 `npm run test:e2e:seller-delivery-settings` verifies these paths in mock mode. The test uses API setup for seller approval, shop/product creation, and paid order creation, then performs delivery settings and shipment operations through browser UI.
 `npm run test:e2e:manual-delivery` and `npm run test:e2e:admin-delivery-supervision` verify the seller-managed delivery model.
+`npm run smoke:manual-yandex-workbench` and `npm run test:e2e:seller-manual-yandex-workbench` verify the manual Yandex workbench flow.
 
 ## Real Carrier Calls
 

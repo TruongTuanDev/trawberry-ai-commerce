@@ -104,6 +104,16 @@ NestJS backend runs in parallel with the legacy `strawberry-backend` Spring Boot
 - `PATCH /api/customer/addresses/:addressId`
 - `DELETE /api/customer/addresses/:addressId`
 - `POST /api/customer/addresses/:addressId/default`
+- `GET /api/shops/:shopId/delivery/settings`
+- `PATCH /api/shops/:shopId/delivery/settings`
+- `GET /api/shops/:shopId/orders/:orderId/delivery`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/manual`
+- `PATCH /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/manual`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-courier-assigned`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-picked-up`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-in-transit`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-delivered`
+- `GET /api/admin/deliveries`
 
 ## Seller Catalog Lifecycle
 
@@ -189,6 +199,19 @@ npm run start:dev
 - Smoke: `npm run smoke:wb-import`.
 - Full import-to-checkout smoke: `npm run smoke:wb-import-checkout`.
 - Bulk edit smoke: `npm run smoke:bulk-product-edit`.
+- Manual Yandex workbench smoke: `npm run smoke:manual-yandex-workbench`.
+
+## Manual Yandex delivery workbench
+
+- Seller-managed no-provider Yandex flow is implemented on top of the delivery module.
+- Yandex-preferred orders can move into `READY_TO_CREATE_YANDEX` after payment confirmation.
+- Delivery shipment records now store manual Yandex placeholders for future real integration:
+  - `manualYandexOrderId`
+  - `yandexClaimId`
+  - `yandexStatus`
+  - `yandexPrice`
+  - `yandexTrackingLink`
+- Optional shipping and pickup coordinates are stored for map handoff and future carrier automation.
 
 ## Wildberries API sync
 - Legacy reference audit: `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`.

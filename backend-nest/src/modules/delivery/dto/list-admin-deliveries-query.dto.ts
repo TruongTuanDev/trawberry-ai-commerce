@@ -14,9 +14,11 @@ import {
 } from '../delivery.constants';
 
 export class ListAdminDeliveriesQueryDto {
-  @ApiPropertyOptional({ enum: MANUAL_DELIVERY_STATUSES })
+  @ApiPropertyOptional({
+    enum: [...MANUAL_DELIVERY_STATUSES, 'OVERDUE', 'READY_TO_CREATE_YANDEX'],
+  })
   @IsOptional()
-  @IsIn(MANUAL_DELIVERY_STATUSES)
+  @IsIn([...MANUAL_DELIVERY_STATUSES, 'OVERDUE', 'READY_TO_CREATE_YANDEX'])
   status?: string;
 
   @ApiPropertyOptional({ enum: DELIVERY_CARRIERS })

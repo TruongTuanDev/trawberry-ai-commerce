@@ -6,8 +6,10 @@ import {
   adminCancelDelivery,
   adminAddDeliveryComment,
   adminMarkDeliveryDelivered,
+  adminMarkDeliveryCourierAssigned,
   adminMarkDeliveryFailed,
   adminMarkDeliveryInTransit,
+  adminMarkDeliveryPickedUp,
   adminUpdateDeliveryCustomerMessage,
   listAdminDeliveries,
   type AdminDeliveryRow,
@@ -16,9 +18,13 @@ import type { DeliveryExceptionReasonCode } from "@/lib/seller-api";
 
 const statusFilters = [
   { label: "Paid without delivery", value: "PAID_WITHOUT_DELIVERY" },
+  { label: "Ready for Yandex", value: "READY_TO_CREATE_YANDEX" },
+  { label: "Overdue", value: "OVERDUE" },
   { label: "Exceptions only", value: "EXCEPTIONS" },
-  { label: "Created", value: "CREATED_MANUALLY" },
-  { label: "In transit", value: "IN_TRANSIT" },
+  { label: "Created", value: "YANDEX_MANUAL_CREATED" },
+  { label: "Courier assigned", value: "COURIER_ASSIGNED" },
+  { label: "Picked up", value: "PICKED_UP" },
+  { label: "On the way", value: "ON_THE_WAY" },
   { label: "Delivered", value: "DELIVERED" },
   { label: "Cancelled", value: "CANCELLED" },
   { label: "Failed", value: "FAILED" },
@@ -45,7 +51,7 @@ export function AdminDeliveriesPageClient() {
 
   const query = useMemo(
     () => ({
-      paidWithoutDelivery: filter === "PAID_WITHOUT_DELIVERY",
+      paidWithoutDelivery: filter === "PAID_WITHOUT_DELIVERY" || filter === "READY_TO_CREATE_YANDEX",
       exceptionOnly: filter === "EXCEPTIONS",
       status: filter === "PAID_WITHOUT_DELIVERY" || filter === "EXCEPTIONS" ? undefined : filter,
       provider: provider || undefined,
@@ -76,14 +82,20 @@ export function AdminDeliveriesPageClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  const handleOverride = async (action: "in-transit" | "delivered" | "cancel") => {
+  const handleOverride = async (action: "courier-assigned" | "picked-up" | "in-transit" | "delivered" | "cancel") => {
     if (!selected?.deliveryShipmentId) return;
     setMessage(null);
     setError(null);
     try {
-      if (action === "in-transit") {
+      if (action === "courier-assigned") {
+        await adminMarkDeliveryCourierAssigned(selected.deliveryShipmentId, { note: "Admin supervision override." });
+        setMessage("Courier assigned.");
+      } else if (action === "picked-up") {
+        await adminMarkDeliveryPickedUp(selected.deliveryShipmentId, { note: "Admin supervision override." });
+        setMessage("Package marked picked up.");
+      } else if (action === "in-transit") {
         await adminMarkDeliveryInTransit(selected.deliveryShipmentId, "Admin supervision override.");
-        setMessage("Delivery marked in transit.");
+        setMessage("Delivery marked on the way.");
       } else if (action === "delivered") {
         await adminMarkDeliveryDelivered(selected.deliveryShipmentId, "Admin supervision override.");
         setMessage("Delivery marked delivered.");
@@ -254,6 +266,8 @@ export function AdminDeliveriesPageClient() {
               <p className="text-sm text-[var(--muted)]">{selected.customer.address}</p>
               {selected.deliveryNote ? <p className="text-sm text-[var(--muted)]">{selected.deliveryNote}</p> : null}
               <div className="flex flex-wrap gap-3">
+                <button type="button" onClick={() => void handleOverride("courier-assigned")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Courier assigned</button>
+                <button type="button" onClick={() => void handleOverride("picked-up")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Picked up</button>
                 <button type="button" onClick={() => void handleOverride("in-transit")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-in-transit">Mark in transit</button>
                 <button type="button" onClick={() => void handleOverride("delivered")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-delivered">Mark delivered</button>
                 <button type="button" onClick={() => void handleOverride("cancel")} disabled={!selected.deliveryShipmentId} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Cancel</button>

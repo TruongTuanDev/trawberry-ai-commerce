@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsNumber,
   IsOptional,
   IsString,
   MaxLength,
@@ -71,4 +73,16 @@ export class CreateCustomerAddressDto {
   @IsString()
   @MaxLength(1000)
   comment?: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  latitude?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  longitude?: number | null;
 }

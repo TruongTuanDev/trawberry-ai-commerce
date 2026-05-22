@@ -31,6 +31,12 @@ export class CustomerAddressResponseDto {
   @ApiProperty({ nullable: true })
   comment!: string | null;
 
+  @ApiProperty({ nullable: true })
+  latitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  longitude!: string | null;
+
   @ApiProperty()
   isDefault!: boolean;
 

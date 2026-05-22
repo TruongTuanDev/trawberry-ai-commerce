@@ -1,11 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsInt,
   IsDateString,
   IsIn,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   MaxLength,
+  Min,
 } from 'class-validator';
 import {
   DELIVERY_COMMENT_VISIBILITIES,
@@ -35,6 +38,12 @@ export class UpsertManualDeliveryDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
+  manualYandexOrderId?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
   trackingNumber?: string | null;
 
   @ApiProperty({ required: false, nullable: true })
@@ -46,8 +55,99 @@ export class UpsertManualDeliveryDto {
   @ApiProperty({ required: false, nullable: true })
   @IsOptional()
   @IsString()
+  @MaxLength(255)
+  courierName?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
   @MaxLength(1000)
   pickupAddress?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  packagePreset?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  packageWeightGram?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  packageLengthCm?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  packageWidthCm?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  packageHeightCm?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  pickupLatitude?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  pickupLongitude?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  dropoffLatitude?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  dropoffLongitude?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  recipientName?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  recipientPhone?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  deliveryPrice?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  yandexClaimId?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  yandexStatus?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(1000)
+  yandexTrackingLink?: string | null;
 
   @ApiProperty({ required: false, nullable: true })
   @IsOptional()
@@ -86,6 +186,23 @@ export class DeliveryTransitionDto {
   @IsString()
   @MaxLength(1000)
   note?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  courierName?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  courierPhone?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsDateString()
+  estimatedDeliveryAt?: string | null;
 }
 
 export class MarkDeliveryExceptionDto {

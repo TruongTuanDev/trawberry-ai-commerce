@@ -156,6 +156,44 @@ export class DeliveryController {
     );
   }
 
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/mark-courier-assigned')
+  @ApiOperation({ summary: 'Mark seller-managed Yandex courier assigned.' })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  markManualCourierAssigned(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.markManualCourierAssigned(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
+  }
+
+  @Post('orders/:orderId/delivery/shipments/:shipmentId/mark-picked-up')
+  @ApiOperation({ summary: 'Mark seller-managed Yandex package picked up.' })
+  @ApiOkResponse({ type: DeliveryShipmentResponseDto })
+  markManualPickedUp(
+    @Param('shopId') shopId: string,
+    @Param('orderId') orderId: string,
+    @Param('shipmentId') shipmentId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.markManualPickedUp(
+      shopId,
+      orderId,
+      shipmentId,
+      user,
+      dto,
+    );
+  }
+
   @Post('orders/:orderId/delivery/shipments/:shipmentId/mark-delivered')
   @ApiOperation({ summary: 'Mark seller-managed delivery delivered.' })
   @ApiOkResponse({ type: DeliveryShipmentResponseDto })
@@ -299,6 +337,34 @@ export class AdminDeliveriesController {
     @Body() dto: DeliveryTransitionDto,
   ) {
     return this.deliveryService.adminMarkInTransit(
+      deliveryShipmentId,
+      admin,
+      dto,
+    );
+  }
+
+  @Post(':deliveryShipmentId/mark-courier-assigned')
+  @ApiOperation({ summary: 'Admin marks courier assigned.' })
+  markCourierAssigned(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.adminMarkCourierAssigned(
+      deliveryShipmentId,
+      admin,
+      dto,
+    );
+  }
+
+  @Post(':deliveryShipmentId/mark-picked-up')
+  @ApiOperation({ summary: 'Admin marks package picked up.' })
+  markPickedUp(
+    @Param('deliveryShipmentId') deliveryShipmentId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+    @Body() dto: DeliveryTransitionDto,
+  ) {
+    return this.deliveryService.adminMarkPickedUp(
       deliveryShipmentId,
       admin,
       dto,
