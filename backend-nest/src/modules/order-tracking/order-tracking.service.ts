@@ -129,6 +129,14 @@ type TrackableOrderRecord = {
       fullName: string | null;
     };
   }>;
+  returnRefundCases?: Array<{
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+    requestedAmount: Prisma.Decimal;
+    approvedAmount: Prisma.Decimal | null;
+  }>;
 };
 
 @Injectable()
@@ -392,6 +400,15 @@ export class OrderTrackingService {
         reviewerName: log.reviewer.fullName,
         createdAt: log.createdAt.toISOString(),
       })),
+      returnRefundCases:
+        order.returnRefundCases?.map((entry) => ({
+          id: entry.id,
+          type: entry.type,
+          reason: entry.reason,
+          status: entry.status,
+          requestedAmount: entry.requestedAmount.toString(),
+          approvedAmount: entry.approvedAmount?.toString() ?? null,
+        })) ?? [],
       delivery: latestShipment
         ? {
             provider: latestShipment.provider,
@@ -543,6 +560,17 @@ export class OrderTrackingService {
               fullName: true,
             },
           },
+        },
+      },
+      returnRefundCases: {
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          type: true,
+          reason: true,
+          status: true,
+          requestedAmount: true,
+          approvedAmount: true,
         },
       },
     };

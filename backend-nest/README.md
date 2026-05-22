@@ -1,5 +1,17 @@
 # backend-nest
 
+## Return / Refund / Dispute Foundation
+
+- Manual return/refund/dispute APIs now exist for customer, seller, and admin.
+- Key docs:
+  - `docs/RETURN_REFUND_DISPUTE.md`
+  - `docs/API_RETURNS.md`
+- Verification entry:
+
+```bash
+npm run smoke:return-refund-dispute
+```
+
 ## Seller Finance
 
 - Direct-to-seller payment now has a ledger-based fee model.

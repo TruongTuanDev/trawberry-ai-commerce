@@ -61,6 +61,21 @@ Update on 2026-05-22 after the seller finance phase:
   - no refund reconciliation automation
   - no bank auto-debit or settlement automation
 
+Update on 2026-05-22 after the return/refund/dispute foundation:
+
+- returns/refunds are no longer fully missing
+- the stack now has:
+  - customer return case creation
+  - seller response flow
+  - admin dispute review
+  - manual refund transfer confirmation
+  - commission adjustment after confirmed refund
+- remaining blocker is still significant:
+  - no automated bank refund
+  - no chargeback workflow
+  - no provider-backed return shipment automation
+  - no legal-policy/content pack
+
 ### Top 10 Blockers
 
 1. No real payment provider, webhook ingestion, settlement, retry, reconciliation, refund, or dispute execution.

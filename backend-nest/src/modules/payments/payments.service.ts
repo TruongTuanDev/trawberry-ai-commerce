@@ -127,6 +127,12 @@ type PaymentOrderRecord = {
       status: string;
     } | null;
   }>;
+  returnRefundCases?: Array<{
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+  }>;
 };
 
 @Injectable()
@@ -677,6 +683,14 @@ export class PaymentsService {
         : null,
       paymentProofStatus: order.paymentProofStatus,
       buyerPaymentNote: order.paymentProofBuyerNote,
+      activeReturnRefundCase: order.returnRefundCases?.[0]
+        ? {
+            id: order.returnRefundCases[0].id,
+            type: order.returnRefundCases[0].type,
+            reason: order.returnRefundCases[0].reason,
+            status: order.returnRefundCases[0].status,
+          }
+        : null,
       ledgerStatus: order.sellerFeeLedgerEntries?.[0]?.status ?? null,
       ledgerCommissionAmount:
         order.sellerFeeLedgerEntries?.[0]?.commissionAmount.toString() ?? null,
@@ -772,6 +786,16 @@ export class PaymentsService {
               status: true,
             },
           },
+        },
+      },
+      returnRefundCases: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          type: true,
+          reason: true,
+          status: true,
         },
       },
     };

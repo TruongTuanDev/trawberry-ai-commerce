@@ -110,6 +110,15 @@ export class CustomerOrdersService {
           productImageSnapshot: item.productImageSnapshot,
           variantNameSnapshot: item.variantNameSnapshot,
         })),
+        returnRefundCases: (order.returnRefundCases ?? []).map((entry) => ({
+          id: entry.id,
+          type: entry.type,
+          reason: entry.reason,
+          status: entry.status,
+          requestedAmount: entry.requestedAmount.toString(),
+          approvedAmount: entry.approvedAmount?.toString() ?? null,
+          createdAt: entry.createdAt.toISOString(),
+        })),
       };
     });
 
@@ -178,6 +187,18 @@ export class CustomerOrdersService {
             orderBy: { createdAt: 'desc' as const },
             select: {
               internalStatus: true,
+            },
+          },
+          returnRefundCases: {
+            orderBy: { createdAt: 'desc' as const },
+            select: {
+              id: true,
+              type: true,
+              reason: true,
+              status: true,
+              requestedAmount: true,
+              approvedAmount: true,
+              createdAt: true,
             },
           },
         },

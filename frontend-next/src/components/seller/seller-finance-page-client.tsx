@@ -152,6 +152,7 @@ export function SellerFinancePageClient() {
               <tr>
                 <th className="px-3 py-2 font-medium">Date</th>
                 <th className="px-3 py-2 font-medium">Order</th>
+                <th className="px-3 py-2 font-medium">Source</th>
                 <th className="px-3 py-2 font-medium">Revenue</th>
                 <th className="px-3 py-2 font-medium">Commission %</th>
                 <th className="px-3 py-2 font-medium">Commission</th>
@@ -167,6 +168,10 @@ export function SellerFinancePageClient() {
                   <td className="px-3 py-3 font-medium text-[var(--foreground)]">
                     {entry.orderCode}
                   </td>
+                  <td className="px-3 py-3 text-[var(--muted)]">
+                    {entry.source}
+                    {entry.referenceCaseId ? ` (${entry.referenceCaseId.slice(0, 8)})` : ""}
+                  </td>
                   <td className="px-3 py-3">{formatRub(entry.productRevenueAmount)}</td>
                   <td className="px-3 py-3">{entry.commissionPercent}%</td>
                   <td className="px-3 py-3">{formatRub(entry.commissionAmount)}</td>
@@ -175,7 +180,7 @@ export function SellerFinancePageClient() {
               ))}
               {ledger.length < 1 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[var(--muted)]">
+                  <td colSpan={7} className="px-3 py-6 text-center text-[var(--muted)]">
                     No ledger entries yet.
                   </td>
                 </tr>

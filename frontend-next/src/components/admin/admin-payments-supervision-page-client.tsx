@@ -9,6 +9,7 @@ import {
   listAdminPayments,
   type AdminPaymentSupervisionRow,
 } from "@/lib/admin-api";
+import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
 
 export function AdminPaymentsSupervisionPageClient() {
   const [items, setItems] = useState<AdminPaymentSupervisionRow[]>([]);
@@ -169,6 +170,11 @@ export function AdminPaymentsSupervisionPageClient() {
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     Ledger {item.ledgerStatus ?? "not created"}
                   </p>
+                  {item.activeReturnRefundCase ? (
+                    <p className="mt-1 text-xs text-rose-700">
+                      Case: {labelForReturnType(item.activeReturnRefundCase.type)} - {labelForReturnStatus(item.activeReturnRefundCase.status)}
+                    </p>
+                  ) : null}
                 </button>
               ))
             ) : (

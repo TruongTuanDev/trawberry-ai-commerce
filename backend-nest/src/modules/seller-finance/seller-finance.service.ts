@@ -191,6 +191,108 @@ export class SellerFinanceService {
     });
   }
 
+  async syncReturnRefundAdjustment(
+    tx: Prisma.TransactionClient,
+    caseId: string,
+  ) {
+    const financeTx = this.asFinanceExecutor(tx);
+    const returnCase = await tx.returnRefundCase.findUnique({
+      where: { id: caseId },
+      include: {
+        order: {
+          select: {
+            id: true,
+            marketplaceCheckoutId: true,
+          },
+        },
+      },
+    });
+
+    if (!returnCase) {
+      throw new NotFoundException(
+        `Return/refund case ${caseId} was not found.`,
+      );
+    }
+
+    if (
+      !['REFUND_CONFIRMED', 'CLOSED'].includes(returnCase.status) ||
+      !returnCase.refundConfirmedAt
+    ) {
+      return null;
+    }
+
+    const existingAdjustment = await financeTx.sellerFeeLedgerEntry.findFirst({
+      where: {
+        referenceCaseId: caseId,
+        source: 'RETURN_REFUND_CONFIRMED',
+      },
+    });
+    if (existingAdjustment) {
+      return existingAdjustment;
+    }
+
+    const reference = await financeTx.sellerFeeLedgerEntry.findFirst({
+      where: {
+        orderId: returnCase.orderId,
+        source: {
+          in: [...FINAL_LEDGER_SOURCES],
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    if (!reference) {
+      return null;
+    }
+
+    const approvedAmount =
+      returnCase.approvedAmount ?? returnCase.requestedAmount;
+    if (approvedAmount.lte(0)) {
+      return null;
+    }
+
+    const refundableProductAmount = Prisma.Decimal.min(
+      approvedAmount,
+      reference.productRevenueAmount.abs(),
+    );
+    const adjustmentCommission = this.roundMoney(
+      refundableProductAmount.mul(reference.commissionPercent).div(100),
+    ).negated();
+
+    const adjustment = await financeTx.sellerFeeLedgerEntry.create({
+      data: {
+        id: randomUUID(),
+        sellerId: reference.sellerId,
+        shopId: reference.shopId,
+        orderId: reference.orderId,
+        checkoutId:
+          reference.checkoutId ?? returnCase.order.marketplaceCheckoutId,
+        billingPeriod: this.getBillingPeriod(
+          returnCase.refundConfirmedAt ?? new Date(),
+        ),
+        productRevenueAmount: refundableProductAmount.negated(),
+        deliveryFeeAmount: returnCase.deliveryFeeRefundAmount.gt(0)
+          ? returnCase.deliveryFeeRefundAmount.negated()
+          : null,
+        commissionPercent: reference.commissionPercent,
+        commissionAmount: adjustmentCommission,
+        status: 'PENDING',
+        source: 'RETURN_REFUND_CONFIRMED',
+        referenceCaseId: caseId,
+      },
+    });
+
+    await tx.returnRefundCase.update({
+      where: { id: caseId },
+      data: {
+        platformFeeAdjustmentAmount: adjustmentCommission,
+      },
+    });
+
+    return adjustment;
+  }
+
   async listAdminSellerFees() {
     const financePrisma = this.asFinanceExecutor(this.prisma);
     const now = new Date();
@@ -767,6 +869,7 @@ export class SellerFinanceService {
       createdAt: entry.createdAt.toISOString(),
       updatedAt: entry.updatedAt.toISOString(),
       invoiceId: entry.invoiceId,
+      referenceCaseId: entry.referenceCaseId,
     }));
   }
 

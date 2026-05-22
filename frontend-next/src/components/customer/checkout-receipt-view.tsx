@@ -4,6 +4,7 @@ import Link from "next/link";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
+import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
 import type { CustomerCheckoutReceipt } from "@/lib/customer-api";
 
 export function CheckoutReceiptView({
@@ -66,10 +67,30 @@ export function CheckoutReceiptView({
             />
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-[var(--foreground)]">Order total {order.totalAmount}</p>
-              <Link href={`${order.trackingPath}${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`} className="public-button-secondary px-4 py-2 text-sm" data-testid="receipt-track-link">
-                Track order
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/customer/returns?orderId=${encodeURIComponent(order.orderId)}`} className="public-button-secondary px-4 py-2 text-sm" data-testid="receipt-open-return-link">
+                  Request return / refund
+                </Link>
+                <Link href={`${order.trackingPath}${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`} className="public-button-secondary px-4 py-2 text-sm" data-testid="receipt-track-link">
+                  Track order
+                </Link>
+              </div>
             </div>
+            {order.returnRefundCases?.length ? (
+              <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Return / refund</p>
+                <div className="mt-3 space-y-2">
+                  {order.returnRefundCases.map((entry) => (
+                    <Link key={entry.id} href={`/customer/returns/${entry.id}`} className="block rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold text-[var(--foreground)]">{labelForReturnType(entry.type)}</span>
+                        <span className="text-[var(--muted)]">{labelForReturnStatus(entry.status)}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>

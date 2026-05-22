@@ -1,5 +1,22 @@
 # frontend-next
 
+## Return / Refund / Dispute Foundation
+
+- Customer UI:
+  - `/customer/returns`
+  - `/customer/returns/[caseId]`
+- Seller UI:
+  - `/seller/returns`
+  - `/seller/returns/[caseId]`
+- Admin UI:
+  - `/admin/returns`
+  - `/admin/returns/[caseId]`
+- Browser verification entry:
+
+```bash
+npm run test:e2e:return-refund-dispute
+```
+
 ## Seller Finance
 
 - Admin finance UI route:

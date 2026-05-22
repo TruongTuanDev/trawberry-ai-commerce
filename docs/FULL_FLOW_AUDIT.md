@@ -1,5 +1,13 @@
 # Full Commerce Flow Audit
 
+## Return / Refund / Dispute Addendum
+
+- customer can now open a return/refund/dispute case from order detail
+- seller can review case context, respond, request evidence, reject, or mark refund sent
+- admin can review marketplace-wide return cases and issue a decision
+- manual refund transfer confirmation now feeds finance adjustment logic
+- seller fee due decreases only after refund confirmation, not merely after approval
+
 ## Three Role Order Sync Addendum
 
 - customer checkout visibility, seller order visibility, and admin supervision are now explicitly tied together through role-aware status projection

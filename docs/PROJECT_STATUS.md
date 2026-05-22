@@ -1,5 +1,28 @@
 # Project Status
 
+## Return / Refund / Dispute Foundation - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Customer now has:
+  - `/customer/returns`
+  - `/customer/returns/[caseId]`
+  - order-detail action to open a return/refund/dispute case
+- Seller now has:
+  - `/seller/returns`
+  - `/seller/returns/[caseId]`
+  - response, evidence follow-up, and manual refund-sent actions
+- Admin now has:
+  - `/admin/returns`
+  - `/admin/returns/[caseId]`
+  - approve/reject/request-evidence/override actions
+- Finance behavior now includes:
+  - manual refund confirmation
+  - negative commission adjustment rows instead of deleting historical fee rows
+- Current limitation remains intentional:
+  - no automatic bank refund
+  - no automatic chargeback
+  - no provider-backed return shipment
+
 ## Three Role Order Sync Audit + Fixes - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

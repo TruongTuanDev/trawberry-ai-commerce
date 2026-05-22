@@ -435,6 +435,15 @@ export class OrdersService {
       subject: string;
       createdAt: Date;
     }>;
+    returnRefundCases?: Array<{
+      id: string;
+      type: string;
+      reason: string;
+      status: string;
+      requestedAmount: Prisma.Decimal;
+      approvedAmount: Prisma.Decimal | null;
+      createdAt: Date;
+    }>;
   }) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
     const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
@@ -520,6 +529,16 @@ export class OrdersService {
           subject: supportCase.subject,
           createdAt: supportCase.createdAt.toISOString(),
         })) ?? [],
+      returnRefundCases:
+        order.returnRefundCases?.map((entry) => ({
+          id: entry.id,
+          type: entry.type,
+          reason: entry.reason,
+          status: entry.status,
+          requestedAmount: entry.requestedAmount.toString(),
+          approvedAmount: entry.approvedAmount?.toString() ?? null,
+          createdAt: entry.createdAt.toISOString(),
+        })) ?? [],
     };
   }
 
@@ -585,6 +604,18 @@ export class OrdersService {
           issueType: true,
           status: true,
           subject: true,
+          createdAt: true,
+        },
+      },
+      returnRefundCases: {
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          type: true,
+          reason: true,
+          status: true,
+          requestedAmount: true,
+          approvedAmount: true,
           createdAt: true,
         },
       },

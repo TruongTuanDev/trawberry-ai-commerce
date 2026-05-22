@@ -264,4 +264,17 @@ export class PublicOrderTrackingResponseDto {
 
   @ApiProperty({ type: PublicOrderDeliveryDto, nullable: true })
   delivery!: PublicOrderDeliveryDto | null;
+
+  @ApiProperty({
+    isArray: true,
+    type: Object,
+  })
+  returnRefundCases!: Array<{
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+    requestedAmount: string;
+    approvedAmount: string | null;
+  }>;
 }

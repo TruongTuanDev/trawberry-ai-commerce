@@ -89,6 +89,29 @@ class OrderSupportCaseSummaryDto {
   createdAt!: string;
 }
 
+class OrderReturnRefundCaseSummaryDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  type!: string;
+
+  @ApiProperty()
+  reason!: string;
+
+  @ApiProperty()
+  status!: string;
+
+  @ApiProperty()
+  requestedAmount!: string;
+
+  @ApiProperty({ nullable: true })
+  approvedAmount!: string | null;
+
+  @ApiProperty()
+  createdAt!: string;
+}
+
 export class OrderResponseDto {
   @ApiProperty()
   id!: string;
@@ -174,4 +197,7 @@ export class OrderResponseDto {
 
   @ApiProperty({ type: OrderSupportCaseSummaryDto, isArray: true })
   supportCases!: OrderSupportCaseSummaryDto[];
+
+  @ApiProperty({ type: OrderReturnRefundCaseSummaryDto, isArray: true })
+  returnRefundCases!: OrderReturnRefundCaseSummaryDto[];
 }

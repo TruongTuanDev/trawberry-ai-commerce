@@ -1,5 +1,26 @@
 # Orders API
 
+## 2026-05-22 Return / Refund / Dispute Addendum
+
+Seller and customer order projections now include linked return/refund case summaries when present.
+
+Additive response projection:
+
+- `returnRefundCases[]`
+  - `id`
+  - `type`
+  - `reason`
+  - `status`
+  - `requestedAmount`
+  - `approvedAmount`
+  - `openedAt`
+  - `updatedAt`
+
+Operational meaning:
+
+- customer order detail can link directly into the return/refund workflow
+- seller order detail can see active case status and react operationally
+
 ## 2026-05-22 Three Role Order Sync Addendum
 
 Seller orders now expose role-aware operational metadata.

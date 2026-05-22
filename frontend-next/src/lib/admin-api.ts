@@ -496,6 +496,15 @@ export type AdminPaymentSupervisionRow = SellerPaymentItem & {
   ledgerStatus?: string | null;
   ledgerCommissionAmount?: string | null;
   ledgerInvoiceStatus?: string | null;
+  activeReturnRefundCase?: {
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+    requestedAmount: string;
+    approvedAmount: string | null;
+    createdAt: string;
+  } | null;
 };
 
 export type AdminSellerFeeRow = {
@@ -533,6 +542,96 @@ export type AdminSellerFeeInvoice = {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AdminReturnRefundCase = {
+  id: string;
+  checkoutId: string | null;
+  orderId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  type: string;
+  reason: string;
+  status: string;
+  requestedAmount: string;
+  approvedAmount: string | null;
+  productAmount: string;
+  deliveryFeeRefundAmount: string;
+  platformFeeAdjustmentAmount: string;
+  currency: string;
+  buyerComment: string;
+  sellerComment: string | null;
+  adminDecision: string | null;
+  sellerResponseDueAt: string | null;
+  openedAt: string;
+  sellerRespondedAt: string | null;
+  adminReviewedAt: string | null;
+  refundConfirmedAt: string | null;
+  closedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order: {
+    id: string;
+    orderCode: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string | null;
+    totalAmount: string;
+    shippingCost: string;
+  };
+  shop: {
+    id: string;
+    name: string;
+  };
+  customer: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  seller: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  messages: Array<{
+    id: string;
+    authorId: string | null;
+    authorRole: string;
+    visibility: string;
+    message: string;
+    authorName: string | null;
+    createdAt: string;
+  }>;
+  evidence: Array<{
+    id: string;
+    uploadedById: string | null;
+    uploadedByRole: string;
+    fileUrl: string;
+    fileType: string;
+    label: string | null;
+    originalName: string | null;
+    createdAt: string;
+  }>;
+  manualTransfers: Array<{
+    id: string;
+    amount: string;
+    currency: string;
+    method: string;
+    proofImageUrl: string | null;
+    bankReference: string | null;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  finance: {
+    latestLedgerStatus: string | null;
+    latestLedgerCommission: string | null;
+    latestAdjustmentId: string | null;
+  };
 };
 
 export async function getAdminDashboardSummary(query?: {
@@ -1016,6 +1115,68 @@ export async function addAdminSupportCaseMessage(
   payload: { message: string; isInternal?: boolean },
 ) {
   return apiRequest<SupportCaseDetail>(`/api/admin/support-cases/${encodeURIComponent(caseId)}/messages`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listAdminReturnRefundCases(query?: {
+  status?: string;
+  reason?: string;
+  shopId?: string;
+  sellerId?: string;
+  customerId?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  Object.entries(query ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  });
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<{ items: AdminReturnRefundCase[]; meta: { page: number; limit: number; total: number; totalPages: number } }>(`/api/admin/returns${suffix}`, {
+    method: "GET",
+  });
+}
+
+export async function getAdminReturnRefundCase(caseId: string) {
+  return apiRequest<AdminReturnRefundCase>(`/api/admin/returns/${encodeURIComponent(caseId)}`, {
+    method: "GET",
+  });
+}
+
+export async function decideAdminReturnRefundCase(
+  caseId: string,
+  payload: {
+    decision: "APPROVE" | "REJECT" | "REQUEST_MORE_EVIDENCE" | "CLOSE" | "OVERRIDE_REFUND_CONFIRMED";
+    approvedAmount?: number;
+    adminNote: string;
+  },
+) {
+  return apiRequest<AdminReturnRefundCase>(`/api/admin/returns/${encodeURIComponent(caseId)}/decision`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function addAdminReturnRefundMessage(
+  caseId: string,
+  payload: { message: string },
+) {
+  return apiRequest<AdminReturnRefundCase>(`/api/admin/returns/${encodeURIComponent(caseId)}/messages`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function addAdminReturnRefundInternalNote(
+  caseId: string,
+  payload: { message: string },
+) {
+  return apiRequest<AdminReturnRefundCase>(`/api/admin/returns/${encodeURIComponent(caseId)}/internal-note`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

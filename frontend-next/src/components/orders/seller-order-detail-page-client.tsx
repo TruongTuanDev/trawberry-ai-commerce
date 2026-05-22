@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
+import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
 import { SectionCard } from "@/components/seller/section-card";
 import {
   calculateDeliveryOffers,
@@ -1508,6 +1509,21 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         title="Ordered products"
         description="Snapshot data is taken from the legacy order records so seller support sees exactly what the customer bought."
       >
+        {order.returnRefundCases?.length ? (
+          <div className="mb-6 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5" data-testid="seller-order-active-return-cases">
+            <p className="text-sm font-semibold text-[var(--foreground)]">Active return / refund cases</p>
+            <div className="mt-3 grid gap-3">
+              {order.returnRefundCases.map((entry) => (
+                <Link key={entry.id} href={`/seller/returns/${entry.id}`} className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-[var(--foreground)]">{labelForReturnType(entry.type)}</span>
+                    <span className="text-[var(--muted)]">{labelForReturnStatus(entry.status)}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="grid gap-4">
           {order.items.map((item) => (
             <article

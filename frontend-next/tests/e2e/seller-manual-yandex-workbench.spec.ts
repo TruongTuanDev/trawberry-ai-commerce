@@ -12,12 +12,21 @@ async function backendJson<T>(
     multipart?: Record<string, string | { name: string; mimeType: string; buffer: Buffer }>;
   } = {},
 ) {
-  const response = await request.fetch(`${backendBaseUrl}${path}`, {
+  let response = await request.fetch(`${backendBaseUrl}${path}`, {
     method: options.method ?? "GET",
     headers: options.token ? { Authorization: `Bearer ${options.token}`, Cookie: "" } : undefined,
     data: options.data,
     multipart: options.multipart,
   });
+  for (let attempt = 0; response.status() === 429 && attempt < 4; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+    response = await request.fetch(`${backendBaseUrl}${path}`, {
+      method: options.method ?? "GET",
+      headers: options.token ? { Authorization: `Bearer ${options.token}`, Cookie: "" } : undefined,
+      data: options.data,
+      multipart: options.multipart,
+    });
+  }
   if (!response.ok()) {
     expect(response.ok(), `${options.method ?? "GET"} ${path} -> ${response.status()} ${await response.text()}`).toBeTruthy();
   }

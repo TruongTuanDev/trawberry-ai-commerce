@@ -136,6 +136,17 @@ export class PaymentResponseDto {
   @ApiProperty({ nullable: true })
   buyerPaymentNote!: string | null;
 
+  @ApiProperty({
+    nullable: true,
+    type: Object,
+  })
+  activeReturnRefundCase!: {
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+  } | null;
+
   @ApiProperty({ type: PaymentReviewLogResponseDto, isArray: true })
   reviewLogs!: PaymentReviewLogResponseDto[];
 }

@@ -1,6 +1,16 @@
 import { apiRequest } from "@/lib/api";
 import type { PaymentDetails } from "@/lib/seller-api";
 
+export type ReturnRefundCaseSummary = {
+  id: string;
+  type: string;
+  reason: string;
+  status: string;
+  requestedAmount: string;
+  approvedAmount: string | null;
+  createdAt: string;
+};
+
 export type CustomerCheckoutReceipt = {
   checkoutId: string;
   checkoutCode: string;
@@ -34,6 +44,7 @@ export type CustomerCheckoutReceipt = {
     paymentDetails: PaymentDetails;
     trackingPath: string;
     deliveryStatus: string | null;
+    returnRefundCases?: ReturnRefundCaseSummary[];
     itemsCount: number;
     items: Array<{
       id: string;
@@ -125,6 +136,96 @@ export type CustomerSupportCase = {
     isInternal: boolean;
     createdAt: string;
   }>;
+};
+
+export type CustomerReturnRefundCase = {
+  id: string;
+  checkoutId: string | null;
+  orderId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  type: string;
+  reason: string;
+  status: string;
+  requestedAmount: string;
+  approvedAmount: string | null;
+  productAmount: string;
+  deliveryFeeRefundAmount: string;
+  platformFeeAdjustmentAmount: string;
+  currency: string;
+  buyerComment: string;
+  sellerComment: string | null;
+  adminDecision: string | null;
+  sellerResponseDueAt: string | null;
+  openedAt: string;
+  sellerRespondedAt: string | null;
+  adminReviewedAt: string | null;
+  refundConfirmedAt: string | null;
+  closedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order: {
+    id: string;
+    orderCode: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string | null;
+    totalAmount: string;
+    shippingCost: string;
+  };
+  shop: {
+    id: string;
+    name: string;
+  };
+  customer: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  seller: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  messages: Array<{
+    id: string;
+    authorId: string | null;
+    authorRole: string;
+    visibility: string;
+    message: string;
+    authorName: string | null;
+    createdAt: string;
+  }>;
+  evidence: Array<{
+    id: string;
+    uploadedById: string | null;
+    uploadedByRole: string;
+    fileUrl: string;
+    fileType: string;
+    label: string | null;
+    originalName: string | null;
+    createdAt: string;
+  }>;
+  manualTransfers: Array<{
+    id: string;
+    amount: string;
+    currency: string;
+    method: string;
+    proofImageUrl: string | null;
+    bankReference: string | null;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  finance: {
+    latestLedgerStatus: string | null;
+    latestLedgerCommission: string | null;
+    latestAdjustmentId: string | null;
+  };
 };
 
 export async function getCustomerOrderHistory() {
@@ -245,5 +346,68 @@ export async function addCustomerSupportCaseMessage(caseId: string, message: str
   return apiRequest<CustomerSupportCase>(`/api/customer/support-cases/${encodeURIComponent(caseId)}/messages`, {
     method: "POST",
     body: JSON.stringify({ message }),
+  });
+}
+
+export async function listCustomerReturnRefundCases() {
+  return apiRequest<{ items: CustomerReturnRefundCase[] }>("/api/customer/returns", {
+    method: "GET",
+  });
+}
+
+export async function getCustomerReturnRefundCase(caseId: string) {
+  return apiRequest<CustomerReturnRefundCase>(`/api/customer/returns/${encodeURIComponent(caseId)}`, {
+    method: "GET",
+  });
+}
+
+export async function createCustomerReturnRefundCase(
+  orderId: string,
+  body: {
+    type: string;
+    reason: string;
+    requestedAmount: number;
+    buyerComment: string;
+  },
+) {
+  return apiRequest<CustomerReturnRefundCase>(
+    `/api/customer/orders/${encodeURIComponent(orderId)}/returns`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function addCustomerReturnRefundMessage(caseId: string, message: string) {
+  return apiRequest<CustomerReturnRefundCase>(`/api/customer/returns/${encodeURIComponent(caseId)}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
+export async function uploadCustomerReturnRefundEvidence(caseId: string, payload: { file: File; label?: string }) {
+  const formData = new FormData();
+  formData.append("file", payload.file);
+  if (payload.label?.trim()) {
+    formData.append("label", payload.label.trim());
+  }
+  return apiRequest<CustomerReturnRefundCase>(`/api/customer/returns/${encodeURIComponent(caseId)}/evidence`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function confirmCustomerRefundReceived(caseId: string) {
+  return apiRequest<CustomerReturnRefundCase>(`/api/customer/returns/${encodeURIComponent(caseId)}/confirm-refund-received`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function cancelCustomerReturnRefundCase(caseId: string) {
+  return apiRequest<CustomerReturnRefundCase>(`/api/customer/returns/${encodeURIComponent(caseId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }

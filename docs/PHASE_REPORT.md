@@ -1,5 +1,34 @@
 # Phase Report
 
+## 2026-05-22 Return / Refund / Dispute Foundation
+
+- added a manual return/refund/dispute domain for the direct-to-seller marketplace model
+- added backend models:
+  - `ReturnRefundCase`
+  - `ReturnRefundMessage`
+  - `ReturnRefundEvidence`
+  - `RefundManualTransfer`
+- added customer APIs for case create/list/detail, evidence, messages, cancel, and refund-received confirmation
+- added seller APIs for shop-scoped case list/detail, respond, mark return received, refund sent, and messages
+- added admin APIs for marketplace-wide list/detail, decisions, public messages, and internal notes
+- integrated order, receipt, payment, and public tracking payloads with active return/refund case summary
+- integrated seller finance with idempotent negative adjustment rows after confirmed refund
+- added new UI routes:
+  - `/customer/returns`
+  - `/customer/returns/[caseId]`
+  - `/seller/returns`
+  - `/seller/returns/[caseId]`
+  - `/admin/returns`
+  - `/admin/returns/[caseId]`
+- added verification targets:
+  - `backend-nest npm run smoke:return-refund-dispute`
+  - `frontend-next npm run test:e2e:return-refund-dispute`
+- current remaining limitations:
+  - refund remains manual because buyer paid seller directly
+  - no bank API refund execution
+  - no chargeback automation
+  - no provider-backed return shipment flow
+
 ## 2026-05-22 Three Role Order Sync Audit + Synchronization Fixes
 
 - audited the end-to-end order flow across customer, seller, and admin roles

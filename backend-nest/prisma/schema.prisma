@@ -36,6 +36,12 @@ model User {
   createdShopCommissionSettings ShopCommissionSetting[] @relation("ShopCommissionSettingAdmin")
   sellerFeeLedgerEntries  SellerFeeLedgerEntry[] @relation("SellerFeeLedgerSeller")
   sellerMonthlyInvoices   SellerMonthlyInvoice[] @relation("SellerMonthlyInvoiceSeller")
+  customerReturnRefundCases ReturnRefundCase[]   @relation("CustomerReturnRefundCases")
+  sellerReturnRefundCases   ReturnRefundCase[]   @relation("SellerReturnRefundCases")
+  returnRefundMessages      ReturnRefundMessage[] @relation("ReturnRefundMessageAuthor")
+  returnRefundEvidence      ReturnRefundEvidence[] @relation("ReturnRefundEvidenceUploader")
+  sentRefundTransfers       RefundManualTransfer[] @relation("RefundTransferSeller")
+  receivedRefundTransfers   RefundManualTransfer[] @relation("RefundTransferCustomer")
 
   @@map("users")
 }
@@ -235,6 +241,7 @@ model Shop {
   commissionSettings    ShopCommissionSetting[]
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
   sellerMonthlyInvoices SellerMonthlyInvoice[]
+  returnRefundCases     ReturnRefundCase[]
 
   @@map("shops")
 }
@@ -527,6 +534,7 @@ model Order {
   deliveryEvents           DeliveryEvent[]
   deliveryComments         DeliveryComment[]
   sellerFeeLedgerEntries   SellerFeeLedgerEntry[]
+  returnRefundCases        ReturnRefundCase[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
@@ -549,6 +557,7 @@ model MarketplaceCheckout {
   orders         Order[]
   supportCases   SupportCase[]
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
+  returnRefundCases ReturnRefundCase[]
 
   @@index([customerUserId, createdAt])
   @@index([customerPhone, checkoutCode])
@@ -620,6 +629,7 @@ model SellerFeeLedgerEntry {
   commissionAmount     Decimal  @map("commission_amount") @db.Decimal(12, 2)
   status               String   @default("PENDING") @db.VarChar(50)
   source               String   @db.VarChar(50)
+  referenceCaseId      String?  @map("reference_case_id") @db.Uuid
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   seller               User     @relation("SellerFeeLedgerSeller", fields: [sellerId], references: [id], onDelete: Restrict)
@@ -627,12 +637,116 @@ model SellerFeeLedgerEntry {
   order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   checkout             MarketplaceCheckout? @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
   invoice              SellerMonthlyInvoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  referenceCase        ReturnRefundCase? @relation(fields: [referenceCaseId], references: [id], onDelete: SetNull)
 
   @@index([sellerId, billingPeriod, status])
   @@index([shopId, billingPeriod, status])
   @@index([orderId, source])
   @@index([invoiceId])
+  @@index([referenceCaseId])
   @@map("seller_fee_ledger_entries")
+}
+
+model ReturnRefundCase {
+  id                          String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  checkoutId                  String?                @map("checkout_id") @db.Uuid
+  orderId                     String                 @map("order_id") @db.Uuid
+  shopId                      String                 @map("shop_id") @db.Uuid
+  sellerId                    String                 @map("seller_id") @db.Uuid
+  customerId                  String                 @map("customer_id") @db.Uuid
+  type                        String                 @db.VarChar(50)
+  reason                      String                 @db.VarChar(50)
+  status                      String                 @default("OPENED") @db.VarChar(50)
+  requestedAmount             Decimal                @map("requested_amount") @db.Decimal(12, 2)
+  approvedAmount              Decimal?               @map("approved_amount") @db.Decimal(12, 2)
+  productAmount               Decimal                @map("product_amount") @db.Decimal(12, 2)
+  deliveryFeeRefundAmount     Decimal                @default(0) @map("delivery_fee_refund_amount") @db.Decimal(12, 2)
+  platformFeeAdjustmentAmount Decimal                @default(0) @map("platform_fee_adjustment_amount") @db.Decimal(12, 2)
+  currency                    String                 @default("RUB") @db.VarChar(10)
+  buyerComment                String                 @map("buyer_comment")
+  sellerComment               String?                @map("seller_comment")
+  adminDecision               String?                @map("admin_decision")
+  sellerResponseDueAt         DateTime?              @map("seller_response_due_at") @db.Timestamptz(6)
+  openedAt                    DateTime               @map("opened_at") @db.Timestamptz(6)
+  sellerRespondedAt           DateTime?              @map("seller_responded_at") @db.Timestamptz(6)
+  adminReviewedAt             DateTime?              @map("admin_reviewed_at") @db.Timestamptz(6)
+  refundConfirmedAt           DateTime?              @map("refund_confirmed_at") @db.Timestamptz(6)
+  closedAt                    DateTime?              @map("closed_at") @db.Timestamptz(6)
+  cancelledAt                 DateTime?              @map("cancelled_at") @db.Timestamptz(6)
+  createdAt                   DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  checkout                    MarketplaceCheckout?   @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+  order                       Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  shop                        Shop                   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seller                      User                   @relation("SellerReturnRefundCases", fields: [sellerId], references: [id], onDelete: Restrict)
+  customer                    User                   @relation("CustomerReturnRefundCases", fields: [customerId], references: [id], onDelete: Restrict)
+  messages                    ReturnRefundMessage[]
+  evidence                    ReturnRefundEvidence[]
+  manualTransfers             RefundManualTransfer[]
+  sellerFeeAdjustments        SellerFeeLedgerEntry[]
+
+  @@index([orderId, createdAt])
+  @@index([shopId, status, createdAt])
+  @@index([customerId, status, createdAt])
+  @@index([sellerId, status, createdAt])
+  @@map("return_refund_cases")
+}
+
+model ReturnRefundMessage {
+  id          String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  caseId       String           @map("case_id") @db.Uuid
+  authorId     String?          @map("author_id") @db.Uuid
+  authorRole   String           @map("author_role") @db.VarChar(50)
+  visibility   String           @db.VarChar(50)
+  message      String
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  returnCase   ReturnRefundCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author       User?            @relation("ReturnRefundMessageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@map("return_refund_messages")
+}
+
+model ReturnRefundEvidence {
+  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  caseId          String           @map("case_id") @db.Uuid
+  uploadedById    String?          @map("uploaded_by_id") @db.Uuid
+  uploadedByRole  String           @map("uploaded_by_role") @db.VarChar(50)
+  fileUrl         String           @map("file_url") @db.VarChar(1000)
+  storageKey      String?          @map("storage_key") @db.VarChar(1024)
+  originalName    String?          @map("original_name") @db.VarChar(255)
+  mimeType        String?          @map("mime_type") @db.VarChar(100)
+  size            Int?
+  fileType        String           @map("file_type") @db.VarChar(50)
+  label           String?          @db.VarChar(255)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  returnCase      ReturnRefundCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  uploadedBy      User?            @relation("ReturnRefundEvidenceUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt])
+  @@map("return_refund_evidence")
+}
+
+model RefundManualTransfer {
+  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  caseId          String           @map("case_id") @db.Uuid
+  sellerId        String           @map("seller_id") @db.Uuid
+  customerId      String           @map("customer_id") @db.Uuid
+  amount          Decimal          @db.Decimal(12, 2)
+  currency        String           @default("RUB") @db.VarChar(10)
+  method          String           @db.VarChar(50)
+  proofImageUrl   String?          @map("proof_image_url") @db.VarChar(1000)
+  proofStorageKey String?          @map("proof_storage_key") @db.VarChar(1024)
+  bankReference   String?          @map("bank_reference") @db.VarChar(255)
+  status          String           @default("MARKED_SENT") @db.VarChar(50)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  returnCase      ReturnRefundCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  seller          User             @relation("RefundTransferSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  customer        User             @relation("RefundTransferCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
+  @@map("refund_manual_transfers")
 }
 
 model SupportCase {

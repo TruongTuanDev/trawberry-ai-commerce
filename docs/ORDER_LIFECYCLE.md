@@ -77,4 +77,22 @@ Finance ledger entries must be created only on final confirmed seller payment. T
 
 - no provider-backed payment status sync
 - no provider-backed delivery webhook sync
-- no automatic refund lifecycle yet
+- refunds remain manual and evidence-driven
+
+## Return / refund / dispute overlay
+
+Return/refund lifecycle is separate from the core delivery lifecycle but linked to the order.
+
+Main manual refund path:
+
+1. customer opens case after payment-confirmed or delivered order
+2. seller responds or escalates
+3. admin can approve or reject disputed cases
+4. seller marks refund sent outside the platform
+5. buyer confirms refund received
+6. finance ledger creates a negative commission adjustment if needed
+
+Important rule:
+
+- opening a case does not change payment history or delete prior ledger rows
+- only confirmed refund closes the finance loop

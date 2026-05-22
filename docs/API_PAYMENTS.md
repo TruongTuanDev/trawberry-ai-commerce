@@ -1,5 +1,23 @@
 # Payments API
 
+## 2026-05-22 Return / Refund / Dispute Foundation
+
+Direct-to-seller payments now support manual refund tracking after payment confirmation.
+
+Important rule:
+
+- the marketplace still does not execute refunds through a provider API
+- seller sends money back directly to the buyer
+- the system records case status, evidence, and manual transfer proof
+
+Payment-adjacent additions:
+
+- return/refund cases can be opened only for customer-owned orders
+- seller can mark a manual refund transfer as sent
+- buyer can confirm refund received
+- admin can override refund confirmation when evidence is sufficient
+- finance ledger creates a negative adjustment only after refund confirmation, not at case open time
+
 ## 2026-05-22 Three Role Order Sync Addendum
 
 Admin payment supervision now projects marketplace finance sync state directly on each payment row.

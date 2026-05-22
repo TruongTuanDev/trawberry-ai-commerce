@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -8,12 +8,35 @@ async function backendJson<T>(
   url: string,
   options?: Parameters<APIRequestContext["fetch"]>[1],
 ) {
-  const response = await request.fetch(`${backendBaseUrl}${url}`, options);
+  let response = await request.fetch(`${backendBaseUrl}${url}`, options);
+  for (let attempt = 0; response.status() === 429 && attempt < 7; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+    response = await request.fetch(`${backendBaseUrl}${url}`, options);
+  }
   expect(
     response.ok(),
     `${options?.method ?? "GET"} ${url} -> ${response.status()}: ${await response.text()}`,
   ).toBeTruthy();
   return (await response.json()) as T;
+}
+
+async function loginAdminWithRetry(page: Page) {
+  await page.goto("/admin-login");
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+    await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+    await page.getByTestId("admin-login-submit").click();
+    try {
+      await page.waitForURL("**/admin/dashboard", { timeout: 10000 });
+      return;
+    } catch {
+      if (attempt === 5) {
+        throw new Error("Admin login stayed blocked by rate limiting.");
+      }
+      await page.waitForTimeout(1500 * (attempt + 1));
+      await page.goto("/admin-login");
+    }
+  }
 }
 
 async function approveSeller(
@@ -198,11 +221,7 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
     data: {},
   });
 
-  await page.goto("/admin-login");
-  await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
-  await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
-  await page.getByTestId("admin-login-submit").click();
-  await page.waitForURL("**/admin/dashboard");
+  await loginAdminWithRetry(page);
 
   await page.goto("/admin/finance/seller-fees");
   await expect(page.getByTestId("admin-seller-fees-page")).toBeVisible();

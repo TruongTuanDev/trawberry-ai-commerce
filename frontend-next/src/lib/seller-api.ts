@@ -227,6 +227,7 @@ export type SellerFinanceLedgerEntry = {
   commissionAmount: string;
   status: string;
   source: string;
+  referenceCaseId?: string | null;
   createdAt: string;
   updatedAt: string;
   invoiceId: string | null;
@@ -291,6 +292,15 @@ export type SellerOrderListItem = {
     commissionAmount: string | null;
     invoiceStatus: string | null;
   } | null;
+  returnRefundCases?: Array<{
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+    requestedAmount: string;
+    approvedAmount: string | null;
+    createdAt: string;
+  }>;
   supportCases: Array<{
     id: string;
     issueType: string;
@@ -311,6 +321,96 @@ export type SellerOrderListItem = {
     productImageSnapshot: string | null;
     variantNameSnapshot: string | null;
   }>;
+};
+
+export type SellerReturnRefundCase = {
+  id: string;
+  checkoutId: string | null;
+  orderId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  type: string;
+  reason: string;
+  status: string;
+  requestedAmount: string;
+  approvedAmount: string | null;
+  productAmount: string;
+  deliveryFeeRefundAmount: string;
+  platformFeeAdjustmentAmount: string;
+  currency: string;
+  buyerComment: string;
+  sellerComment: string | null;
+  adminDecision: string | null;
+  sellerResponseDueAt: string | null;
+  openedAt: string;
+  sellerRespondedAt: string | null;
+  adminReviewedAt: string | null;
+  refundConfirmedAt: string | null;
+  closedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order: {
+    id: string;
+    orderCode: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string | null;
+    totalAmount: string;
+    shippingCost: string;
+  };
+  shop: {
+    id: string;
+    name: string;
+  };
+  customer: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  seller: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+  messages: Array<{
+    id: string;
+    authorId: string | null;
+    authorRole: string;
+    visibility: string;
+    message: string;
+    authorName: string | null;
+    createdAt: string;
+  }>;
+  evidence: Array<{
+    id: string;
+    uploadedById: string | null;
+    uploadedByRole: string;
+    fileUrl: string;
+    fileType: string;
+    label: string | null;
+    originalName: string | null;
+    createdAt: string;
+  }>;
+  manualTransfers: Array<{
+    id: string;
+    amount: string;
+    currency: string;
+    method: string;
+    proofImageUrl: string | null;
+    bankReference: string | null;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  finance: {
+    latestLedgerStatus: string | null;
+    latestLedgerCommission: string | null;
+    latestAdjustmentId: string | null;
+  };
 };
 
 export type SellerSupportCase = {
@@ -2203,6 +2303,93 @@ export async function getShopSupportCase(shopId: string, caseId: string, token?:
 
 export async function addShopSupportCaseMessage(shopId: string, caseId: string, message: string, token?: string) {
   return apiRequest<SellerSupportCase>(`/api/shops/${shopId}/support-cases/${encodeURIComponent(caseId)}/messages`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({ message }),
+  });
+}
+
+export async function listShopReturnRefundCases(
+  shopId: string,
+  query?: {
+    status?: string;
+    reason?: string;
+    q?: string;
+  },
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.reason) params.set("reason", query.reason);
+  if (query?.q) params.set("q", query.q);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<{ items: SellerReturnRefundCase[] }>(`/api/shops/${shopId}/returns${suffix}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function getShopReturnRefundCase(shopId: string, caseId: string, token?: string) {
+  return apiRequest<SellerReturnRefundCase>(`/api/shops/${shopId}/returns/${encodeURIComponent(caseId)}`, {
+    method: "GET",
+    token,
+  });
+}
+
+export async function respondShopReturnRefundCase(
+  shopId: string,
+  caseId: string,
+  payload: { action: "ACCEPT" | "REJECT" | "REQUEST_EVIDENCE" | "ESCALATE_ADMIN"; sellerComment?: string },
+  token?: string,
+) {
+  return apiRequest<SellerReturnRefundCase>(`/api/shops/${shopId}/returns/${encodeURIComponent(caseId)}/respond`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function markShopReturnReceived(shopId: string, caseId: string, token?: string) {
+  return apiRequest<SellerReturnRefundCase>(`/api/shops/${shopId}/returns/${encodeURIComponent(caseId)}/mark-return-received`, {
+    method: "POST",
+    token,
+    body: JSON.stringify({}),
+  });
+}
+
+export async function markShopRefundSent(
+  shopId: string,
+  caseId: string,
+  payload: {
+    amount: number;
+    method: "SBP" | "BANK_TRANSFER" | "CASH" | "OTHER";
+    bankReference?: string;
+    note?: string;
+    file?: File | null;
+  },
+  token?: string,
+) {
+  const formData = new FormData();
+  formData.append("amount", String(payload.amount));
+  formData.append("method", payload.method);
+  if (payload.bankReference?.trim()) {
+    formData.append("bankReference", payload.bankReference.trim());
+  }
+  if (payload.note?.trim()) {
+    formData.append("note", payload.note.trim());
+  }
+  if (payload.file) {
+    formData.append("file", payload.file);
+  }
+  return apiRequest<SellerReturnRefundCase>(`/api/shops/${shopId}/returns/${encodeURIComponent(caseId)}/refund-sent`, {
+    method: "POST",
+    token,
+    body: formData,
+  });
+}
+
+export async function addShopReturnRefundMessage(shopId: string, caseId: string, message: string, token?: string) {
+  return apiRequest<SellerReturnRefundCase>(`/api/shops/${shopId}/returns/${encodeURIComponent(caseId)}/messages`, {
     method: "POST",
     token,
     body: JSON.stringify({ message }),

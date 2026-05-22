@@ -8,12 +8,13 @@ import { PublicShell } from "@/components/public/public-shell";
 import { useAuthStore } from "@/stores/auth-store";
 
 const navItems = [
-  { href: "/customer/account", label: "Tổng quan" },
-  { href: "/customer/account/profile", label: "Thông tin cá nhân" },
-  { href: "/customer/account/addresses", label: "Địa chỉ giao hàng" },
-  { href: "/customer/orders", label: "Đơn hàng của tôi" },
-  { href: "/customer/account/security", label: "Bảo mật" },
-  { href: "/customer/account/support", label: "Hỗ trợ" },
+  { href: "/customer/account", label: "Overview" },
+  { href: "/customer/account/profile", label: "Profile" },
+  { href: "/customer/account/addresses", label: "Addresses" },
+  { href: "/customer/orders", label: "Orders" },
+  { href: "/customer/returns", label: "Returns / refunds" },
+  { href: "/customer/account/security", label: "Security" },
+  { href: "/customer/account/support", label: "Support" },
 ];
 
 export function CustomerAccountShell({
@@ -48,13 +49,13 @@ export function CustomerAccountShell({
             <aside className="card-panel h-fit overflow-hidden rounded-[2rem] border-white/70 bg-white/90 shadow-[0_24px_60px_rgba(82,27,94,0.08)] backdrop-blur">
               <div className="bg-[radial-gradient(circle_at_top_left,rgba(203,17,171,0.18),transparent_48%),linear-gradient(135deg,#fff8fd_0%,#ffffff_64%,#f7f1fb_100%)] px-5 py-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Tài khoản của tôi
+                  My account
                 </p>
                 <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
                   {user?.fullName || "Customer account"}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                  Điều phối hồ sơ, địa chỉ nhận hàng, đơn mua và bảo mật từ một khu vực riêng cho customer.
+                  Manage profile, shipping addresses, returns, orders, and security from one customer workspace.
                 </p>
               </div>
 
@@ -87,7 +88,7 @@ export function CustomerAccountShell({
                   className="mt-2 rounded-[1.25rem] border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/50"
                   data-testid="customer-account-logout"
                 >
-                  Đăng xuất
+                  Logout
                 </button>
               </nav>
             </aside>

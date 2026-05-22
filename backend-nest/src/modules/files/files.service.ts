@@ -98,6 +98,22 @@ export class FilesService {
     return this.storeSellerDocumentInS3(file, context);
   }
 
+  async storeReturnRefundEvidence(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+      caseId: string;
+      folder?: 'evidence' | 'refund-proof';
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeReturnRefundEvidenceLocally(file, context);
+    }
+
+    return this.storeReturnRefundEvidenceInS3(file, context);
+  }
+
   async deleteProductImageFile(params: {
     storageKey?: string | null;
     fileUrl?: string | null;
@@ -372,6 +388,84 @@ export class FilesService {
     const storageKey = [
       'shop-payment-qr',
       context.shopId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+
+    const client = this.createS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.getS3Bucket(),
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeReturnRefundEvidenceLocally(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+      caseId: string;
+      folder?: 'evidence' | 'refund-proof';
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const folder = context.folder ?? 'evidence';
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'return-refund',
+      context.shopId,
+      context.caseId,
+      folder,
+    );
+    const extension = extname(file.originalname) || '.bin';
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const absolutePath = join(targetDirectory, filename);
+    const storageKey = [
+      'return-refund',
+      context.shopId,
+      context.caseId,
+      folder,
+      filename,
+    ].join('/');
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeReturnRefundEvidenceInS3(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+      caseId: string;
+      folder?: 'evidence' | 'refund-proof';
+    },
+  ): Promise<StoredFileResult> {
+    const folder = context.folder ?? 'evidence';
+    const extension = extname(file.originalname) || '.bin';
+    const storageKey = [
+      'return-refund',
+      context.shopId,
+      context.caseId,
+      folder,
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
 

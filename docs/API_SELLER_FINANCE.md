@@ -1,5 +1,22 @@
 # Seller Finance API
 
+## 2026-05-22 Return / Refund / Dispute Foundation
+
+Seller finance now projects refund adjustments for direct-to-seller payment flows.
+
+New ledger behavior:
+
+- original positive commission entry is preserved
+- refund confirmation can create a negative adjustment row with:
+  - `source=RETURN_REFUND_CONFIRMED`
+  - `referenceCaseId=<returnRefundCaseId>`
+- adjustment is idempotent per case
+
+Operational meaning:
+
+- admin seller-fee due decreases when refund adjustment is posted
+- seller finance ledger shows both the original fee row and the reversal row
+
 ## 2026-05-22 Three Role Order Sync Addendum
 
 Finance visibility is now part of the operational order sync:
