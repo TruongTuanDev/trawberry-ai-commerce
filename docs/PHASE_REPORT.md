@@ -2080,3 +2080,22 @@ Verification:
 - Docker: `docker compose ... build backend-nest frontend-next`, `docker compose ... up -d backend-nest frontend-next`, `docker compose ... ps`
 - runtime health: backend, frontend `/products`, and ai-service
 - minimal smoke/E2E rerun after Docker rebuild
+# Phase Report: Yandex Address Readiness Policy
+
+Implemented:
+
+- added backend address readiness helper shared across customer, checkout, seller, admin, and tracking projections
+- customer address API now returns `geoReadiness`, `missingYandexFields`, `yandexManualReady`, and `yandexApiReady`
+- checkout response now surfaces address warnings without blocking current manual flow
+- seller manual Yandex workbench now distinguishes pickup-ready, dropoff-ready, manual-only, and API-ready states
+- admin deliveries now expose missing-coordinate / geo-ready filtering
+- customer address UI now supports explicit manual coordinate workflow
+- added `smoke:yandex-address-readiness`
+- added `test:e2e:yandex-address-readiness`
+
+Retained non-goals:
+
+- no real Yandex geocoder
+- no real Yandex map SDK
+- no real Yandex Delivery API calls
+- no forced coordinate requirement for the current manual checkout flow

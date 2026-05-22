@@ -139,9 +139,27 @@ export type CheckoutOrderResponse = {
     paymentDetails: PaymentDetails;
     trackingPath: string;
     itemsCount: number;
+    addressGeoReadiness: {
+      hasStructuredAddress: boolean;
+      hasCoordinates: boolean;
+      geoPrecision: string | null;
+      isYandexManualReady: boolean;
+      isYandexApiReady: boolean;
+      missingFields: string[];
+    };
+    addressWarnings: string[];
   }>;
   orderCodes: string[];
   grandTotal: string;
+  addressGeoReadiness: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  };
+  addressWarnings: string[];
 };
 
 export type CartValidationStatus =
@@ -215,6 +233,14 @@ export type PublicTrackedOrder = {
     apartment?: string | null;
     geoPrecision?: string | null;
     deliveryComment?: string | null;
+    geoReadiness?: {
+      hasStructuredAddress: boolean;
+      hasCoordinates: boolean;
+      geoPrecision: string | null;
+      isYandexManualReady: boolean;
+      isYandexApiReady: boolean;
+      missingFields: string[];
+    };
   };
   customerNote: string | null;
   createdAt: string;
@@ -284,6 +310,14 @@ export type PublicTrackedOrder = {
     dropoffComment?: string | null;
     dropoffLatitude: string | null;
     dropoffLongitude: string | null;
+    dropoffGeoReadiness?: {
+      hasStructuredAddress: boolean;
+      hasCoordinates: boolean;
+      geoPrecision: string | null;
+      isYandexManualReady: boolean;
+      isYandexApiReady: boolean;
+      missingFields: string[];
+    };
     recipientName: string | null;
     recipientPhone: string | null;
     manualYandexOrderId: string | null;

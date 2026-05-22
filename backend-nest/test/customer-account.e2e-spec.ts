@@ -34,12 +34,30 @@ type StoredCustomerAddress = {
   fullName: string;
   phone: string;
   country: string;
+  countryCode?: string;
   city: string;
   region: string;
+  federalSubject?: string | null;
+  cityType?: string | null;
+  district?: string | null;
+  settlement?: string | null;
   street: string;
+  building?: string;
+  streetType?: string | null;
+  buildingBlock?: string | null;
+  entrance?: string | null;
+  intercom?: string | null;
+  floor?: string | null;
   apartment: string | null;
   postalCode: string | null;
   comment: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geoPrecision?: string;
+  geoProvider?: string;
+  geoProviderUri?: string | null;
+  addressFullName?: string | null;
+  addressShortName?: string | null;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -562,6 +580,18 @@ describe('CustomerAccountController (e2e)', () => {
         phone: '+79990000010',
       }),
     );
+    expect(
+      readBody<{
+        yandexManualReady: boolean;
+        yandexApiReady: boolean;
+        missingYandexFields: string[];
+      }>(created),
+    ).toEqual(
+      expect.objectContaining({
+        yandexManualReady: true,
+        yandexApiReady: false,
+      }),
+    );
 
     const listed = await request(app.getHttpServer())
       .get('/api/customer/addresses')
@@ -576,13 +606,23 @@ describe('CustomerAccountController (e2e)', () => {
       .send({
         city: 'Saint Petersburg',
         street: 'Nevsky 20',
+        latitude: 59.9343,
+        longitude: 30.3351,
+        geoPrecision: 'MANUAL_PIN',
       })
       .expect(200);
 
-    expect(readBody<{ city: string; street: string }>(updated)).toEqual(
+    expect(
+      readBody<{
+        city: string;
+        street: string;
+        yandexApiReady: boolean;
+      }>(updated),
+    ).toEqual(
       expect.objectContaining({
         city: 'Saint Petersburg',
         street: 'Nevsky 20',
+        yandexApiReady: true,
       }),
     );
 

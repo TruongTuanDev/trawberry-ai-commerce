@@ -1,5 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class CheckoutAddressGeoReadinessDto {
+  @ApiProperty()
+  hasStructuredAddress!: boolean;
+
+  @ApiProperty()
+  hasCoordinates!: boolean;
+
+  @ApiProperty({ nullable: true })
+  geoPrecision!: string | null;
+
+  @ApiProperty()
+  isYandexManualReady!: boolean;
+
+  @ApiProperty()
+  isYandexApiReady!: boolean;
+
+  @ApiProperty({ type: String, isArray: true })
+  missingFields!: string[];
+}
+
 class CheckoutPaymentDetailsDto {
   @ApiProperty({ nullable: true })
   mode!: string | null;
@@ -59,6 +79,12 @@ class CheckoutSplitOrderResponseDto {
 
   @ApiProperty()
   itemsCount!: number;
+
+  @ApiProperty({ type: CheckoutAddressGeoReadinessDto })
+  addressGeoReadiness!: CheckoutAddressGeoReadinessDto;
+
+  @ApiProperty({ type: String, isArray: true })
+  addressWarnings!: string[];
 }
 
 export class CheckoutOrderResponseDto {
@@ -103,4 +129,10 @@ export class CheckoutOrderResponseDto {
 
   @ApiProperty()
   grandTotal!: string;
+
+  @ApiProperty({ type: CheckoutAddressGeoReadinessDto })
+  addressGeoReadiness!: CheckoutAddressGeoReadinessDto;
+
+  @ApiProperty({ type: String, isArray: true })
+  addressWarnings!: string[];
 }

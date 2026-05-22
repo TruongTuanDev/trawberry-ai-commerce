@@ -142,6 +142,24 @@ export type AdminDeliveryRow = {
   pickupLongitude: string | null;
   dropoffLatitude: string | null;
   dropoffLongitude: string | null;
+  pickupGeoReadiness?: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  } | null;
+  dropoffGeoReadiness?: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  } | null;
+  yandexManualReady?: boolean;
+  yandexApiReady?: boolean;
   recipientName: string | null;
   recipientPhone: string | null;
   manualYandexOrderId: string | null;
@@ -989,6 +1007,8 @@ export async function listAdminDeliveries(query?: {
   dateFrom?: string;
   dateTo?: string;
   search?: string;
+  geoReady?: boolean;
+  missingCoordinates?: boolean;
 }) {
   const params = new URLSearchParams();
   if (query?.status) params.set("status", query.status);
@@ -1000,6 +1020,8 @@ export async function listAdminDeliveries(query?: {
   if (query?.dateFrom) params.set("dateFrom", query.dateFrom);
   if (query?.dateTo) params.set("dateTo", query.dateTo);
   if (query?.search) params.set("search", query.search);
+  if (query?.geoReady) params.set("geoReady", "true");
+  if (query?.missingCoordinates) params.set("missingCoordinates", "true");
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<{ items: AdminDeliveryRow[] }>(`/api/admin/deliveries${suffix}`, {
     method: "GET",

@@ -16,6 +16,7 @@ import {
 import {
   buildYandexAddressComment,
   buildYandexAddressFullname,
+  computeAddressGeoReadiness,
   formatCustomerAddressSnapshot,
 } from '../../common/utils/customer-address.util';
 import { resolveShopPaymentPanel } from '../../common/utils/shop-payment.util';
@@ -68,6 +69,7 @@ type CreatedCheckoutOrder = {
 };
 
 type ResolvedCheckoutCustomer = {
+  country: string;
   fullName: string;
   phone: string;
   email: string | null;
@@ -118,6 +120,29 @@ export class CheckoutService {
     );
 
     const checkoutCustomer = await this.resolveCheckoutCustomer(dto, user);
+    const addressGeoReadiness = computeAddressGeoReadiness({
+      country: checkoutCustomer.country,
+      city: checkoutCustomer.city ?? '',
+      street: checkoutCustomer.street ?? '',
+      building: checkoutCustomer.building ?? '',
+      entrance: checkoutCustomer.entrance,
+      intercom: checkoutCustomer.intercom,
+      floor: checkoutCustomer.floor,
+      apartment: checkoutCustomer.apartment,
+      latitude: checkoutCustomer.latitude,
+      longitude: checkoutCustomer.longitude,
+      geoPrecision: checkoutCustomer.geoPrecision,
+      addressFullName: checkoutCustomer.addressFullName,
+      comment: checkoutCustomer.note,
+      phone: checkoutCustomer.phone,
+    });
+    const addressWarnings =
+      addressGeoReadiness.isYandexManualReady &&
+      !addressGeoReadiness.hasCoordinates
+        ? [
+            'Coordinates missing; seller may need to verify address manually before using Yandex.',
+          ]
+        : [];
     const customerId = await this.resolveCustomerId(dto, user);
     const itemsByShop = this.groupItemsByShop(normalizedItems);
     const grandTotal = this.sumLineTotals(normalizedItems);
@@ -336,6 +361,8 @@ export class CheckoutService {
       },
       trackingPath: `/orders/${order.id}`,
       itemsCount: order.itemsCount,
+      addressGeoReadiness,
+      addressWarnings,
     }));
 
     return {
@@ -364,6 +391,8 @@ export class CheckoutService {
       orders,
       orderCodes: orders.map((order) => order.orderCode),
       grandTotal: grandTotal.toString(),
+      addressGeoReadiness,
+      addressWarnings,
     };
   }
 
@@ -386,6 +415,7 @@ export class CheckoutService {
       }
 
       return {
+        country: 'Russia',
         fullName: dto.customer.fullName.trim(),
         phone: normalizePhone(dto.customer.phone, 'Customer phone'),
         email,
@@ -427,6 +457,7 @@ export class CheckoutService {
     }
 
     return {
+      country: address.country || 'Russia',
       fullName: address.fullName,
       phone: address.phone,
       email,

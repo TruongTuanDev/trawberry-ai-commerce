@@ -13,6 +13,7 @@ import { isPayOnDeliverySellerQrMethod } from '../../common/constants/payment-me
 import {
   buildYandexAddressComment,
   buildYandexAddressFullname,
+  computeAddressGeoReadiness,
 } from '../../common/utils/customer-address.util';
 import {
   DELIVERY_CARRIERS,
@@ -903,7 +904,7 @@ export class DeliveryService {
         where: this.buildPaidWithoutDeliveryWhere(query),
         orderBy: { createdAt: 'desc' },
         take: 200,
-        include: this.adminOrderInclude,
+        select: this.adminOrderInclude.select,
       });
       return {
         items: orders.map((order) => this.toAdminOrderDeliveryRow(order)),
@@ -1626,6 +1627,26 @@ export class DeliveryService {
     }
     if (query.provider) where.provider = query.provider;
     if (query.shopId) where.shopId = query.shopId;
+    if (query.missingCoordinates) {
+      where.OR = [
+        { pickupLatitude: null },
+        { pickupLongitude: null },
+        { dropoffLatitude: null },
+        { dropoffLongitude: null },
+      ];
+    } else if (query.geoReady) {
+      where.AND = [
+        { pickupLatitude: { not: null } },
+        { pickupLongitude: { not: null } },
+        { dropoffLatitude: { not: null } },
+        { dropoffLongitude: { not: null } },
+        {
+          dropoffGeoPrecision: {
+            in: ['BUILDING', 'MANUAL_PIN'],
+          },
+        },
+      ];
+    }
     if (query.dateFrom || query.dateTo) {
       where.createdAt = {
         gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
@@ -1670,6 +1691,15 @@ export class DeliveryService {
       where.status = 'READY_TO_CREATE_YANDEX';
     }
     if (query.shopId) where.shopId = query.shopId;
+    if (query.missingCoordinates) {
+      where.OR = [{ dropoffLatitude: null }, { dropoffLongitude: null }];
+    } else if (query.geoReady) {
+      where.AND = [
+        { dropoffLatitude: { not: null } },
+        { dropoffLongitude: { not: null } },
+        { dropoffGeoPrecision: { in: ['BUILDING', 'MANUAL_PIN'] } },
+      ];
+    }
     if (query.sellerId) {
       where.shop = { sellerProfile: { userId: query.sellerId } };
     }
@@ -2015,6 +2045,34 @@ export class DeliveryService {
     cancelledAt: Date | null;
     deliveredAt: Date | null;
   }) {
+    const pickupGeoReadiness = computeAddressGeoReadiness({
+      country: 'Russia',
+      city: shipment.pickupAddressFullName ?? shipment.pickupAddress,
+      street: shipment.pickupAddress,
+      building: shipment.pickupAddress,
+      latitude: shipment.pickupLatitude,
+      longitude: shipment.pickupLongitude,
+      geoPrecision:
+        shipment.pickupLatitude && shipment.pickupLongitude
+          ? 'MANUAL_PIN'
+          : 'UNKNOWN',
+      phone: shipment.recipientPhone,
+    });
+    const dropoffGeoReadiness = computeAddressGeoReadiness({
+      country: 'Russia',
+      city: shipment.dropoffCity ?? '',
+      street: shipment.dropoffStreet ?? '',
+      building: shipment.dropoffBuilding ?? '',
+      entrance: shipment.dropoffEntrance ?? null,
+      intercom: shipment.dropoffIntercom ?? null,
+      floor: shipment.dropoffFloor ?? null,
+      apartment: shipment.dropoffApartment ?? null,
+      comment: shipment.dropoffComment ?? null,
+      latitude: shipment.dropoffLatitude,
+      longitude: shipment.dropoffLongitude,
+      geoPrecision: shipment.dropoffGeoPrecision ?? null,
+      phone: shipment.recipientPhone,
+    });
     return {
       id: shipment.id,
       provider: shipment.provider,
@@ -2058,6 +2116,19 @@ export class DeliveryService {
       dropoffApartment: shipment.dropoffApartment,
       dropoffGeoPrecision: shipment.dropoffGeoPrecision,
       dropoffComment: shipment.dropoffComment,
+      pickupGeoReadiness,
+      dropoffGeoReadiness,
+      yandexManualReady:
+        pickupGeoReadiness.isYandexManualReady &&
+        dropoffGeoReadiness.isYandexManualReady,
+      yandexApiReady:
+        pickupGeoReadiness.hasCoordinates &&
+        dropoffGeoReadiness.isYandexApiReady,
+      missingCoordinateWarning:
+        !pickupGeoReadiness.hasCoordinates ||
+        !dropoffGeoReadiness.hasCoordinates
+          ? 'Coordinates missing; manual Yandex verification may be required.'
+          : null,
       recipientName: shipment.recipientName,
       recipientPhone: shipment.recipientPhone,
       manualYandexOrderId: shipment.manualYandexOrderId,
@@ -2125,6 +2196,10 @@ export class DeliveryService {
       customerPhone: string;
       customerEmail: string | null;
       shippingAddress: string;
+      dropoffCity?: string | null;
+      dropoffStreet?: string | null;
+      dropoffBuilding?: string | null;
+      dropoffGeoPrecision?: string | null;
       createdAt: Date;
       shop: {
         id: string;
@@ -2156,6 +2231,29 @@ export class DeliveryService {
       createdAt: Date;
     }>;
   }) {
+    const pickupGeoReadiness = computeAddressGeoReadiness({
+      country: 'Russia',
+      city: shipment.pickupAddress,
+      street: shipment.pickupAddress,
+      building: shipment.pickupAddress,
+      latitude: shipment.pickupLatitude,
+      longitude: shipment.pickupLongitude,
+      geoPrecision:
+        shipment.pickupLatitude && shipment.pickupLongitude
+          ? 'MANUAL_PIN'
+          : 'UNKNOWN',
+      phone: shipment.recipientPhone,
+    });
+    const dropoffGeoReadiness = computeAddressGeoReadiness({
+      country: 'Russia',
+      city: shipment.order.dropoffCity ?? '',
+      street: shipment.order.dropoffStreet ?? '',
+      building: shipment.order.dropoffBuilding ?? '',
+      latitude: shipment.dropoffLatitude,
+      longitude: shipment.dropoffLongitude,
+      geoPrecision: shipment.order.dropoffGeoPrecision ?? null,
+      phone: shipment.recipientPhone ?? shipment.order.customerPhone,
+    });
     return {
       kind: 'SHIPMENT',
       id: shipment.id,
@@ -2203,6 +2301,14 @@ export class DeliveryService {
       pickupLongitude: shipment.pickupLongitude?.toString() ?? null,
       dropoffLatitude: shipment.dropoffLatitude?.toString() ?? null,
       dropoffLongitude: shipment.dropoffLongitude?.toString() ?? null,
+      pickupGeoReadiness,
+      dropoffGeoReadiness,
+      yandexManualReady:
+        pickupGeoReadiness.isYandexManualReady &&
+        dropoffGeoReadiness.isYandexManualReady,
+      yandexApiReady:
+        pickupGeoReadiness.hasCoordinates &&
+        dropoffGeoReadiness.isYandexApiReady,
       recipientName: shipment.recipientName,
       recipientPhone: shipment.recipientPhone,
       manualYandexOrderId: shipment.manualYandexOrderId,
@@ -2249,6 +2355,12 @@ export class DeliveryService {
     customerPhone: string;
     customerEmail: string | null;
     shippingAddress: string;
+    dropoffCity?: string | null;
+    dropoffStreet?: string | null;
+    dropoffBuilding?: string | null;
+    dropoffLatitude?: Prisma.Decimal | null;
+    dropoffLongitude?: Prisma.Decimal | null;
+    dropoffGeoPrecision?: string | null;
     createdAt: Date;
     shop: {
       id: string;
@@ -2259,6 +2371,16 @@ export class DeliveryService {
       };
     };
   }) {
+    const dropoffGeoReadiness = computeAddressGeoReadiness({
+      country: 'Russia',
+      city: order.dropoffCity ?? '',
+      street: order.dropoffStreet ?? '',
+      building: order.dropoffBuilding ?? '',
+      latitude: order.dropoffLatitude ?? null,
+      longitude: order.dropoffLongitude ?? null,
+      geoPrecision: order.dropoffGeoPrecision ?? null,
+      phone: order.customerPhone,
+    });
     return {
       kind: 'PAID_WITHOUT_DELIVERY',
       id: `order-${order.id}`,
@@ -2309,6 +2431,10 @@ export class DeliveryService {
       pickupLongitude: null,
       dropoffLatitude: null,
       dropoffLongitude: null,
+      pickupGeoReadiness: null,
+      dropoffGeoReadiness,
+      yandexManualReady: dropoffGeoReadiness.isYandexManualReady,
+      yandexApiReady: false,
       recipientName: order.customerName,
       recipientPhone: order.customerPhone,
       manualYandexOrderId: null,
@@ -2390,6 +2516,10 @@ export class DeliveryService {
           customerPhone: true,
           customerEmail: true,
           shippingAddress: true,
+          dropoffCity: true,
+          dropoffStreet: true,
+          dropoffBuilding: true,
+          dropoffGeoPrecision: true,
           createdAt: true,
           shop: {
             select: {
@@ -2421,17 +2551,36 @@ export class DeliveryService {
 
   private get adminOrderInclude() {
     return {
-      shop: {
-        select: {
-          id: true,
-          name: true,
-          sellerProfile: {
-            select: {
-              userId: true,
-              user: {
-                select: {
-                  email: true,
-                  fullName: true,
+      select: {
+        id: true,
+        shopId: true,
+        orderNumber: true,
+        status: true,
+        paymentStatus: true,
+        totalAmount: true,
+        customerName: true,
+        customerPhone: true,
+        customerEmail: true,
+        shippingAddress: true,
+        dropoffCity: true,
+        dropoffStreet: true,
+        dropoffBuilding: true,
+        dropoffLatitude: true,
+        dropoffLongitude: true,
+        dropoffGeoPrecision: true,
+        createdAt: true,
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            sellerProfile: {
+              select: {
+                userId: true,
+                user: {
+                  select: {
+                    email: true,
+                    fullName: true,
+                  },
                 },
               },
             },

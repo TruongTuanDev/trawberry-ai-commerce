@@ -98,6 +98,17 @@ export type CustomerAddress = {
   geoProviderUri: string | null;
   addressFullName: string | null;
   addressShortName: string | null;
+  geoReadiness: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  };
+  missingYandexFields: string[];
+  yandexManualReady: boolean;
+  yandexApiReady: boolean;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;

@@ -39,6 +39,7 @@ export function AdminDeliveriesPageClient() {
       : ((searchParams.get("status") as (typeof statusFilters)[number]["value"] | null) ?? "PAID_WITHOUT_DELIVERY");
   const [filter, setFilter] = useState<(typeof statusFilters)[number]["value"]>(initialFilter);
   const [provider, setProvider] = useState("");
+  const [geoFilter, setGeoFilter] = useState<"all" | "missing" | "ready">("all");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<AdminDeliveryRow[]>([]);
   const [selected, setSelected] = useState<AdminDeliveryRow | null>(null);
@@ -56,8 +57,10 @@ export function AdminDeliveriesPageClient() {
       status: filter === "PAID_WITHOUT_DELIVERY" || filter === "EXCEPTIONS" ? undefined : filter,
       provider: provider || undefined,
       search: search.trim() || undefined,
+      geoReady: geoFilter === "ready" ? true : undefined,
+      missingCoordinates: geoFilter === "missing" ? true : undefined,
     }),
-    [filter, provider, search],
+    [filter, geoFilter, provider, search],
   );
 
   const load = async () => {
@@ -190,12 +193,17 @@ export function AdminDeliveriesPageClient() {
             </button>
           ))}
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-[180px_1fr_auto]">
+        <div className="mt-4 grid gap-3 md:grid-cols-[180px_180px_1fr_auto]">
           <select value={provider} onChange={(event) => setProvider(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-provider-filter">
             <option value="">All providers</option>
             <option value="YANDEX">Yandex</option>
             <option value="CDEK">CDEK</option>
             <option value="MANUAL">Manual</option>
+          </select>
+          <select value={geoFilter} onChange={(event) => setGeoFilter(event.target.value as "all" | "missing" | "ready")} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
+            <option value="all">All geo states</option>
+            <option value="missing">Missing coordinates</option>
+            <option value="ready">Yandex API-ready</option>
           </select>
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, customer, phone" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-search" />
           <button type="button" onClick={() => void load()} className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold">Refresh</button>
@@ -236,6 +244,9 @@ export function AdminDeliveriesPageClient() {
                   <div>
                     <p className="text-sm text-[var(--foreground)]">{item.customer.name}</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">{item.customer.phone}</p>
+                    <p className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${item.yandexApiReady ? "bg-emerald-100 text-emerald-700" : item.dropoffGeoReadiness?.hasCoordinates ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}>
+                      {item.yandexApiReady ? "API-ready" : item.dropoffGeoReadiness?.hasCoordinates ? "Manual-ready" : "Missing coordinates"}
+                    </p>
                   </div>
                   <span className="w-fit rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]" data-testid="admin-delivery-row-status">
                     {item.internalStatus}
@@ -264,6 +275,9 @@ export function AdminDeliveriesPageClient() {
                 <Metric label="Customer message" value={selected.customerVisibleMessage ?? "None"} />
               </div>
               <p className="text-sm text-[var(--muted)]">{selected.customer.address}</p>
+              <p className="text-xs text-[var(--muted)]">
+                Pickup: {selected.pickupGeoReadiness?.hasCoordinates ? "ready" : "missing"} | Dropoff: {selected.dropoffGeoReadiness?.hasCoordinates ? "ready" : "missing"} | API-ready: {selected.yandexApiReady ? "yes" : "no"}
+              </p>
               {selected.deliveryNote ? <p className="text-sm text-[var(--muted)]">{selected.deliveryNote}</p> : null}
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={() => void handleOverride("courier-assigned")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Courier assigned</button>

@@ -170,11 +170,11 @@ test("structured Moscow address flows into checkout and seller Yandex workbench"
   await page.getByTestId("customer-address-longitude").fill("37.605192");
   await page.getByTestId("customer-address-save").click();
   await expect(page.getByTestId("customer-address-card")).toHaveCount(1);
-  await expect(page.getByTestId("customer-address-card")).toContainText("Verified");
+  await expect(page.getByTestId("customer-address-card")).toContainText("Yandex-ready");
 
   await page.goto(`/checkout?productId=${catalog.productId}`);
   await expect(page.getByTestId("checkout-saved-address-select")).toBeVisible();
-  await expect(page.getByTestId("checkout-address-geo-status")).toContainText("Address verified");
+  await expect(page.getByTestId("checkout-address-geo-status")).toContainText("Yandex-ready");
   await page.getByTestId("checkout-submit").click();
   await expect(page.getByTestId("checkout-confirmation")).toBeVisible();
 
@@ -200,6 +200,8 @@ test("structured Moscow address flows into checkout and seller Yandex workbench"
   await expect(page.getByText("Moscow, Tverskaya, 12", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Entrance 2").first()).toBeVisible();
   await expect(page.getByText("Intercom 45B").first()).toBeVisible();
-  await expect(page.getByText("Yandex-ready")).toBeVisible();
+  await expect(page.getByText("Pickup ready")).toBeVisible();
+  await expect(page.getByText("Dropoff ready")).toBeVisible();
+  await expect(page.getByText("API-ready")).toBeVisible();
   await expect(page.getByTestId("copy-full-delivery-block")).toBeVisible();
 });

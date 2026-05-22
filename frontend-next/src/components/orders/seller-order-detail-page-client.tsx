@@ -683,7 +683,21 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     .concat(dropoffCommentNote ? [dropoffCommentNote] : [])
     .filter(Boolean)
     .join(", ");
-  const yandexReady = pickupLat !== null && pickupLng !== null && dropoffLat !== null && dropoffLng !== null;
+  const pickupReady = Boolean(
+    activeShipment?.pickupGeoReadiness?.hasCoordinates ??
+      (pickupLat !== null && pickupLng !== null),
+  );
+  const dropoffReady = Boolean(
+    activeShipment?.dropoffGeoReadiness?.hasCoordinates ??
+      order.dropoffGeoReadiness?.hasCoordinates ??
+      (dropoffLat !== null && dropoffLng !== null),
+  );
+  const yandexManualReady = Boolean(
+    activeShipment?.yandexManualReady ?? order.yandexManualReady ?? true,
+  );
+  const yandexApiReady = Boolean(
+    activeShipment?.yandexApiReady ?? order.yandexApiReady ?? false,
+  );
   const senderText = [
     `Pickup: ${activeShipment?.pickupAddressFullName ?? pickupAddress}`,
     pickupLat !== null && pickupLng !== null
@@ -1122,10 +1136,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
                 <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${yandexReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {yandexReady ? "Yandex-ready" : "Coordinates missing"}
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${pickupReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {pickupReady ? "Pickup ready" : "Missing pickup coordinates"}
                   </span>
-                  {!yandexReady ? (
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${dropoffReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {dropoffReady ? "Dropoff ready" : "Missing dropoff coordinates"}
+                  </span>
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${yandexApiReady ? "bg-emerald-100 text-emerald-700" : "bg-sky-100 text-sky-700"}`}>
+                    {yandexApiReady ? "API-ready" : yandexManualReady ? "Manual-only" : "Needs address fixes"}
+                  </span>
+                  {!pickupReady || !dropoffReady ? (
                     <span className="text-xs text-amber-700">
                       Seller may need to verify pickup or dropoff coordinates manually.
                     </span>

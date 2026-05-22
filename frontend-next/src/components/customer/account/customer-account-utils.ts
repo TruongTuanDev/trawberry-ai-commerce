@@ -27,3 +27,31 @@ export function formatCustomerAddressComment(address: Pick<CustomerAddress, "ent
 export function isCustomerAddressGeoReady(address: Pick<CustomerAddress, "latitude" | "longitude" | "geoPrecision">) {
   return Boolean(address.latitude && address.longitude && address.geoPrecision !== "UNKNOWN");
 }
+
+export function getCustomerAddressReadinessBadge(address: Pick<CustomerAddress, "geoPrecision" | "yandexApiReady" | "geoReadiness">) {
+  if (address.yandexApiReady) {
+    return {
+      label: "Yandex-ready",
+      tone: "bg-emerald-100 text-emerald-700",
+    };
+  }
+
+  if (address.geoPrecision === "MANUAL_PIN") {
+    return {
+      label: "Manual pin",
+      tone: "bg-sky-100 text-sky-700",
+    };
+  }
+
+  if (address.geoReadiness?.hasCoordinates) {
+    return {
+      label: "Verified",
+      tone: "bg-emerald-100 text-emerald-700",
+    };
+  }
+
+  return {
+    label: "Missing coordinates",
+    tone: "bg-amber-100 text-amber-700",
+  };
+}

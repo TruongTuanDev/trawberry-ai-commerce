@@ -308,3 +308,10 @@ Support addendum:
 
 - customer receipt detail built on top of checkout now includes `supportCases[]` summary
 - support workflow starts from the parent `checkoutCode`, not from checkout creation itself
+
+Address readiness addendum:
+
+- checkout response now returns `addressGeoReadiness`
+- checkout response now returns `addressWarnings`
+- manual Yandex-compatible delivery still allows addresses without coordinates
+- future real `YANDEX_API` delivery mode should block non-API-ready addresses

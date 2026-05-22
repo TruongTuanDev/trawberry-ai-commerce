@@ -5,7 +5,7 @@ import { CustomerAccountShell } from "@/components/customer/account/customer-acc
 import {
   formatCustomerAddress,
   formatCustomerAddressComment,
-  isCustomerAddressGeoReady,
+  getCustomerAddressReadinessBadge,
 } from "@/components/customer/account/customer-account-utils";
 import {
   createCustomerAddress,
@@ -125,9 +125,15 @@ export function CustomerAccountAddressesPageClient() {
   }, [form.street, form.building, form.city]);
 
   const geoBadge = useMemo(() => {
+    if (form.latitude && form.longitude && form.geoPrecision === "MANUAL_PIN") {
+      return {
+        label: "Manual pin set",
+        tone: "border-sky-200 bg-sky-50 text-sky-700",
+      };
+    }
     if (form.latitude && form.longitude && form.geoPrecision !== "UNKNOWN") {
       return {
-        label: `Address verified (${form.geoPrecision})`,
+        label: `Verified (${form.geoPrecision})`,
         tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
       };
     }
@@ -308,7 +314,9 @@ export function CustomerAccountAddressesPageClient() {
                 Loading addresses...
               </div>
             ) : addresses.length ? (
-              addresses.map((address) => (
+              addresses.map((address) => {
+                const badge = getCustomerAddressReadinessBadge(address);
+                return (
                 <article
                   key={address.id}
                   className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] px-5 py-5"
@@ -326,9 +334,9 @@ export function CustomerAccountAddressesPageClient() {
                           </span>
                         ) : null}
                         <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isCustomerAddressGeoReady(address) ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${badge.tone}`}
                         >
-                          {isCustomerAddressGeoReady(address) ? "Verified" : "Coords missing"}
+                          {badge.label}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-[var(--muted)]">{address.phone}</p>
@@ -343,6 +351,14 @@ export function CustomerAccountAddressesPageClient() {
                       <p className="mt-2 text-xs text-[var(--muted)]">
                         Geo: {address.geoProvider} / {address.geoPrecision}
                       </p>
+                      <p className="mt-2 text-xs text-[var(--muted)]">
+                        Manual-ready: {address.yandexManualReady ? "Yes" : "No"} · API-ready: {address.yandexApiReady ? "Yes" : "No"}
+                      </p>
+                      {address.missingYandexFields.length ? (
+                        <p className="mt-2 text-xs text-amber-700">
+                          Missing for Yandex: {address.missingYandexFields.join(", ")}
+                        </p>
+                      ) : null}
                       {address.latitude || address.longitude ? (
                         <p className="mt-2 text-xs text-[var(--muted)]">
                           GPS: {address.latitude ?? "?"}, {address.longitude ?? "?"}
@@ -379,7 +395,8 @@ export function CustomerAccountAddressesPageClient() {
                     </div>
                   </div>
                 </article>
-              ))
+                );
+              })
             ) : (
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-5 text-sm text-[var(--muted)]">
                 No saved addresses yet.
@@ -501,6 +518,53 @@ export function CustomerAccountAddressesPageClient() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        geoProvider: "MANUAL",
+                        geoPrecision:
+                          current.latitude !== null && current.longitude !== null
+                            ? "MANUAL_PIN"
+                            : current.geoPrecision,
+                      }))
+                    }
+                    className="public-button-secondary px-4 py-2 text-sm"
+                  >
+                    Use manual coordinates
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        geoPrecision:
+                          current.latitude !== null && current.longitude !== null
+                            ? "MANUAL_PIN"
+                            : "UNKNOWN",
+                        geoProvider: "MANUAL",
+                      }))
+                    }
+                    className="public-button-secondary px-4 py-2 text-sm"
+                  >
+                    Mark as manual pin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        latitude: null,
+                        longitude: null,
+                        geoPrecision: "UNKNOWN",
+                        geoProvider: "MANUAL",
+                      }))
+                    }
+                    className="public-button-secondary px-4 py-2 text-sm"
+                  >
+                    Clear coordinates
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => void handleVerify()}
                     disabled={verifying}
                     className="public-button-secondary px-4 py-2 text-sm"
@@ -520,6 +584,9 @@ export function CustomerAccountAddressesPageClient() {
               </div>
               <p className="mt-3 text-xs text-[var(--muted)]">
                 Default tests use a mock/manual geocoder. No real Yandex API call is made in this phase.
+              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Manual-ready needs city, street, building, and recipient phone. API-ready will require coordinates for future Yandex API claims.
               </p>
             </section>
           </div>

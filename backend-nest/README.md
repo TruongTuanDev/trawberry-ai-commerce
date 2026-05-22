@@ -437,3 +437,18 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env up -d backend-n
 ```
 
 - Do not use host `dist` copy as a primary runtime fix path.
+
+## Yandex Address Readiness
+
+Useful scripts:
+
+```bash
+npm run smoke:yandex-address-readiness
+npm run smoke:yandex-address-flow
+```
+
+The readiness smoke verifies:
+
+- structured address without coordinates stays manual-ready
+- manual lat/lng can promote the address to API-ready
+- current manual checkout flow is not blocked by missing coordinates

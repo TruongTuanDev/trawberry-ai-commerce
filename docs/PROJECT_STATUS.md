@@ -1262,3 +1262,18 @@ Verification:
 Current gap:
 
 - GitHub Actions workflow wiring is still a future phase; this pass prepares the Docker layer and docs for it.
+# Yandex Address Readiness Status
+
+Implemented:
+
+- readiness split between saved, manual-ready, and API-ready address states
+- customer address API and UI now expose missing Yandex fields
+- checkout keeps current manual flow but warns when coordinates are missing
+- seller manual Yandex workbench now shows pickup/dropoff readiness explicitly
+- admin deliveries can filter missing-coordinate rows
+
+Current gap:
+
+- real Yandex geocoder is still future work
+- no real map picker or map tiles in default runtime
+- future real Yandex claim creation should tighten API-ready enforcement

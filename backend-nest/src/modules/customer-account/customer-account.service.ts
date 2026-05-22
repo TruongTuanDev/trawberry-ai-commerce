@@ -14,7 +14,10 @@ import {
   isSyntheticEmail,
   normalizePhone,
 } from '../../common/utils/phone.util';
-import { buildYandexAddressFullname } from '../../common/utils/customer-address.util';
+import {
+  buildYandexAddressFullname,
+  computeAddressGeoReadiness,
+} from '../../common/utils/customer-address.util';
 import { AddressGeocoderService } from './address-geocoder.service';
 import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 import { ChangeCustomerPasswordDto } from './dto/change-customer-password.dto';
@@ -562,6 +565,8 @@ export class CustomerAccountService {
     createdAt: Date;
     updatedAt: Date;
   }) {
+    const geoReadiness = computeAddressGeoReadiness(address);
+
     return {
       id: address.id,
       fullName: address.fullName,
@@ -593,6 +598,10 @@ export class CustomerAccountService {
         address.addressFullName || buildYandexAddressFullname(address),
       addressShortName:
         address.addressShortName || this.buildShortAddress(address),
+      geoReadiness,
+      missingYandexFields: geoReadiness.missingFields,
+      yandexManualReady: geoReadiness.isYandexManualReady,
+      yandexApiReady: geoReadiness.isYandexApiReady,
       isDefault: address.isDefault,
       createdAt: address.createdAt.toISOString(),
       updatedAt: address.updatedAt.toISOString(),

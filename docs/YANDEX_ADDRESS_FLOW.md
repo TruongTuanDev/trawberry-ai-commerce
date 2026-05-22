@@ -107,3 +107,20 @@ This is intentionally compatible with manual copy-paste into Yandex tools today 
 - no real Yandex Delivery API call
 - coordinates can still be entered manually
 - address verification remains mock/manual only in default mode
+
+## Address readiness policy
+
+This phase now exposes explicit readiness states:
+
+- `yandexManualReady`
+- `yandexApiReady`
+- `geoReadiness.missingFields`
+
+Operational meaning:
+
+- saved address with no coordinates: still valid for current checkout
+- manual-ready address: seller can use it in manual Yandex workbench
+- API-ready address: future-safe for real Yandex claim creation
+
+Current policy does **not** block manual checkout when coordinates are missing.
+It only warns customer, seller, and admin that the address is manual-only.

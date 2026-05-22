@@ -175,6 +175,31 @@ Example response:
 - Re-runs provider geocoding for an existing saved address
 - In current mock/manual mode this stores deterministic Moscow coordinates or preserves manual coordinates
 
+Address responses now also include:
+
+- `geoReadiness`
+- `missingYandexFields`
+- `yandexManualReady`
+- `yandexApiReady`
+
+Example:
+
+```json
+{
+  "geoReadiness": {
+    "hasStructuredAddress": true,
+    "hasCoordinates": false,
+    "geoPrecision": "UNKNOWN",
+    "isYandexManualReady": true,
+    "isYandexApiReady": false,
+    "missingFields": ["coordinates"]
+  },
+  "missingYandexFields": ["coordinates"],
+  "yandexManualReady": true,
+  "yandexApiReady": false
+}
+```
+
 ### `DELETE /api/customer/addresses/:addressId`
 
 - Auth: customer session required

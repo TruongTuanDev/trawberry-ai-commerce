@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCustomerAddress } from "@/components/customer/account/customer-account-utils";
-import { formatCustomerAddressComment, isCustomerAddressGeoReady } from "@/components/customer/account/customer-account-utils";
+import {
+  formatCustomerAddressComment,
+  getCustomerAddressReadinessBadge,
+  isCustomerAddressGeoReady,
+} from "@/components/customer/account/customer-account-utils";
 import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
@@ -164,6 +168,9 @@ export function CheckoutPageClient({
     selectedAddressId !== "manual"
       ? savedAddresses.find((address) => address.id === selectedAddressId) ?? null
       : null;
+  const selectedAddressBadge = selectedSavedAddress
+    ? getCustomerAddressReadinessBadge(selectedSavedAddress)
+    : null;
 
   useEffect(() => {
     let mounted = true;
@@ -644,16 +651,21 @@ export function CheckoutPageClient({
                             </p>
                           ) : null}
                           <p
-                            className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isCustomerAddressGeoReady(selectedSavedAddress) ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                            className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${selectedAddressBadge?.tone ?? "bg-amber-100 text-amber-700"}`}
                             data-testid="checkout-address-geo-status"
                           >
-                            {isCustomerAddressGeoReady(selectedSavedAddress)
-                              ? "Address verified"
-                              : "Coordinates missing"}
+                            {selectedAddressBadge?.label ?? "Coordinates missing"}
+                          </p>
+                          <p className="mt-2 text-xs text-[var(--muted)]">
+                            {selectedSavedAddress.yandexApiReady
+                              ? "Yandex-ready"
+                              : selectedSavedAddress.yandexManualReady
+                                ? "Manual delivery allowed"
+                                : "Structured address still needs more detail"}
                           </p>
                           {!isCustomerAddressGeoReady(selectedSavedAddress) ? (
                             <p className="mt-2 text-xs text-amber-700">
-                              Coordinates missing; seller may need to verify address manually before using Yandex.
+                              Coordinates missing - seller may need to verify manually before Yandex dispatch.
                             </p>
                           ) : null}
                         </div>

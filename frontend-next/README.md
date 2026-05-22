@@ -705,3 +705,20 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env up -d frontend-
 ```
 
 - Do not use host `.next` copy as a primary runtime fix path.
+
+## Yandex Address Readiness
+
+Useful browser checks:
+
+```bash
+npm run test:e2e:yandex-address-readiness
+npm run test:e2e:yandex-address-flow
+```
+
+The UI now distinguishes:
+
+- missing coordinates
+- manual pin
+- Yandex-ready
+
+Current checkout still allows manual delivery without coordinates and surfaces a warning instead of blocking the order.

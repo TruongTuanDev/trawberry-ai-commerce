@@ -186,6 +186,25 @@ export type DeliveryShipment = {
   dropoffApartment?: string | null;
   dropoffGeoPrecision?: string | null;
   dropoffComment?: string | null;
+  pickupGeoReadiness?: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  };
+  dropoffGeoReadiness?: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  };
+  yandexManualReady?: boolean;
+  yandexApiReady?: boolean;
+  missingCoordinateWarning?: string | null;
   createdAt: string;
   updatedAt: string;
   acceptedAt: string | null;
@@ -284,6 +303,16 @@ export type SellerOrderListItem = {
   dropoffLongitude?: string | null;
   dropoffGeoPrecision?: string | null;
   dropoffComment?: string | null;
+  dropoffGeoReadiness?: {
+    hasStructuredAddress: boolean;
+    hasCoordinates: boolean;
+    geoPrecision: string | null;
+    isYandexManualReady: boolean;
+    isYandexApiReady: boolean;
+    missingFields: string[];
+  };
+  yandexManualReady?: boolean;
+  yandexApiReady?: boolean;
   customer: {
     name: string;
     phone: string;

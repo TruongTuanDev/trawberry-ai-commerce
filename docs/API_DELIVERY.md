@@ -280,7 +280,21 @@ Public order tracking exposes latest delivery projection:
 - delivery note
 - pickup / dropoff coordinates when stored
 - structured dropoff address fullname and access instructions
+- pickup/dropoff readiness metadata for Yandex-compatible delivery
 - customer-friendly timeline states for payment confirmed, Yandex created, courier assigned, picked up, on the way, and delivered
+
+Admin delivery listing now also supports:
+
+- `geoReady=true`
+- `missingCoordinates=true`
+
+Manual Yandex projection now includes:
+
+- `pickupGeoReadiness`
+- `dropoffGeoReadiness`
+- `yandexManualReady`
+- `yandexApiReady`
+- `missingCoordinateWarning`
 
 ## Browser UI Coverage
 

@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { computeAddressGeoReadiness } from '../../common/utils/customer-address.util';
 import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
 import {
   PAYMENT_METHOD_LABELS,
@@ -360,6 +361,19 @@ export class OrderTrackingService {
   private toTrackingResponse(order: TrackableOrderRecord) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
     const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
+    const customerGeoReadiness = computeAddressGeoReadiness({
+      country: 'Russia',
+      city: order.dropoffCity ?? '',
+      street: order.dropoffStreet ?? '',
+      building: order.dropoffBuilding ?? '',
+      entrance: order.dropoffEntrance ?? null,
+      intercom: order.dropoffIntercom ?? null,
+      floor: order.dropoffFloor ?? null,
+      apartment: order.dropoffApartment ?? null,
+      comment: order.dropoffComment ?? null,
+      geoPrecision: order.dropoffGeoPrecision ?? null,
+      phone: order.customerPhone,
+    });
     return {
       orderId: order.id,
       orderCode: order.orderNumber,
@@ -391,6 +405,7 @@ export class OrderTrackingService {
         apartment: order.dropoffApartment ?? null,
         geoPrecision: order.dropoffGeoPrecision ?? null,
         deliveryComment: order.dropoffComment ?? null,
+        geoReadiness: customerGeoReadiness,
       },
       customerNote: order.customerNote,
       createdAt: order.createdAt.toISOString(),
@@ -497,6 +512,31 @@ export class OrderTrackingService {
             dropoffLatitude: latestShipment.dropoffLatitude?.toString() ?? null,
             dropoffLongitude:
               latestShipment.dropoffLongitude?.toString() ?? null,
+            dropoffGeoReadiness: computeAddressGeoReadiness({
+              country: 'Russia',
+              city: latestShipment.dropoffCity ?? order.dropoffCity ?? '',
+              street: latestShipment.dropoffStreet ?? order.dropoffStreet ?? '',
+              building:
+                latestShipment.dropoffBuilding ?? order.dropoffBuilding ?? '',
+              entrance:
+                latestShipment.dropoffEntrance ?? order.dropoffEntrance ?? null,
+              intercom:
+                latestShipment.dropoffIntercom ?? order.dropoffIntercom ?? null,
+              floor: latestShipment.dropoffFloor ?? order.dropoffFloor ?? null,
+              apartment:
+                latestShipment.dropoffApartment ??
+                order.dropoffApartment ??
+                null,
+              comment:
+                latestShipment.dropoffComment ?? order.dropoffComment ?? null,
+              latitude: latestShipment.dropoffLatitude,
+              longitude: latestShipment.dropoffLongitude,
+              geoPrecision:
+                latestShipment.dropoffGeoPrecision ??
+                order.dropoffGeoPrecision ??
+                null,
+              phone: latestShipment.recipientPhone ?? order.customerPhone,
+            }),
             recipientName: latestShipment.recipientName,
             recipientPhone: latestShipment.recipientPhone,
             manualYandexOrderId: latestShipment.manualYandexOrderId,

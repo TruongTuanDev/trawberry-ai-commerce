@@ -50,6 +50,18 @@ export class ListAdminDeliveriesQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  geoReady?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  missingCoordinates?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
   dateFrom?: string;
 

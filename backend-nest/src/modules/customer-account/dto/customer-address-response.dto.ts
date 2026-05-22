@@ -1,5 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class CustomerAddressGeoReadinessDto {
+  @ApiProperty()
+  hasStructuredAddress!: boolean;
+
+  @ApiProperty()
+  hasCoordinates!: boolean;
+
+  @ApiProperty({ nullable: true })
+  geoPrecision!: string | null;
+
+  @ApiProperty()
+  isYandexManualReady!: boolean;
+
+  @ApiProperty()
+  isYandexApiReady!: boolean;
+
+  @ApiProperty({ type: String, isArray: true })
+  missingFields!: string[];
+}
+
 export class CustomerAddressResponseDto {
   @ApiProperty()
   id!: string;
@@ -84,6 +104,18 @@ export class CustomerAddressResponseDto {
 
   @ApiProperty({ nullable: true })
   addressShortName!: string | null;
+
+  @ApiProperty({ type: CustomerAddressGeoReadinessDto })
+  geoReadiness!: CustomerAddressGeoReadinessDto;
+
+  @ApiProperty({ type: String, isArray: true })
+  missingYandexFields!: string[];
+
+  @ApiProperty()
+  yandexManualReady!: boolean;
+
+  @ApiProperty()
+  yandexApiReady!: boolean;
 
   @ApiProperty()
   isDefault!: boolean;

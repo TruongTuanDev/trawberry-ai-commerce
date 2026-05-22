@@ -20,6 +20,15 @@ export type CustomerAddressSnapshot = {
   addressShortName?: string | null;
 };
 
+export type AddressGeoReadiness = {
+  hasStructuredAddress: boolean;
+  hasCoordinates: boolean;
+  geoPrecision: string | null;
+  isYandexManualReady: boolean;
+  isYandexApiReady: boolean;
+  missingFields: string[];
+};
+
 export function formatCustomerAddressSnapshot(
   address: CustomerAddressSnapshot,
 ) {
@@ -78,27 +87,59 @@ export function validateAddressForYandex(
     phone?: string | null;
   },
 ) {
-  const issues: string[] = [];
-
-  if (!address.city?.trim()) {
-    issues.push('city');
-  }
-  if (!address.street?.trim()) {
-    issues.push('street');
-  }
-  if (!address.building?.trim()) {
-    issues.push('building');
-  }
-  if (!address.phone?.trim()) {
-    issues.push('recipient phone');
-  }
-  if (!buildYandexCoordinates(address)) {
-    issues.push('coordinates');
-  }
+  const readiness = computeAddressGeoReadiness(address);
 
   return {
-    valid: issues.length === 0,
-    issues,
+    valid: readiness.isYandexApiReady,
+    issues: readiness.missingFields,
+  };
+}
+
+export function computeAddressGeoReadiness(
+  address: CustomerAddressSnapshot & {
+    fullName?: string | null;
+    phone?: string | null;
+  },
+): AddressGeoReadiness {
+  const missingFields: string[] = [];
+  const hasCity = Boolean(address.city?.trim());
+  const hasStreet = Boolean(address.street?.trim());
+  const hasBuilding = Boolean(address.building?.trim());
+  const hasPhone = Boolean(address.phone?.trim());
+  const coordinates = buildYandexCoordinates(address);
+  const hasCoordinates = Boolean(coordinates);
+  const geoPrecision = address.geoPrecision?.trim() || null;
+  const hasStructuredAddress = hasCity && hasStreet && hasBuilding;
+
+  if (!hasCity) {
+    missingFields.push('city');
+  }
+  if (!hasStreet) {
+    missingFields.push('street');
+  }
+  if (!hasBuilding) {
+    missingFields.push('building');
+  }
+  if (!hasPhone) {
+    missingFields.push('recipient phone');
+  }
+  if (!hasCoordinates) {
+    missingFields.push('coordinates');
+  }
+
+  const isYandexManualReady = hasStructuredAddress && hasPhone;
+  const isYandexApiReady =
+    isYandexManualReady &&
+    hasCoordinates &&
+    (geoPrecision === 'BUILDING' || geoPrecision === 'MANUAL_PIN');
+
+  return {
+    hasStructuredAddress,
+    hasCoordinates,
+    geoPrecision,
+    isYandexManualReady,
+    isYandexApiReady,
+    missingFields,
   };
 }
 

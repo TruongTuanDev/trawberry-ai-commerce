@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
+import { computeAddressGeoReadiness } from '../../common/utils/customer-address.util';
 import { computeSellerOrderDisplayStatus } from '../../common/utils/order-role-status.util';
 import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -459,6 +460,21 @@ export class OrdersService {
   }) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
     const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
+    const dropoffGeoReadiness = computeAddressGeoReadiness({
+      city: order.dropoffCity ?? '',
+      street: order.dropoffStreet ?? '',
+      building: order.dropoffBuilding ?? '',
+      entrance: order.dropoffEntrance ?? null,
+      intercom: order.dropoffIntercom ?? null,
+      floor: order.dropoffFloor ?? null,
+      apartment: order.dropoffApartment ?? null,
+      comment: order.dropoffComment ?? null,
+      latitude: order.dropoffLatitude ?? null,
+      longitude: order.dropoffLongitude ?? null,
+      geoPrecision: order.dropoffGeoPrecision ?? null,
+      country: 'Russia',
+      phone: order.customerPhone,
+    });
     const sellerDisplay = computeSellerOrderDisplayStatus({
       status: order.status,
       paymentStatus: order.paymentStatus,
@@ -495,6 +511,9 @@ export class OrdersService {
       dropoffLongitude: order.dropoffLongitude?.toString() ?? null,
       dropoffGeoPrecision: order.dropoffGeoPrecision ?? null,
       dropoffComment: order.dropoffComment ?? null,
+      dropoffGeoReadiness,
+      yandexManualReady: dropoffGeoReadiness.isYandexManualReady,
+      yandexApiReady: dropoffGeoReadiness.isYandexApiReady,
       customer: {
         name: order.customerName,
         phone: order.customerPhone,
