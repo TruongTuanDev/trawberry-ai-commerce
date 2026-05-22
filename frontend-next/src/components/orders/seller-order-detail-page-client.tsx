@@ -79,6 +79,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupLatitude, setPickupLatitude] = useState<string | null>(null);
+  const [pickupLongitude, setPickupLongitude] = useState<string | null>(null);
   const [weightGram, setWeightGram] = useState("1000");
   const [lengthCm, setLengthCm] = useState("30");
   const [widthCm, setWidthCm] = useState("20");
@@ -167,6 +169,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               ? current
               : settings.pickupAddress || current,
           );
+          setPickupLatitude(settings.pickupLatitude);
+          setPickupLongitude(settings.pickupLongitude);
           setWeightGram(String(settings.defaultWeightGram));
           setLengthCm(String(settings.defaultLengthCm));
           setWidthCm(String(settings.defaultWidthCm));
@@ -637,18 +641,51 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const activeShipment = delivery?.activeShipment ?? null;
   const pickupLat = activeShipment?.pickupLatitude
     ? Number(activeShipment.pickupLatitude)
-    : null;
+    : pickupLatitude
+      ? Number(pickupLatitude)
+      : null;
   const pickupLng = activeShipment?.pickupLongitude
     ? Number(activeShipment.pickupLongitude)
-    : null;
+    : pickupLongitude
+      ? Number(pickupLongitude)
+      : null;
   const dropoffLat = activeShipment?.dropoffLatitude
     ? Number(activeShipment.dropoffLatitude)
-    : null;
+    : order.dropoffLatitude
+      ? Number(order.dropoffLatitude)
+      : null;
   const dropoffLng = activeShipment?.dropoffLongitude
     ? Number(activeShipment.dropoffLongitude)
-    : null;
+    : order.dropoffLongitude
+      ? Number(order.dropoffLongitude)
+      : null;
+  const dropoffAddressFullName =
+    activeShipment?.dropoffAddressFullName ??
+    order.dropoffAddressFullName ??
+    order.shippingAddress;
+  const dropoffCommentNote = activeShipment?.dropoffComment ?? order.dropoffComment ?? null;
+  const dropoffComment = [
+    activeShipment?.dropoffEntrance ?? order.dropoffEntrance ?? null,
+    activeShipment?.dropoffIntercom ?? order.dropoffIntercom ?? null,
+    activeShipment?.dropoffFloor ?? order.dropoffFloor ?? null,
+    activeShipment?.dropoffApartment ?? order.dropoffApartment ?? null,
+  ]
+    .filter(Boolean)
+    .map((entry, index) =>
+      index === 0
+        ? `Entrance ${entry}`
+        : index === 1
+          ? `Intercom ${entry}`
+          : index === 2
+            ? `Floor ${entry}`
+            : `Apartment ${entry}`,
+    )
+    .concat(dropoffCommentNote ? [dropoffCommentNote] : [])
+    .filter(Boolean)
+    .join(", ");
+  const yandexReady = pickupLat !== null && pickupLng !== null && dropoffLat !== null && dropoffLng !== null;
   const senderText = [
-    `Pickup: ${pickupAddress}`,
+    `Pickup: ${activeShipment?.pickupAddressFullName ?? pickupAddress}`,
     pickupLat !== null && pickupLng !== null
       ? `GPS: ${pickupLat}, ${pickupLng}`
       : null,
@@ -658,7 +695,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const recipientText = [
     `Recipient: ${order.customer.name}`,
     `Phone: ${order.customer.phone}`,
-    `Address: ${order.shippingAddress}`,
+    `Address: ${dropoffAddressFullName}`,
+    dropoffComment ? `Access: ${dropoffComment}` : null,
     dropoffLat !== null && dropoffLng !== null
       ? `GPS: ${dropoffLat}, ${dropoffLng}`
       : null,
@@ -765,7 +803,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               Shipping address
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              {order.shippingAddress}
+              {dropoffAddressFullName}
+            </p>
+            {dropoffComment ? (
+              <p className="mt-2 text-sm text-[var(--muted)]">{dropoffComment}</p>
+            ) : null}
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              Geo status: {activeShipment?.dropoffGeoPrecision ?? order.dropoffGeoPrecision ?? "UNKNOWN"}
+              {dropoffLat !== null && dropoffLng !== null ? ` · ${dropoffLat}, ${dropoffLng}` : ""}
             </p>
             {order.customerNote ? (
               <p className="mt-4 text-sm text-[var(--muted)]">
@@ -1076,6 +1121,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </div>
 
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${yandexReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {yandexReady ? "Yandex-ready" : "Coordinates missing"}
+                  </span>
+                  {!yandexReady ? (
+                    <span className="text-xs text-amber-700">
+                      Seller may need to verify pickup or dropoff coordinates manually.
+                    </span>
+                  ) : null}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => void copyToClipboard(senderText, "Sender")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
                     Copy sender
@@ -1083,7 +1138,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   <button type="button" onClick={() => void copyToClipboard(recipientText, "Recipient")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
                     Copy recipient
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard([senderText, recipientText, packageText].join("\n\n"), "Shipment brief")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                  <button type="button" onClick={() => void copyToClipboard([senderText, recipientText, packageText].join("\n\n"), "Shipment brief")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold" data-testid="copy-full-delivery-block">
                     Copy all
                   </button>
                   <button type="button" onClick={() => openMaps(pickupLat, pickupLng)} disabled={pickupLat === null || pickupLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">

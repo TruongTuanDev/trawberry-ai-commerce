@@ -1,0 +1,109 @@
+# Yandex-Compatible Address Flow
+
+## Why this phase exists
+
+Yandex delivery workflows need a more structured dropoff address than the legacy single-line customer address.
+
+This phase upgrades customer addresses so the marketplace can preserve:
+
+- a human-readable address fullname for manual seller operations
+- separate access details for courier instructions
+- latitude and longitude for future Yandex API readiness
+
+No real Yandex geocoder or delivery API is called in this phase.
+
+## Structured customer address model
+
+Customer addresses now support:
+
+- `country`
+- `countryCode`
+- `federalSubject`
+- `city`
+- `cityType`
+- `district`
+- `settlement`
+- `street`
+- `streetType`
+- `building`
+- `buildingBlock`
+- `entrance`
+- `intercom`
+- `floor`
+- `apartment`
+- `comment`
+- `latitude`
+- `longitude`
+- `geoPrecision`
+- `geoProvider`
+- `geoProviderUri`
+- `geoRawPayload`
+- `addressFullName`
+- `addressShortName`
+
+The recommended Yandex-compatible split is:
+
+- fullname: `city + street + building`
+- access details: `entrance`, `intercom`, `floor`, `apartment`, `comment`
+
+## Geocoder posture
+
+Supported providers in this phase:
+
+- `MOCK`
+- `MANUAL`
+
+Future-only provider:
+
+- `YANDEX_GEOCODER`
+
+Default test/runtime behavior does not require any Yandex API key.
+
+The mock provider returns deterministic Moscow suggestions so smoke tests and E2E can remain stable.
+
+## Checkout integration
+
+Saved customer addresses can still be selected by `addressId`.
+
+Checkout now snapshots structured dropoff fields into the order:
+
+- `dropoffAddressFullName`
+- `dropoffCity`
+- `dropoffStreet`
+- `dropoffBuilding`
+- `dropoffEntrance`
+- `dropoffIntercom`
+- `dropoffFloor`
+- `dropoffApartment`
+- `dropoffLatitude`
+- `dropoffLongitude`
+- `dropoffGeoPrecision`
+- `dropoffComment`
+
+Legacy manual/guest checkout remains available.
+
+If coordinates are missing:
+
+- checkout is still allowed in the current MVP
+- seller workbench shows that the address is not fully API-ready
+- future real Yandex claim creation can tighten this later
+
+## Seller manual Yandex workbench
+
+Seller order detail now exposes a clearer dropoff block:
+
+- Yandex-friendly address fullname
+- separated access instructions
+- coordinates when present
+- copy-ready sender / recipient / full delivery block
+- Yandex-ready badge when pickup and dropoff both have coordinates
+
+This is intentionally compatible with manual copy-paste into Yandex tools today and future API mapping later.
+
+## Known limitations
+
+- no real Yandex geocoding call
+- no map picker
+- no real Yandex Delivery API call
+- coordinates can still be entered manually
+- address verification remains mock/manual only in default mode

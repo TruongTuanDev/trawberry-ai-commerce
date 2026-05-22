@@ -1,5 +1,49 @@
 # Phase Report
 
+## 2026-05-22 Yandex-Compatible Customer Address Flow
+
+- upgraded customer addresses from a mostly flat delivery string into a structured Yandex-compatible model
+- added backend fields for:
+  - `countryCode`
+  - `federalSubject`
+  - `district`
+  - `building`
+  - `entrance`
+  - `intercom`
+  - `floor`
+  - `geoPrecision`
+  - `geoProvider`
+  - `geoProviderUri`
+  - `geoRawPayload`
+  - `addressFullName`
+  - `addressShortName`
+- added address helper functions for:
+  - Yandex fullname formatting
+  - Yandex comment formatting
+  - coordinate extraction
+  - API-readiness validation
+- added customer address provider abstraction with:
+  - mock provider
+  - manual provider
+  - future-only Yandex provider posture
+- added customer account endpoints:
+  - `GET /api/customer/address-suggestions`
+  - `POST /api/customer/addresses/:addressId/geocode`
+- checkout now snapshots structured dropoff fields into orders
+- seller manual Yandex workbench now renders:
+  - full Yandex-friendly dropoff address
+  - separated entrance/intercom/floor/apartment/comment
+  - readiness badge based on pickup + dropoff coordinates
+  - copy-all shipment brief using structured fields
+- added verification targets:
+  - `backend-nest npm run smoke:yandex-address-flow`
+  - `frontend-next npm run test:e2e:yandex-address-flow`
+- current limitation remains intentional:
+  - no real Yandex geocoder
+  - no real map picker
+  - no real Yandex Delivery API call
+  - missing coordinates warn but do not block current manual flow
+
 ## 2026-05-22 Return / Refund / Dispute Foundation
 
 - added a manual return/refund/dispute domain for the direct-to-seller marketplace model

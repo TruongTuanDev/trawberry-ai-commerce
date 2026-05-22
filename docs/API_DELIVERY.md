@@ -16,6 +16,39 @@ What is not supported now:
 - Yandex card/cash payment collection on behalf of the seller
 - real Yandex payment API calls
 
+## 2026-05-22 Yandex-Compatible Address Addendum
+
+Manual Yandex delivery now consumes structured customer dropoff fields instead of relying only on a single free-text address string.
+
+Current dropoff snapshot fields include:
+
+- `dropoffAddressFullName`
+- `dropoffCity`
+- `dropoffStreet`
+- `dropoffBuilding`
+- `dropoffEntrance`
+- `dropoffIntercom`
+- `dropoffFloor`
+- `dropoffApartment`
+- `dropoffLatitude`
+- `dropoffLongitude`
+- `dropoffGeoPrecision`
+- `dropoffComment`
+
+Current pickup snapshot fields include:
+
+- `pickupAddressFullName`
+- `pickupLatitude`
+- `pickupLongitude`
+
+Yandex-friendly mapping in this phase:
+
+- fullname: `city + street + building`
+- comment: `entrance / intercom / floor / apartment / delivery comment`
+- coordinates: stored as `latitude` + `longitude`
+
+Coordinates are not enforced for the current manual seller workflow, but orders without coordinates are not fully API-ready for future provider automation.
+
 ## Scope
 
 `backend-nest/src/modules/delivery` provides the multi-carrier foundation for seller delivery operations.
@@ -170,6 +203,7 @@ Validation:
 - `trackingUrl` must be a valid URL when provided
 - future Yandex API placeholders are stored now: `yandexClaimId`, `yandexStatus`, `yandexPrice`, and `yandexTrackingLink`
 - Yandex-preferred orders can enter `READY_TO_CREATE_YANDEX` before a shipment record exists
+- structured dropoff fields are copied from the checkout/order snapshot when available
 
 ## Admin Supervision
 
@@ -209,6 +243,7 @@ Returns:
 - active shipment
 - stored offers
 - shipment events
+- structured pickup/dropoff address fields for manual Yandex operations
 
 ## Refresh / Cancel
 
@@ -244,6 +279,7 @@ Public order tracking exposes latest delivery projection:
 - estimated delivery
 - delivery note
 - pickup / dropoff coordinates when stored
+- structured dropoff address fullname and access instructions
 - customer-friendly timeline states for payment confirmed, Yandex created, courier assigned, picked up, on the way, and delivered
 
 ## Browser UI Coverage

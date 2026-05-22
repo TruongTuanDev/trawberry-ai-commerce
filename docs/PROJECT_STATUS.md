@@ -1,5 +1,31 @@
 # Project Status
 
+## Yandex-Compatible Customer Address Flow - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Customer saved addresses now use a more structured Yandex-compatible shape:
+  - city
+  - district
+  - street
+  - building
+  - entrance
+  - intercom
+  - floor
+  - apartment
+  - comment
+  - latitude / longitude
+  - geo precision / provider metadata
+- Customer UI now supports:
+  - structured Moscow-first address entry
+  - mock/manual address suggestions
+  - geocode/verification status
+- Checkout now snapshots structured dropoff fields into orders while preserving the legacy shipping address string.
+- Seller manual Yandex workbench now shows clearer dropoff data and can determine Yandex-readiness before shipment creation when pickup and dropoff coordinates are known.
+- Current limitation remains intentional:
+  - no real Yandex geocoder
+  - no real Yandex Delivery API call
+  - coordinates can still be entered manually in MVP mode
+
 ## Return / Refund / Dispute Foundation - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

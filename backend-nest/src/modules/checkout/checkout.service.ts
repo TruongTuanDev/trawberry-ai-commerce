@@ -13,7 +13,11 @@ import {
   createSyntheticEmailFromPhone,
   normalizePhone,
 } from '../../common/utils/phone.util';
-import { formatCustomerAddressSnapshot } from '../../common/utils/customer-address.util';
+import {
+  buildYandexAddressComment,
+  buildYandexAddressFullname,
+  formatCustomerAddressSnapshot,
+} from '../../common/utils/customer-address.util';
 import { resolveShopPaymentPanel } from '../../common/utils/shop-payment.util';
 import {
   PAYMENT_METHOD_LABELS,
@@ -71,6 +75,16 @@ type ResolvedCheckoutCustomer = {
   note: string | null;
   latitude: number | null;
   longitude: number | null;
+  city: string | null;
+  street: string | null;
+  building: string | null;
+  entrance: string | null;
+  intercom: string | null;
+  floor: string | null;
+  apartment: string | null;
+  geoPrecision: string | null;
+  addressFullName: string | null;
+  yandexComment: string | null;
 };
 
 @Injectable()
@@ -184,6 +198,24 @@ export class CheckoutService {
               checkoutCustomer.longitude !== null
                 ? new Prisma.Decimal(checkoutCustomer.longitude)
                 : null,
+            dropoffAddressFullName: checkoutCustomer.addressFullName,
+            dropoffCity: checkoutCustomer.city,
+            dropoffStreet: checkoutCustomer.street,
+            dropoffBuilding: checkoutCustomer.building,
+            dropoffEntrance: checkoutCustomer.entrance,
+            dropoffIntercom: checkoutCustomer.intercom,
+            dropoffFloor: checkoutCustomer.floor,
+            dropoffApartment: checkoutCustomer.apartment,
+            dropoffLatitude:
+              checkoutCustomer.latitude !== null
+                ? new Prisma.Decimal(checkoutCustomer.latitude)
+                : null,
+            dropoffLongitude:
+              checkoutCustomer.longitude !== null
+                ? new Prisma.Decimal(checkoutCustomer.longitude)
+                : null,
+            dropoffGeoPrecision: checkoutCustomer.geoPrecision,
+            dropoffComment: checkoutCustomer.yandexComment,
             customerName: checkoutCustomer.fullName,
             customerPhone: checkoutCustomer.phone,
             customerEmail: checkoutCustomer.email,
@@ -361,6 +393,19 @@ export class CheckoutService {
         note,
         latitude: dto.customer.latitude ?? null,
         longitude: dto.customer.longitude ?? null,
+        city: null,
+        street: null,
+        building: null,
+        entrance: null,
+        intercom: null,
+        floor: null,
+        apartment: null,
+        geoPrecision:
+          dto.customer.latitude && dto.customer.longitude
+            ? 'MANUAL_PIN'
+            : 'UNKNOWN',
+        addressFullName: dto.customer.address.trim(),
+        yandexComment: note,
       };
     }
 
@@ -391,6 +436,17 @@ export class CheckoutService {
       longitude: address.longitude
         ? Number(address.longitude.toString())
         : null,
+      city: address.city,
+      street: address.street,
+      building: address.building,
+      entrance: address.entrance,
+      intercom: address.intercom,
+      floor: address.floor,
+      apartment: address.apartment,
+      geoPrecision: address.geoPrecision,
+      addressFullName:
+        address.addressFullName || buildYandexAddressFullname(address),
+      yandexComment: buildYandexAddressComment(address),
     };
   }
 

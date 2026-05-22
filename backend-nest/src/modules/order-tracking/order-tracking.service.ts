@@ -30,6 +30,16 @@ type TrackableOrderRecord = {
   paymentStatus: string;
   totalAmount: Prisma.Decimal;
   shippingAddress: string;
+  dropoffAddressFullName?: string | null;
+  dropoffCity?: string | null;
+  dropoffStreet?: string | null;
+  dropoffBuilding?: string | null;
+  dropoffEntrance?: string | null;
+  dropoffIntercom?: string | null;
+  dropoffFloor?: string | null;
+  dropoffApartment?: string | null;
+  dropoffGeoPrecision?: string | null;
+  dropoffComment?: string | null;
   shippingMethodName: string | null;
   paymentMethod: string | null;
   paymentMethodLabel: string | null;
@@ -84,8 +94,19 @@ type TrackableOrderRecord = {
     packageWidthCm: number | null;
     packageHeightCm: number | null;
     pickupAddress: string;
+    pickupAddressFullName: string | null;
     pickupLatitude: Prisma.Decimal | null;
     pickupLongitude: Prisma.Decimal | null;
+    dropoffAddressFullName: string | null;
+    dropoffCity: string | null;
+    dropoffStreet: string | null;
+    dropoffBuilding: string | null;
+    dropoffEntrance: string | null;
+    dropoffIntercom: string | null;
+    dropoffFloor: string | null;
+    dropoffApartment: string | null;
+    dropoffGeoPrecision: string | null;
+    dropoffComment: string | null;
     dropoffLatitude: Prisma.Decimal | null;
     dropoffLongitude: Prisma.Decimal | null;
     recipientName: string | null;
@@ -360,6 +381,16 @@ export class OrderTrackingService {
         phone: order.customerPhone,
         email: order.customerEmail,
         address: order.shippingAddress,
+        addressFullName: order.dropoffAddressFullName ?? order.shippingAddress,
+        city: order.dropoffCity ?? null,
+        street: order.dropoffStreet ?? null,
+        building: order.dropoffBuilding ?? null,
+        entrance: order.dropoffEntrance ?? null,
+        intercom: order.dropoffIntercom ?? null,
+        floor: order.dropoffFloor ?? null,
+        apartment: order.dropoffApartment ?? null,
+        geoPrecision: order.dropoffGeoPrecision ?? null,
+        deliveryComment: order.dropoffComment ?? null,
       },
       customerNote: order.customerNote,
       createdAt: order.createdAt.toISOString(),
@@ -434,8 +465,35 @@ export class OrderTrackingService {
             packageWidthCm: latestShipment.packageWidthCm,
             packageHeightCm: latestShipment.packageHeightCm,
             pickupAddress: latestShipment.pickupAddress,
+            pickupAddressFullName:
+              latestShipment.pickupAddressFullName ??
+              latestShipment.pickupAddress,
             pickupLatitude: latestShipment.pickupLatitude?.toString() ?? null,
             pickupLongitude: latestShipment.pickupLongitude?.toString() ?? null,
+            dropoffAddressFullName:
+              latestShipment.dropoffAddressFullName ??
+              order.dropoffAddressFullName ??
+              order.shippingAddress,
+            dropoffCity:
+              latestShipment.dropoffCity ?? order.dropoffCity ?? null,
+            dropoffStreet:
+              latestShipment.dropoffStreet ?? order.dropoffStreet ?? null,
+            dropoffBuilding:
+              latestShipment.dropoffBuilding ?? order.dropoffBuilding ?? null,
+            dropoffEntrance:
+              latestShipment.dropoffEntrance ?? order.dropoffEntrance ?? null,
+            dropoffIntercom:
+              latestShipment.dropoffIntercom ?? order.dropoffIntercom ?? null,
+            dropoffFloor:
+              latestShipment.dropoffFloor ?? order.dropoffFloor ?? null,
+            dropoffApartment:
+              latestShipment.dropoffApartment ?? order.dropoffApartment ?? null,
+            dropoffGeoPrecision:
+              latestShipment.dropoffGeoPrecision ??
+              order.dropoffGeoPrecision ??
+              null,
+            dropoffComment:
+              latestShipment.dropoffComment ?? order.dropoffComment ?? null,
             dropoffLatitude: latestShipment.dropoffLatitude?.toString() ?? null,
             dropoffLongitude:
               latestShipment.dropoffLongitude?.toString() ?? null,
@@ -508,8 +566,19 @@ export class OrderTrackingService {
           packageWidthCm: true,
           packageHeightCm: true,
           pickupAddress: true,
+          pickupAddressFullName: true,
           pickupLatitude: true,
           pickupLongitude: true,
+          dropoffAddressFullName: true,
+          dropoffCity: true,
+          dropoffStreet: true,
+          dropoffBuilding: true,
+          dropoffEntrance: true,
+          dropoffIntercom: true,
+          dropoffFloor: true,
+          dropoffApartment: true,
+          dropoffGeoPrecision: true,
+          dropoffComment: true,
           dropoffLatitude: true,
           dropoffLongitude: true,
           recipientName: true,

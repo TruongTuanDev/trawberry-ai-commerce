@@ -7,12 +7,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   createSyntheticEmailFromPhone,
   isSyntheticEmail,
   normalizePhone,
 } from '../../common/utils/phone.util';
+import { buildYandexAddressFullname } from '../../common/utils/customer-address.util';
+import { AddressGeocoderService } from './address-geocoder.service';
 import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
 import { ChangeCustomerPasswordDto } from './dto/change-customer-password.dto';
 import { CreateCustomerAddressDto } from './dto/create-customer-address.dto';
@@ -20,7 +23,10 @@ import { UpdateCustomerAddressDto } from './dto/update-customer-address.dto';
 
 @Injectable()
 export class CustomerAccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly addressGeocoderService: AddressGeocoderService,
+  ) {}
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -173,20 +179,14 @@ export class CustomerAccountService {
     };
   }
 
-  async createAddress(userId: string, dto: CreateCustomerAddressDto) {
-    const payload = {
-      fullName: dto.fullName.trim(),
-      phone: normalizePhone(dto.phone, 'Phone'),
-      country: dto.country?.trim() || 'RU',
-      city: dto.city.trim(),
-      region: dto.region.trim(),
-      street: dto.street.trim(),
-      apartment: dto.apartment?.trim() || null,
-      postalCode: dto.postalCode?.trim() || null,
-      comment: dto.comment?.trim() || null,
-      latitude: dto.latitude ?? null,
-      longitude: dto.longitude ?? null,
+  listAddressSuggestions(query: string, city?: string) {
+    return {
+      items: this.addressGeocoderService.suggest(query, city),
     };
+  }
+
+  async createAddress(userId: string, dto: CreateCustomerAddressDto) {
+    const payload = this.normalizeAddressInput(dto);
     const existingCount = await this.prisma.customerAddress.count({
       where: { customerId: userId },
     });
@@ -220,11 +220,51 @@ export class CustomerAccountService {
     dto: UpdateCustomerAddressDto,
   ) {
     const existing = await this.getOwnedAddressOrThrow(userId, addressId);
-    const payload = this.normalizeAddressInput(dto, true);
+    const payload = this.normalizeAddressInput(dto, true, existing);
 
     const updated = await this.prisma.customerAddress.update({
       where: { id: existing.id },
       data: payload,
+    });
+
+    return this.toAddressResponse(updated);
+  }
+
+  async geocodeAddress(userId: string, addressId: string) {
+    const existing = await this.getOwnedAddressOrThrow(userId, addressId);
+    const geocoded = this.addressGeocoderService.geocode(existing);
+
+    if (!geocoded) {
+      const unchanged = await this.prisma.customerAddress.update({
+        where: { id: existing.id },
+        data: {
+          geoPrecision: 'UNKNOWN',
+          geoProvider: 'MANUAL',
+          geoProviderUri: null,
+          geoRawPayload: Prisma.JsonNull,
+          addressFullName: buildYandexAddressFullname(existing),
+          addressShortName: this.buildShortAddress(existing),
+        },
+      });
+      return this.toAddressResponse(unchanged);
+    }
+
+    const updated = await this.prisma.customerAddress.update({
+      where: { id: existing.id },
+      data: {
+        city: geocoded.city,
+        district: geocoded.district,
+        street: geocoded.street,
+        building: geocoded.building,
+        latitude: geocoded.latitude,
+        longitude: geocoded.longitude,
+        geoPrecision: geocoded.geoPrecision,
+        geoProvider: geocoded.geoProvider,
+        geoProviderUri: geocoded.geoProviderUri,
+        geoRawPayload: geocoded.geoRawPayload,
+        addressFullName: geocoded.addressFullName,
+        addressShortName: geocoded.addressShortName,
+      },
     });
 
     return this.toAddressResponse(updated);
@@ -311,36 +351,181 @@ export class CustomerAccountService {
   private normalizeAddressInput(
     dto: Partial<CreateCustomerAddressDto>,
     partial = false,
+    existing?: Record<string, unknown> | null,
   ) {
-    const payload = {
-      ...(dto.fullName !== undefined ? { fullName: dto.fullName.trim() } : {}),
-      ...(dto.phone !== undefined
-        ? { phone: normalizePhone(dto.phone, 'Phone') }
-        : {}),
-      ...(dto.country !== undefined ? { country: dto.country.trim() } : {}),
-      ...(dto.city !== undefined ? { city: dto.city.trim() } : {}),
-      ...(dto.region !== undefined ? { region: dto.region.trim() } : {}),
-      ...(dto.street !== undefined ? { street: dto.street.trim() } : {}),
-      ...(dto.apartment !== undefined
-        ? { apartment: dto.apartment.trim() || null }
-        : {}),
-      ...(dto.postalCode !== undefined
-        ? { postalCode: dto.postalCode.trim() || null }
-        : {}),
-      ...(dto.comment !== undefined
-        ? { comment: dto.comment.trim() || null }
-        : {}),
-      ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
-      ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
+    const next = {
+      fullName:
+        dto.fullName !== undefined
+          ? dto.fullName.trim()
+          : this.readExistingString(existing, 'fullName'),
+      phone:
+        dto.phone !== undefined
+          ? normalizePhone(dto.phone, 'Phone')
+          : this.readExistingString(existing, 'phone'),
+      country:
+        dto.country !== undefined
+          ? dto.country.trim() || 'Russia'
+          : this.readExistingString(existing, 'country', 'Russia'),
+      countryCode:
+        dto.countryCode !== undefined
+          ? dto.countryCode.trim().toUpperCase() || 'RU'
+          : this.readExistingString(existing, 'countryCode', 'RU'),
+      city:
+        dto.city !== undefined
+          ? dto.city.trim()
+          : this.readExistingString(existing, 'city'),
+      region:
+        dto.region !== undefined
+          ? dto.region.trim()
+          : this.readExistingString(existing, 'region'),
+      federalSubject:
+        dto.federalSubject !== undefined
+          ? dto.federalSubject.trim() || null
+          : ((existing?.federalSubject as string | null | undefined) ?? null),
+      cityType:
+        dto.cityType !== undefined
+          ? dto.cityType.trim() || null
+          : ((existing?.cityType as string | null | undefined) ?? null),
+      district:
+        dto.district !== undefined
+          ? dto.district.trim() || null
+          : ((existing?.district as string | null | undefined) ?? null),
+      settlement:
+        dto.settlement !== undefined
+          ? dto.settlement.trim() || null
+          : ((existing?.settlement as string | null | undefined) ?? null),
+      street:
+        dto.street !== undefined
+          ? dto.street.trim()
+          : this.readExistingString(existing, 'street'),
+      streetType:
+        dto.streetType !== undefined
+          ? dto.streetType.trim() || null
+          : ((existing?.streetType as string | null | undefined) ?? null),
+      building:
+        dto.building !== undefined
+          ? dto.building.trim()
+          : this.readExistingString(existing, 'building'),
+      buildingBlock:
+        dto.buildingBlock !== undefined
+          ? dto.buildingBlock.trim() || null
+          : ((existing?.buildingBlock as string | null | undefined) ?? null),
+      entrance:
+        dto.entrance !== undefined
+          ? dto.entrance.trim() || null
+          : ((existing?.entrance as string | null | undefined) ?? null),
+      intercom:
+        dto.intercom !== undefined
+          ? dto.intercom.trim() || null
+          : ((existing?.intercom as string | null | undefined) ?? null),
+      floor:
+        dto.floor !== undefined
+          ? dto.floor.trim() || null
+          : ((existing?.floor as string | null | undefined) ?? null),
+      apartment:
+        dto.apartment !== undefined
+          ? dto.apartment.trim() || null
+          : ((existing?.apartment as string | null | undefined) ?? null),
+      postalCode:
+        dto.postalCode !== undefined
+          ? dto.postalCode.trim() || null
+          : ((existing?.postalCode as string | null | undefined) ?? null),
+      comment:
+        dto.comment !== undefined
+          ? dto.comment.trim() || null
+          : ((existing?.comment as string | null | undefined) ?? null),
+      latitude:
+        dto.latitude !== undefined
+          ? dto.latitude
+          : ((existing?.latitude as number | null | undefined) ?? null),
+      longitude:
+        dto.longitude !== undefined
+          ? dto.longitude
+          : ((existing?.longitude as number | null | undefined) ?? null),
+      geoPrecision:
+        dto.geoPrecision !== undefined
+          ? dto.geoPrecision.trim() || 'UNKNOWN'
+          : this.readExistingString(existing, 'geoPrecision', 'UNKNOWN'),
+      geoProvider:
+        dto.geoProvider !== undefined
+          ? dto.geoProvider.trim() || 'MANUAL'
+          : this.readExistingString(existing, 'geoProvider', 'MANUAL'),
+      geoProviderUri:
+        dto.geoProviderUri !== undefined
+          ? dto.geoProviderUri.trim() || null
+          : ((existing?.geoProviderUri as string | null | undefined) ?? null),
     };
 
+    if (!next.building) {
+      const parsed = this.extractBuildingFromStreet(next.street);
+      if (parsed) {
+        next.street = parsed.street;
+        next.building = parsed.building;
+      }
+    }
+
+    if (!partial) {
+      if (!next.fullName) {
+        throw new BadRequestException('fullName is required.');
+      }
+      if (!next.phone) {
+        throw new BadRequestException('phone is required.');
+      }
+      if (!next.city) {
+        throw new BadRequestException('city is required.');
+      }
+      if (!next.street) {
+        throw new BadRequestException('street is required.');
+      }
+      if (!next.building) {
+        throw new BadRequestException('building is required.');
+      }
+    }
+
+    const geocoded =
+      next.latitude === null || next.longitude === null
+        ? this.addressGeocoderService.geocode(next)
+        : null;
+
+    const merged = {
+      ...next,
+      city: geocoded?.city ?? next.city,
+      district: geocoded?.district ?? next.district,
+      street: geocoded?.street ?? next.street,
+      building: geocoded?.building ?? next.building,
+      latitude: geocoded?.latitude ?? next.latitude,
+      longitude: geocoded?.longitude ?? next.longitude,
+      geoPrecision:
+        geocoded?.geoPrecision ??
+        (next.latitude !== null && next.longitude !== null
+          ? next.geoPrecision || 'MANUAL_PIN'
+          : 'UNKNOWN'),
+      geoProvider:
+        geocoded?.geoProvider ??
+        (next.latitude !== null && next.longitude !== null
+          ? next.geoProvider || 'MANUAL'
+          : 'MANUAL'),
+      geoProviderUri: geocoded?.geoProviderUri ?? next.geoProviderUri,
+      geoRawPayload: geocoded?.geoRawPayload ?? Prisma.JsonNull,
+    };
+
+    const addressFullName = buildYandexAddressFullname(merged);
+    const addressShortName = this.buildShortAddress(merged);
+
     if (partial) {
-      return payload;
+      return {
+        ...merged,
+        addressFullName,
+        addressShortName,
+      };
     }
 
     return {
-      ...payload,
-      country: payload.country || 'RU',
+      ...merged,
+      country: merged.country || 'Russia',
+      countryCode: merged.countryCode || 'RU',
+      addressFullName,
+      addressShortName,
     };
   }
 
@@ -349,14 +534,30 @@ export class CustomerAccountService {
     fullName: string;
     phone: string;
     country: string;
+    countryCode: string;
     city: string;
     region: string;
+    federalSubject: string | null;
+    cityType: string | null;
+    district: string | null;
+    settlement: string | null;
     street: string;
+    building: string;
+    streetType: string | null;
+    buildingBlock: string | null;
+    entrance: string | null;
+    intercom: string | null;
+    floor: string | null;
     apartment: string | null;
     postalCode: string | null;
     comment: string | null;
     latitude: { toString(): string } | null;
     longitude: { toString(): string } | null;
+    geoPrecision: string;
+    geoProvider: string;
+    geoProviderUri: string | null;
+    addressFullName: string;
+    addressShortName: string;
     isDefault: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -366,17 +567,77 @@ export class CustomerAccountService {
       fullName: address.fullName,
       phone: address.phone,
       country: address.country,
+      countryCode: address.countryCode,
       city: address.city,
       region: address.region,
+      federalSubject: address.federalSubject,
+      cityType: address.cityType,
+      district: address.district,
+      settlement: address.settlement,
       street: address.street,
+      building: address.building,
+      streetType: address.streetType,
+      buildingBlock: address.buildingBlock,
+      entrance: address.entrance,
+      intercom: address.intercom,
+      floor: address.floor,
       apartment: address.apartment,
       postalCode: address.postalCode,
       comment: address.comment,
       latitude: address.latitude?.toString() ?? null,
       longitude: address.longitude?.toString() ?? null,
+      geoPrecision: address.geoPrecision,
+      geoProvider: address.geoProvider,
+      geoProviderUri: address.geoProviderUri,
+      addressFullName:
+        address.addressFullName || buildYandexAddressFullname(address),
+      addressShortName:
+        address.addressShortName || this.buildShortAddress(address),
       isDefault: address.isDefault,
       createdAt: address.createdAt.toISOString(),
       updatedAt: address.updatedAt.toISOString(),
+    };
+  }
+
+  private buildShortAddress(address: {
+    street: string;
+    building: string;
+    buildingBlock?: string | null;
+  }) {
+    return [
+      address.street.trim(),
+      address.building.trim(),
+      address.buildingBlock?.trim() || null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  private readExistingString(
+    existing: Record<string, unknown> | null | undefined,
+    key: string,
+    fallback = '',
+  ) {
+    const value = existing?.[key];
+    return typeof value === 'string' ? value : fallback;
+  }
+
+  private extractBuildingFromStreet(street: string) {
+    const match =
+      street.trim().match(/^(.*?)(?:,\s*|\s+)(\d+[A-Za-zА-Яа-я0-9/\\-]*)$/u) ??
+      null;
+    if (!match) {
+      return null;
+    }
+
+    const [, name, building] = match;
+    if (!name?.trim() || !building?.trim()) {
+      return null;
+    }
+
+    return {
+      street: name.trim(),
+      building: building.trim(),
     };
   }
 }

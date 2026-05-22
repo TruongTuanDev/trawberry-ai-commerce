@@ -74,14 +74,30 @@ export type CustomerAddress = {
   fullName: string;
   phone: string;
   country: string;
+  countryCode: string;
   city: string;
   region: string;
+  federalSubject: string | null;
+  cityType: string | null;
+  district: string | null;
+  settlement: string | null;
   street: string;
+  building: string;
+  streetType: string | null;
+  buildingBlock: string | null;
+  entrance: string | null;
+  intercom: string | null;
+  floor: string | null;
   apartment: string | null;
   postalCode: string | null;
   comment: string | null;
   latitude: string | null;
   longitude: string | null;
+  geoPrecision: string;
+  geoProvider: string;
+  geoProviderUri: string | null;
+  addressFullName: string | null;
+  addressShortName: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
@@ -90,14 +106,48 @@ export type CustomerAddress = {
 export type CustomerAddressInput = {
   fullName: string;
   phone: string;
+  country?: string;
+  countryCode?: string;
   city: string;
   region: string;
+  federalSubject?: string;
+  cityType?: string;
+  district?: string;
+  settlement?: string;
   street: string;
+  building: string;
+  streetType?: string;
+  buildingBlock?: string;
+  entrance?: string;
+  intercom?: string;
+  floor?: string;
   apartment?: string;
   postalCode?: string;
   comment?: string;
   latitude?: number | null;
   longitude?: number | null;
+  geoPrecision?: string;
+  geoProvider?: string;
+  geoProviderUri?: string;
+};
+
+export type CustomerAddressSuggestion = {
+  title: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  federalSubject: string | null;
+  district: string | null;
+  street: string;
+  streetType: string | null;
+  building: string;
+  latitude: number;
+  longitude: number;
+  geoPrecision: string;
+  geoProvider: string;
+  geoProviderUri: string | null;
+  addressFullName: string;
+  addressShortName: string;
 };
 
 export type CustomerSupportCase = {
@@ -291,6 +341,29 @@ export async function setDefaultCustomerAddress(addressId: string) {
   return apiRequest<CustomerAddress>(`/api/customer/addresses/${encodeURIComponent(addressId)}/default`, {
     method: "POST",
   });
+}
+
+export async function getCustomerAddressSuggestions(query: string, city?: string) {
+  const params = new URLSearchParams();
+  params.set("query", query);
+  if (city?.trim()) {
+    params.set("city", city.trim());
+  }
+  return apiRequest<{ items: CustomerAddressSuggestion[] }>(
+    `/api/customer/address-suggestions?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function geocodeCustomerAddress(addressId: string) {
+  return apiRequest<CustomerAddress>(
+    `/api/customer/addresses/${encodeURIComponent(addressId)}/geocode`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export async function getCustomerOrderReceipt(checkoutCode: string) {

@@ -240,9 +240,34 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                     />
                     <TextMetric
                       label="Address"
-                      value={order.customer.address}
+                      value={order.customer.addressFullName ?? order.customer.address}
                     />
                   </div>
+                  {order.customer.entrance ||
+                  order.customer.intercom ||
+                  order.customer.floor ||
+                  order.customer.apartment ||
+                  order.customer.deliveryComment ? (
+                    <p className="mt-4 text-sm text-[var(--muted)]">
+                      {[
+                        order.customer.entrance
+                          ? `Entrance ${order.customer.entrance}`
+                          : null,
+                        order.customer.intercom
+                          ? `Intercom ${order.customer.intercom}`
+                          : null,
+                        order.customer.floor
+                          ? `Floor ${order.customer.floor}`
+                          : null,
+                        order.customer.apartment
+                          ? `Apartment ${order.customer.apartment}`
+                          : null,
+                        order.customer.deliveryComment ?? null,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  ) : null}
                   {order.customerNote ? (
                     <p className="mt-4 text-sm text-[var(--muted)]">
                       Customer note: {order.customerNote}

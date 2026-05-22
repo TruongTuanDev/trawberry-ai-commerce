@@ -12,6 +12,36 @@ class PublicOrderCustomerDto {
 
   @ApiProperty()
   address!: string;
+
+  @ApiProperty({ nullable: true })
+  addressFullName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  city!: string | null;
+
+  @ApiProperty({ nullable: true })
+  street!: string | null;
+
+  @ApiProperty({ nullable: true })
+  building!: string | null;
+
+  @ApiProperty({ nullable: true })
+  entrance!: string | null;
+
+  @ApiProperty({ nullable: true })
+  intercom!: string | null;
+
+  @ApiProperty({ nullable: true })
+  floor!: string | null;
+
+  @ApiProperty({ nullable: true })
+  apartment!: string | null;
+
+  @ApiProperty({ nullable: true })
+  geoPrecision!: string | null;
+
+  @ApiProperty({ nullable: true })
+  deliveryComment!: string | null;
 }
 
 class PublicOrderItemDto {
@@ -171,10 +201,43 @@ class PublicOrderDeliveryDto {
   pickupAddress!: string | null;
 
   @ApiProperty({ nullable: true })
+  pickupAddressFullName!: string | null;
+
+  @ApiProperty({ nullable: true })
   pickupLatitude!: string | null;
 
   @ApiProperty({ nullable: true })
   pickupLongitude!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffAddressFullName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffCity!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffStreet!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffBuilding!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffEntrance!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffIntercom!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffFloor!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffApartment!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffGeoPrecision!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffComment!: string | null;
 
   @ApiProperty({ nullable: true })
   dropoffLatitude!: string | null;

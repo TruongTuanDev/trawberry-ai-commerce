@@ -370,6 +370,18 @@ export class OrdersService {
     shippingCost: Prisma.Decimal;
     shippingMethodName: string | null;
     shippingAddress: string;
+    dropoffAddressFullName?: string | null;
+    dropoffCity?: string | null;
+    dropoffStreet?: string | null;
+    dropoffBuilding?: string | null;
+    dropoffEntrance?: string | null;
+    dropoffIntercom?: string | null;
+    dropoffFloor?: string | null;
+    dropoffApartment?: string | null;
+    dropoffLatitude?: Prisma.Decimal | null;
+    dropoffLongitude?: Prisma.Decimal | null;
+    dropoffGeoPrecision?: string | null;
+    dropoffComment?: string | null;
     customerName: string;
     customerPhone: string;
     customerEmail: string | null;
@@ -470,6 +482,19 @@ export class OrdersService {
       shippingCost: order.shippingCost.toString(),
       shippingMethodName: order.shippingMethodName,
       shippingAddress: order.shippingAddress,
+      dropoffAddressFullName:
+        order.dropoffAddressFullName ?? order.shippingAddress,
+      dropoffCity: order.dropoffCity ?? null,
+      dropoffStreet: order.dropoffStreet ?? null,
+      dropoffBuilding: order.dropoffBuilding ?? null,
+      dropoffEntrance: order.dropoffEntrance ?? null,
+      dropoffIntercom: order.dropoffIntercom ?? null,
+      dropoffFloor: order.dropoffFloor ?? null,
+      dropoffApartment: order.dropoffApartment ?? null,
+      dropoffLatitude: order.dropoffLatitude?.toString() ?? null,
+      dropoffLongitude: order.dropoffLongitude?.toString() ?? null,
+      dropoffGeoPrecision: order.dropoffGeoPrecision ?? null,
+      dropoffComment: order.dropoffComment ?? null,
       customer: {
         name: order.customerName,
         phone: order.customerPhone,

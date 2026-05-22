@@ -9,6 +9,7 @@ Current scope includes:
 - seller visibility of newly created orders through the existing seller Orders API
 - direct seller payment details snapshot for manual QR/bank transfer flows
 - payment-method strategy selection for seller QR + Yandex manual delivery preparation
+- structured customer address snapshot for Yandex-compatible manual delivery
 
 Current scope does not include:
 - real payment provider integration
@@ -108,6 +109,7 @@ Validation:
 - requested quantity must be within available stock
 - customer `fullName`, `phone`, and `address` are required
 - `customer.latitude` and `customer.longitude` are optional and are stored as shipping coordinate snapshots when present
+- when a logged-in customer uses `addressId`, the backend copies structured address fields into dedicated dropoff snapshot fields
 - frontend-supplied totals or seller-only fields are ignored because they are not accepted by the DTO
 
 Order creation behavior:
@@ -190,6 +192,29 @@ Compatibility:
 - `paymentDetails` follows the same compatibility rule and describes the first created order for legacy single-order consumers.
 - New cart consumers should read `checkoutCode`, `orders[]`, `orderCodes[]`, and `grandTotal`.
 
+Structured address addendum:
+
+- `shippingAddress` remains for legacy compatibility
+- structured dropoff fields are now also stored for Yandex-compatible delivery operations:
+  - `dropoffAddressFullName`
+  - `dropoffCity`
+  - `dropoffStreet`
+  - `dropoffBuilding`
+  - `dropoffEntrance`
+  - `dropoffIntercom`
+  - `dropoffFloor`
+  - `dropoffApartment`
+  - `dropoffLatitude`
+  - `dropoffLongitude`
+  - `dropoffGeoPrecision`
+  - `dropoffComment`
+
+Current policy:
+
+- missing coordinates do not block checkout
+- seller manual Yandex workbench can still operate
+- future real Yandex API claim creation can require coordinates more strictly
+
 ## Customer Receipt APIs
 
 - `GET /api/customer/orders`: logged-in customer receipt history.
@@ -230,6 +255,7 @@ Coverage currently includes:
 - Payment flow is still manual and informational only.
 - direct seller QR payment is static and snapshot-based; checkout does not call any bank API.
 - delivery routing can now snapshot optional shipping coordinates for downstream manual Yandex workbench usage, but checkout still does not call any carrier API.
+- structured Yandex-compatible address suggestions/geocoding remain mock/manual only in this phase.
 - Checkout chooses the requested `variantId` when provided, otherwise it falls back to the first active priced variant for legacy callers.
 - Manual transfer orders remain `paymentStatus=PENDING`, so later fulfillment progression still depends on future payment workflows.
 - Payment proof and delivery remain per created shop order; parent receipt is for combined customer view/history.

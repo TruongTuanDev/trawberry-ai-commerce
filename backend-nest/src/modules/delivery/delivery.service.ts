@@ -11,6 +11,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { isPayOnDeliverySellerQrMethod } from '../../common/constants/payment-methods.constant';
 import {
+  buildYandexAddressComment,
+  buildYandexAddressFullname,
+} from '../../common/utils/customer-address.util';
+import {
   DELIVERY_CARRIERS,
   DELIVERY_EXCEPTION_STATUSES,
   DELIVERY_PROVIDER,
@@ -47,6 +51,18 @@ type OrderRecord = {
   shippingAddress: string;
   shippingLatitude?: Prisma.Decimal | null;
   shippingLongitude?: Prisma.Decimal | null;
+  dropoffAddressFullName?: string | null;
+  dropoffCity?: string | null;
+  dropoffStreet?: string | null;
+  dropoffBuilding?: string | null;
+  dropoffEntrance?: string | null;
+  dropoffIntercom?: string | null;
+  dropoffFloor?: string | null;
+  dropoffApartment?: string | null;
+  dropoffLatitude?: Prisma.Decimal | null;
+  dropoffLongitude?: Prisma.Decimal | null;
+  dropoffGeoPrecision?: string | null;
+  dropoffComment?: string | null;
   customerName: string;
   customerPhone: string;
   shop: {
@@ -112,8 +128,19 @@ type OrderRecord = {
     packageHeightCm: number | null;
     pickupLatitude: Prisma.Decimal | null;
     pickupLongitude: Prisma.Decimal | null;
+    pickupAddressFullName: string | null;
     dropoffLatitude: Prisma.Decimal | null;
     dropoffLongitude: Prisma.Decimal | null;
+    dropoffAddressFullName: string | null;
+    dropoffCity: string | null;
+    dropoffStreet: string | null;
+    dropoffBuilding: string | null;
+    dropoffEntrance: string | null;
+    dropoffIntercom: string | null;
+    dropoffFloor: string | null;
+    dropoffApartment: string | null;
+    dropoffGeoPrecision: string | null;
+    dropoffComment: string | null;
     recipientName: string | null;
     recipientPhone: string | null;
     manualYandexOrderId: string | null;
@@ -570,6 +597,9 @@ export class DeliveryService {
           this.clean(dto.pickupAddress) ??
           order.shop.deliverySettings?.pickupAddress ??
           'Seller-managed pickup',
+        pickupAddressFullName: order.shop.deliverySettings?.pickupAddress
+          ? `${order.shop.deliverySettings.pickupCity}, ${order.shop.deliverySettings.pickupAddress}`
+          : this.clean(dto.pickupAddress),
         pickupLatitude:
           dto.pickupLatitude !== undefined && dto.pickupLatitude !== null
             ? new Prisma.Decimal(dto.pickupLatitude)
@@ -582,11 +612,40 @@ export class DeliveryService {
         dropoffLatitude:
           dto.dropoffLatitude !== undefined && dto.dropoffLatitude !== null
             ? new Prisma.Decimal(dto.dropoffLatitude)
-            : (order.shippingLatitude ?? null),
+            : (order.dropoffLatitude ?? order.shippingLatitude ?? null),
         dropoffLongitude:
           dto.dropoffLongitude !== undefined && dto.dropoffLongitude !== null
             ? new Prisma.Decimal(dto.dropoffLongitude)
-            : (order.shippingLongitude ?? null),
+            : (order.dropoffLongitude ?? order.shippingLongitude ?? null),
+        dropoffAddressFullName:
+          order.dropoffAddressFullName ??
+          buildYandexAddressFullname({
+            city: order.dropoffCity ?? '',
+            street: order.dropoffStreet ?? '',
+            building: order.dropoffBuilding ?? '',
+            country: 'Russia',
+          }) ??
+          order.shippingAddress,
+        dropoffCity: order.dropoffCity,
+        dropoffStreet: order.dropoffStreet,
+        dropoffBuilding: order.dropoffBuilding,
+        dropoffEntrance: order.dropoffEntrance,
+        dropoffIntercom: order.dropoffIntercom,
+        dropoffFloor: order.dropoffFloor,
+        dropoffApartment: order.dropoffApartment,
+        dropoffGeoPrecision: order.dropoffGeoPrecision,
+        dropoffComment:
+          order.dropoffComment ??
+          buildYandexAddressComment({
+            country: 'Russia',
+            city: order.dropoffCity ?? '',
+            street: order.dropoffStreet ?? '',
+            building: order.dropoffBuilding ?? '',
+            entrance: order.dropoffEntrance,
+            intercom: order.dropoffIntercom,
+            floor: order.dropoffFloor,
+            apartment: order.dropoffApartment,
+          }),
         recipientName: this.clean(dto.recipientName) ?? order.customerName,
         recipientPhone: this.clean(dto.recipientPhone) ?? order.customerPhone,
         manualYandexOrderId: this.clean(dto.manualYandexOrderId),
@@ -1929,9 +1988,20 @@ export class DeliveryService {
     pickupAddress: string;
     pickupLatitude: Prisma.Decimal | null;
     pickupLongitude: Prisma.Decimal | null;
+    pickupAddressFullName: string | null;
     dropoffAddress: string;
     dropoffLatitude: Prisma.Decimal | null;
     dropoffLongitude: Prisma.Decimal | null;
+    dropoffAddressFullName: string | null;
+    dropoffCity: string | null;
+    dropoffStreet: string | null;
+    dropoffBuilding: string | null;
+    dropoffEntrance: string | null;
+    dropoffIntercom: string | null;
+    dropoffFloor: string | null;
+    dropoffApartment: string | null;
+    dropoffGeoPrecision: string | null;
+    dropoffComment: string | null;
     recipientName: string | null;
     recipientPhone: string | null;
     manualYandexOrderId: string | null;
@@ -1974,9 +2044,20 @@ export class DeliveryService {
       pickupAddress: shipment.pickupAddress,
       pickupLatitude: shipment.pickupLatitude?.toString() ?? null,
       pickupLongitude: shipment.pickupLongitude?.toString() ?? null,
+      pickupAddressFullName: shipment.pickupAddressFullName,
       dropoffAddress: shipment.dropoffAddress,
       dropoffLatitude: shipment.dropoffLatitude?.toString() ?? null,
       dropoffLongitude: shipment.dropoffLongitude?.toString() ?? null,
+      dropoffAddressFullName: shipment.dropoffAddressFullName,
+      dropoffCity: shipment.dropoffCity,
+      dropoffStreet: shipment.dropoffStreet,
+      dropoffBuilding: shipment.dropoffBuilding,
+      dropoffEntrance: shipment.dropoffEntrance,
+      dropoffIntercom: shipment.dropoffIntercom,
+      dropoffFloor: shipment.dropoffFloor,
+      dropoffApartment: shipment.dropoffApartment,
+      dropoffGeoPrecision: shipment.dropoffGeoPrecision,
+      dropoffComment: shipment.dropoffComment,
       recipientName: shipment.recipientName,
       recipientPhone: shipment.recipientPhone,
       manualYandexOrderId: shipment.manualYandexOrderId,

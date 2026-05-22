@@ -49,6 +49,7 @@
     "smoke:seller-fee-dashboard": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-fee-dashboard.ps1",
     "smoke:three-role-order-sync": "powershell -ExecutionPolicy Bypass -File scripts/smoke-three-role-order-sync.ps1",
     "smoke:return-refund-dispute": "powershell -ExecutionPolicy Bypass -File scripts/smoke-return-refund-dispute.ps1",
+    "smoke:yandex-address-flow": "powershell -ExecutionPolicy Bypass -File scripts/smoke-yandex-address-flow.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",
     "smoke:seller-approval": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-approval.ps1",
     "smoke:seller-onboarding": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-onboarding.ps1",

@@ -85,8 +85,41 @@ export class DeliveryShipmentResponseDto {
   @ApiProperty({ nullable: true })
   pickupLongitude!: string | null;
 
+  @ApiProperty({ nullable: true })
+  pickupAddressFullName!: string | null;
+
   @ApiProperty()
   dropoffAddress!: string;
+
+  @ApiProperty({ nullable: true })
+  dropoffAddressFullName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffCity!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffStreet!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffBuilding!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffEntrance!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffIntercom!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffFloor!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffApartment!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffGeoPrecision!: string | null;
+
+  @ApiProperty({ nullable: true })
+  dropoffComment!: string | null;
 
   @ApiProperty({ nullable: true })
   dropoffLatitude!: string | null;

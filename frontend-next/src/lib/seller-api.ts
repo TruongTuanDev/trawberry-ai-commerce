@@ -174,7 +174,18 @@ export type DeliveryShipment = {
   lastAdminNote: string | null;
   lastSellerNote: string | null;
   pickupAddress: string;
+  pickupAddressFullName?: string | null;
   dropoffAddress: string;
+  dropoffAddressFullName?: string | null;
+  dropoffCity?: string | null;
+  dropoffStreet?: string | null;
+  dropoffBuilding?: string | null;
+  dropoffEntrance?: string | null;
+  dropoffIntercom?: string | null;
+  dropoffFloor?: string | null;
+  dropoffApartment?: string | null;
+  dropoffGeoPrecision?: string | null;
+  dropoffComment?: string | null;
   createdAt: string;
   updatedAt: string;
   acceptedAt: string | null;
@@ -261,6 +272,18 @@ export type SellerOrderListItem = {
   shippingCost: string;
   shippingMethodName: string | null;
   shippingAddress: string;
+  dropoffAddressFullName?: string | null;
+  dropoffCity?: string | null;
+  dropoffStreet?: string | null;
+  dropoffBuilding?: string | null;
+  dropoffEntrance?: string | null;
+  dropoffIntercom?: string | null;
+  dropoffFloor?: string | null;
+  dropoffApartment?: string | null;
+  dropoffLatitude?: string | null;
+  dropoffLongitude?: string | null;
+  dropoffGeoPrecision?: string | null;
+  dropoffComment?: string | null;
   customer: {
     name: string;
     phone: string;

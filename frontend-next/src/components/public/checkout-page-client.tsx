@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCustomerAddress } from "@/components/customer/account/customer-account-utils";
+import { formatCustomerAddressComment, isCustomerAddressGeoReady } from "@/components/customer/account/customer-account-utils";
 import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
@@ -637,6 +638,24 @@ export function CheckoutPageClient({
                           <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                             {formatCustomerAddress(selectedSavedAddress)}
                           </p>
+                          {formatCustomerAddressComment(selectedSavedAddress) ? (
+                            <p className="mt-2 text-xs text-[var(--muted)]">
+                              {formatCustomerAddressComment(selectedSavedAddress)}
+                            </p>
+                          ) : null}
+                          <p
+                            className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${isCustomerAddressGeoReady(selectedSavedAddress) ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                            data-testid="checkout-address-geo-status"
+                          >
+                            {isCustomerAddressGeoReady(selectedSavedAddress)
+                              ? "Address verified"
+                              : "Coordinates missing"}
+                          </p>
+                          {!isCustomerAddressGeoReady(selectedSavedAddress) ? (
+                            <p className="mt-2 text-xs text-amber-700">
+                              Coordinates missing; seller may need to verify address manually before using Yandex.
+                            </p>
+                          ) : null}
                         </div>
                         <Field label="Email">
                           <input

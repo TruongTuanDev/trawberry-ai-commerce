@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -72,6 +73,20 @@ export class CustomerAccountController {
     return this.customerAccountService.listAddresses(user.userId);
   }
 
+  @Get('address-suggestions')
+  @ApiOperation({
+    summary:
+      'Return deterministic customer address suggestions for mock/manual geocoder mode.',
+  })
+  listAddressSuggestions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('query') query: string,
+    @Query('city') city?: string,
+  ) {
+    this.assertCustomer(user);
+    return this.customerAccountService.listAddressSuggestions(query, city);
+  }
+
   @Post('addresses')
   @ApiOperation({ summary: 'Create a saved address for the current customer.' })
   @ApiOkResponse({ type: CustomerAddressResponseDto })
@@ -97,6 +112,18 @@ export class CustomerAccountController {
       addressId,
       dto,
     );
+  }
+
+  @Post('addresses/:addressId/geocode')
+  @ApiOperation({
+    summary: 'Apply the configured mock/manual geocoder to one address.',
+  })
+  geocodeAddress(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('addressId') addressId: string,
+  ) {
+    this.assertCustomer(user);
+    return this.customerAccountService.geocodeAddress(user.userId, addressId);
   }
 
   @Delete('addresses/:addressId')
