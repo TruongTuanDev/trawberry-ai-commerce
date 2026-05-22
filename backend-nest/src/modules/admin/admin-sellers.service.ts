@@ -3,15 +3,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
+import { ListAdminSellersQueryDto } from './dto/list-admin-sellers-query.dto';
+import { SellerFinanceService } from '../seller-finance/seller-finance.service';
 
 type SellerWithProfile = {
   id: string;
   email: string;
   fullName: string | null;
+  phone: string | null;
   role: string;
+  createdAt: Date;
   sellerProfile: {
+    id?: string;
+    currentShopId?: string | null;
     approvalStatus: string;
     approvedAt: Date | null;
     rejectedAt: Date | null;
@@ -28,38 +35,219 @@ type SellerWithProfile = {
     bankName?: string | null;
     bankAccount?: string | null;
     bik?: string | null;
+    shops?: Array<{
+      id: string;
+      name: string;
+      status: string;
+      paymentConfigStatus: string;
+    }>;
   } | null;
 };
 
 @Injectable()
 export class AdminSellersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sellerFinanceService: SellerFinanceService,
+  ) {}
 
-  async listSellers(status?: 'PENDING' | 'APPROVED' | 'REJECTED') {
-    const sellers = await this.prisma.user.findMany({
-      where: {
-        role: USER_ROLES.SELLER,
-        sellerProfile: status ? { approvalStatus: status } : undefined,
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        sellerProfile: {
-          select: {
-            approvalStatus: true,
-            approvedAt: true,
-            rejectedAt: true,
-            rejectionReason: true,
+  async listSellers(query: ListAdminSellersQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+    const trimmedQuery = query.q?.trim();
+    const sellerWhere: Prisma.UserWhereInput = {
+      role: USER_ROLES.SELLER,
+      sellerProfile:
+        query.status && query.status !== 'ALL'
+          ? { approvalStatus: query.status }
+          : undefined,
+      ...(trimmedQuery
+        ? {
+            OR: [
+              { email: { contains: trimmedQuery, mode: 'insensitive' } },
+              { fullName: { contains: trimmedQuery, mode: 'insensitive' } },
+              { phone: { contains: trimmedQuery, mode: 'insensitive' } },
+              {
+                sellerProfile: {
+                  shops: {
+                    some: {
+                      name: { contains: trimmedQuery, mode: 'insensitive' },
+                    },
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [sellers, total, summaryCounts] = await Promise.all([
+      this.prisma.user.findMany({
+        where: sellerWhere,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sellerProfile: {
+            select: {
+              id: true,
+              approvalStatus: true,
+              approvedAt: true,
+              rejectedAt: true,
+              rejectionReason: true,
+              currentShopId: true,
+              contactPhone: true,
+              contactEmail: true,
+              shops: {
+                select: {
+                  id: true,
+                  name: true,
+                  status: true,
+                  paymentConfigStatus: true,
+                },
+              },
+            },
           },
         },
-      },
-      take: 200,
-    });
+        skip,
+        take: limit,
+      }),
+      this.prisma.user.count({ where: sellerWhere }),
+      this.prisma.sellerProfile.groupBy({
+        by: ['approvalStatus'],
+        _count: { _all: true },
+      }),
+    ]);
 
-    return sellers.map((seller) => this.mapSeller(seller));
+    const shopIds = sellers.flatMap(
+      (seller) => seller.sellerProfile?.shops?.map((shop) => shop.id) ?? [],
+    );
+    const financeRows = shopIds.length
+      ? await this.sellerFinanceService.listAdminSellerFees()
+      : [];
+    const financeByShop = new Map(financeRows.map((row) => [row.shopId, row]));
+
+    return {
+      items: sellers.map((seller) =>
+        this.mapSellerListItem(seller as SellerWithProfile, financeByShop),
+      ),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+      summary: {
+        all: summaryCounts.reduce((sum, item) => sum + item._count._all, 0),
+        pending:
+          summaryCounts.find((item) => item.approvalStatus === 'PENDING')
+            ?._count._all ?? 0,
+        approved:
+          summaryCounts.find((item) => item.approvalStatus === 'APPROVED')
+            ?._count._all ?? 0,
+        rejected:
+          summaryCounts.find((item) => item.approvalStatus === 'REJECTED')
+            ?._count._all ?? 0,
+      },
+    };
   }
 
   async getSeller(userId: string) {
-    return this.mapSeller(await this.findSellerOrThrow(userId));
+    const seller = await this.findSellerOrThrow(userId);
+    const shops = await this.prisma.shop.findMany({
+      where: {
+        sellerProfileId: seller.sellerProfile?.id,
+      },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        paymentConfigStatus: true,
+        allowPrepaidQr: true,
+        allowPayOnDeliverySellerQr: true,
+        allowDepositPayment: true,
+      },
+    });
+    const financeRows = await this.sellerFinanceService.listAdminSellerFees();
+    const financeByShop = new Map(financeRows.map((row) => [row.shopId, row]));
+    const recentOrders = await this.prisma.order.findMany({
+      where: {
+        shopId: {
+          in: shops.map((shop) => shop.id),
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        paymentStatus: true,
+        totalAmount: true,
+        createdAt: true,
+        shop: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const shopSummaries = shops.map((shop) => {
+      const finance = financeByShop.get(shop.id);
+      return {
+        id: shop.id,
+        name: shop.name,
+        slug: shop.slug,
+        status: shop.status,
+        paymentConfigStatus: shop.paymentConfigStatus,
+        allowPrepaidQr: shop.allowPrepaidQr,
+        allowPayOnDeliverySellerQr: shop.allowPayOnDeliverySellerQr,
+        allowDepositPayment: shop.allowDepositPayment,
+        confirmedRevenueThisMonth: finance?.confirmedRevenueThisMonth ?? '0',
+        pendingPlatformFees: finance?.platformFeeDue ?? '0',
+      };
+    });
+
+    return {
+      ...this.mapSellerBase(seller),
+      contactPhone: seller.sellerProfile?.contactPhone ?? seller.phone ?? null,
+      contactEmail: seller.sellerProfile?.contactEmail ?? seller.email ?? null,
+      kycStatus: this.computeKycStatus(seller.sellerProfile?.approvalStatus),
+      onboardingStatus: seller.sellerProfile?.approvalStatus ?? 'PENDING',
+      shopCount: shopSummaries.length,
+      activeShopCount: shopSummaries.filter((shop) => shop.status === 'ACTIVE')
+        .length,
+      shops: shopSummaries,
+      financeSummary: {
+        revenueThisMonth: shopSummaries
+          .reduce(
+            (sum, shop) =>
+              sum.plus(new Prisma.Decimal(shop.confirmedRevenueThisMonth)),
+            new Prisma.Decimal(0),
+          )
+          .toString(),
+        pendingPlatformFees: shopSummaries
+          .reduce(
+            (sum, shop) =>
+              sum.plus(new Prisma.Decimal(shop.pendingPlatformFees)),
+            new Prisma.Decimal(0),
+          )
+          .toString(),
+      },
+      recentOrders: recentOrders.map((order) => ({
+        id: order.id,
+        orderCode: order.orderNumber,
+        shopId: order.shop.id,
+        shopName: order.shop.name,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        totalAmount: order.totalAmount.toString(),
+        createdAt: order.createdAt.toISOString(),
+      })),
+    };
   }
 
   async approveSeller(userId: string, adminUserId: string) {
@@ -269,6 +457,7 @@ export class AdminSellersService {
       include: {
         sellerProfile: {
           select: {
+            id: true,
             approvalStatus: true,
             approvedAt: true,
             rejectedAt: true,
@@ -285,6 +474,7 @@ export class AdminSellersService {
             bankName: true,
             bankAccount: true,
             bik: true,
+            currentShopId: true,
           },
         },
       },
@@ -304,16 +494,70 @@ export class AdminSellersService {
   }
 
   private mapSeller(seller: SellerWithProfile) {
+    return this.mapSellerBase(seller);
+  }
+
+  private mapSellerBase(seller: SellerWithProfile) {
     return {
       userId: seller.id,
       email: seller.email,
       name: seller.fullName,
+      phone: seller.phone,
       role: seller.role,
       sellerApprovalStatus: seller.sellerProfile?.approvalStatus ?? 'PENDING',
       sellerApprovedAt: seller.sellerProfile?.approvedAt?.toISOString() ?? null,
       sellerRejectedAt: seller.sellerProfile?.rejectedAt?.toISOString() ?? null,
       sellerRejectionReason: seller.sellerProfile?.rejectionReason ?? null,
+      createdAt: seller.createdAt.toISOString(),
     };
+  }
+
+  private mapSellerListItem(
+    seller: SellerWithProfile,
+    financeByShop: Map<
+      string,
+      {
+        confirmedRevenueThisMonth: string;
+        platformFeeDue: string;
+      }
+    >,
+  ) {
+    const shops = seller.sellerProfile?.shops ?? [];
+    const financeTotals = shops.reduce(
+      (totals, shop) => {
+        const finance = financeByShop.get(shop.id);
+        return {
+          revenue: totals.revenue.plus(
+            new Prisma.Decimal(finance?.confirmedRevenueThisMonth ?? '0'),
+          ),
+          pendingFees: totals.pendingFees.plus(
+            new Prisma.Decimal(finance?.platformFeeDue ?? '0'),
+          ),
+        };
+      },
+      {
+        revenue: new Prisma.Decimal(0),
+        pendingFees: new Prisma.Decimal(0),
+      },
+    );
+
+    return {
+      ...this.mapSellerBase(seller),
+      onboardingStatus: seller.sellerProfile?.approvalStatus ?? 'PENDING',
+      kycStatus: this.computeKycStatus(seller.sellerProfile?.approvalStatus),
+      shopCount: shops.length,
+      activeShopCount: shops.filter((shop) => shop.status === 'ACTIVE').length,
+      revenueThisMonth: financeTotals.revenue.toString(),
+      pendingPlatformFees: financeTotals.pendingFees.toString(),
+      currentShopId: seller.sellerProfile?.currentShopId ?? null,
+      primaryShopName: shops[0]?.name ?? null,
+    };
+  }
+
+  private computeKycStatus(approvalStatus?: string | null) {
+    if (approvalStatus === 'APPROVED') return 'APPROVED';
+    if (approvalStatus === 'REJECTED') return 'REJECTED';
+    return 'PENDING_REVIEW';
   }
 
   private mapUpdatedProfile(updated: {
@@ -332,7 +576,9 @@ export class AdminSellersService {
       id: updated.user.id,
       email: updated.user.email,
       fullName: updated.user.fullName,
+      phone: null,
       role: updated.user.role,
+      createdAt: new Date(),
       sellerProfile: {
         approvalStatus: updated.approvalStatus,
         approvedAt: updated.approvedAt,

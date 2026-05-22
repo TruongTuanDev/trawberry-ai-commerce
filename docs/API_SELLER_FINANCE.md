@@ -1,5 +1,15 @@
 # Seller Finance API
 
+## 2026-05-22 Three Role Order Sync Addendum
+
+Finance visibility is now part of the operational order sync:
+
+- seller order detail can project latest ledger status and invoice status
+- admin payment supervision can project ledger creation state
+- seller-confirmed final payment remains the only valid trigger for ledger creation
+
+This keeps customer payment confirmation, seller operations, and admin fee accounting aligned.
+
 ## Overview
 
 These endpoints support manual marketplace fee accounting for direct-to-seller payment.

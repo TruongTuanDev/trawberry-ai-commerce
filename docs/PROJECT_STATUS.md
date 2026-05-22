@@ -1,5 +1,31 @@
 # Project Status
 
+## Three Role Order Sync Audit + Fixes - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- customer, seller, and admin order operations are now more explicitly synchronized
+- seller orders now show:
+  - role-specific display status
+  - next action
+  - finance summary
+  - richer delivery summary
+- admin seller management now includes:
+  - `PENDING` / `APPROVED` / `REJECTED` / `ALL`
+  - search by seller or shop
+  - status counts
+  - finance and recent order summary in seller detail
+- admin payments supervision now includes ledger sync visibility:
+  - ledger status
+  - fee amount
+  - invoice status
+- new verification targets:
+  - `backend-nest npm run smoke:three-role-order-sync`
+  - `frontend-next npm run test:e2e:three-role-order-sync`
+  - `frontend-next npm run test:e2e:admin-seller-management`
+- known remaining gaps:
+  - no seller suspension workflow yet
+  - no automated refund/dispute finance reversals beyond current manual adjustment foundation
+
 ## Admin Seller Fee Settings + Seller Revenue Dashboard - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

@@ -1,5 +1,29 @@
 # Phase Report
 
+## 2026-05-22 Three Role Order Sync Audit + Synchronization Fixes
+
+- audited the end-to-end order flow across customer, seller, and admin roles
+- added seller-facing role-sync status mapping and next-action helpers in backend
+- expanded seller order API and UI with:
+  - richer filters
+  - display status
+  - next action
+  - payment method visibility
+  - finance summary
+- expanded admin seller management with:
+  - `ALL` / `PENDING` / `APPROVED` / `REJECTED`
+  - seller/shop search
+  - status counts
+  - seller detail finance, shop, and recent order summary
+- expanded admin payment supervision with finance ledger visibility
+- added verification targets:
+  - `backend-nest npm run smoke:three-role-order-sync`
+  - `frontend-next npm run test:e2e:three-role-order-sync`
+  - `frontend-next npm run test:e2e:admin-seller-management`
+- current remaining limitations:
+  - customer detail surface reuses the existing receipt/tracking pages rather than a brand new dedicated role-specific view
+  - seller suspension and broader admin moderation are still future work
+
 ## 2026-05-22 Admin Seller Fee Settings + Seller Revenue Dashboard
 
 - added manual marketplace fee accounting for the direct-to-seller payment model

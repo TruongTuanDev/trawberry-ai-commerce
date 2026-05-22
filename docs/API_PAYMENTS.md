@@ -1,5 +1,24 @@
 # Payments API
 
+## 2026-05-22 Three Role Order Sync Addendum
+
+Admin payment supervision now projects marketplace finance sync state directly on each payment row.
+
+Additional admin payment response fields:
+
+- `sellerId`
+- `sellerName`
+- `sellerEmail`
+- `ledgerStatus`
+- `ledgerCommissionAmount`
+- `ledgerInvoiceStatus`
+
+Operational meaning:
+
+- `ledgerStatus=null` means final fee ledger has not been created yet
+- final ledger should appear only after the seller confirms the final payment event for that order
+- admin can now see payment review and finance sync in one queue
+
 ## 2026-05-22 Seller Fee Ledger For Direct-to-Seller Payment
 
 Direct-to-seller payment now has a separate finance layer.

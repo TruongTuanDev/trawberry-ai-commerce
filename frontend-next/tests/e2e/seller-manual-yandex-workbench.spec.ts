@@ -179,7 +179,9 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
 
   await loginSeller(page, email, password);
   await page.goto(`/seller/orders/${checkout.orderId}`);
-  await expect(page.getByText("Create Yandex manually")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Create Yandex manually" }),
+  ).toBeVisible();
   await expect(page.getByTestId("seller-order-status")).toContainText("READY_TO_CREATE_YANDEX");
 
   const adminPage = await loginAdmin(browser);

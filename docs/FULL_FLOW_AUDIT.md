@@ -1,5 +1,16 @@
 # Full Commerce Flow Audit
 
+## Three Role Order Sync Addendum
+
+- customer checkout visibility, seller order visibility, and admin supervision are now explicitly tied together through role-aware status projection
+- seller order list/detail now surfaces the next operational action instead of raw internal-only status combinations
+- admin seller management now exposes status tabs, search, counts, and seller finance/order summary
+- admin payment supervision now shows whether seller final confirmation has already generated a finance ledger row
+- finance hook remains:
+  - prepaid seller QR -> ledger on seller confirmed prepaid payment
+  - pay on delivery seller QR -> ledger on seller confirmed delivery payment
+  - deposit then delivery -> ledger on seller confirmed final payment
+
 ## Seller Manual Yandex Delivery Workbench Addendum
 
 - direct-seller payment confirmation can now move Yandex-preferred orders into `READY_TO_CREATE_YANDEX`

@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
+import { SellerFinanceService } from '../src/modules/seller-finance/seller-finance.service';
 import { readBody } from './test-helpers';
 
 type StoredSellerProfile = {
@@ -60,11 +61,13 @@ describe('Admin seller approval workflow (e2e)', () => {
     user: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
       create: jest.fn(),
     },
     sellerProfile: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      groupBy: jest.fn(),
       update: jest.fn(),
     },
     sellerDocument: {
@@ -79,9 +82,16 @@ describe('Admin seller approval workflow (e2e)', () => {
     },
     shop: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
     },
+    order: {
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn(),
+  };
+  const sellerFinanceServiceMock = {
+    listAdminSellerFees: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -134,6 +144,21 @@ describe('Admin seller approval workflow (e2e)', () => {
             ...user,
             sellerProfile: user.sellerProfile ?? null,
           })),
+    );
+    prismaMock.user.count.mockImplementation(
+      ({
+        where,
+      }: {
+        where?: { role?: string; sellerProfile?: { approvalStatus?: string } };
+      }) =>
+        Promise.resolve(
+          users
+            .filter((user) => !where?.role || user.role === where.role)
+            .filter((user) => {
+              const status = where?.sellerProfile?.approvalStatus;
+              return !status || user.sellerProfile?.approvalStatus === status;
+            }).length,
+        ),
     );
 
     prismaMock.user.create.mockImplementation(
@@ -207,6 +232,22 @@ describe('Admin seller approval workflow (e2e)', () => {
           : user.sellerProfile;
       },
     );
+    prismaMock.sellerProfile.groupBy.mockImplementation(() => {
+      const counts = new Map<string, number>();
+      for (const user of users) {
+        if (user.role !== 'SELLER' || !user.sellerProfile) continue;
+        counts.set(
+          user.sellerProfile.approvalStatus,
+          (counts.get(user.sellerProfile.approvalStatus) ?? 0) + 1,
+        );
+      }
+      return Promise.resolve(
+        Array.from(counts.entries()).map(([approvalStatus, count]) => ({
+          approvalStatus,
+          _count: { _all: count },
+        })),
+      );
+    });
 
     prismaMock.sellerDocument.count.mockImplementation(
       ({ where }: { where: { userId: string; status?: string } }) =>
@@ -253,6 +294,7 @@ describe('Admin seller approval workflow (e2e)', () => {
     prismaMock.adminAuditLog.findMany.mockResolvedValue([]);
 
     prismaMock.shop.findUnique.mockResolvedValue(null);
+    prismaMock.shop.findMany.mockResolvedValue([]);
     prismaMock.shop.create.mockImplementation(
       ({
         data,
@@ -274,6 +316,8 @@ describe('Admin seller approval workflow (e2e)', () => {
           _count: { products: 0 },
         }),
     );
+    prismaMock.order.findMany.mockResolvedValue([]);
+    sellerFinanceServiceMock.listAdminSellerFees.mockResolvedValue([]);
 
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
@@ -285,6 +329,8 @@ describe('Admin seller approval workflow (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(SellerFinanceService)
+      .useValue(sellerFinanceServiceMock)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -355,9 +401,9 @@ describe('Admin seller approval workflow (e2e)', () => {
       .get('/api/admin/sellers?status=PENDING')
       .set('Authorization', `Bearer ${adminLogin.accessToken}`)
       .expect(200);
-    expect(readBody<Array<{ userId: string }>>(pendingList)).toContainEqual(
-      expect.objectContaining({ userId: seller.userId }),
-    );
+    expect(
+      readBody<{ items: Array<{ userId: string }> }>(pendingList).items,
+    ).toContainEqual(expect.objectContaining({ userId: seller.userId }));
 
     const approved = await request(app.getHttpServer())
       .post(`/api/admin/sellers/${seller.userId}/approve`)

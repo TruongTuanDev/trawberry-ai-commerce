@@ -1,5 +1,32 @@
 # Orders API
 
+## 2026-05-22 Three Role Order Sync Addendum
+
+Seller orders now expose role-aware operational metadata.
+
+Additional list query params:
+
+- `q`
+- `paymentStatus`
+- `deliveryStatus`
+- `from`
+- `to`
+- `sort=createdAt_desc|createdAt_asc`
+
+Additional response fields:
+
+- `paymentMethod`
+- `paymentMethodLabel`
+- `itemsCount`
+- `sellerDisplayStatus`
+- `sellerDisplayLabel`
+- `sellerStatusBucket`
+- `nextAction`
+- `paymentDetails`
+- `finance`
+
+This allows seller order list/detail UI to stay synchronized with payment review, delivery workbench, and finance ledger state.
+
 ## Scope
 This document describes the current seller-facing Orders API implemented in `backend-nest`.
 
@@ -29,15 +56,21 @@ This is not yet a full payments module and does not include:
 
 ### `GET /api/shops/:shopId/orders`
 
-List orders for a seller shop with pagination and basic filters.
+List orders for a seller shop with pagination and operational filters.
 
 Query params:
 - `page`
 - `size`
 - `search`
+- `q`
 - `status`
+- `paymentStatus`
+- `deliveryStatus`
 - `dateFrom`
+- `from`
 - `dateTo`
+- `to`
+- `sort`
 
 Response shape:
 
@@ -51,6 +84,8 @@ Response shape:
       "shopName": "Shop One",
       "status": "PENDING",
       "paymentStatus": "PENDING",
+      "paymentMethod": "PREPAID_SELLER_QR",
+      "paymentMethodLabel": "Prepaid seller QR",
       "totalAmount": "120.00",
       "shippingCost": "10.00",
       "shippingMethodName": "Courier",
@@ -64,6 +99,17 @@ Response shape:
       "createdAt": "2025-01-10T10:00:00.000Z",
       "updatedAt": "2025-01-10T10:00:00.000Z",
       "customerCompletedAt": null,
+      "itemsCount": 1,
+      "sellerDisplayStatus": "PAYMENT_PROOF_SUBMITTED",
+      "sellerDisplayLabel": "Payment proof submitted",
+      "sellerStatusBucket": "PAYMENT_PROOF",
+      "nextAction": "review_payment_proof",
+      "paymentDetails": {},
+      "finance": {
+        "ledgerStatus": "PENDING",
+        "commissionAmount": "9",
+        "invoiceStatus": null
+      },
       "items": []
     }
   ],
@@ -78,7 +124,7 @@ Response shape:
 
 ### `GET /api/shops/:shopId/orders/:orderId`
 
-Return one seller-visible order with customer snapshot, items, totals, shipping address, payment status, and the latest delivery shipment summary when present.
+Return one seller-visible order with customer snapshot, items, totals, shipping address, payment status, role-aware next action, latest delivery shipment summary, payment destination snapshot, and latest finance ledger summary when present.
 
 Delivery summary fields currently projected in the order detail:
 - `provider`
@@ -86,6 +132,9 @@ Delivery summary fields currently projected in the order detail:
 - `providerShipmentId`
 - `trackingNumber`
 - `trackingUrl`
+- `courierPhone`
+- `estimatedDeliveryAt`
+- `deliveryNote`
 
 ### `PATCH /api/shops/:shopId/orders/:orderId/status`
 

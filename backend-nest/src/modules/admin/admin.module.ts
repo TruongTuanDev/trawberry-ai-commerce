@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SellerFinanceModule } from '../seller-finance/seller-finance.module';
 import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminDashboardService } from './admin-dashboard.service';
 import { AdminQueueTasksController } from './admin-queue-tasks.controller';
@@ -11,6 +12,7 @@ import { AdminSellersController } from './admin-sellers.controller';
 import { AdminSellersService } from './admin-sellers.service';
 
 @Module({
+  imports: [SellerFinanceModule],
   controllers: [
     AdminSellersController,
     AdminDashboardController,

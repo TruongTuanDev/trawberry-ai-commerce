@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
+import { computeSellerOrderDisplayStatus } from '../../common/utils/order-role-status.util';
 import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { SellerFinanceService } from '../seller-finance/seller-finance.service';
@@ -21,42 +23,16 @@ export class OrdersService {
     const size = query.size ?? 20;
     const skip = (page - 1) * size;
     const where = this.buildWhere(shopId, query);
+    const orderBy =
+      query.sort === 'createdAt_asc'
+        ? { createdAt: 'asc' as const }
+        : { createdAt: 'desc' as const };
 
     const [items, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
-        include: {
-          shop: {
-            select: { id: true, name: true },
-          },
-          deliveryShipments: {
-            take: 1,
-            orderBy: { createdAt: 'desc' },
-            select: {
-              provider: true,
-              internalStatus: true,
-              providerShipmentId: true,
-              trackingNumber: true,
-              trackingUrl: true,
-            },
-          },
-          items: {
-            orderBy: { productTitleSnapshot: 'asc' },
-          },
-          supportCases: {
-            orderBy: { createdAt: 'desc' },
-            select: {
-              id: true,
-              issueType: true,
-              status: true,
-              subject: true,
-              createdAt: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        include: this.orderInclude,
+        orderBy,
         skip,
         take: size,
       }),
@@ -80,35 +56,7 @@ export class OrdersService {
         id: orderId,
         shopId,
       },
-      include: {
-        shop: {
-          select: { id: true, name: true },
-        },
-        deliveryShipments: {
-          take: 1,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            provider: true,
-            internalStatus: true,
-            providerShipmentId: true,
-            trackingNumber: true,
-            trackingUrl: true,
-          },
-        },
-        items: {
-          orderBy: { productTitleSnapshot: 'asc' },
-        },
-        supportCases: {
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            issueType: true,
-            status: true,
-            subject: true,
-            createdAt: true,
-          },
-        },
-      },
+      include: this.orderInclude,
     });
 
     if (!order) {
@@ -130,12 +78,7 @@ export class OrdersService {
         id: orderId,
         shopId,
       },
-      include: {
-        shop: {
-          select: { id: true, name: true },
-        },
-        items: true,
-      },
+      include: this.orderInclude,
     });
 
     if (!order) {
@@ -189,35 +132,7 @@ export class OrdersService {
         data: {
           status: dto.status,
         },
-        include: {
-          shop: {
-            select: { id: true, name: true },
-          },
-          deliveryShipments: {
-            take: 1,
-            orderBy: { createdAt: 'desc' },
-            select: {
-              provider: true,
-              internalStatus: true,
-              providerShipmentId: true,
-              trackingNumber: true,
-              trackingUrl: true,
-            },
-          },
-          items: {
-            orderBy: { productTitleSnapshot: 'asc' },
-          },
-          supportCases: {
-            orderBy: { createdAt: 'desc' },
-            select: {
-              id: true,
-              issueType: true,
-              status: true,
-              subject: true,
-              createdAt: true,
-            },
-          },
-        },
+        include: this.orderInclude,
       });
 
       if (dto.status === 'CANCELLED') {
@@ -242,16 +157,33 @@ export class OrdersService {
     };
 
     if (query.status) {
-      where.status = query.status;
+      Object.assign(where, this.resolveSellerStatusWhere(query.status));
     }
 
-    if (query.search?.trim()) {
-      const search = query.search.trim();
+    if (query.paymentStatus) {
+      where.paymentStatus = query.paymentStatus;
+    }
+
+    if (query.deliveryStatus) {
+      where.deliveryShipments = {
+        some: {
+          internalStatus: query.deliveryStatus,
+        },
+      };
+    }
+
+    const search = query.q?.trim() || query.search?.trim();
+    if (search) {
       where.OR = [
         { orderNumber: { contains: search, mode: 'insensitive' } },
         { customerName: { contains: search, mode: 'insensitive' } },
         { customerEmail: { contains: search, mode: 'insensitive' } },
         { customerPhone: { contains: search, mode: 'insensitive' } },
+        {
+          shop: {
+            name: { contains: search, mode: 'insensitive' },
+          },
+        },
         {
           items: {
             some: {
@@ -262,19 +194,115 @@ export class OrdersService {
       ];
     }
 
-    if (query.dateFrom || query.dateTo) {
+    const dateFrom = query.from ?? query.dateFrom;
+    const dateTo = query.to ?? query.dateTo;
+    if (dateFrom || dateTo) {
       where.createdAt = {};
-      if (query.dateFrom) {
-        where.createdAt.gte = new Date(query.dateFrom);
+      if (dateFrom) {
+        where.createdAt.gte = new Date(dateFrom);
       }
-      if (query.dateTo) {
-        const inclusiveEnd = new Date(query.dateTo);
+      if (dateTo) {
+        const inclusiveEnd = new Date(dateTo);
         inclusiveEnd.setDate(inclusiveEnd.getDate() + 1);
         where.createdAt.lt = inclusiveEnd;
       }
     }
 
     return where;
+  }
+
+  private resolveSellerStatusWhere(status: string): Prisma.OrderWhereInput {
+    switch (status) {
+      case 'NEW':
+        return {
+          status: { in: ['PENDING', 'NEW'] },
+          paymentStatus: { in: ['PENDING', 'UNPAID'] },
+          paymentProofStatus: 'NOT_SUBMITTED',
+        };
+      case 'AWAITING_PAYMENT':
+        return {
+          paymentStatus: {
+            in: [
+              'PAY_ON_DELIVERY_SELECTED',
+              'SELLER_ACCEPTED_PAY_ON_DELIVERY',
+              'DELIVERED_AWAITING_PAYMENT',
+            ],
+          },
+        };
+      case 'PAYMENT_PROOF':
+        return {
+          paymentProofStatus: 'BUYER_MARKED_PAID',
+          paymentStatus: {
+            notIn: ['BUYER_MARKED_DELIVERY_PAID', 'PAID', 'APPROVED'],
+          },
+        };
+      case 'TO_PACK':
+        return {
+          status: { in: ['NEW', 'PENDING', 'ASSEMBLING'] },
+          paymentStatus: {
+            in: ['PAID', 'APPROVED', 'SELLER_CONFIRMED_DELIVERY_PAYMENT'],
+          },
+        };
+      case 'READY_FOR_YANDEX':
+        return { status: 'READY_TO_CREATE_YANDEX' };
+      case 'IN_DELIVERY':
+        return {
+          OR: [
+            { status: { in: ['YANDEX_MANUAL_CREATED', 'SHIPPING'] } },
+            {
+              deliveryShipments: {
+                some: {
+                  internalStatus: {
+                    in: [
+                      'YANDEX_MANUAL_CREATED',
+                      'CREATED_MANUALLY',
+                      'CREATED',
+                      'COURIER_ASSIGNED',
+                      'PICKED_UP',
+                      'ON_THE_WAY',
+                      'IN_TRANSIT',
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        };
+      case 'DELIVERED':
+        return {
+          OR: [
+            { status: 'DELIVERED' },
+            {
+              deliveryShipments: {
+                some: {
+                  internalStatus: 'DELIVERED',
+                },
+              },
+            },
+          ],
+        };
+      case 'PAYMENT_ISSUES':
+        return {
+          OR: [
+            {
+              paymentStatus: {
+                in: ['REJECTED', 'FAILED', 'DELIVERY_PAYMENT_REJECTED'],
+              },
+            },
+            {
+              deliveryShipments: {
+                some: {
+                  internalStatus: 'FAILED',
+                },
+              },
+            },
+          ],
+        };
+      case 'CANCELLED':
+        return { status: 'CANCELLED' };
+      default:
+        return { status };
+    }
   }
 
   private assertStatusTransition(
@@ -334,6 +362,10 @@ export class OrdersService {
     shopId: string;
     status: string;
     paymentStatus: string;
+    paymentMethod: string | null;
+    paymentMethodLabel: string | null;
+    paymentProofStatus: string;
+    paymentFlowStage: string | null;
     totalAmount: Prisma.Decimal;
     shippingCost: Prisma.Decimal;
     shippingMethodName: string | null;
@@ -345,13 +377,43 @@ export class OrdersService {
     createdAt: Date;
     updatedAt: Date;
     customerCompletedAt: Date | null;
-    shop: { id: string; name: string };
+    shop: {
+      id: string;
+      name: string;
+      paymentInstructions: string | null;
+      bankName: string | null;
+      accountHolderName: string | null;
+      accountNumber: string | null;
+      recipientPhone: string | null;
+      sbpPhone: string | null;
+      staticQrImageUrl: string | null;
+      paymentMode: string | null;
+      paymentConfigStatus: string;
+      allowPrepaidQr: boolean;
+      allowPayOnDeliverySellerQr: boolean;
+      allowDepositPayment: boolean;
+      depositPercent: number | null;
+      depositRequiredAboveAmount: Prisma.Decimal | null;
+      codMaxOrderAmount: Prisma.Decimal | null;
+      yandexCardOnDeliveryStatus: string;
+      cashCourierCollectionStatus: string;
+    };
     deliveryShipments?: Array<{
       provider: string;
       internalStatus: string;
       providerShipmentId: string | null;
       trackingNumber: string | null;
       trackingUrl: string | null;
+      courierPhone: string | null;
+      estimatedDeliveryAt: Date | null;
+      deliveryNote: string | null;
+    }>;
+    sellerFeeLedgerEntries?: Array<{
+      status: string;
+      commissionAmount: Prisma.Decimal;
+      invoice: {
+        status: string;
+      } | null;
     }>;
     items: Array<{
       id: string;
@@ -375,6 +437,17 @@ export class OrdersService {
     }>;
   }) {
     const latestShipment = order.deliveryShipments?.[0] ?? null;
+    const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
+    const sellerDisplay = computeSellerOrderDisplayStatus({
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      shippingMethodName: order.shippingMethodName,
+      paymentProofStatus: order.paymentProofStatus,
+      deliveryStatus: latestShipment?.internalStatus ?? null,
+    });
+    const latestLedger = order.sellerFeeLedgerEntries?.[0] ?? null;
+
     return {
       id: order.id,
       orderNumber: order.orderNumber,
@@ -382,6 +455,8 @@ export class OrdersService {
       shopName: order.shop.name,
       status: order.status,
       paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod ?? order.shippingMethodName,
+      paymentMethodLabel: order.paymentMethodLabel,
       totalAmount: order.totalAmount.toString(),
       shippingCost: order.shippingCost.toString(),
       shippingMethodName: order.shippingMethodName,
@@ -395,6 +470,11 @@ export class OrdersService {
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       customerCompletedAt: order.customerCompletedAt?.toISOString() ?? null,
+      itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+      sellerDisplayStatus: sellerDisplay.code,
+      sellerDisplayLabel: sellerDisplay.label,
+      sellerStatusBucket: sellerDisplay.bucket,
+      nextAction: sellerDisplay.nextAction,
       delivery: latestShipment
         ? {
             provider: latestShipment.provider,
@@ -402,6 +482,18 @@ export class OrdersService {
             providerShipmentId: latestShipment.providerShipmentId,
             trackingNumber: latestShipment.trackingNumber,
             trackingUrl: latestShipment.trackingUrl,
+            courierPhone: latestShipment.courierPhone,
+            estimatedDeliveryAt:
+              latestShipment.estimatedDeliveryAt?.toISOString() ?? null,
+            deliveryNote: latestShipment.deliveryNote,
+          }
+        : null,
+      paymentDetails,
+      finance: latestLedger
+        ? {
+            ledgerStatus: latestLedger.status,
+            commissionAmount: latestLedger.commissionAmount.toString(),
+            invoiceStatus: latestLedger.invoice?.status ?? null,
           }
         : null,
       items: order.items.map((item) => ({
@@ -428,6 +520,74 @@ export class OrdersService {
           subject: supportCase.subject,
           createdAt: supportCase.createdAt.toISOString(),
         })) ?? [],
+    };
+  }
+
+  private get orderInclude() {
+    return {
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          paymentInstructions: true,
+          bankName: true,
+          accountHolderName: true,
+          accountNumber: true,
+          recipientPhone: true,
+          sbpPhone: true,
+          staticQrImageUrl: true,
+          paymentMode: true,
+          paymentConfigStatus: true,
+          allowPrepaidQr: true,
+          allowPayOnDeliverySellerQr: true,
+          allowDepositPayment: true,
+          depositPercent: true,
+          depositRequiredAboveAmount: true,
+          codMaxOrderAmount: true,
+          yandexCardOnDeliveryStatus: true,
+          cashCourierCollectionStatus: true,
+        },
+      },
+      deliveryShipments: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          provider: true,
+          internalStatus: true,
+          providerShipmentId: true,
+          trackingNumber: true,
+          trackingUrl: true,
+          courierPhone: true,
+          estimatedDeliveryAt: true,
+          deliveryNote: true,
+        },
+      },
+      sellerFeeLedgerEntries: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          status: true,
+          commissionAmount: true,
+          invoice: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      },
+      items: {
+        orderBy: { productTitleSnapshot: 'asc' as const },
+      },
+      supportCases: {
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          issueType: true,
+          status: true,
+          subject: true,
+          createdAt: true,
+        },
+      },
     };
   }
 }

@@ -13,11 +13,68 @@ export type AdminSeller = {
   userId: string;
   email: string;
   name: string | null;
+  phone: string | null;
   role: string;
   sellerApprovalStatus: SellerApprovalStatus;
   sellerApprovedAt: string | null;
   sellerRejectedAt: string | null;
   sellerRejectionReason: string | null;
+  createdAt: string;
+  onboardingStatus?: string;
+  kycStatus?: string;
+  shopCount?: number;
+  activeShopCount?: number;
+  revenueThisMonth?: string;
+  pendingPlatformFees?: string;
+  currentShopId?: string | null;
+  primaryShopName?: string | null;
+};
+
+export type AdminSellerListResponse = {
+  items: AdminSeller[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    all: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+};
+
+export type AdminSellerDetail = AdminSeller & {
+  contactPhone: string | null;
+  contactEmail: string | null;
+  shops: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    paymentConfigStatus: string;
+    allowPrepaidQr: boolean;
+    allowPayOnDeliverySellerQr: boolean;
+    allowDepositPayment: boolean;
+    confirmedRevenueThisMonth: string;
+    pendingPlatformFees: string;
+  }>;
+  financeSummary: {
+    revenueThisMonth: string;
+    pendingPlatformFees: string;
+  };
+  recentOrders: Array<{
+    id: string;
+    orderCode: string;
+    shopId: string;
+    shopName: string;
+    status: string;
+    paymentStatus: string;
+    totalAmount: string;
+    createdAt: string;
+  }>;
 };
 
 export type AdminSellerOnboarding = {
@@ -433,6 +490,12 @@ export type AdminPaymentAgingReportRow = {
 export type AdminPaymentSupervisionRow = SellerPaymentItem & {
   paymentDetails: PaymentDetails;
   paymentMethodLabel?: string | null;
+  sellerId?: string;
+  sellerName?: string | null;
+  sellerEmail?: string | null;
+  ledgerStatus?: string | null;
+  ledgerCommissionAmount?: string | null;
+  ledgerInvoiceStatus?: string | null;
 };
 
 export type AdminSellerFeeRow = {
@@ -749,14 +812,23 @@ export async function listAdminQueueTaskEvents(taskId: string) {
   });
 }
 
-export async function listAdminSellers(status: SellerApprovalStatus) {
-  return apiRequest<AdminSeller[]>(`/api/admin/sellers?status=${status}`, {
+export async function listAdminSellers(query: {
+  status: SellerApprovalStatus | "ALL";
+  q?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams({ status: query.status });
+  if (query.q) params.set("q", query.q);
+  if (query.page) params.set("page", String(query.page));
+  if (query.limit) params.set("limit", String(query.limit));
+  return apiRequest<AdminSellerListResponse>(`/api/admin/sellers?${params.toString()}`, {
     method: "GET",
   });
 }
 
 export async function getAdminSeller(userId: string) {
-  return apiRequest<AdminSeller>(`/api/admin/sellers/${userId}`, {
+  return apiRequest<AdminSellerDetail>(`/api/admin/sellers/${userId}`, {
     method: "GET",
   });
 }

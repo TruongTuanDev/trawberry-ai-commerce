@@ -5,18 +5,19 @@ import Link from "next/link";
 import {
   approveAdminSeller,
   approveAdminSellerDocument,
+  getAdminSeller,
   getAdminSellerOnboarding,
   listAdminAuditLogs,
   listAdminSellerDocuments,
   rejectAdminSeller,
   rejectAdminSellerDocument,
   type AdminAuditLog,
-  type AdminSeller,
+  type AdminSellerDetail,
 } from "@/lib/admin-api";
 import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
 
 export function AdminSellerDetailClient({ userId }: { userId: string }) {
-  const [seller, setSeller] = useState<AdminSeller | null>(null);
+  const [seller, setSeller] = useState<AdminSellerDetail | null>(null);
   const [profile, setProfile] = useState<SellerOnboardingProfile | null>(null);
   const [documents, setDocuments] = useState<SellerDocument[]>([]);
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
@@ -32,13 +33,14 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       setLoading(true);
     }
     try {
-      const [onboarding, documentResult, auditResult] = await Promise.all([
+      const [sellerResult, onboardingResult, documentResult, auditResult] = await Promise.all([
+        getAdminSeller(userId),
         getAdminSellerOnboarding(userId),
         listAdminSellerDocuments(userId),
         listAdminAuditLogs(userId),
       ]);
-      setSeller(onboarding.seller);
-      setProfile(onboarding.profile);
+      setSeller(sellerResult);
+      setProfile(onboardingResult.profile);
       setDocuments(documentResult);
       setAuditLogs(auditResult);
       setError(null);
@@ -89,7 +91,8 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
     setMessage(null);
     setError(null);
     try {
-      const updated = await approveAdminSeller(userId);
+      await approveAdminSeller(userId);
+      const updated = await getAdminSeller(userId);
       setSeller(updated);
       setMessage("Seller approved.");
       await load(false);
@@ -105,7 +108,8 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
     setMessage(null);
     setError(null);
     try {
-      const updated = await rejectAdminSeller(userId, rejectReason.trim() || undefined);
+      await rejectAdminSeller(userId, rejectReason.trim() || undefined);
+      const updated = await getAdminSeller(userId);
       setSeller(updated);
       setMessage("Seller rejected.");
       await load(false);
@@ -140,6 +144,50 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
         {message ? <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
         {error ? <div className="mt-4 rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
       </section>
+
+      {seller ? (
+        <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
+          <h3 className="text-lg font-bold text-[var(--foreground)]">Marketplace operations summary</h3>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <ProfileField label="Shops" value={`${seller.activeShopCount ?? 0}/${seller.shopCount ?? 0} active`} />
+            <ProfileField label="Contact phone" value={seller.contactPhone} />
+            <ProfileField label="Revenue this month" value={`${seller.financeSummary.revenueThisMonth} ₽`} />
+            <ProfileField label="Pending platform fees" value={`${seller.financeSummary.pendingPlatformFees} ₽`} />
+          </div>
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Shops</p>
+              <div className="mt-3 space-y-3">
+                {seller.shops.map((shop) => (
+                  <div key={shop.id} className="rounded-[0.9rem] border border-[var(--border)] bg-white px-4 py-3">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{shop.name}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{shop.status} · payment {shop.paymentConfigStatus}</p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      Revenue {shop.confirmedRevenueThisMonth} ₽ · Pending fee {shop.pendingPlatformFees} ₽
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Recent orders</p>
+              <div className="mt-3 space-y-3">
+                {seller.recentOrders.length ? seller.recentOrders.map((order) => (
+                  <div key={order.id} className="rounded-[0.9rem] border border-[var(--border)] bg-white px-4 py-3">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{order.orderCode}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{order.shopName}</p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {order.status} · {order.paymentStatus} · {order.totalAmount} ₽
+                    </p>
+                  </div>
+                )) : (
+                  <p className="text-sm text-[var(--muted)]">No recent orders yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
         <h3 className="text-lg font-bold text-[var(--foreground)]">Legal profile</h3>

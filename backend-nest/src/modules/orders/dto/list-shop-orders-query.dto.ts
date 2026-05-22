@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   Max,
@@ -33,7 +34,22 @@ export class ListShopOrdersQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  q?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  paymentStatus?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  deliveryStatus?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -43,5 +59,20 @@ export class ListShopOrdersQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
   dateTo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+
+  @ApiPropertyOptional({ enum: ['createdAt_desc', 'createdAt_asc'] })
+  @IsOptional()
+  @IsIn(['createdAt_desc', 'createdAt_asc'])
+  sort?: 'createdAt_desc' | 'createdAt_asc';
 }

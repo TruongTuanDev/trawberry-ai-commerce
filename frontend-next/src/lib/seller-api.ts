@@ -254,6 +254,8 @@ export type SellerOrderListItem = {
   shopName: string;
   status: SellerOrderStatus;
   paymentStatus: string;
+  paymentMethod: string | null;
+  paymentMethodLabel: string | null;
   totalAmount: string;
   shippingCost: string;
   shippingMethodName: string | null;
@@ -267,7 +269,28 @@ export type SellerOrderListItem = {
   createdAt: string;
   updatedAt: string;
   customerCompletedAt: string | null;
+  itemsCount: number;
+  sellerDisplayStatus: string;
+  sellerDisplayLabel: string;
+  sellerStatusBucket:
+    | "ALL"
+    | "NEW"
+    | "AWAITING_PAYMENT"
+    | "PAYMENT_PROOF"
+    | "TO_PACK"
+    | "READY_FOR_YANDEX"
+    | "IN_DELIVERY"
+    | "DELIVERED"
+    | "PAYMENT_ISSUES"
+    | "CANCELLED";
+  nextAction: string | null;
   delivery: SellerOrderDeliverySummary | null;
+  paymentDetails: PaymentDetails | null;
+  finance: {
+    ledgerStatus: string | null;
+    commissionAmount: string | null;
+    invoiceStatus: string | null;
+  } | null;
   supportCases: Array<{
     id: string;
     issueType: string;
@@ -1583,9 +1606,13 @@ export async function getShopOrders(
     page: number;
     size: number;
     search?: string;
+    q?: string;
     status?: string;
+    paymentStatus?: string;
+    deliveryStatus?: string;
     dateFrom?: string;
     dateTo?: string;
+    sort?: "createdAt_desc" | "createdAt_asc";
   },
   token?: string,
 ) {
@@ -1597,14 +1624,26 @@ export async function getShopOrders(
   if (query.search) {
     params.set("search", query.search);
   }
+  if (query.q) {
+    params.set("q", query.q);
+  }
   if (query.status) {
     params.set("status", query.status);
+  }
+  if (query.paymentStatus) {
+    params.set("paymentStatus", query.paymentStatus);
+  }
+  if (query.deliveryStatus) {
+    params.set("deliveryStatus", query.deliveryStatus);
   }
   if (query.dateFrom) {
     params.set("dateFrom", query.dateFrom);
   }
   if (query.dateTo) {
     params.set("dateTo", query.dateTo);
+  }
+  if (query.sort) {
+    params.set("sort", query.sort);
   }
 
   return apiRequest<SellerOrdersResponse>(

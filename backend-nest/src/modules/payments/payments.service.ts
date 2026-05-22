@@ -71,6 +71,13 @@ type PaymentOrderRecord = {
   shop: {
     id: string;
     name: string;
+    sellerProfile: {
+      userId: string;
+      user: {
+        fullName: string | null;
+        email: string;
+      };
+    };
     paymentInstructions: string | null;
     bankName: string | null;
     accountHolderName: string | null;
@@ -111,6 +118,14 @@ type PaymentOrderRecord = {
       id: string;
       fullName: string | null;
     };
+  }>;
+  sellerFeeLedgerEntries?: Array<{
+    id: string;
+    status: string;
+    commissionAmount: Prisma.Decimal;
+    invoice: {
+      status: string;
+    } | null;
   }>;
 };
 
@@ -604,11 +619,15 @@ export class PaymentsService {
 
   private toPaymentResponse(order: PaymentOrderRecord) {
     const paymentDetails = resolveOrderPaymentPanel(order, order.shop);
+    const sellerProfile = order.shop.sellerProfile;
     return {
       id: order.id,
       orderNumber: order.orderNumber,
       shopId: order.shop.id,
       shopName: order.shop.name,
+      sellerId: sellerProfile?.userId ?? null,
+      sellerName: sellerProfile?.user?.fullName ?? null,
+      sellerEmail: sellerProfile?.user?.email ?? null,
       status: order.status,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod ?? order.shippingMethodName,
@@ -658,6 +677,11 @@ export class PaymentsService {
         : null,
       paymentProofStatus: order.paymentProofStatus,
       buyerPaymentNote: order.paymentProofBuyerNote,
+      ledgerStatus: order.sellerFeeLedgerEntries?.[0]?.status ?? null,
+      ledgerCommissionAmount:
+        order.sellerFeeLedgerEntries?.[0]?.commissionAmount.toString() ?? null,
+      ledgerInvoiceStatus:
+        order.sellerFeeLedgerEntries?.[0]?.invoice?.status ?? null,
       reviewLogs: order.paymentReviewLogs.map((log) =>
         this.toPaymentLogResponse(log),
       ),
@@ -685,6 +709,17 @@ export class PaymentsService {
         select: {
           id: true,
           name: true,
+          sellerProfile: {
+            select: {
+              userId: true,
+              user: {
+                select: {
+                  fullName: true,
+                  email: true,
+                },
+              },
+            },
+          },
           paymentInstructions: true,
           bankName: true,
           accountHolderName: true,
@@ -721,6 +756,20 @@ export class PaymentsService {
             select: {
               id: true,
               fullName: true,
+            },
+          },
+        },
+      },
+      sellerFeeLedgerEntries: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          status: true,
+          commissionAmount: true,
+          invoice: {
+            select: {
+              status: true,
             },
           },
         },

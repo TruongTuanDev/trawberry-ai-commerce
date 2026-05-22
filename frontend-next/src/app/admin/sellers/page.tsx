@@ -1,34 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   approveAdminSeller,
   listAdminSellers,
   rejectAdminSeller,
+  type AdminSellerListResponse,
   type AdminSeller,
   type SellerApprovalStatus,
 } from "@/lib/admin-api";
 
-const statuses: SellerApprovalStatus[] = ["PENDING", "APPROVED", "REJECTED"];
+const statuses: Array<SellerApprovalStatus | "ALL"> = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
 export default function AdminSellersPage() {
-  const [status, setStatus] = useState<SellerApprovalStatus>("PENDING");
+  const [status, setStatus] = useState<SellerApprovalStatus | "ALL">("PENDING");
   const [sellers, setSellers] = useState<AdminSeller[]>([]);
+  const [summary, setSummary] = useState<AdminSellerListResponse["summary"]>({
+    all: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
   const [selectedSeller, setSelectedSeller] = useState<AdminSeller | null>(null);
   const [reason, setReason] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const totals = useMemo(
-    () => ({
-      visible: sellers.length,
-      pending: sellers.filter((seller) => seller.sellerApprovalStatus === "PENDING").length,
-    }),
-    [sellers],
-  );
 
   useEffect(() => {
     let mounted = true;
@@ -36,9 +36,10 @@ export default function AdminSellersPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const result = await listAdminSellers(status);
+        const result = await listAdminSellers({ status, q: search || undefined, page: 1, limit: 50 });
         if (!mounted) return;
-        setSellers(result);
+        setSellers(result.items);
+        setSummary(result.summary);
         setError(null);
       } catch (err) {
         if (mounted) {
@@ -55,10 +56,12 @@ export default function AdminSellersPage() {
     return () => {
       mounted = false;
     };
-  }, [status]);
+  }, [search, status]);
 
   const refresh = async () => {
-    setSellers(await listAdminSellers(status));
+    const result = await listAdminSellers({ status, q: search || undefined, page: 1, limit: 50 });
+    setSellers(result.items);
+    setSummary(result.summary);
   };
 
   const approve = async (seller: AdminSeller) => {
@@ -107,9 +110,11 @@ export default function AdminSellersPage() {
               New seller registrations stay pending until an admin approves them. Rejected sellers cannot create shops.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <Metric label="Visible" value={String(totals.visible)} />
-            <Metric label="Pending in view" value={String(totals.pending)} />
+          <div className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
+            <Metric label="All" value={String(summary.all)} />
+            <Metric label="Pending" value={String(summary.pending)} />
+            <Metric label="Approved" value={String(summary.approved)} />
+            <Metric label="Rejected" value={String(summary.rejected)} />
           </div>
         </div>
       </section>
@@ -132,14 +137,25 @@ export default function AdminSellersPage() {
             </button>
           ))}
         </div>
+        <div className="mt-4">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search seller by name, email, phone, or shop"
+            className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+          />
+        </div>
 
         {message ? <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
         {error ? <div className="mt-4 rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
 
         <div className="mt-5 overflow-hidden rounded-[1.25rem] border border-[var(--border)]">
-          <div className="hidden grid-cols-[1.3fr_1fr_160px_300px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)] lg:grid">
+          <div className="hidden grid-cols-[1.2fr_1fr_120px_120px_140px_140px_300px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)] lg:grid">
             <div>Seller</div>
             <div>Status</div>
+            <div>Shops</div>
+            <div>Revenue</div>
+            <div>Pending fee</div>
             <div>Reviewed</div>
             <div>Actions</div>
           </div>
@@ -150,12 +166,13 @@ export default function AdminSellersPage() {
               sellers.map((seller) => (
                 <article
                   key={seller.userId}
-                  className="grid gap-4 px-5 py-4 lg:grid-cols-[1.3fr_1fr_160px_300px] lg:items-center"
+                  className="grid gap-4 px-5 py-4 lg:grid-cols-[1.2fr_1fr_120px_120px_140px_140px_300px] lg:items-center"
                   data-testid="admin-seller-row"
                 >
                   <div>
                     <p className="text-sm font-semibold text-[var(--foreground)]">{seller.name ?? "Unnamed seller"}</p>
                     <p className="mt-1 text-sm text-[var(--muted)]">{seller.email}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{seller.phone ?? "No phone"}{seller.primaryShopName ? ` · ${seller.primaryShopName}` : ""}</p>
                   </div>
                   <div>
                     <span className="inline-flex rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
@@ -165,6 +182,9 @@ export default function AdminSellersPage() {
                       <p className="mt-2 text-xs text-[var(--muted)]">{seller.sellerRejectionReason}</p>
                     ) : null}
                   </div>
+                  <p className="text-sm text-[var(--foreground)]">{seller.activeShopCount ?? 0}/{seller.shopCount ?? 0}</p>
+                  <p className="text-sm text-[var(--foreground)]">{seller.revenueThisMonth ?? "0"} ₽</p>
+                  <p className="text-sm text-[var(--foreground)]">{seller.pendingPlatformFees ?? "0"} ₽</p>
                   <p className="text-sm text-[var(--muted)]">
                     {seller.sellerApprovedAt ?? seller.sellerRejectedAt
                       ? new Date(seller.sellerApprovedAt ?? seller.sellerRejectedAt ?? "").toLocaleDateString()

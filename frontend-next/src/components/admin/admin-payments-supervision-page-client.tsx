@@ -160,8 +160,14 @@ export function AdminPaymentsSupervisionPageClient() {
                 >
                   <p className="text-sm font-semibold text-[var(--foreground)]">{item.orderNumber}</p>
                   <p className="mt-1 text-sm text-[var(--muted)]">{item.shopName} - {item.customer.name}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {item.sellerName ?? "Seller"} · {item.paymentMethodLabel ?? item.paymentMethod ?? "Direct seller payment"}
+                  </p>
                   <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
                     {item.paymentStatus} - {item.paymentProofStatus}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Ledger {item.ledgerStatus ?? "not created"}
                   </p>
                 </button>
               ))
@@ -178,7 +184,13 @@ export function AdminPaymentsSupervisionPageClient() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Selected payment</p>
                 <h3 className="mt-2 text-2xl font-bold text-[var(--foreground)]">{selected.orderNumber}</h3>
                 <p className="mt-2 text-sm text-[var(--muted)]">{selected.shopName} - {selected.totalAmount}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {selected.sellerName ?? "Seller"} · {selected.sellerEmail ?? "no email"} · {selected.paymentMethodLabel ?? selected.paymentMethod ?? "Direct seller payment"}
+                </p>
                 <p className="mt-1 text-sm text-[var(--muted)]">Buyer proof status: {selected.paymentProofStatus}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Ledger: {selected.ledgerStatus ?? "not created"}{selected.ledgerCommissionAmount ? ` · fee ${selected.ledgerCommissionAmount}` : ""}{selected.ledgerInvoiceStatus ? ` · invoice ${selected.ledgerInvoiceStatus}` : ""}
+                </p>
               </div>
               <PaymentDetailsPanel details={selected.paymentDetails} title="Seller payment destination" />
               {selected.paymentProof ? (

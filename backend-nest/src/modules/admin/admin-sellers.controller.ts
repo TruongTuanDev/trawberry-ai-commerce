@@ -34,7 +34,7 @@ export class AdminSellersController {
   @ApiOperation({ summary: 'List seller accounts for admin review.' })
   @ApiOkResponse({ type: AdminSellerResponseDto, isArray: true })
   listSellers(@Query() query: ListAdminSellersQueryDto) {
-    return this.adminSellersService.listSellers(query.status);
+    return this.adminSellersService.listSellers(query);
   }
 
   @Get('api/admin/sellers/:userId')

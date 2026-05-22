@@ -61,6 +61,15 @@ class OrderDeliveryResponseDto {
 
   @ApiProperty({ nullable: true })
   trackingUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  courierPhone!: string | null;
+
+  @ApiProperty({ nullable: true })
+  estimatedDeliveryAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  deliveryNote!: string | null;
 }
 
 class OrderSupportCaseSummaryDto {
@@ -99,6 +108,12 @@ export class OrderResponseDto {
   @ApiProperty()
   paymentStatus!: string;
 
+  @ApiProperty({ nullable: true })
+  paymentMethod!: string | null;
+
+  @ApiProperty({ nullable: true })
+  paymentMethodLabel!: string | null;
+
   @ApiProperty()
   totalAmount!: string;
 
@@ -126,11 +141,36 @@ export class OrderResponseDto {
   @ApiProperty({ nullable: true })
   customerCompletedAt!: string | null;
 
+  @ApiProperty()
+  itemsCount!: number;
+
+  @ApiProperty()
+  sellerDisplayStatus!: string;
+
+  @ApiProperty()
+  sellerDisplayLabel!: string;
+
+  @ApiProperty()
+  sellerStatusBucket!: string;
+
+  @ApiProperty({ nullable: true })
+  nextAction!: string | null;
+
   @ApiProperty({ type: OrderItemResponseDto, isArray: true })
   items!: OrderItemResponseDto[];
 
   @ApiProperty({ type: OrderDeliveryResponseDto, nullable: true })
   delivery!: OrderDeliveryResponseDto | null;
+
+  @ApiProperty({ nullable: true })
+  paymentDetails!: Record<string, unknown> | null;
+
+  @ApiProperty({ nullable: true })
+  finance!: {
+    ledgerStatus: string | null;
+    commissionAmount: string | null;
+    invoiceStatus: string | null;
+  } | null;
 
   @ApiProperty({ type: OrderSupportCaseSummaryDto, isArray: true })
   supportCases!: OrderSupportCaseSummaryDto[];

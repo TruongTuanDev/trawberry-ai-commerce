@@ -4,9 +4,22 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/seller/section-card";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { getShopOrders, type SellerOrderListItem } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+
+const sellerTabs = [
+  { value: "", label: "All" },
+  { value: "NEW", label: "New" },
+  { value: "AWAITING_PAYMENT", label: "Awaiting payment" },
+  { value: "PAYMENT_PROOF", label: "Payment proof" },
+  { value: "TO_PACK", label: "To pack" },
+  { value: "READY_FOR_YANDEX", label: "Ready for Yandex" },
+  { value: "IN_DELIVERY", label: "In delivery" },
+  { value: "DELIVERED", label: "Delivered" },
+  { value: "PAYMENT_ISSUES", label: "Payment issues" },
+] as const;
 
 export function SellerOrdersPageClient() {
   const user = useAuthStore((state) => state.sellerUser);
@@ -71,9 +84,30 @@ export function SellerOrdersPageClient() {
       <SectionCard
         eyebrow="Fulfillment"
         title="Orders"
-        description="Seller order queue. Filter by status, date, or customer/order search while staying scoped to the active shop."
+        description="Seller order queue synced with payment, delivery, and finance states for the active shop."
       >
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_180px_180px_180px]">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seller order filters">
+          {sellerTabs.map((tab) => (
+            <button
+              key={tab.value || "ALL"}
+              type="button"
+              onClick={() => {
+                setStatus(tab.value);
+                setPage(1);
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                status === tab.value
+                  ? "bg-[var(--accent)] text-white"
+                  : "border border-[var(--border)] bg-white text-[var(--foreground)] hover:bg-[var(--panel)]"
+              }`}
+              data-testid={`seller-order-tab-${tab.value || "ALL"}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1.25fr_180px_180px_180px]">
           <input
             value={search}
             onChange={(event) => {
@@ -91,13 +125,11 @@ export function SellerOrdersPageClient() {
             }}
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           >
-            <option value="">All statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="NEW">New</option>
-            <option value="ASSEMBLING">Assembling</option>
-            <option value="SHIPPING">Shipping</option>
-            <option value="DELIVERED">Delivered</option>
-            <option value="CANCELLED">Cancelled</option>
+            {sellerTabs.map((tab) => (
+              <option key={tab.value || "ALL"} value={tab.value}>
+                {tab.label}
+              </option>
+            ))}
           </select>
           <input
             type="date"
@@ -123,19 +155,21 @@ export function SellerOrdersPageClient() {
       <SectionCard
         eyebrow="Orders list"
         title="Shop orders"
-        description="The queue shows order number, customer, products, totals, status, and creation date."
+        description="Each order shows the seller-facing sync status and the next operational action."
       >
         {error ? (
           <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div>
         ) : null}
 
         <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-          <div className="hidden grid-cols-[160px_1.2fr_1.3fr_160px_160px_160px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
+          <div className="hidden grid-cols-[150px_1.2fr_1.3fr_150px_170px_170px_180px_130px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
             <div>Order</div>
             <div>Customer</div>
             <div>Products</div>
             <div>Total</div>
-            <div>Status</div>
+            <div>Seller sync</div>
+            <div>Payment</div>
+            <div>Next action</div>
             <div>Date</div>
           </div>
 
@@ -144,12 +178,12 @@ export function SellerOrdersPageClient() {
               <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading orders...</div>
             ) : orders.length ? (
               orders.map((order) => (
-                <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[160px_1.2fr_1.3fr_160px_160px_160px] lg:px-5" data-testid="seller-order-card">
+                <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[150px_1.2fr_1.3fr_150px_170px_170px_180px_130px] lg:px-5" data-testid="seller-order-card">
                   <div>
                     <Link href={`/seller/orders/${order.id}`} className="text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)]">
                       {order.orderNumber}
                     </Link>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{order.paymentStatus}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{order.paymentMethodLabel ?? order.paymentMethod ?? "Direct seller payment"}</p>
                   </div>
                   <div className="text-sm text-[var(--muted)]">
                     <p className="font-semibold text-[var(--foreground)]">{order.customer.name}</p>
@@ -165,7 +199,19 @@ export function SellerOrdersPageClient() {
                     {order.items.length > 2 ? <p>+{order.items.length - 2} more items</p> : null}
                   </div>
                   <div className="text-sm font-semibold text-[var(--foreground)]">{order.totalAmount}</div>
-                  <div><OrderStatusBadge status={order.status} /></div>
+                  <div className="space-y-2">
+                    <OrderStatusBadge status={order.sellerDisplayStatus} />
+                    <p className="text-xs text-[var(--muted)]">{order.sellerDisplayLabel}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <PaymentStatusBadge status={order.paymentStatus} />
+                    {order.finance?.ledgerStatus ? (
+                      <p className="text-xs text-[var(--muted)]">Ledger {order.finance.ledgerStatus}</p>
+                    ) : null}
+                  </div>
+                  <div className="text-sm text-[var(--muted)]">
+                    {formatNextAction(order.nextAction)}
+                  </div>
                   <div className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleDateString()}</div>
                 </article>
               ))
@@ -199,4 +245,26 @@ export function SellerOrdersPageClient() {
       </SectionCard>
     </div>
   );
+}
+
+function formatNextAction(nextAction: string | null) {
+  const labels: Record<string, string> = {
+    review_payment_proof: "Confirm or reject proof",
+    accept_pay_on_delivery_order: "Accept COD and create Yandex",
+    create_yandex_delivery: "Create Yandex manually",
+    prepare_order: "Start preparing order",
+    continue_preparing: "Continue packing",
+    mark_picked_up: "Mark picked up",
+    mark_on_the_way: "Mark on the way",
+    mark_delivered: "Mark delivered",
+    confirm_delivery_payment: "Confirm delivery payment",
+    wait_for_delivery_payment: "Wait for buyer payment",
+    resolve_delivery_payment_issue: "Resolve payment dispute",
+    review_payment_issue: "Resolve payment issue",
+    wait_for_payment: "Wait for buyer payment",
+    monitor_delivery: "Monitor delivery",
+    review_order: "Open order detail",
+  };
+
+  return nextAction ? labels[nextAction] ?? nextAction : "No action";
 }

@@ -716,6 +716,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             <Metric label="Email" value={order.customer.email ?? "No email"} />
             <Metric label="Total" value={order.totalAmount} />
             <Metric
+              label="Seller sync"
+              value={order.sellerDisplayLabel}
+              testId="seller-order-display-status"
+            />
+            <Metric
+              label="Next action"
+              value={formatNextAction(order.nextAction)}
+              testId="seller-order-next-action"
+            />
+            <Metric
               label="Created"
               value={new Date(order.createdAt).toLocaleString()}
             />
@@ -735,6 +745,18 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 <PaymentStatusBadge status={order.paymentStatus} />
               </div>
             </div>
+            <Metric
+              label="Payment method"
+              value={order.paymentMethodLabel ?? order.paymentMethod ?? "Not set"}
+            />
+            <Metric
+              label="Finance"
+              value={
+                order.finance?.ledgerStatus
+                  ? `${order.finance.ledgerStatus} · fee ${order.finance.commissionAmount ?? "0"}`
+                  : "Ledger pending"
+              }
+            />
           </div>
 
           <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
@@ -750,6 +772,21 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </p>
             ) : null}
           </div>
+          {order.paymentDetails ? (
+            <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                Payment destination
+              </p>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {order.paymentMethodLabel ?? order.paymentMethod ?? "Direct seller payment"}
+              </p>
+              {order.paymentDetails.paymentInstruction ? (
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  {order.paymentDetails.paymentInstruction}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {isPayOnDeliverySellerQr ? (
             <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
               <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -1538,6 +1575,28 @@ function Metric({
       </p>
     </div>
   );
+}
+
+function formatNextAction(nextAction: string | null) {
+  const labels: Record<string, string> = {
+    review_payment_proof: "Confirm or reject payment proof",
+    accept_pay_on_delivery_order: "Accept COD order",
+    create_yandex_delivery: "Create Yandex manually",
+    prepare_order: "Prepare the order",
+    continue_preparing: "Continue preparing",
+    mark_picked_up: "Mark picked up",
+    mark_on_the_way: "Mark on the way",
+    mark_delivered: "Mark delivered",
+    confirm_delivery_payment: "Confirm final payment",
+    wait_for_delivery_payment: "Wait for buyer payment",
+    resolve_delivery_payment_issue: "Resolve payment dispute",
+    review_payment_issue: "Resolve payment issue",
+    wait_for_payment: "Wait for payment",
+    monitor_delivery: "Monitor delivery",
+    review_order: "Review order detail",
+  };
+
+  return nextAction ? labels[nextAction] ?? nextAction : "No action";
 }
 
 function Field({
