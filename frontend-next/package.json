@@ -37,6 +37,7 @@
     "test:e2e:public-full": "playwright test public-full",
     "test:e2e:public-payment-review": "playwright test public-payment-review",
     "test:e2e:direct-seller-qr-payment": "playwright test direct-seller-qr-payment",
+    "test:e2e:payment-method-choice": "playwright test payment-method-choice",
     "test:e2e:seller-delivery-settings": "playwright test seller-delivery-settings",
     "test:e2e:seller-ai-images": "playwright test seller-ai-images",
     "test:e2e:three-role-demo": "playwright test three-role-demo-workflow",

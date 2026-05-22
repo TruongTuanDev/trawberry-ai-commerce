@@ -15,6 +15,12 @@ import {
 } from '../../common/utils/phone.util';
 import { formatCustomerAddressSnapshot } from '../../common/utils/customer-address.util';
 import { resolveShopPaymentPanel } from '../../common/utils/shop-payment.util';
+import {
+  PAYMENT_METHOD_LABELS,
+  isPayOnDeliverySellerQrMethod,
+  isPrepaidLikePaymentMethod,
+  type CheckoutPaymentMethod,
+} from '../../common/constants/payment-methods.constant';
 import { CreateCheckoutOrderDto } from './dto/create-checkout-order.dto';
 import {
   CartValidationLine,
@@ -52,6 +58,8 @@ type CreatedCheckoutOrder = {
   paymentSbpPhoneSnapshot: string | null;
   paymentQrImageUrlSnapshot: string | null;
   paymentInstructionSnapshot: string | null;
+  paymentMethod: string | null;
+  paymentMethodLabel: string | null;
   itemsCount: number;
 };
 
@@ -150,12 +158,12 @@ export class CheckoutService {
         const shop = shopItems[0].product.shop;
         const paymentPanel = resolveShopPaymentPanel(shop);
         const totalAmount = this.sumLineTotals(shopItems);
-
-        if (dto.paymentMethod === 'MANUAL_TRANSFER' && !paymentPanel.isReady) {
-          throw new BadRequestException(
-            `Shop ${shop.name} does not have direct seller payment instructions configured yet.`,
-          );
-        }
+        this.assertSupportedPaymentMethod(
+          dto.paymentMethod,
+          totalAmount,
+          shop.name,
+          paymentPanel,
+        );
 
         const order = await tx.order.create({
           data: {
@@ -165,8 +173,7 @@ export class CheckoutService {
             shopId: shop.id,
             orderNumber: this.buildOrderNumber(),
             status: 'PENDING',
-            paymentStatus:
-              dto.paymentMethod === 'CASH_ON_DELIVERY' ? 'UNPAID' : 'PENDING',
+            paymentStatus: this.resolveInitialPaymentStatus(dto.paymentMethod),
             totalAmount,
             shippingAddress: checkoutCustomer.address,
             shippingLatitude:
@@ -183,6 +190,26 @@ export class CheckoutService {
             customerNote: checkoutCustomer.note,
             shippingCost: new Prisma.Decimal(0),
             shippingMethodName: dto.paymentMethod,
+            paymentMethod: dto.paymentMethod,
+            paymentMethodLabel: PAYMENT_METHOD_LABELS[dto.paymentMethod],
+            paymentFlowStage: this.resolveInitialPaymentFlowStage(
+              dto.paymentMethod,
+            ),
+            depositPercentSnapshot: paymentPanel.capabilities.depositPercent,
+            depositRequiredAboveAmountSnapshot: paymentPanel.capabilities
+              .depositRequiredAboveAmount
+              ? new Prisma.Decimal(
+                  paymentPanel.capabilities.depositRequiredAboveAmount,
+                )
+              : null,
+            codMaxOrderAmountSnapshot: paymentPanel.capabilities
+              .codMaxOrderAmount
+              ? new Prisma.Decimal(paymentPanel.capabilities.codMaxOrderAmount)
+              : null,
+            yandexCardOnDeliveryStatusSnapshot:
+              paymentPanel.capabilities.yandexCardOnDeliveryStatus,
+            cashCourierCollectionStatusSnapshot:
+              paymentPanel.capabilities.cashCourierCollectionStatus,
             paymentModeSnapshot: paymentPanel.mode,
             paymentBankNameSnapshot: paymentPanel.bankName,
             paymentRecipientNameSnapshot: paymentPanel.recipientName,
@@ -191,6 +218,25 @@ export class CheckoutService {
             paymentSbpPhoneSnapshot: paymentPanel.sbpPhone,
             paymentQrImageUrlSnapshot: paymentPanel.staticQrImageUrl,
             paymentInstructionSnapshot: paymentPanel.paymentInstruction,
+            paymentReviewLogs: {
+              create: {
+                id: randomUUID(),
+                action: isPayOnDeliverySellerQrMethod(dto.paymentMethod)
+                  ? 'pay_on_delivery_selected'
+                  : dto.paymentMethod === 'YANDEX_CARD_ON_DELIVERY'
+                    ? 'yandex_payment_on_delivery_config_checked'
+                    : 'payment_method_selected',
+                fromStatus: null,
+                toStatus: this.resolveInitialPaymentStatus(dto.paymentMethod),
+                note: `Checkout selected ${PAYMENT_METHOD_LABELS[dto.paymentMethod]}.`,
+                shop: {
+                  connect: { id: shop.id },
+                },
+                reviewer: {
+                  connect: { id: customerId },
+                },
+              },
+            },
             items: {
               create: shopItems.map((item) => this.buildOrderItemCreate(item)),
             },
@@ -215,6 +261,8 @@ export class CheckoutService {
             paymentSbpPhoneSnapshot: true,
             paymentQrImageUrlSnapshot: true,
             paymentInstructionSnapshot: true,
+            paymentMethod: true,
+            paymentMethodLabel: true,
           },
         });
         createdOrders.push({
@@ -242,6 +290,8 @@ export class CheckoutService {
       paymentStatus: order.paymentStatus,
       totalAmount: order.totalAmount.toString(),
       paymentInstructions: order.paymentInstructionSnapshot,
+      paymentMethod: order.paymentMethod,
+      paymentMethodLabel: order.paymentMethodLabel,
       paymentDetails: {
         mode: order.paymentModeSnapshot,
         bankName: order.paymentBankNameSnapshot,
@@ -264,6 +314,8 @@ export class CheckoutService {
       status: firstOrder.status,
       paymentStatus: firstOrder.paymentStatus,
       totalAmount: firstOrder.totalAmount.toString(),
+      paymentMethod: firstOrder.paymentMethod,
+      paymentMethodLabel: firstOrder.paymentMethodLabel,
       paymentInstructions: firstOrder.paymentInstructionSnapshot,
       paymentDetails: {
         mode: firstOrder.paymentModeSnapshot,
@@ -538,5 +590,90 @@ export class CheckoutService {
       default:
         return `Product ${item.input.productId} is not available for checkout.`;
     }
+  }
+
+  private assertSupportedPaymentMethod(
+    paymentMethod: CheckoutPaymentMethod,
+    totalAmount: Prisma.Decimal,
+    shopName: string,
+    paymentPanel: ReturnType<typeof resolveShopPaymentPanel>,
+  ) {
+    const unsupported = () =>
+      new BadRequestException(
+        `SHOP_PAYMENT_METHOD_NOT_SUPPORTED: ${shopName} does not support ${paymentMethod}.`,
+      );
+
+    switch (paymentMethod) {
+      case 'PREPAID_SELLER_QR':
+        if (
+          !paymentPanel.capabilities.sellerQrPaymentEnabled ||
+          !paymentPanel.isReady
+        ) {
+          throw unsupported();
+        }
+        return;
+      case 'PAY_ON_DELIVERY_SELLER_QR':
+        if (
+          !paymentPanel.capabilities.payOnDeliverySellerQrEnabled ||
+          !paymentPanel.isReady
+        ) {
+          throw unsupported();
+        }
+        if (
+          paymentPanel.capabilities.codMaxOrderAmount &&
+          totalAmount.greaterThan(
+            new Prisma.Decimal(paymentPanel.capabilities.codMaxOrderAmount),
+          )
+        ) {
+          throw new BadRequestException(
+            `SHOP_PAYMENT_METHOD_NOT_SUPPORTED: ${shopName} exceeds the pay-on-delivery limit.`,
+          );
+        }
+        return;
+      case 'DEPOSIT_THEN_DELIVERY_PAYMENT':
+        if (
+          !paymentPanel.capabilities.depositPaymentEnabled ||
+          !paymentPanel.isReady
+        ) {
+          throw unsupported();
+        }
+        return;
+      case 'YANDEX_CARD_ON_DELIVERY':
+        if (
+          paymentPanel.capabilities.yandexCardOnDeliveryStatus !== 'AVAILABLE'
+        ) {
+          throw unsupported();
+        }
+        return;
+      case 'CASH_COURIER_COLLECTION':
+        throw unsupported();
+      default:
+        throw unsupported();
+    }
+  }
+
+  private resolveInitialPaymentStatus(paymentMethod: CheckoutPaymentMethod) {
+    if (isPayOnDeliverySellerQrMethod(paymentMethod)) {
+      return 'PAY_ON_DELIVERY_SELECTED';
+    }
+
+    if (paymentMethod === 'YANDEX_CARD_ON_DELIVERY') {
+      return 'YANDEX_PAYMENT_ON_DELIVERY_PENDING';
+    }
+
+    return 'PENDING';
+  }
+
+  private resolveInitialPaymentFlowStage(paymentMethod: CheckoutPaymentMethod) {
+    if (isPrepaidLikePaymentMethod(paymentMethod)) {
+      return 'AWAITING_PREPAID_CONFIRMATION';
+    }
+    if (isPayOnDeliverySellerQrMethod(paymentMethod)) {
+      return 'AWAITING_SELLER_ACCEPTANCE';
+    }
+    if (paymentMethod === 'YANDEX_CARD_ON_DELIVERY') {
+      return 'AWAITING_PROVIDER_AVAILABILITY';
+    }
+    return 'CHECKOUT_CREATED';
   }
 }

@@ -8,13 +8,30 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
+import {
+  PAYMENT_METHOD_LABELS,
+  isPayOnDeliverySellerQrMethod,
+} from '../../common/constants/payment-methods.constant';
 import { AddPaymentNoteDto } from './dto/add-payment-note.dto';
 import { ListShopPaymentsQueryDto } from './dto/list-shop-payments-query.dto';
 import { MarkPaymentPaidDto } from './dto/mark-payment-paid.dto';
 import { RejectPaymentDto } from './dto/reject-payment.dto';
 
-const PENDING_PAYMENT_STATUSES = ['PENDING', 'UNPAID'] as const;
-const PAID_PAYMENT_STATUSES = ['PAID', 'APPROVED'] as const;
+const PENDING_PAYMENT_STATUSES = [
+  'PENDING',
+  'UNPAID',
+  'PAY_ON_DELIVERY_SELECTED',
+  'SELLER_ACCEPTED_PAY_ON_DELIVERY',
+  'DELIVERED_AWAITING_PAYMENT',
+  'BUYER_MARKED_DELIVERY_PAID',
+  'YANDEX_PAYMENT_ON_DELIVERY_PENDING',
+] as const;
+const PAID_PAYMENT_STATUSES = [
+  'PAID',
+  'APPROVED',
+  'SELLER_CONFIRMED_DELIVERY_PAYMENT',
+  'YANDEX_PAYMENT_ON_DELIVERY_PAID',
+] as const;
 const REJECTED_PAYMENT_STATUSES = ['REJECTED', 'FAILED', 'CANCELLED'] as const;
 
 type PaymentOrderRecord = {
@@ -25,6 +42,9 @@ type PaymentOrderRecord = {
   totalAmount: Prisma.Decimal;
   shippingAddress: string;
   shippingMethodName: string | null;
+  paymentMethod: string | null;
+  paymentMethodLabel: string | null;
+  paymentFlowStage: string | null;
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
@@ -44,6 +64,7 @@ type PaymentOrderRecord = {
   paymentProofUploadedAt: Date | null;
   paymentProofStatus: string;
   paymentProofBuyerNote: string | null;
+  sellerConfirmedPaidAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   shop: {
@@ -194,20 +215,44 @@ export class PaymentsService {
       );
     }
 
+    const isPayOnDelivery = isPayOnDeliverySellerQrMethod(
+      order.paymentMethod ?? order.shippingMethodName,
+    );
+    const isSellerAcceptingCod =
+      isPayOnDelivery && order.paymentStatus === 'PAY_ON_DELIVERY_SELECTED';
+    const nextPaymentStatus = isSellerAcceptingCod
+      ? 'SELLER_ACCEPTED_PAY_ON_DELIVERY'
+      : isPayOnDelivery
+        ? 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
+        : 'PAID';
+
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.order.update({
         where: { id: orderId },
         data: {
-          paymentStatus: 'PAID',
-          status: this.nextPaidOrderStatus(order),
-          paymentProofStatus: 'SELLER_CONFIRMED',
-          sellerConfirmedPaidAt: new Date(),
+          paymentStatus: nextPaymentStatus,
+          status: isSellerAcceptingCod
+            ? this.nextPaidOrderStatus(order)
+            : this.nextFinalPaidOrderStatus(order),
+          paymentProofStatus: isSellerAcceptingCod
+            ? order.paymentProofStatus
+            : 'SELLER_CONFIRMED',
+          sellerConfirmedPaidAt: isSellerAcceptingCod
+            ? (order.sellerConfirmedPaidAt ?? null)
+            : new Date(),
+          paymentFlowStage: isSellerAcceptingCod
+            ? 'READY_TO_CREATE_YANDEX'
+            : 'PAYMENT_CONFIRMED',
           paymentReviewLogs: {
             create: {
               id: randomUUID(),
-              action: 'SELLER_CONFIRMED',
+              action: isSellerAcceptingCod
+                ? 'pay_on_delivery_selected'
+                : isPayOnDelivery
+                  ? 'seller_confirmed_delivery_payment'
+                  : 'SELLER_CONFIRMED',
               fromStatus: order.paymentStatus,
-              toStatus: 'PAID',
+              toStatus: nextPaymentStatus,
               note: dto.note?.trim() || null,
               shop: {
                 connect: { id: shopId },
@@ -244,16 +289,21 @@ export class PaymentsService {
     const order = await this.findPaymentOrderOrThrow(shopId, orderId);
 
     if (PAID_PAYMENT_STATUSES.includes(order.paymentStatus as 'PAID')) {
-      throw new BadRequestException(
-        'Paid payments cannot be rejected in this MVP flow.',
-      );
+      throw new BadRequestException('Paid payments cannot be rejected.');
     }
 
     if (order.paymentStatus === 'REJECTED') {
       throw new BadRequestException('Payment is already rejected.');
     }
 
-    if (order.status === 'SHIPPING' || order.status === 'DELIVERED') {
+    const isPayOnDelivery = isPayOnDeliverySellerQrMethod(
+      order.paymentMethod ?? order.shippingMethodName,
+    );
+
+    if (
+      (order.status === 'SHIPPING' || order.status === 'DELIVERED') &&
+      !isPayOnDelivery
+    ) {
       throw new BadRequestException(
         'Cannot reject payment for shipped or delivered orders.',
       );
@@ -264,20 +314,29 @@ export class PaymentsService {
         ? 'CANCELLED'
         : order.status;
 
+    const nextPaymentStatus = isPayOnDelivery
+      ? 'DELIVERY_PAYMENT_REJECTED'
+      : 'REJECTED';
+
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.order.update({
         where: { id: orderId },
         data: {
-          paymentStatus: 'REJECTED',
+          paymentStatus: nextPaymentStatus,
           status: nextOrderStatus,
           paymentProofStatus: 'SELLER_REJECTED',
           sellerRejectedPaidAt: new Date(),
+          paymentFlowStage: isPayOnDelivery
+            ? 'DELIVERY_PAYMENT_REJECTED'
+            : order.paymentFlowStage,
           paymentReviewLogs: {
             create: {
               id: randomUUID(),
-              action: 'SELLER_REJECTED',
+              action: isPayOnDelivery
+                ? 'seller_rejected_delivery_payment'
+                : 'SELLER_REJECTED',
               fromStatus: order.paymentStatus,
-              toStatus: 'REJECTED',
+              toStatus: nextPaymentStatus,
               note: dto.note?.trim() || null,
               shop: {
                 connect: { id: shopId },
@@ -359,7 +418,11 @@ export class PaymentsService {
     return this.transitionAdminPayment(
       order,
       user,
-      'PAID',
+      isPayOnDeliverySellerQrMethod(
+        order.paymentMethod ?? order.shippingMethodName,
+      )
+        ? 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
+        : 'PAID',
       'SELLER_CONFIRMED',
       'ADMIN_CONFIRMED',
       dto.note?.trim() || null,
@@ -375,7 +438,11 @@ export class PaymentsService {
     return this.transitionAdminPayment(
       order,
       user,
-      'REJECTED',
+      isPayOnDeliverySellerQrMethod(
+        order.paymentMethod ?? order.shippingMethodName,
+      )
+        ? 'DELIVERY_PAYMENT_REJECTED'
+        : 'REJECTED',
       'SELLER_REJECTED',
       'ADMIN_REJECTED',
       dto.note?.trim() || null,
@@ -403,6 +470,7 @@ export class PaymentsService {
         { customerEmail: { contains: search, mode: 'insensitive' } },
         { customerPhone: { contains: search, mode: 'insensitive' } },
         { shippingMethodName: { contains: search, mode: 'insensitive' } },
+        { paymentMethod: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -444,16 +512,22 @@ export class PaymentsService {
   private async transitionAdminPayment(
     order: PaymentOrderRecord,
     user: AuthenticatedUser,
-    paymentStatus: 'PAID' | 'REJECTED',
+    paymentStatus: string,
     proofStatus: 'SELLER_CONFIRMED' | 'SELLER_REJECTED',
-    action: 'ADMIN_CONFIRMED' | 'ADMIN_REJECTED',
+    action: string,
     note: string | null,
   ) {
-    if (paymentStatus === 'PAID') {
+    if (
+      paymentStatus === 'PAID' ||
+      paymentStatus === 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
+    ) {
       if (PAID_PAYMENT_STATUSES.includes(order.paymentStatus as 'PAID')) {
         throw new BadRequestException('Payment is already marked as paid.');
       }
-    } else if (paymentStatus === 'REJECTED') {
+    } else if (
+      paymentStatus === 'REJECTED' ||
+      paymentStatus === 'DELIVERY_PAYMENT_REJECTED'
+    ) {
       if (order.status === 'SHIPPING' || order.status === 'DELIVERED') {
         throw new BadRequestException(
           'Cannot reject payment for shipped or delivered orders.',
@@ -462,10 +536,12 @@ export class PaymentsService {
     }
 
     const nextOrderStatus =
-      paymentStatus === 'REJECTED' &&
+      (paymentStatus === 'REJECTED' ||
+        paymentStatus === 'DELIVERY_PAYMENT_REJECTED') &&
       (order.status === 'PENDING' || order.status === 'NEW')
         ? 'CANCELLED'
-        : paymentStatus === 'PAID'
+        : paymentStatus === 'PAID' ||
+            paymentStatus === 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
           ? this.nextPaidOrderStatus(order)
           : order.status;
 
@@ -476,7 +552,8 @@ export class PaymentsService {
           paymentStatus,
           status: nextOrderStatus,
           paymentProofStatus: proofStatus,
-          ...(paymentStatus === 'PAID'
+          ...(paymentStatus === 'PAID' ||
+          paymentStatus === 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
             ? { sellerConfirmedPaidAt: new Date() }
             : { sellerRejectedPaidAt: new Date() }),
           paymentReviewLogs: {
@@ -519,7 +596,14 @@ export class PaymentsService {
       shopName: order.shop.name,
       status: order.status,
       paymentStatus: order.paymentStatus,
-      paymentMethod: order.shippingMethodName,
+      paymentMethod: order.paymentMethod ?? order.shippingMethodName,
+      paymentMethodLabel:
+        order.paymentMethodLabel ??
+        (order.paymentMethod && order.paymentMethod in PAYMENT_METHOD_LABELS
+          ? PAYMENT_METHOD_LABELS[
+              order.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS
+            ]
+          : null),
       paymentInstructions: paymentDetails.paymentInstruction,
       paymentDetails,
       totalAmount: order.totalAmount.toString(),
@@ -595,6 +679,14 @@ export class PaymentsService {
           staticQrImageUrl: true,
           paymentMode: true,
           paymentConfigStatus: true,
+          allowPrepaidQr: true,
+          allowPayOnDeliverySellerQr: true,
+          allowDepositPayment: true,
+          depositPercent: true,
+          depositRequiredAboveAmount: true,
+          codMaxOrderAmount: true,
+          yandexCardOnDeliveryStatus: true,
+          cashCourierCollectionStatus: true,
           deliverySettings: {
             select: {
               defaultCarrier: true,
@@ -642,5 +734,13 @@ export class PaymentsService {
     }
 
     return order.status === 'PENDING' ? 'NEW' : order.status;
+  }
+
+  private nextFinalPaidOrderStatus(order: PaymentOrderRecord) {
+    if (order.status === 'DELIVERED' || order.status === 'CANCELLED') {
+      return order.status;
+    }
+
+    return this.nextPaidOrderStatus(order);
   }
 }

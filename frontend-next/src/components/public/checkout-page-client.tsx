@@ -23,6 +23,7 @@ import {
   createCheckoutOrder,
   getPublicProduct,
   validatePublicCart,
+  type CheckoutPaymentMethod,
   type CheckoutOrderResponse,
   type PublicCartValidationResponse,
 } from "@/lib/public-api";
@@ -84,9 +85,8 @@ export function CheckoutPageClient({
   const authUser = useAuthStore((state) => state.customerUser);
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const refreshRole = useAuthStore((state) => state.refreshRole);
-  const [paymentMethod, setPaymentMethod] = useState<
-    "MANUAL_TRANSFER" | "CASH_ON_DELIVERY"
-  >("MANUAL_TRANSFER");
+  const [paymentMethod, setPaymentMethod] =
+    useState<CheckoutPaymentMethod>("PREPAID_SELLER_QR");
   const [customer, setCustomer] = useState(initialCustomer);
   const [loading, setLoading] = useState(Boolean(initialProductId));
   const [submitting, setSubmitting] = useState(false);
@@ -472,9 +472,19 @@ export function CheckoutPageClient({
                         - ID {splitOrder.orderId} - {splitOrder.itemsCount} item(s) -{" "}
                         {splitOrder.totalAmount}
                       </p>
+                      {splitOrder.paymentMethodLabel ? (
+                        <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                          {splitOrder.paymentMethodLabel}
+                        </p>
+                      ) : null}
                       <PaymentDetailsPanel
                         details={splitOrder.paymentDetails}
-                        title={`Pay ${splitOrder.shopName} directly`}
+                        title={
+                          splitOrder.paymentMethod ===
+                          "PAY_ON_DELIVERY_SELLER_QR"
+                            ? `Pay ${splitOrder.shopName} after delivery`
+                            : `Pay ${splitOrder.shopName} directly`
+                        }
                         className="mt-4"
                       />
                     </div>
@@ -798,16 +808,29 @@ export function CheckoutPageClient({
                   </p>
                   <div className="mt-4 grid gap-3">
                     <PaymentOption
-                      label="Manual transfer"
-                      checked={paymentMethod === "MANUAL_TRANSFER"}
-                      onChange={() => setPaymentMethod("MANUAL_TRANSFER")}
-                      testId="payment-method-manual-transfer"
+                      label="Trả trước qua QR người bán"
+                      description="Buyer chuyển trước bằng QR/SBP của người bán, rồi seller xác nhận."
+                      checked={paymentMethod === "PREPAID_SELLER_QR"}
+                      onChange={() => setPaymentMethod("PREPAID_SELLER_QR")}
+                      testId="payment-method-prepaid-seller-qr"
                     />
                     <PaymentOption
-                      label="Cash on delivery"
-                      checked={paymentMethod === "CASH_ON_DELIVERY"}
-                      onChange={() => setPaymentMethod("CASH_ON_DELIVERY")}
-                      testId="payment-method-cod"
+                      label="Thanh toán khi nhận hàng bằng QR/SBP cho người bán"
+                      description="Bạn nhận hàng từ tài xế Yandex, sau đó thanh toán trực tiếp cho người bán bằng QR/SBP. Tài xế Yandex không thu tiền hộ."
+                      checked={paymentMethod === "PAY_ON_DELIVERY_SELLER_QR"}
+                      onChange={() =>
+                        setPaymentMethod("PAY_ON_DELIVERY_SELLER_QR")
+                      }
+                      testId="payment-method-pay-on-delivery-seller-qr"
+                    />
+                    <PaymentOption
+                      label="Đặt cọc trước, trả phần còn lại khi nhận"
+                      description="Flow deposit được seller bật theo shop; phần còn lại vẫn trả trực tiếp cho người bán khi nhận."
+                      checked={paymentMethod === "DEPOSIT_THEN_DELIVERY_PAYMENT"}
+                      onChange={() =>
+                        setPaymentMethod("DEPOSIT_THEN_DELIVERY_PAYMENT")
+                      }
+                      testId="payment-method-deposit-then-delivery"
                     />
                   </div>
                   <button
@@ -840,11 +863,13 @@ export function CheckoutPageClient({
 
 function PaymentOption({
   label,
+  description,
   checked,
   onChange,
   testId,
 }: {
   label: string;
+  description: string;
   checked: boolean;
   onChange: () => void;
   testId: string;
@@ -862,6 +887,9 @@ function PaymentOption({
         data-testid={testId}
       />
       <p className="text-sm font-semibold text-[var(--foreground)]">{label}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+        {description}
+      </p>
     </label>
   );
 }

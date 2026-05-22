@@ -133,7 +133,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     email = "smoke-admin-dashboard-customer-$timestamp@example.com"
     address = 'Lenina 10, Moscow'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 6)
 
 $paid = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/payments/$($checkout.orderId)/mark-paid" -Headers $sellerHeaders -ContentType 'application/json' -Body (@{

@@ -1,6 +1,13 @@
 import { apiRequest } from "@/lib/api";
 import type { PaymentDetails } from "@/lib/seller-api";
 
+export type CheckoutPaymentMethod =
+  | "PREPAID_SELLER_QR"
+  | "PAY_ON_DELIVERY_SELLER_QR"
+  | "DEPOSIT_THEN_DELIVERY_PAYMENT"
+  | "YANDEX_CARD_ON_DELIVERY"
+  | "CASH_COURIER_COLLECTION";
+
 export type PublicProduct = {
   id: string;
   shopId: string;
@@ -101,7 +108,7 @@ export type CheckoutOrderPayload = {
     longitude?: number;
   };
   addressId?: string;
-  paymentMethod: "MANUAL_TRANSFER" | "CASH_ON_DELIVERY";
+  paymentMethod: CheckoutPaymentMethod;
 };
 
 export type CheckoutOrderResponse = {
@@ -111,6 +118,8 @@ export type CheckoutOrderResponse = {
   orderCode: string;
   status: string;
   paymentStatus: string;
+  paymentMethod: string | null;
+  paymentMethodLabel: string | null;
   totalAmount: string;
   paymentInstructions: string | null;
   paymentDetails: PaymentDetails;
@@ -123,6 +132,8 @@ export type CheckoutOrderResponse = {
     shopName: string;
     status: string;
     paymentStatus: string;
+    paymentMethod: string | null;
+    paymentMethodLabel: string | null;
     totalAmount: string;
     paymentInstructions: string | null;
     paymentDetails: PaymentDetails;
@@ -186,6 +197,7 @@ export type PublicTrackedOrder = {
   paymentStatus: string;
   totalAmount: string;
   paymentMethod: string | null;
+  paymentMethodLabel: string | null;
   paymentInstructions: string | null;
   paymentDetails: PaymentDetails;
   customer: {
@@ -365,7 +377,7 @@ export async function trackOrderById(orderId: string, phone: string) {
 export async function uploadPaymentProof(
   orderId: string,
   phone: string,
-  file: File,
+  file?: File | null,
   buyerNote?: string,
 ) {
   const formData = new FormData();
@@ -373,7 +385,9 @@ export async function uploadPaymentProof(
   if (buyerNote?.trim()) {
     formData.append("buyerNote", buyerNote.trim());
   }
-  formData.append("file", file);
+  if (file) {
+    formData.append("file", file);
+  }
 
   return apiRequest<PublicTrackedOrder>(
     `/api/public/orders/${orderId}/payment-proof`,

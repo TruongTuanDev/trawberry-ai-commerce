@@ -139,7 +139,7 @@ async function createPaidOrder(request: APIRequestContext, sellerToken: string, 
         longitude: 37.618423,
         note: `Manual Yandex workbench ${stamp}`,
       },
-      paymentMethod: "MANUAL_TRANSFER",
+      paymentMethod: "PREPAID_SELLER_QR",
     },
   });
   await backendJson<{ paymentStatus: string; status: string }>(request, `/api/shops/${shop.id}/payments/${checkout.orderId}/mark-paid`, {

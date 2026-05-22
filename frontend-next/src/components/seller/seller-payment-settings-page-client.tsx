@@ -29,6 +29,15 @@ export function SellerPaymentSettingsPageClient() {
     status: "PENDING_REVIEW" as "READY" | "DISABLED" | "PENDING_REVIEW",
     staticQrImageUrl: "",
     isReady: false,
+    allowPrepaidQr: true,
+    allowPayOnDeliverySellerQr: false,
+    allowDepositPayment: false,
+    depositPercent: "",
+    depositRequiredAboveAmount: "",
+    codMaxOrderAmount: "",
+    yandexCardOnDeliveryStatus: "NOT_CONFIGURED",
+    cashCourierCollectionStatus: "NOT_AVAILABLE",
+    availableMethods: [] as string[],
   });
 
   useEffect(() => {
@@ -53,6 +62,18 @@ export function SellerPaymentSettingsPageClient() {
           status: settings.status as "READY" | "DISABLED" | "PENDING_REVIEW",
           staticQrImageUrl: settings.staticQrImageUrl ?? "",
           isReady: settings.isReady,
+          allowPrepaidQr: settings.allowPrepaidQr,
+          allowPayOnDeliverySellerQr: settings.allowPayOnDeliverySellerQr,
+          allowDepositPayment: settings.allowDepositPayment,
+          depositPercent: settings.depositPercent?.toString() ?? "",
+          depositRequiredAboveAmount:
+            settings.depositRequiredAboveAmount ?? "",
+          codMaxOrderAmount: settings.codMaxOrderAmount ?? "",
+          yandexCardOnDeliveryStatus:
+            settings.yandexCardOnDeliveryStatus ?? "NOT_CONFIGURED",
+          cashCourierCollectionStatus:
+            settings.cashCourierCollectionStatus ?? "NOT_AVAILABLE",
+          availableMethods: settings.availableMethods ?? [],
         });
       } catch (err) {
         if (mounted) {
@@ -86,6 +107,25 @@ export function SellerPaymentSettingsPageClient() {
           recipientAccount: form.recipientAccount,
           sbpPhone: form.sbpPhone,
           paymentInstruction: form.paymentInstruction,
+          allowPrepaidQr: form.allowPrepaidQr,
+          allowPayOnDeliverySellerQr: form.allowPayOnDeliverySellerQr,
+          allowDepositPayment: form.allowDepositPayment,
+          depositPercent: form.depositPercent.trim()
+            ? Number(form.depositPercent)
+            : null,
+          depositRequiredAboveAmount: form.depositRequiredAboveAmount.trim()
+            ? Number(form.depositRequiredAboveAmount)
+            : null,
+          codMaxOrderAmount: form.codMaxOrderAmount.trim()
+            ? Number(form.codMaxOrderAmount)
+            : null,
+          yandexCardOnDeliveryStatus:
+            form.yandexCardOnDeliveryStatus as
+              | "NOT_CONFIGURED"
+              | "PROVIDER_PENDING"
+              | "AVAILABLE"
+              | "DISABLED",
+          cashCourierCollectionStatus: "NOT_AVAILABLE",
         },
         "",
       );
@@ -94,6 +134,15 @@ export function SellerPaymentSettingsPageClient() {
         status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
         staticQrImageUrl: saved.staticQrImageUrl ?? "",
         isReady: saved.isReady,
+        allowPrepaidQr: saved.allowPrepaidQr,
+        allowPayOnDeliverySellerQr: saved.allowPayOnDeliverySellerQr,
+        allowDepositPayment: saved.allowDepositPayment,
+        depositPercent: saved.depositPercent?.toString() ?? "",
+        depositRequiredAboveAmount: saved.depositRequiredAboveAmount ?? "",
+        codMaxOrderAmount: saved.codMaxOrderAmount ?? "",
+        yandexCardOnDeliveryStatus: saved.yandexCardOnDeliveryStatus,
+        cashCourierCollectionStatus: saved.cashCourierCollectionStatus,
+        availableMethods: saved.availableMethods ?? [],
       }));
       setMessage("Payment settings saved.");
     } catch (err) {
@@ -160,6 +209,67 @@ export function SellerPaymentSettingsPageClient() {
             </Field>
           </div>
 
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              Payment method strategy
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <ToggleField
+                label="Allow prepaid QR"
+                checked={form.allowPrepaidQr}
+                onChange={(checked) =>
+                  setForm((current) => ({
+                    ...current,
+                    allowPrepaidQr: checked,
+                  }))
+                }
+              />
+              <ToggleField
+                label="Allow pay on delivery via seller QR"
+                checked={form.allowPayOnDeliverySellerQr}
+                onChange={(checked) =>
+                  setForm((current) => ({
+                    ...current,
+                    allowPayOnDeliverySellerQr: checked,
+                  }))
+                }
+              />
+              <ToggleField
+                label="Allow deposit payment"
+                checked={form.allowDepositPayment}
+                onChange={(checked) =>
+                  setForm((current) => ({
+                    ...current,
+                    allowDepositPayment: checked,
+                  }))
+                }
+              />
+              <Field label="Deposit percent">
+                <input value={form.depositPercent} onChange={(event) => setForm((current) => ({ ...current, depositPercent: event.target.value }))} className="public-input" />
+              </Field>
+              <Field label="Deposit required above amount">
+                <input value={form.depositRequiredAboveAmount} onChange={(event) => setForm((current) => ({ ...current, depositRequiredAboveAmount: event.target.value }))} className="public-input" />
+              </Field>
+              <Field label="COD max amount">
+                <input value={form.codMaxOrderAmount} onChange={(event) => setForm((current) => ({ ...current, codMaxOrderAmount: event.target.value }))} className="public-input" />
+              </Field>
+              <Field label="Yandex card on delivery">
+                <select value={form.yandexCardOnDeliveryStatus} onChange={(event) => setForm((current) => ({ ...current, yandexCardOnDeliveryStatus: event.target.value }))} className="public-input">
+                  <option value="NOT_CONFIGURED">Future / not configured</option>
+                  <option value="PROVIDER_PENDING">Provider pending</option>
+                  <option value="DISABLED">Disabled</option>
+                  <option value="AVAILABLE">Available after provider verification</option>
+                </select>
+              </Field>
+              <Field label="Cash courier collection">
+                <input value="Not available" disabled className="public-input bg-[var(--panel)] text-[var(--muted)]" />
+              </Field>
+            </div>
+            <div className="mt-4 rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]">
+              Available buyer methods now: {form.availableMethods.join(", ") || "None"}
+            </div>
+          </div>
+
           <Field label="Buyer payment instruction">
             <textarea value={form.paymentInstruction} onChange={(event) => setForm((current) => ({ ...current, paymentInstruction: event.target.value }))} rows={4} className="public-input min-h-32" data-testid="payment-settings-instruction" />
           </Field>
@@ -204,6 +314,28 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </span>
       {children}
+    </label>
+  );
+}
+
+function ToggleField({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]">
+      <span>{label}</span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4"
+      />
     </label>
   );
 }

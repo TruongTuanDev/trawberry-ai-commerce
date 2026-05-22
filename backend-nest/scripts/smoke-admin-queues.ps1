@@ -139,7 +139,7 @@ function New-Checkout($suffix) {
       email = "smoke-admin-queues-customer-$timestamp-$suffix@example.com"
       address = 'Lenina 10, Moscow'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   }
 }
 

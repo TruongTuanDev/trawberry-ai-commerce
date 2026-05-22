@@ -28,6 +28,8 @@ export type SellerPaymentProofStatus =
 
 export type PaymentDetails = {
   mode: string | null;
+  selectedPaymentMethod?: string | null;
+  selectedPaymentMethodLabel?: string | null;
   bankName: string | null;
   recipientName: string | null;
   recipientPhone: string | null;
@@ -35,6 +37,17 @@ export type PaymentDetails = {
   sbpPhone: string | null;
   staticQrImageUrl: string | null;
   paymentInstruction: string | null;
+  capabilities?: {
+    sellerQrPaymentEnabled: boolean;
+    payOnDeliverySellerQrEnabled: boolean;
+    depositPaymentEnabled: boolean;
+    yandexCardOnDeliveryStatus: string;
+    cashCourierCollectionStatus: string;
+    availableMethods: string[];
+    depositPercent: number | null;
+    depositRequiredAboveAmount: string | null;
+    codMaxOrderAmount: string | null;
+  };
 };
 export type StockStatus =
   | "IN_STOCK"
@@ -292,6 +305,7 @@ export type SellerPaymentItem = {
   status: SellerOrderStatus;
   paymentStatus: string;
   paymentMethod: string | null;
+  paymentMethodLabel?: string | null;
   paymentInstructions: string | null;
   paymentDetails: PaymentDetails;
   totalAmount: string;
@@ -342,6 +356,15 @@ export type ShopPaymentSettings = {
   paymentInstruction: string | null;
   isReady: boolean;
   usesLegacyInstructions: boolean;
+  allowPrepaidQr: boolean;
+  allowPayOnDeliverySellerQr: boolean;
+  allowDepositPayment: boolean;
+  depositPercent: number | null;
+  depositRequiredAboveAmount: string | null;
+  codMaxOrderAmount: string | null;
+  yandexCardOnDeliveryStatus: string;
+  cashCourierCollectionStatus: string;
+  availableMethods: string[];
 };
 
 export type SellerPaymentsResponse = {
@@ -1658,6 +1681,18 @@ export async function updateShopPaymentSettings(
     recipientAccount?: string;
     sbpPhone?: string;
     paymentInstruction?: string;
+    allowPrepaidQr?: boolean;
+    allowPayOnDeliverySellerQr?: boolean;
+    allowDepositPayment?: boolean;
+    depositPercent?: number | null;
+    depositRequiredAboveAmount?: number | null;
+    codMaxOrderAmount?: number | null;
+    yandexCardOnDeliveryStatus?:
+      | "NOT_CONFIGURED"
+      | "PROVIDER_PENDING"
+      | "AVAILABLE"
+      | "DISABLED";
+    cashCourierCollectionStatus?: "NOT_AVAILABLE" | "DISABLED";
   },
   token?: string,
 ) {

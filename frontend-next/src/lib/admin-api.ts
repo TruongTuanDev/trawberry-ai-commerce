@@ -432,6 +432,7 @@ export type AdminPaymentAgingReportRow = {
 
 export type AdminPaymentSupervisionRow = SellerPaymentItem & {
   paymentDetails: PaymentDetails;
+  paymentMethodLabel?: string | null;
 };
 
 export async function getAdminDashboardSummary(query?: {

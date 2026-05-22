@@ -95,7 +95,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     longitude = 37.618423
     note = 'Manual Yandex smoke'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 6)
 
 $paid = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/payments/$($checkout.orderId)/mark-paid" -Headers $headers -ContentType 'application/json' -Body (@{

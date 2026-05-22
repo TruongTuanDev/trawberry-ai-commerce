@@ -1,5 +1,22 @@
 # Project Status
 
+## Payment Method Strategy For Yandex Delivery - 2026-05-22
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Buyer-facing payment method choice is now explicit:
+  - `PREPAID_SELLER_QR`
+  - `PAY_ON_DELIVERY_SELLER_QR`
+  - `DEPOSIT_THEN_DELIVERY_PAYMENT`
+- `YANDEX_CARD_ON_DELIVERY` is modeled as future capability only and stays unavailable unless a shop is explicitly marked `AVAILABLE`.
+- `CASH_COURIER_COLLECTION` remains unavailable and is not exposed as a buyer option.
+- The currently safe Yandex-related COD flow is:
+  - buyer selects pay on delivery via seller QR
+  - seller accepts the order
+  - seller creates manual Yandex delivery
+  - buyer pays seller directly after delivery
+  - seller confirms or rejects final payment
+- This phase does not claim Yandex courier money collection support.
+
 ## Seller Manual Yandex Delivery Workbench - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

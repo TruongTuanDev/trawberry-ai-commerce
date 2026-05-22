@@ -1,5 +1,21 @@
 # Delivery API
 
+## 2026-05-22 Payment On Delivery Strategy Addendum
+
+Manual Yandex delivery remains delivery-only in the current stack.
+
+What is supported now:
+
+- seller confirms prepaid QR orders and creates manual Yandex delivery
+- seller accepts `PAY_ON_DELIVERY_SELLER_QR` orders and creates manual Yandex delivery before any money is collected
+- after `DELIVERED`, buyer can mark delivery payment completed and seller can confirm/reject final payment
+
+What is not supported now:
+
+- Yandex courier cash collection
+- Yandex card/cash payment collection on behalf of the seller
+- real Yandex payment API calls
+
 ## Scope
 
 `backend-nest/src/modules/delivery` provides the multi-carrier foundation for seller delivery operations.

@@ -1,5 +1,18 @@
 # frontend-next
 
+## Payment Method Strategy For Yandex Delivery
+
+- Checkout now distinguishes:
+  - prepaid seller QR
+  - pay on delivery via seller QR
+  - deposit then delivery
+- Buyer UI does not expose Yandex money collection or courier cash collection unless future provider verification enables it.
+- Browser verification entry:
+
+```bash
+npm run test:e2e:payment-method-choice
+```
+
 ## Multi-Role Sessions
 
 - Frontend auth state is split into `adminUser`, `sellerUser`, and `customerUser`.

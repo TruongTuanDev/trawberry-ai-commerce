@@ -13,7 +13,7 @@ import {
 export function AdminPaymentsSupervisionPageClient() {
   const [items, setItems] = useState<AdminPaymentSupervisionRow[]>([]);
   const [selected, setSelected] = useState<AdminPaymentSupervisionRow | null>(null);
-  const [status, setStatus] = useState("PENDING");
+  const [status, setStatus] = useState("BUYER_MARKED_DELIVERY_PAID");
   const [proofStatus, setProofStatus] = useState("BUYER_MARKED_PAID");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,13 +114,17 @@ export function AdminPaymentsSupervisionPageClient() {
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Marketplace operations</p>
         <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">Payments supervision</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-          Review buyer-marked direct-to-seller transfers across all shops and override seller decisions when needed.
+          Review buyer-marked direct-to-seller transfers across all shops, including pay-on-delivery seller QR flows after delivery.
         </p>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           <label className="text-sm font-semibold text-[var(--foreground)]">
             Payment status
             <select value={status} onChange={(event) => setStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
-              <option value="PENDING">Pending</option>
+              <option value="PENDING">Pending prepaid review</option>
+              <option value="PAY_ON_DELIVERY_SELECTED">Pay on delivery selected</option>
+              <option value="DELIVERED_AWAITING_PAYMENT">Delivered awaiting payment</option>
+              <option value="BUYER_MARKED_DELIVERY_PAID">Buyer marked delivery paid</option>
+              <option value="DELIVERY_PAYMENT_REJECTED">Delivery payment rejected</option>
               <option value="PAID">Paid</option>
               <option value="REJECTED">Rejected</option>
             </select>
@@ -129,9 +133,9 @@ export function AdminPaymentsSupervisionPageClient() {
             Proof status
             <select value={proofStatus} onChange={(event) => setProofStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
               <option value="BUYER_MARKED_PAID">Buyer marked paid</option>
+              <option value="NOT_SUBMITTED">No proof yet</option>
               <option value="SELLER_CONFIRMED">Seller confirmed</option>
               <option value="SELLER_REJECTED">Seller rejected</option>
-              <option value="NOT_SUBMITTED">No proof</option>
             </select>
           </label>
         </div>

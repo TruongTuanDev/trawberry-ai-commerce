@@ -31,7 +31,7 @@ function Invoke-Checkout($shopId, $productId, $quantity, $phone) {
       address = 'Bulk Product Edit Street 1'
       note = "Bulk product edit smoke $timestamp"
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 }
 

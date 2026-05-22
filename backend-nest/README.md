@@ -1,5 +1,19 @@
 # backend-nest
 
+## Payment Method Strategy For Yandex Delivery
+
+- Checkout payment method choices are now:
+  - `PREPAID_SELLER_QR`
+  - `PAY_ON_DELIVERY_SELLER_QR`
+  - `DEPOSIT_THEN_DELIVERY_PAYMENT`
+- `YANDEX_CARD_ON_DELIVERY` remains future-only.
+- `CASH_COURIER_COLLECTION` remains unavailable.
+- Verification entry:
+
+```bash
+npm run smoke:payment-method-choice
+```
+
 ## Multi-Role Sessions
 
 - Role-specific auth cookies:

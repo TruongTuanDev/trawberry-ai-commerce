@@ -98,6 +98,9 @@ export class PaymentResponseDto {
   paymentMethod!: string | null;
 
   @ApiProperty({ nullable: true })
+  paymentMethodLabel!: string | null;
+
+  @ApiProperty({ nullable: true })
   paymentInstructions!: string | null;
 
   @ApiProperty({ type: PaymentDetailsDto })

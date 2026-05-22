@@ -40,6 +40,14 @@ export type CartValidationProductRecord = {
     staticQrImageUrl: string | null;
     paymentMode: string | null;
     paymentConfigStatus: string;
+    allowPrepaidQr: boolean | null;
+    allowPayOnDeliverySellerQr: boolean | null;
+    allowDepositPayment: boolean | null;
+    depositPercent: number | null;
+    depositRequiredAboveAmount: Prisma.Decimal | null;
+    codMaxOrderAmount: Prisma.Decimal | null;
+    yandexCardOnDeliveryStatus: string | null;
+    cashCourierCollectionStatus: string | null;
     status: string;
     sellerProfile: {
       approvalStatus: string;
@@ -129,6 +137,14 @@ export class CartValidationService {
             staticQrImageUrl: true,
             paymentMode: true,
             paymentConfigStatus: true,
+            allowPrepaidQr: true,
+            allowPayOnDeliverySellerQr: true,
+            allowDepositPayment: true,
+            depositPercent: true,
+            depositRequiredAboveAmount: true,
+            codMaxOrderAmount: true,
+            yandexCardOnDeliveryStatus: true,
+            cashCourierCollectionStatus: true,
             status: true,
             sellerProfile: {
               select: {

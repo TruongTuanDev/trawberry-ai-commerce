@@ -36,4 +36,31 @@ export class ShopPaymentSettingsResponseDto {
 
   @ApiProperty()
   usesLegacyInstructions!: boolean;
+
+  @ApiProperty()
+  allowPrepaidQr!: boolean;
+
+  @ApiProperty()
+  allowPayOnDeliverySellerQr!: boolean;
+
+  @ApiProperty()
+  allowDepositPayment!: boolean;
+
+  @ApiProperty({ nullable: true })
+  depositPercent!: number | null;
+
+  @ApiProperty({ nullable: true })
+  depositRequiredAboveAmount!: string | null;
+
+  @ApiProperty({ nullable: true })
+  codMaxOrderAmount!: string | null;
+
+  @ApiProperty()
+  yandexCardOnDeliveryStatus!: string;
+
+  @ApiProperty()
+  cashCourierCollectionStatus!: string;
+
+  @ApiProperty({ type: [String] })
+  availableMethods!: string[];
 }

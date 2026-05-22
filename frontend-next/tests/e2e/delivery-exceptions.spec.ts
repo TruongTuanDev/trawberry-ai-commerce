@@ -104,7 +104,7 @@ async function createPaidOrder(request: APIRequestContext, sellerToken: string, 
         address: "Lenina 10, Moscow",
         note: `Delivery exception E2E ${stamp}`,
       },
-      paymentMethod: "MANUAL_TRANSFER",
+      paymentMethod: "PREPAID_SELLER_QR",
     },
   });
   await backendJson(request, `/api/shops/${shop.id}/payments/${checkout.orderId}/mark-paid`, {

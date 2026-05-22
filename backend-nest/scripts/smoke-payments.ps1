@@ -121,7 +121,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     address = '123 Payment Street'
     note = 'Waiting for confirmation'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 6)
 
 $payments = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/payments?page=1&size=10" -Headers $headers

@@ -77,7 +77,7 @@ test("admin supervises paid orders without delivery and overrides status", async
       shopId: shop.id,
       items: [{ productId: product.id, quantity: 1 }],
       customer: { fullName: "Admin Delivery Customer", phone, email: `admin-delivery-customer-${stamp}@example.com`, address: "Lenina 10, Moscow" },
-      paymentMethod: "MANUAL_TRANSFER",
+      paymentMethod: "PREPAID_SELLER_QR",
     },
   });
   await backendJson(`/api/shops/${shop.id}/payments/${checkout.orderId}/mark-paid`, { method: "POST", token: sellerLogin.accessToken, data: { note: "Paid." } });

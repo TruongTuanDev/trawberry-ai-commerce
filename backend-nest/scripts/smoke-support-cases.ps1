@@ -151,7 +151,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     email = $customerEmail
     address = '123 Support Street'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 6)
 
 if (-not $checkout.checkoutCode) { throw 'Expected checkoutCode from checkout.' }

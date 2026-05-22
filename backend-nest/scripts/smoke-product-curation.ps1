@@ -29,7 +29,7 @@ function Invoke-Checkout($shopId, $productId, $quantity, $phone) {
       address = 'Product Curation Street 1'
       note = "Product curation smoke $timestamp"
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 }
 

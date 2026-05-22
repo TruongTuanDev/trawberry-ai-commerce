@@ -172,7 +172,7 @@ try {
       phone = '0123456789'
       address = '123 Validation Street'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 } catch {
   $checkoutFailed = $true

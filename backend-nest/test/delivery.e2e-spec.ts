@@ -192,7 +192,12 @@ describe('DeliveryController (e2e)', () => {
   const prismaMock = {
     user: { findUnique: jest.fn() },
     shop: { findUnique: jest.fn() },
-    order: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+    order: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+    },
     shopDeliverySetting: { findUnique: jest.fn(), upsert: jest.fn() },
     deliveryOffer: { deleteMany: jest.fn(), create: jest.fn() },
     deliveryShipment: {
@@ -448,12 +453,34 @@ describe('DeliveryController (e2e)', () => {
       });
     });
 
+    prismaMock.order.findUnique.mockImplementation(({ where, select }) => {
+      const order = orders.find((entry) => entry.id === where.id) ?? null;
+      if (!order) {
+        return Promise.resolve(null);
+      }
+      if (select) {
+        return Promise.resolve({
+          paymentMethod: null,
+          shippingMethodName:
+            (order as { shippingMethodName?: string | null })
+              .shippingMethodName ?? null,
+        });
+      }
+      return Promise.resolve(adminOrderFor(order.id));
+    });
+
     prismaMock.order.findMany.mockImplementation(({ where }) => {
       let rows = orders;
       if (where?.paymentStatus) {
-        rows = rows.filter(
-          (entry) => entry.paymentStatus === where.paymentStatus,
-        );
+        if (typeof where.paymentStatus === 'string') {
+          rows = rows.filter(
+            (entry) => entry.paymentStatus === where.paymentStatus,
+          );
+        } else if ('in' in where.paymentStatus) {
+          rows = rows.filter((entry) =>
+            (where.paymentStatus.in as string[]).includes(entry.paymentStatus),
+          );
+        }
       }
       if (where?.shopId) {
         rows = rows.filter((entry) => entry.shopId === where.shopId);
@@ -464,9 +491,7 @@ describe('DeliveryController (e2e)', () => {
         } else if ('notIn' in where.status) {
           rows = rows.filter(
             (entry) =>
-              !(where.status.notIn as string[]).includes(
-                entry.status ?? 'NEW',
-              ),
+              !(where.status.notIn as string[]).includes(entry.status ?? 'NEW'),
           );
         }
       }

@@ -213,7 +213,7 @@ describe('OrderTrackingController (e2e)', () => {
         paymentStatus: 'PENDING',
         totalAmount: decimal('120.00'),
         shippingAddress: '123 Main St',
-        shippingMethodName: 'MANUAL_TRANSFER',
+        shippingMethodName: 'PREPAID_SELLER_QR',
         customerName: 'Alice Customer',
         customerPhone: '123456',
         customerEmail: 'alice@example.com',

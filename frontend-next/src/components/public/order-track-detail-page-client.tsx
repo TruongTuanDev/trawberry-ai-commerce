@@ -25,6 +25,8 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const isPayOnDeliverySellerQr =
+    order?.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
 
   useEffect(() => {
     let mounted = true;
@@ -84,7 +86,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   };
 
   const handleUpload = async () => {
-    if (!phone.trim() || !file) {
+    if (!phone.trim() || (!file && !isPayOnDeliverySellerQr)) {
       setError("Phone and payment proof file are required.");
       return;
     }
@@ -103,7 +105,11 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
       setOrder(updated);
       setFile(null);
       setBuyerNote("");
-      setSuccessMessage("Marked as paid. Seller can review the proof now.");
+      setSuccessMessage(
+        isPayOnDeliverySellerQr
+          ? "Marked as paid after delivery. Seller can review it now."
+          : "Marked as paid. Seller can review the proof now.",
+      );
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to upload payment proof.",
@@ -203,15 +209,28 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       />
                     </Metric>
                     <Metric label="Payment method">
-                      {order.paymentMethod ?? "Unknown"}
+                      {order.paymentMethodLabel ??
+                        order.paymentMethod ??
+                        "Unknown"}
                     </Metric>
                     <Metric label="Total">{order.totalAmount}</Metric>
                   </div>
                   <PaymentDetailsPanel
                     details={order.paymentDetails}
-                    title="Direct seller payment"
+                    title={
+                      isPayOnDeliverySellerQr
+                        ? "Seller QR / SBP payment after delivery"
+                        : "Direct seller payment"
+                    }
                     className="mt-6"
                   />
+                  {isPayOnDeliverySellerQr ? (
+                    <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 text-sm leading-6 text-[var(--foreground)]">
+                      {order.delivery?.status === "DELIVERED"
+                        ? "Vui lòng thanh toán cho người bán bằng QR/SBP nếu chưa thanh toán."
+                        : "Bạn sẽ thanh toán cho người bán khi nhận hàng."}
+                    </div>
+                  ) : null}
                   <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-2">
                     <TextMetric label="Customer" value={order.customer.name} />
                     <TextMetric label="Phone" value={order.customer.phone} />
@@ -308,7 +327,9 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                     </div>
                   ) : (
                     <p className="mt-4 text-sm text-[var(--muted)]">
-                      No payment proof uploaded yet.
+                      {isPayOnDeliverySellerQr
+                        ? "No delivery payment mark submitted yet."
+                        : "No payment proof uploaded yet."}
                     </p>
                   )}
 
@@ -332,15 +353,25 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         className="public-input"
                         data-testid="payment-proof-input"
                       />
+                      {isPayOnDeliverySellerQr ? (
+                        <p className="text-xs leading-6 text-[var(--muted)]">
+                          Bill upload is optional for payment-on-delivery via
+                          seller QR.
+                        </p>
+                      ) : null}
                     </Field>
                     <button
                       type="button"
                       onClick={() => void handleUpload()}
-                      disabled={uploading || !file}
+                      disabled={uploading || (!file && !isPayOnDeliverySellerQr)}
                       className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                       data-testid="payment-proof-submit"
                     >
-                      {uploading ? "Submitting..." : "I transferred the money"}
+                      {uploading
+                        ? "Submitting..."
+                        : isPayOnDeliverySellerQr
+                          ? "Tôi đã thanh toán khi nhận"
+                          : "I transferred the money"}
                     </button>
                   </div>
                   {order.buyerPaymentNote ? (

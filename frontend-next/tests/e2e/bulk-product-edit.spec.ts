@@ -180,7 +180,7 @@ test("seller bulk edits imported products before publishing them", async ({
         address: "Bulk Product Edit Street 1",
         note: "Bulk edit e2e checkout",
       },
-      paymentMethod: "MANUAL_TRANSFER",
+      paymentMethod: "PREPAID_SELLER_QR",
     },
   });
   expect(checkout.orderId).toBeTruthy();

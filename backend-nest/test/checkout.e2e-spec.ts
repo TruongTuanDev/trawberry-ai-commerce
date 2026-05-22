@@ -946,7 +946,7 @@ describe('CheckoutController (e2e)', () => {
           address: '123 Main St',
           note: 'Ring the bell',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
 
@@ -1010,7 +1010,7 @@ describe('CheckoutController (e2e)', () => {
           email: 'multi@example.com',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
 
@@ -1055,7 +1055,7 @@ describe('CheckoutController (e2e)', () => {
           email: 'multi-shop@example.com',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
 
@@ -1126,7 +1126,7 @@ describe('CheckoutController (e2e)', () => {
           email: 'customer@example.com',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
 
@@ -1187,7 +1187,7 @@ describe('CheckoutController (e2e)', () => {
           address: '',
         },
         addressId: 'address-1',
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
 
@@ -1215,7 +1215,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 
@@ -1237,7 +1237,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
   });
@@ -1256,7 +1256,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(404);
 
@@ -1275,7 +1275,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
   });
@@ -1291,7 +1291,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '',
           address: '',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
   });
@@ -1310,7 +1310,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
   });
@@ -1328,7 +1328,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
   });
@@ -1349,7 +1349,7 @@ describe('CheckoutController (e2e)', () => {
           phone: '0123456789',
           address: '123 Main St',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 

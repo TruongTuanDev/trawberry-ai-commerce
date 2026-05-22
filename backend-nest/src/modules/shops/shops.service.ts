@@ -183,6 +183,18 @@ export class ShopsService {
       recipientAccount?: string;
       sbpPhone?: string;
       paymentInstruction?: string;
+      allowPrepaidQr?: boolean;
+      allowPayOnDeliverySellerQr?: boolean;
+      allowDepositPayment?: boolean;
+      depositPercent?: number | null;
+      depositRequiredAboveAmount?: number | null;
+      codMaxOrderAmount?: number | null;
+      yandexCardOnDeliveryStatus?:
+        | 'NOT_CONFIGURED'
+        | 'PROVIDER_PENDING'
+        | 'AVAILABLE'
+        | 'DISABLED';
+      cashCourierCollectionStatus?: 'NOT_AVAILABLE' | 'DISABLED';
     },
   ) {
     const current = await this.findShopOrThrow(shopId);
@@ -216,6 +228,23 @@ export class ShopsService {
           ? normalizePhone(dto.sbpPhone, 'SBP phone')
           : null,
         paymentInstructions: dto.paymentInstruction?.trim() || null,
+        allowPrepaidQr: dto.allowPrepaidQr ?? current.allowPrepaidQr,
+        allowPayOnDeliverySellerQr:
+          dto.allowPayOnDeliverySellerQr ?? current.allowPayOnDeliverySellerQr,
+        allowDepositPayment:
+          dto.allowDepositPayment ?? current.allowDepositPayment,
+        depositPercent: dto.depositPercent ?? current.depositPercent,
+        depositRequiredAboveAmount:
+          dto.depositRequiredAboveAmount !== undefined
+            ? dto.depositRequiredAboveAmount
+            : current.depositRequiredAboveAmount,
+        codMaxOrderAmount:
+          dto.codMaxOrderAmount !== undefined
+            ? dto.codMaxOrderAmount
+            : current.codMaxOrderAmount,
+        yandexCardOnDeliveryStatus:
+          dto.yandexCardOnDeliveryStatus ?? current.yandexCardOnDeliveryStatus,
+        cashCourierCollectionStatus: 'NOT_AVAILABLE',
       },
     });
 
@@ -352,6 +381,14 @@ export class ShopsService {
     paymentInstructions: string | null;
     paymentMode: string | null;
     paymentConfigStatus: string;
+    allowPrepaidQr: boolean | null;
+    allowPayOnDeliverySellerQr: boolean | null;
+    allowDepositPayment: boolean | null;
+    depositPercent: number | null;
+    depositRequiredAboveAmount: { toString(): string } | null;
+    codMaxOrderAmount: { toString(): string } | null;
+    yandexCardOnDeliveryStatus: string;
+    cashCourierCollectionStatus: string;
   }) {
     const panel = resolveShopPaymentPanel(shop);
     return {
@@ -367,6 +404,17 @@ export class ShopsService {
       paymentInstruction: panel.paymentInstruction,
       isReady: panel.isReady,
       usesLegacyInstructions: panel.usesLegacyInstructions,
+      allowPrepaidQr: panel.capabilities.sellerQrPaymentEnabled,
+      allowPayOnDeliverySellerQr:
+        panel.capabilities.payOnDeliverySellerQrEnabled,
+      allowDepositPayment: panel.capabilities.depositPaymentEnabled,
+      depositPercent: panel.capabilities.depositPercent,
+      depositRequiredAboveAmount: panel.capabilities.depositRequiredAboveAmount,
+      codMaxOrderAmount: panel.capabilities.codMaxOrderAmount,
+      yandexCardOnDeliveryStatus: panel.capabilities.yandexCardOnDeliveryStatus,
+      cashCourierCollectionStatus:
+        panel.capabilities.cashCourierCollectionStatus,
+      availableMethods: panel.capabilities.availableMethods,
     };
   }
 

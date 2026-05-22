@@ -113,7 +113,7 @@ const prisma = new PrismaClient();
       address = '456 Tracking Street'
       note = 'Tracking flow'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 
   $tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/track?orderCode=$($checkout.orderCode)&phone=$customerPhone"

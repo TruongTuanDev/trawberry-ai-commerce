@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { isPayOnDeliverySellerQrMethod } from '../../common/constants/payment-methods.constant';
 import {
   DELIVERY_CARRIERS,
   DELIVERY_EXCEPTION_STATUSES,
@@ -42,6 +43,7 @@ type OrderRecord = {
   orderNumber: string;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string | null;
   shippingAddress: string;
   shippingLatitude?: Prisma.Decimal | null;
   shippingLongitude?: Prisma.Decimal | null;
@@ -158,7 +160,7 @@ type OrderRecord = {
   }>;
 };
 
-const PAID_STATUSES = new Set(['PAID']);
+const PAID_STATUSES = new Set(['PAID', 'SELLER_ACCEPTED_PAY_ON_DELIVERY']);
 
 @Injectable()
 export class DeliveryService {
@@ -589,6 +591,7 @@ export class DeliveryService {
         recipientPhone: this.clean(dto.recipientPhone) ?? order.customerPhone,
         manualYandexOrderId: this.clean(dto.manualYandexOrderId),
         yandexClaimId: this.clean(dto.yandexClaimId),
+        deliveryPaymentMethod: order.paymentMethod ?? null,
         yandexStatus:
           this.clean(dto.yandexStatus) ??
           (dto.provider === 'YANDEX' ? 'MANUAL_CREATED' : null),
@@ -1276,6 +1279,16 @@ export class DeliveryService {
       user,
     );
     const now = new Date();
+    const order = await this.prisma.order.findUnique({
+      where: { id: shipment.orderId },
+      select: {
+        paymentMethod: true,
+        shippingMethodName: true,
+      },
+    });
+    const payOnDelivery = isPayOnDeliverySellerQrMethod(
+      order?.paymentMethod ?? order?.shippingMethodName,
+    );
     const updated = await this.prisma.deliveryShipment.update({
       where: { id: shipment.id },
       data: {
@@ -1319,6 +1332,14 @@ export class DeliveryService {
                   nextStatus === 'COURIER_ASSIGNED'
                 ? 'YANDEX_MANUAL_CREATED'
                 : undefined,
+        paymentStatus:
+          nextStatus === 'DELIVERED' && payOnDelivery
+            ? 'DELIVERED_AWAITING_PAYMENT'
+            : undefined,
+        paymentFlowStage:
+          nextStatus === 'DELIVERED' && payOnDelivery
+            ? 'DELIVERED_AWAITING_PAYMENT'
+            : undefined,
       },
     });
 
@@ -1576,7 +1597,9 @@ export class DeliveryService {
     query: ListAdminDeliveriesQueryDto,
   ): Prisma.OrderWhereInput {
     const where: Prisma.OrderWhereInput = {
-      paymentStatus: 'PAID',
+      paymentStatus: {
+        in: ['PAID', 'SELLER_ACCEPTED_PAY_ON_DELIVERY'],
+      },
       status: { notIn: ['DELIVERED', 'CANCELLED'] },
       deliveryShipments: {
         none: {

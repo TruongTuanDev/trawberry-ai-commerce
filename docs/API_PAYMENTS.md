@@ -1,5 +1,38 @@
 # Payments API
 
+## 2026-05-22 Payment Method Strategy For Yandex Delivery
+
+Current buyer-facing payment methods are now:
+
+- `PREPAID_SELLER_QR`
+- `PAY_ON_DELIVERY_SELLER_QR`
+- `DEPOSIT_THEN_DELIVERY_PAYMENT`
+
+Future-only / disabled methods:
+
+- `YANDEX_CARD_ON_DELIVERY`
+  - must stay unavailable unless shop capability status is `AVAILABLE`
+- `CASH_COURIER_COLLECTION`
+  - must stay unavailable
+
+Important rule:
+
+- manual Yandex delivery does not collect money in the current stack
+- `PAY_ON_DELIVERY_SELLER_QR` means buyer pays seller directly by QR/SBP after receiving the parcel
+
+New shop payment capability fields include:
+
+- `allowPrepaidQr`
+- `allowPayOnDeliverySellerQr`
+- `allowDepositPayment`
+- `depositPercent`
+- `depositRequiredAboveAmount`
+- `codMaxOrderAmount`
+- `yandexCardOnDeliveryStatus`
+- `cashCourierCollectionStatus`
+
+Order snapshots now store dedicated payment strategy fields instead of relying only on `shippingMethodName`.
+
 ## Scope
 This document describes the manual payment review MVP implemented in `backend-nest`.
 

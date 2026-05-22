@@ -8,6 +8,10 @@ import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
+import {
+  PAYMENT_METHOD_LABELS,
+  isPayOnDeliverySellerQrMethod,
+} from '../../common/constants/payment-methods.constant';
 import { FilesService } from '../files/files.service';
 import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
 import { TrackPublicOrderQueryDto } from './dto/track-public-order-query.dto';
@@ -27,6 +31,8 @@ type TrackableOrderRecord = {
   totalAmount: Prisma.Decimal;
   shippingAddress: string;
   shippingMethodName: string | null;
+  paymentMethod: string | null;
+  paymentMethodLabel: string | null;
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
@@ -176,26 +182,36 @@ export class OrderTrackingService {
       throw new BadRequestException('phone is required.');
     }
 
-    if (!file) {
-      throw new BadRequestException('payment proof file is required.');
-    }
-
-    this.assertValidFile(file);
-
     const order = await this.prisma.order.findFirst({
       where: { id: orderId },
       include: this.orderInclude,
     });
     const trackableOrder = this.assertMatchingOrder(order, normalizedPhone);
 
-    const stored = await this.filesService.storePaymentProof(file, {
-      shopId: trackableOrder.shop.id,
-      orderId: trackableOrder.id,
-    });
+    if (!file) {
+      if (
+        !isPayOnDeliverySellerQrMethod(
+          trackableOrder.paymentMethod ?? trackableOrder.shippingMethodName,
+        )
+      ) {
+        throw new BadRequestException('payment proof file is required.');
+      }
+    }
+
+    if (file) {
+      this.assertValidFile(file);
+    }
+
+    const stored = file
+      ? await this.filesService.storePaymentProof(file, {
+          shopId: trackableOrder.shop.id,
+          orderId: trackableOrder.id,
+        })
+      : null;
 
     if (
-      trackableOrder.paymentProofStorageKey ||
-      trackableOrder.paymentProofUrl
+      stored &&
+      (trackableOrder.paymentProofStorageKey || trackableOrder.paymentProofUrl)
     ) {
       await this.filesService.deleteProductImageFile({
         storageKey: trackableOrder.paymentProofStorageKey,
@@ -203,28 +219,50 @@ export class OrderTrackingService {
       });
     }
 
+    const isDeliveryPayment = isPayOnDeliverySellerQrMethod(
+      trackableOrder.paymentMethod ?? trackableOrder.shippingMethodName,
+    );
     await this.prisma.order.update({
       where: { id: trackableOrder.id },
       data: {
-        paymentProofUrl: stored.publicUrl,
-        paymentProofStorageKey: stored.storageKey,
-        paymentProofOriginalName: stored.originalName,
-        paymentProofMimeType: stored.mimeType,
-        paymentProofSize: stored.size,
-        paymentProofUploadedAt: new Date(),
+        paymentProofUrl: stored?.publicUrl ?? trackableOrder.paymentProofUrl,
+        paymentProofStorageKey:
+          stored?.storageKey ?? trackableOrder.paymentProofStorageKey,
+        paymentProofOriginalName:
+          stored?.originalName ?? trackableOrder.paymentProofOriginalName,
+        paymentProofMimeType:
+          stored?.mimeType ?? trackableOrder.paymentProofMimeType,
+        paymentProofSize: stored?.size ?? trackableOrder.paymentProofSize,
+        paymentProofUploadedAt: stored
+          ? new Date()
+          : trackableOrder.paymentProofUploadedAt,
         paymentProofStatus: 'BUYER_MARKED_PAID',
         paymentProofBuyerNote: buyerNote?.trim() || null,
         paymentProofAmount: trackableOrder.totalAmount,
         buyerMarkedPaidAt: new Date(),
+        paymentStatus: isDeliveryPayment
+          ? 'BUYER_MARKED_DELIVERY_PAID'
+          : trackableOrder.paymentStatus,
+        paymentFlowStage: isDeliveryPayment
+          ? 'BUYER_MARKED_DELIVERY_PAID'
+          : undefined,
         paymentReviewLogs: {
           create: {
             id: randomUUID(),
-            action: 'BUYER_MARKED_PAID',
+            action: isDeliveryPayment
+              ? 'buyer_marked_delivery_paid'
+              : 'BUYER_MARKED_PAID',
             fromStatus: trackableOrder.paymentStatus,
-            toStatus: trackableOrder.paymentStatus,
+            toStatus: isDeliveryPayment
+              ? 'BUYER_MARKED_DELIVERY_PAID'
+              : trackableOrder.paymentStatus,
             note: buyerNote?.trim()
-              ? `Customer marked as paid and uploaded proof: ${stored.originalName}. Note: ${buyerNote.trim()}`
-              : `Customer marked as paid and uploaded proof: ${stored.originalName}`,
+              ? stored
+                ? `Customer marked as paid and uploaded proof: ${stored.originalName}. Note: ${buyerNote.trim()}`
+                : `Customer marked as delivery paid. Note: ${buyerNote.trim()}`
+              : stored
+                ? `Customer marked as paid and uploaded proof: ${stored.originalName}`
+                : 'Customer marked as delivery paid.',
             shop: {
               connect: { id: trackableOrder.shop.id },
             },
@@ -299,7 +337,14 @@ export class OrderTrackingService {
       status: order.status,
       paymentStatus: order.paymentStatus,
       totalAmount: order.totalAmount.toString(),
-      paymentMethod: order.shippingMethodName,
+      paymentMethod: order.paymentMethod ?? order.shippingMethodName,
+      paymentMethodLabel:
+        order.paymentMethodLabel ??
+        (order.paymentMethod && order.paymentMethod in PAYMENT_METHOD_LABELS
+          ? PAYMENT_METHOD_LABELS[
+              order.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS
+            ]
+          : null),
       paymentInstructions: paymentDetails.paymentInstruction,
       paymentDetails,
       customer: {
@@ -417,6 +462,14 @@ export class OrderTrackingService {
           staticQrImageUrl: true,
           paymentMode: true,
           paymentConfigStatus: true,
+          allowPrepaidQr: true,
+          allowPayOnDeliverySellerQr: true,
+          allowDepositPayment: true,
+          depositPercent: true,
+          depositRequiredAboveAmount: true,
+          codMaxOrderAmount: true,
+          yandexCardOnDeliveryStatus: true,
+          cashCourierCollectionStatus: true,
         },
       },
       deliveryShipments: {

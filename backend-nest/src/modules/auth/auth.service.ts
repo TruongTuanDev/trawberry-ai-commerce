@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  InternalServerErrorException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -163,7 +164,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const persistedEmail = email ?? createSyntheticEmailFromPhone(phone!);
 
-    const user = await this.prisma.$transaction(async (tx) => {
+    const createdUserId = await this.prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
         data: {
           email: persistedEmail,
@@ -184,34 +185,40 @@ export class AuthService {
         });
       }
 
-      return (
-        (await tx.user.findUnique({
-          where: { id: createdUser.id },
-          include: {
-            sellerProfile: {
-              select: {
-                approvalStatus: true,
-                rejectionReason: true,
-                legalType: true,
-                legalName: true,
-                inn: true,
-                legalAddress: true,
-                contactName: true,
-                contactPhone: true,
-                contactEmail: true,
-                bankName: true,
-                bankAccount: true,
-                bik: true,
-                documents: {
-                  select: { id: true },
-                  take: 1,
-                },
-              },
+      return createdUser.id;
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: createdUserId },
+      include: {
+        sellerProfile: {
+          select: {
+            approvalStatus: true,
+            rejectionReason: true,
+            legalType: true,
+            legalName: true,
+            inn: true,
+            legalAddress: true,
+            contactName: true,
+            contactPhone: true,
+            contactEmail: true,
+            bankName: true,
+            bankAccount: true,
+            bik: true,
+            documents: {
+              select: { id: true },
+              take: 1,
             },
           },
-        })) ?? createdUser
-      );
+        },
+      },
     });
+
+    if (!user) {
+      throw new InternalServerErrorException(
+        'Registered user could not be loaded.',
+      );
+    }
 
     return this.buildAuthResponse(user);
   }

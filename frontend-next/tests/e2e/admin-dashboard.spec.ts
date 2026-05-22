@@ -136,7 +136,7 @@ async function createDashboardData(request: APIRequestContext) {
         email: `dashboard-customer-${stamp}@example.com`,
         address: "Lenina 10, Moscow",
       },
-      paymentMethod: "MANUAL_TRANSFER",
+      paymentMethod: "PREPAID_SELLER_QR",
     },
   });
   await backendJson(request, `/api/shops/${shop.id}/payments/${checkout.orderId}/mark-paid`, {

@@ -289,6 +289,10 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   await adminPage.waitForURL("**/admin/dashboard");
   await adminPage.goto("/admin/payments-supervision");
   await expect(adminPage.getByTestId("admin-payments-supervision-page")).toBeVisible();
+  await adminPage
+    .locator("select")
+    .first()
+    .selectOption("PENDING");
   const adminQueueItem = adminPage.getByRole("button", { name: new RegExp(orderCode) }).first();
   await expect(adminQueueItem).toBeVisible();
   await adminQueueItem.click();

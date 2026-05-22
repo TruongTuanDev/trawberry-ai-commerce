@@ -791,7 +791,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
 
@@ -814,7 +814,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 
@@ -834,7 +834,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 
@@ -854,7 +854,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 
@@ -874,7 +874,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 
@@ -894,7 +894,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
 
@@ -914,7 +914,7 @@ describe('PublicProductsController contract (e2e)', () => {
           phone: '0123456789',
           address: '123 Contract Street',
         },
-        paymentMethod: 'MANUAL_TRANSFER',
+        paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(400);
   });

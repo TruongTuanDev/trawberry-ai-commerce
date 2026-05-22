@@ -76,7 +76,7 @@ export class OrderTrackingController {
           format: 'binary',
         },
       },
-      required: ['phone', 'file'],
+      required: ['phone'],
     },
   })
   @ApiOkResponse({ type: PublicOrderTrackingResponseDto })
@@ -85,10 +85,10 @@ export class OrderTrackingController {
     @Body() dto: UploadPaymentProofDto,
     @UploadedFile(
       new ParseFilePipeBuilder().build({
-        fileIsRequired: true,
+        fileIsRequired: false,
       }),
     )
-    file: ProductImageUploadFile,
+    file?: ProductImageUploadFile,
   ) {
     return this.orderTrackingService.uploadPaymentProof(
       orderId,

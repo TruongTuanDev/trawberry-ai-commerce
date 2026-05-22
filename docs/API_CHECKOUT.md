@@ -8,12 +8,31 @@ Current scope includes:
 - anonymous or logged-in customer order creation
 - seller visibility of newly created orders through the existing seller Orders API
 - direct seller payment details snapshot for manual QR/bank transfer flows
+- payment-method strategy selection for seller QR + Yandex manual delivery preparation
 
 Current scope does not include:
 - real payment provider integration
 - payment approval or capture endpoints
 - customer account-based order history pages
 - shipment creation or tracking
+
+## Payment methods
+
+Checkout currently accepts:
+
+- `PREPAID_SELLER_QR`
+- `PAY_ON_DELIVERY_SELLER_QR`
+- `DEPOSIT_THEN_DELIVERY_PAYMENT`
+
+Checkout rejects:
+
+- `YANDEX_CARD_ON_DELIVERY` unless every shop capability status is `AVAILABLE`
+- `CASH_COURIER_COLLECTION`
+
+Multi-shop rule:
+
+- the selected method must be supported by every shop in the checkout
+- otherwise checkout returns `SHOP_PAYMENT_METHOD_NOT_SUPPORTED`
 
 ## Public Catalog
 

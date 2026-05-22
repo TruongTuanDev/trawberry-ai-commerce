@@ -109,7 +109,7 @@ $firstCheckout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orde
     phone = "+79997770001"
     address = 'Inventory Street 1'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 5)
 
 $inventoryAfterFirst = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/inventory" -Headers $headers
@@ -127,7 +127,7 @@ try {
       phone = "+79997770002"
       address = 'Inventory Street 2'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 5) -ErrorAction Stop | Out-Null
   $secondCheckoutStatus = 'ALLOWED'
 } catch {
@@ -150,7 +150,7 @@ $thirdCheckout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orde
     phone = "+79997770003"
     address = 'Inventory Street 3'
   }
-  paymentMethod = 'CASH_ON_DELIVERY'
+  paymentMethod = 'PAY_ON_DELIVERY_SELLER_QR'
 } | ConvertTo-Json -Depth 5)
 
 $inventoryAfterThird = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/inventory" -Headers $headers

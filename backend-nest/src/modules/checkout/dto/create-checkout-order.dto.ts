@@ -14,6 +14,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { CHECKOUT_PAYMENT_METHODS } from '../../../common/constants/payment-methods.constant';
 
 class CheckoutOrderItemDto {
   @ApiProperty()
@@ -109,8 +110,8 @@ export class CreateCheckoutOrderDto {
   @IsNotEmpty()
   addressId?: string;
 
-  @ApiProperty({ enum: ['MANUAL_TRANSFER', 'CASH_ON_DELIVERY'] })
+  @ApiProperty({ enum: CHECKOUT_PAYMENT_METHODS })
   @IsString()
-  @IsIn(['MANUAL_TRANSFER', 'CASH_ON_DELIVERY'])
-  paymentMethod!: 'MANUAL_TRANSFER' | 'CASH_ON_DELIVERY';
+  @IsIn(CHECKOUT_PAYMENT_METHODS)
+  paymentMethod!: (typeof CHECKOUT_PAYMENT_METHODS)[number];
 }

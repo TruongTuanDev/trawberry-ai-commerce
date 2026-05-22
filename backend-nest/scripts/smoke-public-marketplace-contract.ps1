@@ -147,7 +147,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     phone = '0123456789'
     address = '123 Smoke Contract Street'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 6)
 
 $outOfStockFailed = $false
@@ -166,7 +166,7 @@ try {
       phone = '0123456789'
       address = '123 Smoke Contract Street'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 } catch {
   $outOfStockFailed = $true

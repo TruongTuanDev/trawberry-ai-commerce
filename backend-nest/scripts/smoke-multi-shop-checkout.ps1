@@ -141,7 +141,7 @@ $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -
     address = '123 Multi Shop Street'
     note = 'Split checkout smoke'
   }
-  paymentMethod = 'MANUAL_TRANSFER'
+  paymentMethod = 'PREPAID_SELLER_QR'
 } | ConvertTo-Json -Depth 6)
 $trackedPhone = [uri]::EscapeDataString($checkout.customerPhone)
 
@@ -214,7 +214,7 @@ try {
       phone = '0123456789'
       address = '123 Multi Shop Street'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 } catch {
   $failed = $true

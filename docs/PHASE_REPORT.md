@@ -1,5 +1,26 @@
 # Phase Report
 
+## 2026-05-22 Payment Method Strategy For Yandex Delivery
+
+- split marketplace payment choice into explicit strategy methods instead of legacy `MANUAL_TRANSFER` / `CASH_ON_DELIVERY`
+- current real methods are now:
+  - `PREPAID_SELLER_QR`
+  - `PAY_ON_DELIVERY_SELLER_QR`
+  - `DEPOSIT_THEN_DELIVERY_PAYMENT`
+- future-only methods are now modeled but not enabled:
+  - `YANDEX_CARD_ON_DELIVERY`
+  - `CASH_COURIER_COLLECTION`
+- seller payment settings now expose per-shop capability flags for prepaid QR, pay-on-delivery seller QR, deposit flow, deposit thresholds, and provider capability posture
+- checkout now validates payment method support across all shops and rejects unsupported strategy selection with `SHOP_PAYMENT_METHOD_NOT_SUPPORTED`
+- `PAY_ON_DELIVERY_SELLER_QR` flow now supports:
+  - checkout without upfront buyer proof
+  - seller acceptance before delivery
+  - move to `READY_TO_CREATE_YANDEX`
+  - post-delivery buyer mark-paid with optional proof
+  - seller confirm/reject final payment
+- buyer tracking, seller order detail, and admin payments supervision were updated to reflect this split clearly
+- Yandex manual delivery remains delivery-only; no provider money collection is assumed in this phase
+
 ## 2026-05-22 Seller Manual Yandex Delivery Workbench
 
 - extended the seller-managed delivery flow into a dedicated manual Yandex workbench without calling the real Yandex API

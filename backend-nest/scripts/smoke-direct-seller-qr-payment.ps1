@@ -110,7 +110,7 @@ try {
       address = 'Moscow, QR Street 1'
       note = 'Smoke direct QR checkout'
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 
   $proofUpload = & curl.exe --ipv4 -s -X POST `

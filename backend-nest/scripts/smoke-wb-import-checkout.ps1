@@ -29,7 +29,7 @@ function Invoke-Checkout($shopId, $productId, $quantity, $phone) {
       address = 'WB Import Checkout Street 1'
       note = "WB import checkout smoke $timestamp"
     }
-    paymentMethod = 'MANUAL_TRANSFER'
+    paymentMethod = 'PREPAID_SELLER_QR'
   } | ConvertTo-Json -Depth 6)
 }
 

@@ -10,6 +10,7 @@ import {
   acceptDeliveryShipment,
   addDeliveryComment,
   cancelDeliveryShipment,
+  confirmPayment,
   createDeliveryShipment,
   createManualDelivery,
   getDeliverySettings,
@@ -21,6 +22,7 @@ import {
   markManualDeliveryInTransit,
   markManualDeliveryPickedUp,
   refreshDeliveryShipment,
+  rejectPayment,
   updateShopOrderStatus,
   updateManualDelivery,
   type DeliveryDetail,
@@ -100,6 +102,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [exceptionReasonText, setExceptionReasonText] = useState("");
   const [exceptionCustomerMessage, setExceptionCustomerMessage] = useState("");
   const [internalComment, setInternalComment] = useState("");
+  const isPayOnDeliverySellerQr =
+    order?.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR";
 
   function hydrateManualForm(deliveryResult: DeliveryDetail) {
     const shipment = deliveryResult.activeShipment;
@@ -232,6 +236,55 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     setLengthCm(value.lengthCm);
     setWidthCm(value.widthCm);
     setHeightCm(value.heightCm);
+  };
+
+  const handleDeliveryPaymentDecision = async (
+    action: "confirm" | "reject",
+  ) => {
+    if (!currentShopId || !order) return;
+    setSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      if (action === "confirm") {
+        await confirmPayment(
+          currentShopId,
+          order.id,
+          {
+            note:
+              order.paymentStatus === "PAY_ON_DELIVERY_SELECTED"
+                ? "Seller accepted pay-on-delivery via seller QR."
+                : "Seller confirmed delivery payment.",
+          },
+          "",
+        );
+      } else {
+        await rejectPayment(
+          currentShopId,
+          order.id,
+          {
+            note: "Seller did not receive delivery payment and opened dispute.",
+          },
+          "",
+        );
+      }
+      const refreshed = await getShopOrderById(currentShopId, order.id, "");
+      setOrder(refreshed);
+      setNextStatus(refreshed.status as SellerOrderListItem["status"]);
+      setSuccessMessage(
+        action === "confirm"
+          ? "Payment step updated."
+          : "Delivery payment issue recorded.",
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update delivery payment state.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const refreshDeliverySnapshot = async () => {
@@ -616,6 +669,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     `Weight: ${weightGram} g`,
     `Size: ${lengthCm} x ${widthCm} x ${heightCm} cm`,
   ].join("\n");
+  const canCreateDelivery =
+    order.paymentStatus === "PAID" ||
+    order.paymentStatus === "SELLER_ACCEPTED_PAY_ON_DELIVERY";
   const copyToClipboard = async (value: string, label: string) => {
     await navigator.clipboard.writeText(value);
     setDeliveryMessage(`${label} copied.`);
@@ -694,6 +750,55 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </p>
             ) : null}
           </div>
+          {isPayOnDeliverySellerQr ? (
+            <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                Payment on delivery via seller QR
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                Buyer will pay the seller directly by QR/SBP when receiving the
+                parcel. Yandex only handles delivery and does not collect cash
+                or card payment for this flow.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {order.paymentStatus === "PAY_ON_DELIVERY_SELECTED" ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleDeliveryPaymentDecision("confirm")}
+                    disabled={saving}
+                    className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                    data-testid="seller-accept-pay-on-delivery"
+                  >
+                    Accept pay on delivery and prepare Yandex
+                  </button>
+                ) : null}
+                {order.status === "DELIVERED" ||
+                order.paymentStatus === "DELIVERED_AWAITING_PAYMENT" ||
+                order.paymentStatus === "BUYER_MARKED_DELIVERY_PAID" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleDeliveryPaymentDecision("confirm")}
+                      disabled={saving}
+                      className="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                      data-testid="seller-confirm-delivery-payment"
+                    >
+                      Đã nhận tiền khi giao hàng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDeliveryPaymentDecision("reject")}
+                      disabled={saving}
+                      className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                      data-testid="seller-reject-delivery-payment"
+                    >
+                      Chưa nhận được tiền / mở tranh chấp
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </SectionCard>
 
         <SectionCard
@@ -961,7 +1066,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 <button
                   type="button"
                   onClick={() => void handleManualDeliveryAction("save")}
-                  disabled={deliveryLoading || order.paymentStatus !== "PAID"}
+                  disabled={deliveryLoading || !canCreateDelivery}
                   className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="manual-delivery-save"
                 >
@@ -1031,7 +1136,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 <button
                   type="button"
                   onClick={() => void handleDeliveryAction("create")}
-                  disabled={deliveryLoading || order.paymentStatus !== "PAID"}
+                  disabled={deliveryLoading || !canCreateDelivery}
                   className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="delivery-create-shipment"
                 >

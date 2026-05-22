@@ -244,7 +244,7 @@ describe('PaymentsController (e2e)', () => {
         paymentStatus: 'PENDING',
         totalAmount: decimal('120.00'),
         shippingAddress: '123 Main St',
-        shippingMethodName: 'MANUAL_TRANSFER',
+        shippingMethodName: 'PREPAID_SELLER_QR',
         customerName: 'Alice',
         customerPhone: '123456',
         customerEmail: 'alice@example.com',
@@ -294,7 +294,7 @@ describe('PaymentsController (e2e)', () => {
         paymentStatus: 'UNPAID',
         totalAmount: decimal('80.00'),
         shippingAddress: '456 Side St',
-        shippingMethodName: 'CASH_ON_DELIVERY',
+        shippingMethodName: 'PAY_ON_DELIVERY_SELLER_QR',
         customerName: 'Bob',
         customerPhone: '987654',
         customerEmail: 'bob@example.com',
@@ -329,7 +329,7 @@ describe('PaymentsController (e2e)', () => {
         paymentStatus: 'PAID',
         totalAmount: decimal('95.00'),
         shippingAddress: '789 Another St',
-        shippingMethodName: 'MANUAL_TRANSFER',
+        shippingMethodName: 'PREPAID_SELLER_QR',
         customerName: 'Carol',
         customerPhone: '555123',
         customerEmail: 'carol@example.com',
@@ -364,7 +364,7 @@ describe('PaymentsController (e2e)', () => {
         paymentStatus: 'PENDING',
         totalAmount: decimal('40.00'),
         shippingAddress: '789 Other St',
-        shippingMethodName: 'MANUAL_TRANSFER',
+        shippingMethodName: 'PREPAID_SELLER_QR',
         customerName: 'Dave',
         customerPhone: '999000',
         customerEmail: 'dave@example.com',
@@ -552,7 +552,7 @@ describe('PaymentsController (e2e)', () => {
 
     const body = readBody<PaymentResponseDto>(response);
     expect(body.id).toBe('order-1');
-    expect(body.paymentMethod).toBe('MANUAL_TRANSFER');
+    expect(body.paymentMethod).toBe('PREPAID_SELLER_QR');
     expect(body.paymentInstructions).toBe('Transfer to account 123.');
     expect(body.paymentDetails.staticQrImageUrl).toBe(
       'https://example.com/qr-shop-1.png',
@@ -578,7 +578,7 @@ describe('PaymentsController (e2e)', () => {
   it('rejects payment and cancels order when still pending', async () => {
     const token = await loginAndGetToken(app, 'seller1@example.com');
     const response = await request(app.getHttpServer())
-      .post('/api/shops/shop-1/payments/order-2/reject')
+      .post('/api/shops/shop-1/payments/order-1/reject')
       .set('Authorization', `Bearer ${token}`)
       .send({ note: 'Customer payment failed review.' })
       .expect(200);

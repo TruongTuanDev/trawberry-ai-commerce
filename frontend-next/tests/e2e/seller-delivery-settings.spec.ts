@@ -211,7 +211,7 @@ test("seller configures delivery settings and creates same-city Yandex shipment 
         address: "Tverskaya Street 15, Moscow",
         note: `Seller delivery settings E2E ${stamp}`,
       },
-      paymentMethod: "MANUAL_TRANSFER",
+      paymentMethod: "PREPAID_SELLER_QR",
     },
   });
   expect(checkout.orderId).toBeTruthy();
