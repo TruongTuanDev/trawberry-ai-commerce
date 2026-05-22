@@ -20,8 +20,11 @@ test("customer can promote address from manual-ready to api-ready with manual co
   await page.getByTestId("customer-address-city").fill("Moscow");
   await page.getByTestId("customer-address-street").fill("Tverskaya");
   await page.getByTestId("customer-address-building").fill("18");
+  await page.getByTestId("customer-address-no-entrance").check();
+  await page.getByTestId("customer-address-no-floor").check();
+  await page.getByTestId("customer-address-no-apartment").check();
   await page.getByTestId("customer-address-save").click();
-  await expect(page.getByTestId("customer-address-card")).toContainText("Missing coordinates");
+  await expect(page.getByTestId("customer-address-card")).toContainText("Manual-ready");
 
   await page.locator('[data-testid^="customer-address-edit-"]').first().click();
   await page.getByRole("button", { name: "Use manual coordinates" }).click();

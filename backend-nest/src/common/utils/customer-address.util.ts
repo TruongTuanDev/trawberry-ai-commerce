@@ -8,9 +8,12 @@ export type CustomerAddressSnapshot = {
   street: string;
   building?: string | null;
   entrance?: string | null;
+  noEntrance?: boolean | null;
   intercom?: string | null;
   floor?: string | null;
+  noFloor?: boolean | null;
   apartment?: string | null;
+  noApartment?: boolean | null;
   postalCode?: string | null;
   comment?: string | null;
   latitude?: number | { toString(): string } | null;
@@ -27,6 +30,13 @@ export type AddressGeoReadiness = {
   isYandexManualReady: boolean;
   isYandexApiReady: boolean;
   missingFields: string[];
+};
+
+export type YandexManualAddressValidation = {
+  valid: boolean;
+  missingFields: string[];
+  yandexManualReady: boolean;
+  yandexApiReady: boolean;
 };
 
 export function formatCustomerAddressSnapshot(
@@ -61,10 +71,22 @@ export function buildYandexAddressFullname(address: CustomerAddressSnapshot) {
 
 export function buildYandexAddressComment(address: CustomerAddressSnapshot) {
   return [
-    address.entrance?.trim() ? `Entrance ${address.entrance.trim()}` : null,
+    address.entrance?.trim()
+      ? `Entrance ${address.entrance.trim()}`
+      : address.noEntrance
+        ? 'No private entrance'
+        : null,
     address.intercom?.trim() ? `Intercom ${address.intercom.trim()}` : null,
-    address.floor?.trim() ? `Floor ${address.floor.trim()}` : null,
-    address.apartment?.trim() ? `Apartment ${address.apartment.trim()}` : null,
+    address.floor?.trim()
+      ? `Floor ${address.floor.trim()}`
+      : address.noFloor
+        ? 'Floor unknown'
+        : null,
+    address.apartment?.trim()
+      ? `Apartment ${address.apartment.trim()}`
+      : address.noApartment
+        ? 'No apartment'
+        : null,
     address.comment?.trim() || null,
   ]
     .filter(Boolean)
@@ -92,6 +114,51 @@ export function validateAddressForYandex(
   return {
     valid: readiness.isYandexApiReady,
     issues: readiness.missingFields,
+  };
+}
+
+export function validateYandexManualAddress(
+  address: CustomerAddressSnapshot & {
+    fullName?: string | null;
+    phone?: string | null;
+  },
+): YandexManualAddressValidation {
+  const missingFields: string[] = [];
+  const hasCity = Boolean(address.city?.trim());
+  const hasStreet = Boolean(address.street?.trim());
+  const hasBuilding = Boolean(address.building?.trim());
+  const hasFullName = Boolean(address.fullName?.trim());
+  const hasPhone = Boolean(address.phone?.trim());
+  const hasEntranceDecision = Boolean(
+    address.entrance?.trim() || address.noEntrance,
+  );
+  const hasFloorDecision = Boolean(address.floor?.trim() || address.noFloor);
+  const hasApartmentDecision = Boolean(
+    address.apartment?.trim() || address.noApartment,
+  );
+
+  if (!hasCity) missingFields.push('city');
+  if (!hasStreet) missingFields.push('street');
+  if (!hasBuilding) missingFields.push('building');
+  if (!hasFullName) missingFields.push('fullName');
+  if (!hasPhone) missingFields.push('phone');
+  if (!hasEntranceDecision) missingFields.push('entranceDecision');
+  if (!hasFloorDecision) missingFields.push('floorDecision');
+  if (!hasApartmentDecision) missingFields.push('apartmentDecision');
+
+  const geoReadiness = computeAddressGeoReadiness(address);
+  const yandexManualReady = missingFields.length === 0;
+  const yandexApiReady =
+    yandexManualReady &&
+    geoReadiness.hasCoordinates &&
+    (geoReadiness.geoPrecision === 'BUILDING' ||
+      geoReadiness.geoPrecision === 'MANUAL_PIN');
+
+  return {
+    valid: yandexManualReady,
+    missingFields,
+    yandexManualReady,
+    yandexApiReady,
   };
 }
 

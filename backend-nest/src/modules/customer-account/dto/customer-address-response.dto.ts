@@ -69,14 +69,23 @@ export class CustomerAddressResponseDto {
   @ApiProperty({ nullable: true })
   entrance!: string | null;
 
+  @ApiProperty()
+  noEntrance!: boolean;
+
   @ApiProperty({ nullable: true })
   intercom!: string | null;
 
   @ApiProperty({ nullable: true })
   floor!: string | null;
 
+  @ApiProperty()
+  noFloor!: boolean;
+
   @ApiProperty({ nullable: true })
   apartment!: string | null;
+
+  @ApiProperty()
+  noApartment!: boolean;
 
   @ApiProperty({ nullable: true })
   postalCode!: string | null;

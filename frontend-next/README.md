@@ -713,6 +713,7 @@ Useful browser checks:
 ```bash
 npm run test:e2e:yandex-address-readiness
 npm run test:e2e:yandex-address-flow
+npm run test:e2e:manual-yandex-operational-polish
 ```
 
 The UI now distinguishes:
@@ -722,3 +723,10 @@ The UI now distinguishes:
 - Yandex-ready
 
 Current checkout still allows manual delivery without coordinates and surfaces a warning instead of blocking the order.
+
+## Manual Yandex Operational Polish
+
+- seller order detail exposes a clearer `Yandex Delivery Handoff` section with copy-ready blocks
+- customer address UX now requires explicit entrance / floor / apartment decisions for Yandex manual readiness
+- customer tracking shows the seller-entered Yandex order ID
+- admin deliveries can remind sellers internally when a Yandex ID has not been entered yet

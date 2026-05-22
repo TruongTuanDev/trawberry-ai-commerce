@@ -664,23 +664,26 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     order.dropoffAddressFullName ??
     order.shippingAddress;
   const dropoffCommentNote = activeShipment?.dropoffComment ?? order.dropoffComment ?? null;
+  const entranceValue =
+    activeShipment?.dropoffEntrance ??
+    order.dropoffEntrance ??
+    (order.dropoffNoEntrance ? "No private entrance" : null);
+  const intercomValue = activeShipment?.dropoffIntercom ?? order.dropoffIntercom ?? null;
+  const floorValue =
+    activeShipment?.dropoffFloor ??
+    order.dropoffFloor ??
+    (order.dropoffNoFloor ? "Floor unknown" : null);
+  const apartmentValue =
+    activeShipment?.dropoffApartment ??
+    order.dropoffApartment ??
+    (order.dropoffNoApartment ? "No apartment" : null);
   const dropoffComment = [
-    activeShipment?.dropoffEntrance ?? order.dropoffEntrance ?? null,
-    activeShipment?.dropoffIntercom ?? order.dropoffIntercom ?? null,
-    activeShipment?.dropoffFloor ?? order.dropoffFloor ?? null,
-    activeShipment?.dropoffApartment ?? order.dropoffApartment ?? null,
+    entranceValue ? `Entrance ${entranceValue}` : null,
+    intercomValue ? `Intercom ${intercomValue}` : null,
+    floorValue ? `Floor ${floorValue}` : null,
+    apartmentValue ? `Apartment ${apartmentValue}` : null,
+    dropoffCommentNote,
   ]
-    .filter(Boolean)
-    .map((entry, index) =>
-      index === 0
-        ? `Entrance ${entry}`
-        : index === 1
-          ? `Intercom ${entry}`
-          : index === 2
-            ? `Floor ${entry}`
-            : `Apartment ${entry}`,
-    )
-    .concat(dropoffCommentNote ? [dropoffCommentNote] : [])
     .filter(Boolean)
     .join(", ");
   const pickupReady = Boolean(
@@ -707,20 +710,34 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     .filter(Boolean)
     .join("\n");
   const recipientText = [
-    `Recipient: ${order.customer.name}`,
-    `Phone: ${order.customer.phone}`,
+    `Recipient: ${order.customer.name}, ${order.customer.phone}`,
     `Address: ${dropoffAddressFullName}`,
-    dropoffComment ? `Access: ${dropoffComment}` : null,
+    entranceValue ? `Entrance: ${entranceValue}` : null,
+    intercomValue ? `Door code: ${intercomValue}` : null,
+    floorValue ? `Floor: ${floorValue}` : null,
+    apartmentValue ? `Apartment: ${apartmentValue}` : null,
+    dropoffCommentNote ? `Comment: ${dropoffCommentNote}` : null,
     dropoffLat !== null && dropoffLng !== null
-      ? `GPS: ${dropoffLat}, ${dropoffLng}`
+      ? `Coordinates: ${dropoffLat}, ${dropoffLng}`
       : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].filter(Boolean).join("\n");
   const packageText = [
-    `Preset: ${packagePreset}`,
-    `Weight: ${weightGram} g`,
-    `Size: ${lengthCm} x ${widthCm} x ${heightCm} cm`,
+    `Package: ${packagePreset}, ${weightGram} g, ${lengthCm} x ${widthCm} x ${heightCm} cm`,
+    `Declared value: ${order.totalAmount}`,
+    `Items: ${order.itemsCount}`,
+  ].join("\n");
+  const fullYandexBlock = [
+    `ORDER: ${order.orderNumber}`,
+    `Recipient: ${order.customer.name}, ${order.customer.phone}`,
+    `Address: ${dropoffAddressFullName}`,
+    `Entrance: ${entranceValue ?? "-"}`,
+    `Door code: ${intercomValue ?? "-"}`,
+    `Floor: ${floorValue ?? "-"}`,
+    `Apartment: ${apartmentValue ?? "-"}`,
+    `Comment: ${dropoffCommentNote ?? "-"}`,
+    `Coordinates: ${dropoffLat !== null && dropoffLng !== null ? `${dropoffLat}, ${dropoffLng}` : "-"}`,
+    `Package: ${packagePreset}, ${weightGram} g, ${lengthCm} x ${widthCm} x ${heightCm} cm`,
+    `Declared value: ${order.totalAmount}`,
   ].join("\n");
   const canCreateDelivery =
     order.paymentStatus === "PAID" ||
@@ -943,12 +960,23 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
       <SectionCard
         eyebrow="Delivery"
-        title="Create Yandex manually"
+        title="Yandex Delivery Handoff"
         description="Use this workbench after payment is confirmed to create and supervise a manual Yandex shipment without calling the real Yandex API."
       >
         <div data-testid="seller-order-delivery-section">
           <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
             <div className="space-y-4">
+              {order.latestYandexReminder ? (
+                <div
+                  className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+                  data-testid="seller-yandex-reminder-banner"
+                >
+                  Admin reminded you to create Yandex delivery for this order.
+                  <span className="ml-2 text-xs text-amber-700">
+                    {new Date(order.latestYandexReminder.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              ) : null}
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Manual provider">
                   <select
@@ -966,11 +994,15 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     <option value="MANUAL">Manual</option>
                   </select>
                 </Field>
-                <Field label="Manual Yandex order id">
+                <Field label="Mã vận đơn Yandex">
                   <input
                     value={manualYandexOrderId}
                     onChange={(event) =>
                       setManualYandexOrderId(event.target.value)
+                    }
+                    disabled={
+                      activeShipment?.internalStatus === "DELIVERED" ||
+                      activeShipment?.internalStatus === "CANCELLED"
                     }
                     className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="manual-yandex-order-id"
@@ -1158,8 +1190,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   <button type="button" onClick={() => void copyToClipboard(recipientText, "Recipient")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
                     Copy recipient
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard([senderText, recipientText, packageText].join("\n\n"), "Shipment brief")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold" data-testid="copy-full-delivery-block">
-                    Copy all
+                  <button type="button" onClick={() => void copyToClipboard(dropoffAddressFullName, "Address")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    Copy address
+                  </button>
+                  <button type="button" onClick={() => void copyToClipboard(dropoffComment || "No extra courier details", "Courier details")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    Copy courier details
+                  </button>
+                  <button type="button" onClick={() => void copyToClipboard(fullYandexBlock, "Full Yandex block")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold" data-testid="copy-full-delivery-block">
+                    Copy full Yandex block
                   </button>
                   <button type="button" onClick={() => openMaps(pickupLat, pickupLng)} disabled={pickupLat === null || pickupLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
                     Open pickup map

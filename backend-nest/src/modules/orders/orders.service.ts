@@ -66,7 +66,45 @@ export class OrdersService {
       );
     }
 
-    return this.toOrderResponse(order);
+    const response = this.toOrderResponse(order);
+    const latestYandexReminder =
+      typeof this.prisma.adminAuditLog?.findFirst === 'function'
+        ? await this.prisma.adminAuditLog.findFirst({
+            where: {
+              entityType: 'DELIVERY_REMINDER',
+              entityId: order.id,
+              action: 'REMIND_CREATE_YANDEX_MANUAL',
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              reason: true,
+              createdAt: true,
+              actor: {
+                select: {
+                  fullName: true,
+                  email: true,
+                },
+              },
+            },
+          })
+        : null;
+
+    return {
+      ...response,
+      latestYandexReminder: latestYandexReminder
+        ? {
+            id: latestYandexReminder.id,
+            message:
+              latestYandexReminder.reason ??
+              'Admin reminded the seller to create Yandex delivery.',
+            createdAt: latestYandexReminder.createdAt.toISOString(),
+            adminName:
+              latestYandexReminder.actor.fullName ??
+              latestYandexReminder.actor.email,
+          }
+        : null,
+    };
   }
 
   async updateStatus(
@@ -376,9 +414,12 @@ export class OrdersService {
     dropoffStreet?: string | null;
     dropoffBuilding?: string | null;
     dropoffEntrance?: string | null;
+    dropoffNoEntrance?: boolean;
     dropoffIntercom?: string | null;
     dropoffFloor?: string | null;
+    dropoffNoFloor?: boolean;
     dropoffApartment?: string | null;
+    dropoffNoApartment?: boolean;
     dropoffLatitude?: Prisma.Decimal | null;
     dropoffLongitude?: Prisma.Decimal | null;
     dropoffGeoPrecision?: string | null;
@@ -415,10 +456,20 @@ export class OrdersService {
       provider: string;
       internalStatus: string;
       providerShipmentId: string | null;
+      providerOrderNumber: string | null;
       trackingNumber: string | null;
       trackingUrl: string | null;
+      courierName: string | null;
       courierPhone: string | null;
       estimatedDeliveryAt: Date | null;
+      packagePreset: string | null;
+      packageWeightGram: number | null;
+      packageLengthCm: number | null;
+      packageWidthCm: number | null;
+      packageHeightCm: number | null;
+      manualYandexOrderId: string | null;
+      yandexClaimId: string | null;
+      yandexTrackingLink: string | null;
       deliveryNote: string | null;
     }>;
     sellerFeeLedgerEntries?: Array<{
@@ -465,9 +516,12 @@ export class OrdersService {
       street: order.dropoffStreet ?? '',
       building: order.dropoffBuilding ?? '',
       entrance: order.dropoffEntrance ?? null,
+      noEntrance: order.dropoffNoEntrance ?? false,
       intercom: order.dropoffIntercom ?? null,
       floor: order.dropoffFloor ?? null,
+      noFloor: order.dropoffNoFloor ?? false,
       apartment: order.dropoffApartment ?? null,
+      noApartment: order.dropoffNoApartment ?? false,
       comment: order.dropoffComment ?? null,
       latitude: order.dropoffLatitude ?? null,
       longitude: order.dropoffLongitude ?? null,
@@ -504,9 +558,12 @@ export class OrdersService {
       dropoffStreet: order.dropoffStreet ?? null,
       dropoffBuilding: order.dropoffBuilding ?? null,
       dropoffEntrance: order.dropoffEntrance ?? null,
+      dropoffNoEntrance: order.dropoffNoEntrance ?? false,
       dropoffIntercom: order.dropoffIntercom ?? null,
       dropoffFloor: order.dropoffFloor ?? null,
+      dropoffNoFloor: order.dropoffNoFloor ?? false,
       dropoffApartment: order.dropoffApartment ?? null,
+      dropoffNoApartment: order.dropoffNoApartment ?? false,
       dropoffLatitude: order.dropoffLatitude?.toString() ?? null,
       dropoffLongitude: order.dropoffLongitude?.toString() ?? null,
       dropoffGeoPrecision: order.dropoffGeoPrecision ?? null,
@@ -533,11 +590,21 @@ export class OrdersService {
             provider: latestShipment.provider,
             status: latestShipment.internalStatus,
             providerShipmentId: latestShipment.providerShipmentId,
+            providerOrderNumber: latestShipment.providerOrderNumber,
             trackingNumber: latestShipment.trackingNumber,
             trackingUrl: latestShipment.trackingUrl,
+            courierName: latestShipment.courierName,
             courierPhone: latestShipment.courierPhone,
             estimatedDeliveryAt:
               latestShipment.estimatedDeliveryAt?.toISOString() ?? null,
+            packagePreset: latestShipment.packagePreset,
+            packageWeightGram: latestShipment.packageWeightGram,
+            packageLengthCm: latestShipment.packageLengthCm,
+            packageWidthCm: latestShipment.packageWidthCm,
+            packageHeightCm: latestShipment.packageHeightCm,
+            manualYandexOrderId: latestShipment.manualYandexOrderId,
+            yandexClaimId: latestShipment.yandexClaimId,
+            yandexTrackingLink: latestShipment.yandexTrackingLink,
             deliveryNote: latestShipment.deliveryNote,
           }
         : null,
@@ -618,10 +685,20 @@ export class OrdersService {
           provider: true,
           internalStatus: true,
           providerShipmentId: true,
+          providerOrderNumber: true,
           trackingNumber: true,
           trackingUrl: true,
+          courierName: true,
           courierPhone: true,
           estimatedDeliveryAt: true,
+          packagePreset: true,
+          packageWeightGram: true,
+          packageLengthCm: true,
+          packageWidthCm: true,
+          packageHeightCm: true,
+          manualYandexOrderId: true,
+          yandexClaimId: true,
+          yandexTrackingLink: true,
           deliveryNote: true,
         },
       },

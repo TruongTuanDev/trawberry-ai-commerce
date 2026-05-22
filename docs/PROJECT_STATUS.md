@@ -1,5 +1,20 @@
 # Project Status
 
+## Manual Yandex Operational Polish - 2026-05-23
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Seller order detail now has a clearer `Yandex Delivery Handoff` block with copy-ready operational data
+- Customer saved addresses now require explicit entrance / floor / apartment decisions for current manual Yandex readiness
+- Customer tracking now shows `manualYandexOrderId` once the seller enters it
+- Admin deliveries now support:
+  - `MISSING_YANDEX_ORDER_ID`
+  - `CREATED_WITH_YANDEX_ID`
+  - internal seller reminder action for delayed manual Yandex creation
+- Reminder behavior is internal only in this MVP:
+  - no SMS
+  - no email
+  - stored as an audit/reminder event in the platform
+
 ## Yandex-Compatible Customer Address Flow - 2026-05-22
 
 - Status: implemented in `backend-nest` and `frontend-next`

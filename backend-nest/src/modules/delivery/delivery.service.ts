@@ -906,8 +906,53 @@ export class DeliveryService {
         take: 200,
         select: this.adminOrderInclude.select,
       });
+      const reminders = await this.loadLatestYandexReminderMap(
+        orders.map((order) => order.id),
+      );
       return {
-        items: orders.map((order) => this.toAdminOrderDeliveryRow(order)),
+        items: orders.map((order) =>
+          this.toAdminOrderDeliveryRow(order, reminders.get(order.id) ?? null),
+        ),
+      };
+    }
+
+    if (query.status === 'MISSING_YANDEX_ORDER_ID') {
+      const [orders, shipments] = await Promise.all([
+        this.prisma.order.findMany({
+          where: this.buildPaidWithoutDeliveryWhere({
+            ...query,
+            status: 'READY_TO_CREATE_YANDEX',
+          }),
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+          select: this.adminOrderInclude.select,
+        }),
+        this.prisma.deliveryShipment.findMany({
+          where: this.buildAdminShipmentWhere(query),
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+          include: this.adminShipmentInclude,
+        }),
+      ]);
+      const reminders = await this.loadLatestYandexReminderMap([
+        ...orders.map((order) => order.id),
+        ...shipments.map((shipment) => shipment.orderId),
+      ]);
+      return {
+        items: [
+          ...orders.map((order) =>
+            this.toAdminOrderDeliveryRow(
+              order,
+              reminders.get(order.id) ?? null,
+            ),
+          ),
+          ...shipments.map((shipment) =>
+            this.toAdminShipmentRow(
+              shipment,
+              reminders.get(shipment.orderId) ?? null,
+            ),
+          ),
+        ],
       };
     }
 
@@ -917,9 +962,17 @@ export class DeliveryService {
       take: 200,
       include: this.adminShipmentInclude,
     });
+    const reminders = await this.loadLatestYandexReminderMap(
+      shipments.map((shipment) => shipment.orderId),
+    );
 
     return {
-      items: shipments.map((shipment) => this.toAdminShipmentRow(shipment)),
+      items: shipments.map((shipment) =>
+        this.toAdminShipmentRow(
+          shipment,
+          reminders.get(shipment.orderId) ?? null,
+        ),
+      ),
     };
   }
 
@@ -933,7 +986,101 @@ export class DeliveryService {
         `Delivery shipment ${deliveryShipmentId} was not found.`,
       );
     }
-    return this.toAdminShipmentRow(shipment);
+    const reminders = await this.loadLatestYandexReminderMap([
+      shipment.orderId,
+    ]);
+    return this.toAdminShipmentRow(
+      shipment,
+      reminders.get(shipment.orderId) ?? null,
+    );
+  }
+
+  async adminRemindYandex(orderId: string, admin: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        id: true,
+        shopId: true,
+        status: true,
+        paymentStatus: true,
+        shop: {
+          select: {
+            sellerProfile: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        },
+        deliveryShipments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            manualYandexOrderId: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+
+    const latestReminder = await this.prisma.adminAuditLog.findFirst({
+      where: {
+        entityType: 'DELIVERY_REMINDER',
+        entityId: order.id,
+        action: 'REMIND_CREATE_YANDEX_MANUAL',
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, createdAt: true },
+    });
+
+    const now = new Date();
+    const nextAllowedAt = latestReminder
+      ? new Date(latestReminder.createdAt.getTime() + 30 * 60 * 1000)
+      : now;
+
+    if (latestReminder && nextAllowedAt > now) {
+      return {
+        reminderCreated: false,
+        lastReminderAt: latestReminder.createdAt.toISOString(),
+        nextAllowedAt: nextAllowedAt.toISOString(),
+      };
+    }
+
+    const hasYandexId = Boolean(
+      order.deliveryShipments[0]?.manualYandexOrderId?.trim(),
+    );
+    const message = hasYandexId
+      ? 'Admin reviewed the order after a Yandex id was already provided.'
+      : 'Admin reminded the seller to create manual Yandex delivery for this order.';
+
+    const created = await this.prisma.adminAuditLog.create({
+      data: {
+        id: randomUUID(),
+        actorUserId: admin.userId,
+        targetUserId: order.shop.sellerProfile.userId,
+        action: 'REMIND_CREATE_YANDEX_MANUAL',
+        entityType: 'DELIVERY_REMINDER',
+        entityId: order.id,
+        reason: message,
+        newValueJson: {
+          orderStatus: order.status,
+          paymentStatus: order.paymentStatus,
+          hasYandexId,
+        },
+      },
+      select: { createdAt: true },
+    });
+
+    return {
+      reminderCreated: true,
+      lastReminderAt: created.createdAt.toISOString(),
+      nextAllowedAt: new Date(
+        created.createdAt.getTime() + 30 * 60 * 1000,
+      ).toISOString(),
+    };
   }
 
   async adminUpdateDelivery(
@@ -1606,21 +1753,41 @@ export class DeliveryService {
     if (
       query.status &&
       query.status !== 'OVERDUE' &&
-      query.status !== 'READY_TO_CREATE_YANDEX'
+      query.status !== 'READY_TO_CREATE_YANDEX' &&
+      query.status !== 'MISSING_YANDEX_ORDER_ID' &&
+      query.status !== 'CREATED_WITH_YANDEX_ID'
     ) {
       where.internalStatus = query.status;
     }
+    if (query.status === 'CREATED_WITH_YANDEX_ID') {
+      where.provider = 'YANDEX';
+      where.manualYandexOrderId = { not: null };
+    }
+    if (query.status === 'MISSING_YANDEX_ORDER_ID') {
+      where.provider = 'YANDEX';
+      where.OR = [{ manualYandexOrderId: null }, { manualYandexOrderId: '' }];
+    }
     if (query.status === 'OVERDUE') {
-      where.internalStatus = {
-        in: [
-          'YANDEX_MANUAL_CREATED',
-          'COURIER_ASSIGNED',
-          'PICKED_UP',
-          'ON_THE_WAY',
-          'IN_TRANSIT',
-        ],
-      };
-      where.estimatedDeliveryAt = { lt: new Date() };
+      where.OR = [
+        {
+          internalStatus: {
+            in: [
+              'YANDEX_MANUAL_CREATED',
+              'COURIER_ASSIGNED',
+              'PICKED_UP',
+              'ON_THE_WAY',
+              'IN_TRANSIT',
+            ],
+          },
+          estimatedDeliveryAt: { lt: new Date() },
+        },
+        {
+          provider: 'YANDEX',
+          internalStatus: 'YANDEX_MANUAL_CREATED',
+          updatedAt: { lt: this.getManualYandexOverdueCutoff() },
+          OR: [{ manualYandexOrderId: null }, { manualYandexOrderId: '' }],
+        },
+      ];
     }
     if (query.exceptionOnly) {
       where.internalStatus = { in: [...DELIVERY_EXCEPTION_STATUSES] };
@@ -1689,6 +1856,10 @@ export class DeliveryService {
     };
     if (query.status === 'READY_TO_CREATE_YANDEX') {
       where.status = 'READY_TO_CREATE_YANDEX';
+    }
+    if (query.status === 'OVERDUE') {
+      where.status = 'READY_TO_CREATE_YANDEX';
+      where.createdAt = { lt: this.getManualYandexOverdueCutoff() };
     }
     if (query.shopId) where.shopId = query.shopId;
     if (query.missingCoordinates) {
@@ -2144,93 +2315,100 @@ export class DeliveryService {
     };
   }
 
-  private toAdminShipmentRow(shipment: {
-    id: string;
-    shopId: string;
-    orderId: string;
-    provider: string;
-    providerShipmentId: string | null;
-    providerOrderNumber: string | null;
-    providerStatus: string;
-    internalStatus: string;
-    trackingNumber: string | null;
-    trackingUrl: string | null;
-    courierName: string | null;
-    courierPhone: string | null;
-    estimatedDeliveryAt: Date | null;
-    packagePreset: string | null;
-    packageWeightGram: number | null;
-    packageLengthCm: number | null;
-    packageWidthCm: number | null;
-    packageHeightCm: number | null;
-    deliveryNote: string | null;
-    failureReasonCode: string | null;
-    failureReasonText: string | null;
-    failedAt: Date | null;
-    customerVisibleMessage: string | null;
-    lastAdminNote: string | null;
-    lastSellerNote: string | null;
-    pickupAddress: string;
-    pickupLatitude: Prisma.Decimal | null;
-    pickupLongitude: Prisma.Decimal | null;
-    dropoffLatitude: Prisma.Decimal | null;
-    dropoffLongitude: Prisma.Decimal | null;
-    recipientName: string | null;
-    recipientPhone: string | null;
-    manualYandexOrderId: string | null;
-    yandexClaimId: string | null;
-    yandexStatus: string | null;
-    yandexPrice: Prisma.Decimal | null;
-    yandexTrackingLink: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    acceptedAt: Date | null;
-    cancelledAt: Date | null;
-    deliveredAt: Date | null;
-    order: {
-      orderNumber: string;
-      status: string;
-      paymentStatus: string;
-      totalAmount: Prisma.Decimal;
-      customerName: string;
-      customerPhone: string;
-      customerEmail: string | null;
-      shippingAddress: string;
-      dropoffCity?: string | null;
-      dropoffStreet?: string | null;
-      dropoffBuilding?: string | null;
-      dropoffGeoPrecision?: string | null;
+  private toAdminShipmentRow(
+    shipment: {
+      id: string;
+      shopId: string;
+      orderId: string;
+      provider: string;
+      providerShipmentId: string | null;
+      providerOrderNumber: string | null;
+      providerStatus: string;
+      internalStatus: string;
+      trackingNumber: string | null;
+      trackingUrl: string | null;
+      courierName: string | null;
+      courierPhone: string | null;
+      estimatedDeliveryAt: Date | null;
+      packagePreset: string | null;
+      packageWeightGram: number | null;
+      packageLengthCm: number | null;
+      packageWidthCm: number | null;
+      packageHeightCm: number | null;
+      deliveryNote: string | null;
+      failureReasonCode: string | null;
+      failureReasonText: string | null;
+      failedAt: Date | null;
+      customerVisibleMessage: string | null;
+      lastAdminNote: string | null;
+      lastSellerNote: string | null;
+      pickupAddress: string;
+      pickupLatitude: Prisma.Decimal | null;
+      pickupLongitude: Prisma.Decimal | null;
+      dropoffLatitude: Prisma.Decimal | null;
+      dropoffLongitude: Prisma.Decimal | null;
+      recipientName: string | null;
+      recipientPhone: string | null;
+      manualYandexOrderId: string | null;
+      yandexClaimId: string | null;
+      yandexStatus: string | null;
+      yandexPrice: Prisma.Decimal | null;
+      yandexTrackingLink: string | null;
       createdAt: Date;
-      shop: {
-        id: string;
-        name: string;
-        sellerProfile: {
-          userId: string;
-          user: { email: string; fullName: string | null };
+      updatedAt: Date;
+      acceptedAt: Date | null;
+      cancelledAt: Date | null;
+      deliveredAt: Date | null;
+      order: {
+        orderNumber: string;
+        status: string;
+        paymentStatus: string;
+        totalAmount: Prisma.Decimal;
+        customerName: string;
+        customerPhone: string;
+        customerEmail: string | null;
+        shippingAddress: string;
+        dropoffCity?: string | null;
+        dropoffStreet?: string | null;
+        dropoffBuilding?: string | null;
+        dropoffGeoPrecision?: string | null;
+        createdAt: Date;
+        shop: {
+          id: string;
+          name: string;
+          sellerProfile: {
+            userId: string;
+            user: {
+              email: string;
+              fullName: string | null;
+              phone: string | null;
+            };
+          };
         };
       };
-    };
-    events: Array<{
-      id: string;
-      eventType: string;
-      actorUserId: string | null;
-      actorRole: string | null;
-      action: string | null;
-      oldStatus: string | null;
-      newStatus: string | null;
-      providerStatus: string | null;
-      message: string | null;
-      createdAt: Date;
-    }>;
-    comments: Array<{
-      id: string;
-      actorUserId: string | null;
-      actorRole: string;
-      visibility: string;
-      message: string;
-      createdAt: Date;
-    }>;
-  }) {
+      events: Array<{
+        id: string;
+        eventType: string;
+        actorUserId: string | null;
+        actorRole: string | null;
+        action: string | null;
+        oldStatus: string | null;
+        newStatus: string | null;
+        providerStatus: string | null;
+        message: string | null;
+        createdAt: Date;
+      }>;
+      comments: Array<{
+        id: string;
+        actorUserId: string | null;
+        actorRole: string;
+        visibility: string;
+        message: string;
+        createdAt: Date;
+      }>;
+    },
+    latestReminder?: { createdAt: Date; reason: string | null } | null,
+  ) {
     const pickupGeoReadiness = computeAddressGeoReadiness({
       country: 'Russia',
       city: shipment.pickupAddress,
@@ -2265,8 +2443,13 @@ export class DeliveryService {
       sellerId: shipment.order.shop.sellerProfile.userId,
       sellerEmail: shipment.order.shop.sellerProfile.user.email,
       sellerName: shipment.order.shop.sellerProfile.user.fullName,
+      sellerPhone: shipment.order.shop.sellerProfile.user.phone,
       orderStatus: shipment.order.status,
       paymentStatus: shipment.order.paymentStatus,
+      timeWaitingMinutes: Math.max(
+        0,
+        Math.round((Date.now() - shipment.order.createdAt.getTime()) / 60000),
+      ),
       totalAmount: shipment.order.totalAmount.toString(),
       customer: {
         name: shipment.order.customerName,
@@ -2316,6 +2499,8 @@ export class DeliveryService {
       yandexStatus: shipment.yandexStatus,
       yandexPrice: shipment.yandexPrice?.toString() ?? null,
       yandexTrackingLink: shipment.yandexTrackingLink,
+      lastReminderAt: latestReminder?.createdAt.toISOString() ?? null,
+      lastReminderMessage: latestReminder?.reason ?? null,
       createdAt: shipment.createdAt.toISOString(),
       updatedAt: shipment.updatedAt.toISOString(),
       acceptedAt: shipment.acceptedAt?.toISOString() ?? null,
@@ -2344,33 +2529,40 @@ export class DeliveryService {
     };
   }
 
-  private toAdminOrderDeliveryRow(order: {
-    id: string;
-    shopId: string;
-    orderNumber: string;
-    status: string;
-    paymentStatus: string;
-    totalAmount: Prisma.Decimal;
-    customerName: string;
-    customerPhone: string;
-    customerEmail: string | null;
-    shippingAddress: string;
-    dropoffCity?: string | null;
-    dropoffStreet?: string | null;
-    dropoffBuilding?: string | null;
-    dropoffLatitude?: Prisma.Decimal | null;
-    dropoffLongitude?: Prisma.Decimal | null;
-    dropoffGeoPrecision?: string | null;
-    createdAt: Date;
-    shop: {
+  private toAdminOrderDeliveryRow(
+    order: {
       id: string;
-      name: string;
-      sellerProfile: {
-        userId: string;
-        user: { email: string; fullName: string | null };
+      shopId: string;
+      orderNumber: string;
+      status: string;
+      paymentStatus: string;
+      totalAmount: Prisma.Decimal;
+      customerName: string;
+      customerPhone: string;
+      customerEmail: string | null;
+      shippingAddress: string;
+      dropoffCity?: string | null;
+      dropoffStreet?: string | null;
+      dropoffBuilding?: string | null;
+      dropoffLatitude?: Prisma.Decimal | null;
+      dropoffLongitude?: Prisma.Decimal | null;
+      dropoffGeoPrecision?: string | null;
+      createdAt: Date;
+      shop: {
+        id: string;
+        name: string;
+        sellerProfile: {
+          userId: string;
+          user: {
+            email: string;
+            fullName: string | null;
+            phone: string | null;
+          };
+        };
       };
-    };
-  }) {
+    },
+    latestReminder?: { createdAt: Date; reason: string | null } | null,
+  ) {
     const dropoffGeoReadiness = computeAddressGeoReadiness({
       country: 'Russia',
       city: order.dropoffCity ?? '',
@@ -2392,8 +2584,13 @@ export class DeliveryService {
       sellerId: order.shop.sellerProfile.userId,
       sellerEmail: order.shop.sellerProfile.user.email,
       sellerName: order.shop.sellerProfile.user.fullName,
+      sellerPhone: order.shop.sellerProfile.user.phone,
       orderStatus: order.status,
       paymentStatus: order.paymentStatus,
+      timeWaitingMinutes: Math.max(
+        0,
+        Math.round((Date.now() - order.createdAt.getTime()) / 60000),
+      ),
       totalAmount: order.totalAmount.toString(),
       customer: {
         name: order.customerName,
@@ -2442,6 +2639,8 @@ export class DeliveryService {
       yandexStatus: null,
       yandexPrice: null,
       yandexTrackingLink: null,
+      lastReminderAt: latestReminder?.createdAt.toISOString() ?? null,
+      lastReminderMessage: latestReminder?.reason ?? null,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.createdAt.toISOString(),
       acceptedAt: null,
@@ -2463,6 +2662,49 @@ export class DeliveryService {
   private clean(value?: string | null) {
     const cleaned = value?.trim();
     return cleaned ? cleaned : null;
+  }
+
+  private getManualYandexOverdueCutoff() {
+    const minutes = Number(
+      this.configService.get<string>('MANUAL_YANDEX_OVERDUE_MINUTES', '120'),
+    );
+    return new Date(Date.now() - minutes * 60 * 1000);
+  }
+
+  private async loadLatestYandexReminderMap(orderIds: string[]) {
+    const uniqueOrderIds = [...new Set(orderIds.filter(Boolean))];
+    if (!uniqueOrderIds.length) {
+      return new Map<string, { createdAt: Date; reason: string | null }>();
+    }
+
+    if (typeof this.prisma.adminAuditLog?.findMany !== 'function') {
+      return new Map<string, { createdAt: Date; reason: string | null }>();
+    }
+
+    const logs = await this.prisma.adminAuditLog.findMany({
+      where: {
+        entityType: 'DELIVERY_REMINDER',
+        action: 'REMIND_CREATE_YANDEX_MANUAL',
+        entityId: { in: uniqueOrderIds },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        entityId: true,
+        createdAt: true,
+        reason: true,
+      },
+    });
+
+    const map = new Map<string, { createdAt: Date; reason: string | null }>();
+    for (const log of logs) {
+      if (log.entityId && !map.has(log.entityId)) {
+        map.set(log.entityId, {
+          createdAt: log.createdAt,
+          reason: log.reason,
+        });
+      }
+    }
+    return map;
   }
 
   private readCarrierList(value: Prisma.JsonValue) {
@@ -2532,6 +2774,7 @@ export class DeliveryService {
                     select: {
                       email: true,
                       fullName: true,
+                      phone: true,
                     },
                   },
                 },
@@ -2580,6 +2823,7 @@ export class DeliveryService {
                   select: {
                     email: true,
                     fullName: true,
+                    phone: true,
                   },
                 },
               },

@@ -15,7 +15,11 @@ The marketplace now distinguishes three address states for Yandex-compatible del
 - `city`
 - `street`
 - `building`
+- recipient `fullName`
 - recipient `phone`
+- `entrance` or `noEntrance=true`
+- `floor` or `noFloor=true`
+- `apartment` or `noApartment=true`
 
 `api-ready` requires:
 
@@ -54,3 +58,12 @@ Customer account now supports:
 - clearing coordinates safely
 
 This is a real manual data path, not a fake geocoder or fake map integration.
+
+## Reminder for future API enablement
+
+Current manual Yandex checkout still allows operation without coordinates only because sellers are creating deliveries manually.
+
+When a future real Yandex claim-creation phase is enabled, addresses should only be accepted for that mode when:
+
+- `yandexApiReady=true`
+- pickup coordinates are also available

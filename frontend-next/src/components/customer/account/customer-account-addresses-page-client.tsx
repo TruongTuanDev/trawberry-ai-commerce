@@ -33,9 +33,12 @@ const emptyForm: CustomerAddressInput = {
   street: "",
   building: "",
   entrance: "",
+  noEntrance: false,
   intercom: "",
   floor: "",
+  noFloor: false,
   apartment: "",
+  noApartment: false,
   postalCode: "",
   comment: "",
   latitude: null,
@@ -215,9 +218,12 @@ export function CustomerAccountAddressesPageClient() {
       streetType: address.streetType || "",
       buildingBlock: address.buildingBlock || "",
       entrance: address.entrance || "",
+      noEntrance: address.noEntrance,
       intercom: address.intercom || "",
       floor: address.floor || "",
+      noFloor: address.noFloor,
       apartment: address.apartment || "",
+      noApartment: address.noApartment,
       postalCode: address.postalCode || "",
       comment: address.comment || "",
       latitude: address.latitude ? Number(address.latitude) : null,
@@ -475,17 +481,53 @@ export function CustomerAccountAddressesPageClient() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">3. Delivery details</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <AddressField label="Entrance">
-                  <input value={form.entrance || ""} onChange={(event) => setForm((current) => ({ ...current, entrance: event.target.value }))} className="public-input" data-testid="customer-address-entrance" />
+                  <input value={form.entrance || ""} onChange={(event) => setForm((current) => ({ ...current, entrance: event.target.value, noEntrance: event.target.value ? false : current.noEntrance }))} disabled={Boolean(form.noEntrance)} className="public-input disabled:opacity-60" data-testid="customer-address-entrance" />
                 </AddressField>
+                <BooleanField
+                  label="No private entrance"
+                  checked={Boolean(form.noEntrance)}
+                  onChange={(checked) =>
+                    setForm((current) => ({
+                      ...current,
+                      noEntrance: checked,
+                      entrance: checked ? "" : current.entrance,
+                    }))
+                  }
+                  testId="customer-address-no-entrance"
+                />
                 <AddressField label="Intercom / door code">
                   <input value={form.intercom || ""} onChange={(event) => setForm((current) => ({ ...current, intercom: event.target.value }))} className="public-input" data-testid="customer-address-intercom" />
                 </AddressField>
                 <AddressField label="Floor">
-                  <input value={form.floor || ""} onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value }))} className="public-input" />
+                  <input value={form.floor || ""} onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value, noFloor: event.target.value ? false : current.noFloor }))} disabled={Boolean(form.noFloor)} className="public-input disabled:opacity-60" data-testid="customer-address-floor" />
                 </AddressField>
+                <BooleanField
+                  label="No / unknown floor"
+                  checked={Boolean(form.noFloor)}
+                  onChange={(checked) =>
+                    setForm((current) => ({
+                      ...current,
+                      noFloor: checked,
+                      floor: checked ? "" : current.floor,
+                    }))
+                  }
+                  testId="customer-address-no-floor"
+                />
                 <AddressField label="Apartment">
-                  <input value={form.apartment || ""} onChange={(event) => setForm((current) => ({ ...current, apartment: event.target.value }))} className="public-input" data-testid="customer-address-apartment" />
+                  <input value={form.apartment || ""} onChange={(event) => setForm((current) => ({ ...current, apartment: event.target.value, noApartment: event.target.value ? false : current.noApartment }))} disabled={Boolean(form.noApartment)} className="public-input disabled:opacity-60" data-testid="customer-address-apartment" />
                 </AddressField>
+                <BooleanField
+                  label="No apartment"
+                  checked={Boolean(form.noApartment)}
+                  onChange={(checked) =>
+                    setForm((current) => ({
+                      ...current,
+                      noApartment: checked,
+                      apartment: checked ? "" : current.apartment,
+                    }))
+                  }
+                  testId="customer-address-no-apartment"
+                />
                 <AddressField label="Postal code">
                   <input value={form.postalCode || ""} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} className="public-input" data-testid="customer-address-postalCode" />
                 </AddressField>
@@ -613,6 +655,30 @@ function AddressField({ label, children }: { label: string; children: React.Reac
         {label}
       </span>
       {children}
+    </label>
+  );
+}
+
+function BooleanField({
+  label,
+  checked,
+  onChange,
+  testId,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  testId: string;
+}) {
+  return (
+    <label className="flex items-center gap-3 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--foreground)]">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        data-testid={testId}
+      />
+      <span>{label}</span>
     </label>
   );
 }

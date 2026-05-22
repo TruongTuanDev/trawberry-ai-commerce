@@ -228,9 +228,12 @@ export type PublicTrackedOrder = {
     street?: string | null;
     building?: string | null;
     entrance?: string | null;
+    noEntrance?: boolean;
     intercom?: string | null;
     floor?: string | null;
+    noFloor?: boolean;
     apartment?: string | null;
+    noApartment?: boolean;
     geoPrecision?: string | null;
     deliveryComment?: string | null;
     geoReadiness?: {
@@ -303,9 +306,12 @@ export type PublicTrackedOrder = {
     dropoffStreet?: string | null;
     dropoffBuilding?: string | null;
     dropoffEntrance?: string | null;
+    dropoffNoEntrance?: boolean;
     dropoffIntercom?: string | null;
     dropoffFloor?: string | null;
+    dropoffNoFloor?: boolean;
     dropoffApartment?: string | null;
+    dropoffNoApartment?: boolean;
     dropoffGeoPrecision?: string | null;
     dropoffComment?: string | null;
     dropoffLatitude: string | null;

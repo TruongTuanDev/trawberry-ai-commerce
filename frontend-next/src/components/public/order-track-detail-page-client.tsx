@@ -244,23 +244,32 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                     />
                   </div>
                   {order.customer.entrance ||
+                  order.customer.noEntrance ||
                   order.customer.intercom ||
                   order.customer.floor ||
+                  order.customer.noFloor ||
                   order.customer.apartment ||
+                  order.customer.noApartment ||
                   order.customer.deliveryComment ? (
                     <p className="mt-4 text-sm text-[var(--muted)]">
                       {[
                         order.customer.entrance
                           ? `Entrance ${order.customer.entrance}`
+                          : order.customer.noEntrance
+                            ? "No private entrance"
                           : null,
                         order.customer.intercom
                           ? `Intercom ${order.customer.intercom}`
                           : null,
                         order.customer.floor
                           ? `Floor ${order.customer.floor}`
+                          : order.customer.noFloor
+                            ? "Floor unknown"
                           : null,
                         order.customer.apartment
                           ? `Apartment ${order.customer.apartment}`
+                          : order.customer.noApartment
+                            ? "No apartment"
                           : null,
                         order.customer.deliveryComment ?? null,
                       ]
@@ -476,6 +485,21 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                           Tracking number:{" "}
                           {order.delivery.trackingNumber ?? "Not assigned yet."}
                         </p>
+                        {order.delivery.manualYandexOrderId ? (
+                          <p
+                            className="mt-3 text-sm font-semibold text-[var(--foreground)]"
+                            data-testid="tracked-yandex-order-id"
+                          >
+                            Mã vận đơn Yandex: {order.delivery.manualYandexOrderId}
+                          </p>
+                        ) : (
+                          <p
+                            className="mt-3 text-sm text-[var(--muted)]"
+                            data-testid="tracked-yandex-order-id-pending"
+                          >
+                            Shop đang tạo đơn giao hàng Yandex.
+                          </p>
+                        )}
                         {order.delivery.courierPhone ? (
                           <p
                             className="mt-3 text-sm text-[var(--muted)]"
@@ -548,7 +572,9 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             className="public-button-secondary mt-4 inline-flex px-4 py-2 text-sm"
                             data-testid="tracked-delivery-link"
                           >
-                            Open delivery tracking
+                            {order.delivery.manualYandexOrderId
+                              ? "Theo dõi Yandex"
+                              : "Open delivery tracking"}
                           </a>
                         ) : (
                           <p className="mt-3 text-sm text-[var(--muted)]">
@@ -560,7 +586,9 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                     </div>
                   ) : (
                     <p className="mt-4 text-sm text-[var(--muted)]">
-                      Delivery has not been created for this order yet.
+                      {order.status === "READY_TO_CREATE_YANDEX"
+                        ? "Shop đang tạo đơn giao hàng Yandex."
+                        : "Delivery has not been created for this order yet."}
                     </p>
                   )}
                 </section>

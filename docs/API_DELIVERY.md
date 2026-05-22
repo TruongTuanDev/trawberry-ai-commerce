@@ -49,6 +49,33 @@ Yandex-friendly mapping in this phase:
 
 Coordinates are not enforced for the current manual seller workflow, but orders without coordinates are not fully API-ready for future provider automation.
 
+## 2026-05-23 Manual Yandex Operational Polish Addendum
+
+Manual Yandex operations now distinguish:
+
+- address saved
+- manual Yandex ready
+- API-ready for future provider automation
+
+For current seller-operated manual Yandex flow, operational completeness now also expects explicit customer access decisions:
+
+- `entrance` or `noEntrance=true`
+- `floor` or `noFloor=true`
+- `apartment` or `noApartment=true`
+
+Customer tracking now exposes:
+
+- `manualYandexOrderId`
+- `trackingUrl` as a customer-facing `Theo dõi Yandex` action when present
+
+Admin deliveries now support:
+
+- `status=MISSING_YANDEX_ORDER_ID`
+- `status=CREATED_WITH_YANDEX_ID`
+- `POST /api/admin/deliveries/:orderId/remind-yandex`
+
+The reminder endpoint writes an internal admin audit/reminder event only. It does not send real SMS or email in this phase.
+
 ## Scope
 
 `backend-nest/src/modules/delivery` provides the multi-carrier foundation for seller delivery operations.
@@ -234,6 +261,8 @@ Admin actions:
 Additional queue filters:
 - `status=READY_TO_CREATE_YANDEX`
 - `status=OVERDUE`
+- `status=MISSING_YANDEX_ORDER_ID`
+- `status=CREATED_WITH_YANDEX_ID`
 
 ## Delivery Detail
 

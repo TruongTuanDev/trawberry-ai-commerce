@@ -300,7 +300,8 @@ export function CheckoutPageClient({
     submitting ||
     activeValidationLoading ||
     Boolean(activeValidationError) ||
-    hasBlockingIssues;
+    hasBlockingIssues ||
+    Boolean(selectedSavedAddress && !selectedSavedAddress.yandexManualReady);
 
   const handleSubmit = async () => {
     if (!items.length) {
@@ -663,6 +664,12 @@ export function CheckoutPageClient({
                                 ? "Manual delivery allowed"
                                 : "Structured address still needs more detail"}
                           </p>
+                          {!selectedSavedAddress.yandexManualReady &&
+                          selectedSavedAddress.missingYandexFields.length ? (
+                            <p className="mt-2 text-xs text-rose-700" data-testid="checkout-address-missing-details">
+                              Missing details: {selectedSavedAddress.missingYandexFields.join(", ")}
+                            </p>
+                          ) : null}
                           {!isCustomerAddressGeoReady(selectedSavedAddress) ? (
                             <p className="mt-2 text-xs text-amber-700">
                               Coordinates missing - seller may need to verify manually before Yandex dispatch.
@@ -873,6 +880,8 @@ export function CheckoutPageClient({
                   >
                     {submitting
                       ? "Creating order..."
+                      : selectedSavedAddress && !selectedSavedAddress.yandexManualReady
+                        ? "Complete saved address details first"
                       : hasBlockingIssues
                         ? "Resolve cart issues first"
                         : "Create order"}

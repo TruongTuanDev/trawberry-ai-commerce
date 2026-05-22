@@ -71,10 +71,20 @@ export type SellerOrderDeliverySummary = {
   provider: DeliveryProviderName | string;
   status: string;
   providerShipmentId: string | null;
+  providerOrderNumber?: string | null;
   trackingNumber: string | null;
   trackingUrl: string | null;
+  courierName?: string | null;
   courierPhone: string | null;
   estimatedDeliveryAt: string | null;
+  packagePreset?: string | null;
+  packageWeightGram?: number | null;
+  packageLengthCm?: number | null;
+  packageWidthCm?: number | null;
+  packageHeightCm?: number | null;
+  manualYandexOrderId?: string | null;
+  yandexClaimId?: string | null;
+  yandexTrackingLink?: string | null;
   deliveryNote: string | null;
 };
 
@@ -181,9 +191,12 @@ export type DeliveryShipment = {
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
+  dropoffNoEntrance?: boolean;
   dropoffIntercom?: string | null;
   dropoffFloor?: string | null;
+  dropoffNoFloor?: boolean;
   dropoffApartment?: string | null;
+  dropoffNoApartment?: boolean;
   dropoffGeoPrecision?: string | null;
   dropoffComment?: string | null;
   pickupGeoReadiness?: {
@@ -296,9 +309,12 @@ export type SellerOrderListItem = {
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
+  dropoffNoEntrance?: boolean;
   dropoffIntercom?: string | null;
   dropoffFloor?: string | null;
+  dropoffNoFloor?: boolean;
   dropoffApartment?: string | null;
+  dropoffNoApartment?: boolean;
   dropoffLatitude?: string | null;
   dropoffLongitude?: string | null;
   dropoffGeoPrecision?: string | null;
@@ -343,6 +359,12 @@ export type SellerOrderListItem = {
     ledgerStatus: string | null;
     commissionAmount: string | null;
     invoiceStatus: string | null;
+  } | null;
+  latestYandexReminder?: {
+    id: string;
+    message: string;
+    createdAt: string;
+    adminName: string | null;
   } | null;
   returnRefundCases?: Array<{
     id: string;

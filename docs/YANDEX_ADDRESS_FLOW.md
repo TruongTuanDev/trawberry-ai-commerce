@@ -124,3 +124,18 @@ Operational meaning:
 
 Current policy does **not** block manual checkout when coordinates are missing.
 It only warns customer, seller, and admin that the address is manual-only.
+
+## Manual Yandex completeness rules
+
+Structured address entry now also preserves access decisions needed by a manual Yandex courier handoff:
+
+- `entrance` or explicit `noEntrance`
+- `floor` or explicit `noFloor`
+- `apartment` or explicit `noApartment`
+
+These fields are stored separately and are not folded into `addressFullName`.
+
+This keeps the Yandex handoff copy clean:
+
+- fullname: `city + street + building`
+- access details: entrance / intercom / floor / apartment / comment

@@ -12,12 +12,12 @@ export function formatCustomerAddress(address: CustomerAddress) {
     .join(", ");
 }
 
-export function formatCustomerAddressComment(address: Pick<CustomerAddress, "entrance" | "intercom" | "floor" | "apartment" | "comment">) {
+export function formatCustomerAddressComment(address: Pick<CustomerAddress, "entrance" | "noEntrance" | "intercom" | "floor" | "noFloor" | "apartment" | "noApartment" | "comment">) {
   return [
-    address.entrance ? `Entrance ${address.entrance}` : null,
+    address.entrance ? `Entrance ${address.entrance}` : address.noEntrance ? "No private entrance" : null,
     address.intercom ? `Intercom ${address.intercom}` : null,
-    address.floor ? `Floor ${address.floor}` : null,
-    address.apartment ? `Apartment ${address.apartment}` : null,
+    address.floor ? `Floor ${address.floor}` : address.noFloor ? "Floor unknown" : null,
+    address.apartment ? `Apartment ${address.apartment}` : address.noApartment ? "No apartment" : null,
     address.comment || null,
   ]
     .filter(Boolean)
@@ -28,11 +28,18 @@ export function isCustomerAddressGeoReady(address: Pick<CustomerAddress, "latitu
   return Boolean(address.latitude && address.longitude && address.geoPrecision !== "UNKNOWN");
 }
 
-export function getCustomerAddressReadinessBadge(address: Pick<CustomerAddress, "geoPrecision" | "yandexApiReady" | "geoReadiness">) {
+export function getCustomerAddressReadinessBadge(address: Pick<CustomerAddress, "geoPrecision" | "yandexApiReady" | "yandexManualReady" | "geoReadiness">) {
   if (address.yandexApiReady) {
     return {
       label: "Yandex-ready",
       tone: "bg-emerald-100 text-emerald-700",
+    };
+  }
+
+  if (address.yandexManualReady) {
+    return {
+      label: "Manual-ready",
+      tone: "bg-sky-100 text-sky-700",
     };
   }
 

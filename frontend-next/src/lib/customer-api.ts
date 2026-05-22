@@ -86,9 +86,12 @@ export type CustomerAddress = {
   streetType: string | null;
   buildingBlock: string | null;
   entrance: string | null;
+  noEntrance: boolean;
   intercom: string | null;
   floor: string | null;
+  noFloor: boolean;
   apartment: string | null;
+  noApartment: boolean;
   postalCode: string | null;
   comment: string | null;
   latitude: string | null;
@@ -130,9 +133,12 @@ export type CustomerAddressInput = {
   streetType?: string;
   buildingBlock?: string;
   entrance?: string;
+  noEntrance?: boolean;
   intercom?: string;
   floor?: string;
+  noFloor?: boolean;
   apartment?: string;
+  noApartment?: boolean;
   postalCode?: string;
   comment?: string;
   latitude?: number | null;

@@ -1,5 +1,35 @@
 # Phase Report
 
+## 2026-05-23 Manual Yandex Operational Polish
+
+- polished the seller-operated Yandex delivery workflow without introducing real Yandex API calls
+- seller order detail now exposes a dedicated `Yandex Delivery Handoff` block with:
+  - customer identity
+  - structured dropoff data
+  - access decisions
+  - package summary
+  - copy-ready Yandex handoff blocks
+  - editable `manualYandexOrderId`
+- current saved customer address policy now requires:
+  - `city`
+  - `street`
+  - `building`
+  - recipient `fullName`
+  - recipient `phone`
+  - entrance / floor / apartment value or explicit no/unknown decision
+- customer tracking now shows seller-entered `manualYandexOrderId`
+- admin deliveries now support:
+  - `MISSING_YANDEX_ORDER_ID`
+  - `CREATED_WITH_YANDEX_ID`
+  - internal `remind-yandex` action with 30-minute rate limit
+- added verification targets:
+  - `backend-nest npm run smoke:manual-yandex-operational-polish`
+  - `frontend-next npm run test:e2e:manual-yandex-operational-polish`
+- current remaining limitations:
+  - no real Yandex API
+  - no SMS or email provider
+  - reminder is internal/audit-only in this phase
+
 ## 2026-05-22 Yandex-Compatible Customer Address Flow
 
 - upgraded customer addresses from a mostly flat delivery string into a structured Yandex-compatible model

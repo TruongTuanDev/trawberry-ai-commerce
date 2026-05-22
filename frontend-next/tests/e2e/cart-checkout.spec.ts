@@ -122,6 +122,24 @@ async function createTwoVariantProduct(
       },
     },
   );
+  await backendJson(request, `/api/shops/${shop.id}/payment-settings`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${input.token}`, Cookie: "" },
+    data: {
+      paymentMode: "STATIC_QR",
+      status: "READY",
+      bankName: "T-Bank",
+      recipientName: "Cart Checkout Seller",
+      recipientPhone: "+79990000007",
+      recipientAccount: "40817810000000000707",
+      sbpPhone: "+79990000007",
+      paymentInstruction: "Pay seller directly by QR.",
+      allowPrepaidQr: true,
+      allowPayOnDeliverySellerQr: true,
+      allowDepositPayment: true,
+      depositPercent: 30,
+    },
+  });
   const wbNmId = 7100000 + (input.stamp % 100000);
   const product = await backendJson<{
     id: string;

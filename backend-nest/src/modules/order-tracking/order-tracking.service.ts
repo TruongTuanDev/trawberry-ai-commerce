@@ -36,9 +36,12 @@ type TrackableOrderRecord = {
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
+  dropoffNoEntrance?: boolean;
   dropoffIntercom?: string | null;
   dropoffFloor?: string | null;
+  dropoffNoFloor?: boolean;
   dropoffApartment?: string | null;
+  dropoffNoApartment?: boolean;
   dropoffGeoPrecision?: string | null;
   dropoffComment?: string | null;
   shippingMethodName: string | null;
@@ -367,9 +370,12 @@ export class OrderTrackingService {
       street: order.dropoffStreet ?? '',
       building: order.dropoffBuilding ?? '',
       entrance: order.dropoffEntrance ?? null,
+      noEntrance: order.dropoffNoEntrance ?? false,
       intercom: order.dropoffIntercom ?? null,
       floor: order.dropoffFloor ?? null,
+      noFloor: order.dropoffNoFloor ?? false,
       apartment: order.dropoffApartment ?? null,
+      noApartment: order.dropoffNoApartment ?? false,
       comment: order.dropoffComment ?? null,
       geoPrecision: order.dropoffGeoPrecision ?? null,
       phone: order.customerPhone,
@@ -400,9 +406,12 @@ export class OrderTrackingService {
         street: order.dropoffStreet ?? null,
         building: order.dropoffBuilding ?? null,
         entrance: order.dropoffEntrance ?? null,
+        noEntrance: order.dropoffNoEntrance ?? false,
         intercom: order.dropoffIntercom ?? null,
         floor: order.dropoffFloor ?? null,
+        noFloor: order.dropoffNoFloor ?? false,
         apartment: order.dropoffApartment ?? null,
+        noApartment: order.dropoffNoApartment ?? false,
         geoPrecision: order.dropoffGeoPrecision ?? null,
         deliveryComment: order.dropoffComment ?? null,
         geoReadiness: customerGeoReadiness,
@@ -497,12 +506,15 @@ export class OrderTrackingService {
               latestShipment.dropoffBuilding ?? order.dropoffBuilding ?? null,
             dropoffEntrance:
               latestShipment.dropoffEntrance ?? order.dropoffEntrance ?? null,
+            dropoffNoEntrance: order.dropoffNoEntrance ?? false,
             dropoffIntercom:
               latestShipment.dropoffIntercom ?? order.dropoffIntercom ?? null,
             dropoffFloor:
               latestShipment.dropoffFloor ?? order.dropoffFloor ?? null,
+            dropoffNoFloor: order.dropoffNoFloor ?? false,
             dropoffApartment:
               latestShipment.dropoffApartment ?? order.dropoffApartment ?? null,
+            dropoffNoApartment: order.dropoffNoApartment ?? false,
             dropoffGeoPrecision:
               latestShipment.dropoffGeoPrecision ??
               order.dropoffGeoPrecision ??
@@ -520,13 +532,16 @@ export class OrderTrackingService {
                 latestShipment.dropoffBuilding ?? order.dropoffBuilding ?? '',
               entrance:
                 latestShipment.dropoffEntrance ?? order.dropoffEntrance ?? null,
+              noEntrance: order.dropoffNoEntrance ?? false,
               intercom:
                 latestShipment.dropoffIntercom ?? order.dropoffIntercom ?? null,
               floor: latestShipment.dropoffFloor ?? order.dropoffFloor ?? null,
+              noFloor: order.dropoffNoFloor ?? false,
               apartment:
                 latestShipment.dropoffApartment ??
                 order.dropoffApartment ??
                 null,
+              noApartment: order.dropoffNoApartment ?? false,
               comment:
                 latestShipment.dropoffComment ?? order.dropoffComment ?? null,
               latitude: latestShipment.dropoffLatitude,

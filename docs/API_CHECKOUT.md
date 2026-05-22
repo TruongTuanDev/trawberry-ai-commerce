@@ -1,5 +1,26 @@
 # Checkout API
 
+## 2026-05-23 Manual Yandex Operational Polish Addendum
+
+Saved customer addresses used for current manual Yandex operations must now be operationally complete enough for seller copy-paste handoff.
+
+Current manual-ready validation expects:
+
+- `city`
+- `street`
+- `building`
+- customer `fullName`
+- customer `phone`
+- `entrance` or `noEntrance=true`
+- `floor` or `noFloor=true`
+- `apartment` or `noApartment=true`
+
+Current policy:
+
+- checkout blocks if these manual-ready requirements are missing on a saved address
+- coordinates remain optional for current manual Yandex flow
+- future real `YANDEX_API` claim creation should still require API-ready coordinates
+
 ## Scope
 This document describes the customer checkout MVP implemented in `backend-nest`.
 

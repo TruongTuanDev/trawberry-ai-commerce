@@ -1,5 +1,21 @@
 # Order Lifecycle
 
+## Manual Yandex operational addendum
+
+For seller-operated Yandex fulfillment, the expected operational sequence is now:
+
+1. payment confirmed or seller accepted COD
+2. order enters `READY_TO_CREATE_YANDEX`
+3. seller enters `manualYandexOrderId` and saves manual Yandex data
+4. shipment moves to `YANDEX_MANUAL_CREATED`
+5. seller/admin can move courier states:
+   - `COURIER_ASSIGNED`
+   - `PICKED_UP`
+   - `ON_THE_WAY`
+   - `DELIVERED`
+6. customer tracking shows `manualYandexOrderId` once available
+7. admin can remind the seller if the order stays too long without a Yandex ID
+
 ## Role-oriented lifecycle
 
 The marketplace uses one core order record with role-specific display mapping.

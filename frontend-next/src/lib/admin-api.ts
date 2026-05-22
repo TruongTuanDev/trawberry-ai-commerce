@@ -106,8 +106,10 @@ export type AdminDeliveryRow = {
   sellerId: string;
   sellerEmail: string;
   sellerName: string | null;
+  sellerPhone?: string | null;
   orderStatus: string;
   paymentStatus: string;
+  timeWaitingMinutes?: number;
   totalAmount: string;
   customer: {
     name: string;
@@ -167,6 +169,8 @@ export type AdminDeliveryRow = {
   yandexStatus: string | null;
   yandexPrice: string | null;
   yandexTrackingLink: string | null;
+  lastReminderAt?: string | null;
+  lastReminderMessage?: string | null;
   createdAt: string;
   updatedAt: string;
   events: Array<{
@@ -1208,5 +1212,16 @@ export async function adminUpdateDeliveryCustomerMessage(deliveryShipmentId: str
   return apiRequest<AdminDeliveryRow>(`/api/admin/deliveries/${deliveryShipmentId}/customer-message`, {
     method: "PATCH",
     body: JSON.stringify({ customerVisibleMessage }),
+  });
+}
+
+export async function adminRemindYandex(orderId: string) {
+  return apiRequest<{
+    reminderCreated: boolean;
+    lastReminderAt: string | null;
+    nextAllowedAt: string | null;
+  }>(`/api/admin/deliveries/${encodeURIComponent(orderId)}/remind-yandex`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }

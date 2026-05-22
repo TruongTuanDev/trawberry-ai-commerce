@@ -445,6 +445,7 @@ Useful scripts:
 ```bash
 npm run smoke:yandex-address-readiness
 npm run smoke:yandex-address-flow
+npm run smoke:manual-yandex-operational-polish
 ```
 
 The readiness smoke verifies:
@@ -452,3 +453,10 @@ The readiness smoke verifies:
 - structured address without coordinates stays manual-ready
 - manual lat/lng can promote the address to API-ready
 - current manual checkout flow is not blocked by missing coordinates
+
+## Manual Yandex Operational Polish
+
+- seller order detail now includes a dedicated `Yandex Delivery Handoff` block
+- customer saved addresses now require explicit entrance / floor / apartment decisions for manual Yandex readiness
+- customer tracking now shows `manualYandexOrderId` when the seller enters it
+- admin deliveries can filter missing Yandex IDs and trigger an internal reminder event

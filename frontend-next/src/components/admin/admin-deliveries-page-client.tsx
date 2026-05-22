@@ -10,6 +10,7 @@ import {
   adminMarkDeliveryFailed,
   adminMarkDeliveryInTransit,
   adminMarkDeliveryPickedUp,
+  adminRemindYandex,
   adminUpdateDeliveryCustomerMessage,
   listAdminDeliveries,
   type AdminDeliveryRow,
@@ -20,6 +21,8 @@ const statusFilters = [
   { label: "Paid without delivery", value: "PAID_WITHOUT_DELIVERY" },
   { label: "Ready for Yandex", value: "READY_TO_CREATE_YANDEX" },
   { label: "Overdue", value: "OVERDUE" },
+  { label: "Missing Yandex ID", value: "MISSING_YANDEX_ORDER_ID" },
+  { label: "Created with Yandex ID", value: "CREATED_WITH_YANDEX_ID" },
   { label: "Exceptions only", value: "EXCEPTIONS" },
   { label: "Created", value: "YANDEX_MANUAL_CREATED" },
   { label: "Courier assigned", value: "COURIER_ASSIGNED" },
@@ -109,6 +112,23 @@ export function AdminDeliveriesPageClient() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Admin delivery action failed.");
+    }
+  };
+
+  const handleRemindSeller = async () => {
+    if (!selected?.orderId) return;
+    setMessage(null);
+    setError(null);
+    try {
+      const result = await adminRemindYandex(selected.orderId);
+      setMessage(
+        result.reminderCreated
+          ? "Reminder sent."
+          : `Reminder already sent. Next allowed at ${result.nextAllowedAt ? new Date(result.nextAllowedAt).toLocaleString() : "later"}.`,
+      );
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to remind seller.");
     }
   };
 
@@ -240,6 +260,7 @@ export function AdminDeliveriesPageClient() {
                   <div>
                     <p className="text-sm font-semibold text-[var(--foreground)]">{item.shopName}</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">{item.sellerEmail}</p>
+                    {item.sellerPhone ? <p className="mt-1 text-xs text-[var(--muted)]">{item.sellerPhone}</p> : null}
                   </div>
                   <div>
                     <p className="text-sm text-[var(--foreground)]">{item.customer.name}</p>
@@ -251,6 +272,9 @@ export function AdminDeliveriesPageClient() {
                   <span className="w-fit rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]" data-testid="admin-delivery-row-status">
                     {item.internalStatus}
                   </span>
+                  {item.lastReminderAt ? (
+                    <p className="text-xs text-[var(--muted)]">Reminder: {new Date(item.lastReminderAt).toLocaleString()}</p>
+                  ) : null}
                 </button>
               ))
             ) : (
@@ -270,7 +294,9 @@ export function AdminDeliveriesPageClient() {
                 <Metric label="Provider" value={selected.provider ?? "Not created"} />
                 <Metric label="Status" value={selected.internalStatus} testId="admin-delivery-detail-status" />
                 <Metric label="Tracking" value={selected.trackingNumber ?? "Not assigned"} />
+                <Metric label="Yandex ID" value={selected.manualYandexOrderId ?? "Missing"} />
                 <Metric label="Courier" value={selected.courierPhone ?? "Not assigned"} />
+                <Metric label="Waiting" value={selected.timeWaitingMinutes !== undefined ? `${selected.timeWaitingMinutes} min` : "Unknown"} />
                 <Metric label="Reason" value={selected.failureReasonCode ?? "None"} />
                 <Metric label="Customer message" value={selected.customerVisibleMessage ?? "None"} />
               </div>
@@ -279,7 +305,15 @@ export function AdminDeliveriesPageClient() {
                 Pickup: {selected.pickupGeoReadiness?.hasCoordinates ? "ready" : "missing"} | Dropoff: {selected.dropoffGeoReadiness?.hasCoordinates ? "ready" : "missing"} | API-ready: {selected.yandexApiReady ? "yes" : "no"}
               </p>
               {selected.deliveryNote ? <p className="text-sm text-[var(--muted)]">{selected.deliveryNote}</p> : null}
+              {selected.lastReminderAt ? (
+                <p className="text-xs text-[var(--muted)]">
+                  Last reminder: {new Date(selected.lastReminderAt).toLocaleString()}
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-3">
+                <button type="button" onClick={() => void handleRemindSeller()} className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white" data-testid="admin-remind-seller-yandex">
+                  Nhắc seller
+                </button>
                 <button type="button" onClick={() => void handleOverride("courier-assigned")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Courier assigned</button>
                 <button type="button" onClick={() => void handleOverride("picked-up")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Picked up</button>
                 <button type="button" onClick={() => void handleOverride("in-transit")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-in-transit">Mark in transit</button>

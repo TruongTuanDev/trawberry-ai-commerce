@@ -18,6 +18,7 @@ import {
   buildYandexAddressFullname,
   computeAddressGeoReadiness,
   formatCustomerAddressSnapshot,
+  validateYandexManualAddress,
 } from '../../common/utils/customer-address.util';
 import { resolveShopPaymentPanel } from '../../common/utils/shop-payment.util';
 import {
@@ -81,9 +82,12 @@ type ResolvedCheckoutCustomer = {
   street: string | null;
   building: string | null;
   entrance: string | null;
+  noEntrance: boolean;
   intercom: string | null;
   floor: string | null;
+  noFloor: boolean;
   apartment: string | null;
+  noApartment: boolean;
   geoPrecision: string | null;
   addressFullName: string | null;
   yandexComment: string | null;
@@ -126,9 +130,12 @@ export class CheckoutService {
       street: checkoutCustomer.street ?? '',
       building: checkoutCustomer.building ?? '',
       entrance: checkoutCustomer.entrance,
+      noEntrance: checkoutCustomer.noEntrance,
       intercom: checkoutCustomer.intercom,
       floor: checkoutCustomer.floor,
+      noFloor: checkoutCustomer.noFloor,
       apartment: checkoutCustomer.apartment,
+      noApartment: checkoutCustomer.noApartment,
       latitude: checkoutCustomer.latitude,
       longitude: checkoutCustomer.longitude,
       geoPrecision: checkoutCustomer.geoPrecision,
@@ -136,13 +143,44 @@ export class CheckoutService {
       comment: checkoutCustomer.note,
       phone: checkoutCustomer.phone,
     });
-    const addressWarnings =
-      addressGeoReadiness.isYandexManualReady &&
+    const manualAddressValidation = validateYandexManualAddress({
+      country: checkoutCustomer.country,
+      city: checkoutCustomer.city ?? '',
+      street: checkoutCustomer.street ?? '',
+      building: checkoutCustomer.building ?? '',
+      entrance: checkoutCustomer.entrance,
+      noEntrance: checkoutCustomer.noEntrance,
+      intercom: checkoutCustomer.intercom,
+      floor: checkoutCustomer.floor,
+      noFloor: checkoutCustomer.noFloor,
+      apartment: checkoutCustomer.apartment,
+      noApartment: checkoutCustomer.noApartment,
+      latitude: checkoutCustomer.latitude,
+      longitude: checkoutCustomer.longitude,
+      geoPrecision: checkoutCustomer.geoPrecision,
+      addressFullName: checkoutCustomer.addressFullName,
+      comment: checkoutCustomer.note,
+      fullName: checkoutCustomer.fullName,
+      phone: checkoutCustomer.phone,
+    });
+    if (dto.addressId && !manualAddressValidation.valid) {
+      throw new BadRequestException(
+        `Saved address is not ready for Yandex manual delivery: ${manualAddressValidation.missingFields.join(', ')}.`,
+      );
+    }
+    const addressWarnings = [
+      ...(!manualAddressValidation.valid
+        ? [
+            `Address needs more Yandex delivery detail: ${manualAddressValidation.missingFields.join(', ')}.`,
+          ]
+        : []),
+      ...(manualAddressValidation.yandexManualReady &&
       !addressGeoReadiness.hasCoordinates
         ? [
             'Coordinates missing; seller may need to verify address manually before using Yandex.',
           ]
-        : [];
+        : []),
+    ];
     const customerId = await this.resolveCustomerId(dto, user);
     const itemsByShop = this.groupItemsByShop(normalizedItems);
     const grandTotal = this.sumLineTotals(normalizedItems);
@@ -228,9 +266,12 @@ export class CheckoutService {
             dropoffStreet: checkoutCustomer.street,
             dropoffBuilding: checkoutCustomer.building,
             dropoffEntrance: checkoutCustomer.entrance,
+            dropoffNoEntrance: checkoutCustomer.noEntrance,
             dropoffIntercom: checkoutCustomer.intercom,
             dropoffFloor: checkoutCustomer.floor,
+            dropoffNoFloor: checkoutCustomer.noFloor,
             dropoffApartment: checkoutCustomer.apartment,
+            dropoffNoApartment: checkoutCustomer.noApartment,
             dropoffLatitude:
               checkoutCustomer.latitude !== null
                 ? new Prisma.Decimal(checkoutCustomer.latitude)
@@ -427,9 +468,12 @@ export class CheckoutService {
         street: null,
         building: null,
         entrance: null,
+        noEntrance: false,
         intercom: null,
         floor: null,
+        noFloor: false,
         apartment: null,
+        noApartment: false,
         geoPrecision:
           dto.customer.latitude && dto.customer.longitude
             ? 'MANUAL_PIN'
@@ -471,9 +515,12 @@ export class CheckoutService {
       street: address.street,
       building: address.building,
       entrance: address.entrance,
+      noEntrance: address.noEntrance,
       intercom: address.intercom,
       floor: address.floor,
+      noFloor: address.noFloor,
       apartment: address.apartment,
+      noApartment: address.noApartment,
       geoPrecision: address.geoPrecision,
       addressFullName:
         address.addressFullName || buildYandexAddressFullname(address),

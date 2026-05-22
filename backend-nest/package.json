@@ -51,6 +51,7 @@
     "smoke:return-refund-dispute": "powershell -ExecutionPolicy Bypass -File scripts/smoke-return-refund-dispute.ps1",
     "smoke:yandex-address-flow": "powershell -ExecutionPolicy Bypass -File scripts/smoke-yandex-address-flow.ps1",
     "smoke:yandex-address-readiness": "powershell -ExecutionPolicy Bypass -File scripts/smoke-yandex-address-readiness.ps1",
+    "smoke:manual-yandex-operational-polish": "powershell -ExecutionPolicy Bypass -File scripts/smoke-manual-yandex-operational-polish.ps1",
     "smoke:products": "powershell -ExecutionPolicy Bypass -File scripts/smoke-products.ps1",
     "smoke:seller-approval": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-approval.ps1",
     "smoke:seller-onboarding": "powershell -ExecutionPolicy Bypass -File scripts/smoke-seller-onboarding.ps1",

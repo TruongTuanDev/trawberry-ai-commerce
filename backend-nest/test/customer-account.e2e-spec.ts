@@ -568,7 +568,10 @@ describe('CustomerAccountController (e2e)', () => {
         phone: '8 999 000 00 10',
         city: 'Moscow',
         region: 'Moscow',
-        street: 'Tverskaya 10',
+        street: 'Tverskaya',
+        building: '10',
+        noEntrance: true,
+        noFloor: true,
         apartment: '12',
         postalCode: '101000',
       })
@@ -605,7 +608,8 @@ describe('CustomerAccountController (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         city: 'Saint Petersburg',
-        street: 'Nevsky 20',
+        street: 'Nevsky',
+        building: '20',
         latitude: 59.9343,
         longitude: 30.3351,
         geoPrecision: 'MANUAL_PIN',
@@ -621,7 +625,7 @@ describe('CustomerAccountController (e2e)', () => {
     ).toEqual(
       expect.objectContaining({
         city: 'Saint Petersburg',
-        street: 'Nevsky 20',
+        street: 'Nevsky',
         yandexApiReady: true,
       }),
     );

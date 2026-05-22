@@ -43,6 +43,7 @@
     "test:e2e:return-refund-dispute": "playwright test return-refund-dispute",
     "test:e2e:yandex-address-flow": "playwright test yandex-address-flow",
     "test:e2e:yandex-address-readiness": "playwright test yandex-address-readiness",
+    "test:e2e:manual-yandex-operational-polish": "playwright test manual-yandex-operational-polish",
     "test:e2e:admin-seller-management": "playwright test admin-seller-management",
     "test:e2e:seller-delivery-settings": "playwright test seller-delivery-settings",
     "test:e2e:seller-ai-images": "playwright test seller-ai-images",

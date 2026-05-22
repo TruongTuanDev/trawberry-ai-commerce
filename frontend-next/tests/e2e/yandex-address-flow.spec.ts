@@ -164,6 +164,7 @@ test("structured Moscow address flows into checkout and seller Yandex workbench"
   await page.getByTestId("customer-address-building").fill("12");
   await page.getByTestId("customer-address-entrance").fill("2");
   await page.getByTestId("customer-address-intercom").fill("45B");
+  await page.getByTestId("customer-address-no-floor").check();
   await page.getByTestId("customer-address-apartment").fill("73");
   await page.getByTestId("customer-address-comment").fill("Call 10 minutes before arrival");
   await page.getByTestId("customer-address-latitude").fill("55.765369");

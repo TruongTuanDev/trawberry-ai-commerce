@@ -432,4 +432,16 @@ export class AdminDeliveriesController {
       dto,
     );
   }
+
+  @Post(':orderId/remind-yandex')
+  @ApiOperation({
+    summary:
+      'Create an internal admin reminder for the seller to create manual Yandex delivery.',
+  })
+  remindYandex(
+    @Param('orderId') orderId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.deliveryService.adminRemindYandex(orderId, admin);
+  }
 }

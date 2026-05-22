@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
@@ -107,6 +108,11 @@ export class CreateCustomerAddressDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsBoolean()
+  noEntrance?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   @MaxLength(255)
   intercom?: string;
@@ -119,12 +125,22 @@ export class CreateCustomerAddressDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsBoolean()
+  noFloor?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @ValidateIf(
     (_, value) => value !== undefined && value !== null && value !== '',
   )
   @IsString()
   @MaxLength(255)
   apartment?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  noApartment?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()

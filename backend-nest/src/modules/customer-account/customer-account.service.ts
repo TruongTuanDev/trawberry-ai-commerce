@@ -17,6 +17,7 @@ import {
 import {
   buildYandexAddressFullname,
   computeAddressGeoReadiness,
+  validateYandexManualAddress,
 } from '../../common/utils/customer-address.util';
 import { AddressGeocoderService } from './address-geocoder.service';
 import { UpdateCustomerProfileDto } from './dto/update-customer-profile.dto';
@@ -417,6 +418,10 @@ export class CustomerAccountService {
         dto.entrance !== undefined
           ? dto.entrance.trim() || null
           : ((existing?.entrance as string | null | undefined) ?? null),
+      noEntrance:
+        dto.noEntrance !== undefined
+          ? Boolean(dto.noEntrance)
+          : ((existing?.noEntrance as boolean | null | undefined) ?? false),
       intercom:
         dto.intercom !== undefined
           ? dto.intercom.trim() || null
@@ -425,10 +430,18 @@ export class CustomerAccountService {
         dto.floor !== undefined
           ? dto.floor.trim() || null
           : ((existing?.floor as string | null | undefined) ?? null),
+      noFloor:
+        dto.noFloor !== undefined
+          ? Boolean(dto.noFloor)
+          : ((existing?.noFloor as boolean | null | undefined) ?? false),
       apartment:
         dto.apartment !== undefined
           ? dto.apartment.trim() || null
           : ((existing?.apartment as string | null | undefined) ?? null),
+      noApartment:
+        dto.noApartment !== undefined
+          ? Boolean(dto.noApartment)
+          : ((existing?.noApartment as boolean | null | undefined) ?? false),
       postalCode:
         dto.postalCode !== undefined
           ? dto.postalCode.trim() || null
@@ -465,6 +478,24 @@ export class CustomerAccountService {
         next.street = parsed.street;
         next.building = parsed.building;
       }
+    }
+
+    if (next.entrance) {
+      next.noEntrance = false;
+    } else if (next.noEntrance) {
+      next.entrance = null;
+    }
+
+    if (next.floor) {
+      next.noFloor = false;
+    } else if (next.noFloor) {
+      next.floor = null;
+    }
+
+    if (next.apartment) {
+      next.noApartment = false;
+    } else if (next.noApartment) {
+      next.apartment = null;
     }
 
     if (!partial) {
@@ -549,9 +580,12 @@ export class CustomerAccountService {
     streetType: string | null;
     buildingBlock: string | null;
     entrance: string | null;
+    noEntrance: boolean;
     intercom: string | null;
     floor: string | null;
+    noFloor: boolean;
     apartment: string | null;
+    noApartment: boolean;
     postalCode: string | null;
     comment: string | null;
     latitude: { toString(): string } | null;
@@ -566,6 +600,7 @@ export class CustomerAccountService {
     updatedAt: Date;
   }) {
     const geoReadiness = computeAddressGeoReadiness(address);
+    const manualValidation = validateYandexManualAddress(address);
 
     return {
       id: address.id,
@@ -584,9 +619,12 @@ export class CustomerAccountService {
       streetType: address.streetType,
       buildingBlock: address.buildingBlock,
       entrance: address.entrance,
+      noEntrance: address.noEntrance,
       intercom: address.intercom,
       floor: address.floor,
+      noFloor: address.noFloor,
       apartment: address.apartment,
+      noApartment: address.noApartment,
       postalCode: address.postalCode,
       comment: address.comment,
       latitude: address.latitude?.toString() ?? null,
@@ -599,9 +637,9 @@ export class CustomerAccountService {
       addressShortName:
         address.addressShortName || this.buildShortAddress(address),
       geoReadiness,
-      missingYandexFields: geoReadiness.missingFields,
-      yandexManualReady: geoReadiness.isYandexManualReady,
-      yandexApiReady: geoReadiness.isYandexApiReady,
+      missingYandexFields: manualValidation.missingFields,
+      yandexManualReady: manualValidation.yandexManualReady,
+      yandexApiReady: manualValidation.yandexApiReady,
       isDefault: address.isDefault,
       createdAt: address.createdAt.toISOString(),
       updatedAt: address.updatedAt.toISOString(),

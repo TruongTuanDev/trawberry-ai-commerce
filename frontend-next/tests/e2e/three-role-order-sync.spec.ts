@@ -278,8 +278,22 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
     data: { note: "Seller confirmed direct payment." },
   });
 
+  await expect
+    .poll(async () => {
+      const rows = await backendJson<Array<{ shopId: string; platformFeeDue: string }>>(
+        request,
+        "/api/admin/finance/seller-fees",
+        {
+          method: "GET",
+          token: adminLogin.accessToken,
+        },
+      );
+      return rows.find((row) => row.shopId === shop.id)?.platformFeeDue ?? null;
+    }, { timeout: 15000 })
+    .not.toBeNull();
+
   await page.goto("/admin/finance/seller-fees");
-  await expect(page.getByTestId("admin-seller-fees-page")).toContainText(shop.name);
+  await expect(page.getByTestId(`admin-platform-fee-due-${shop.id}`)).toBeVisible();
   const platformFeeDueText =
     (await page.getByTestId(`admin-platform-fee-due-${shop.id}`).textContent()) ?? "";
   const normalizedPlatformFeeDue = Number(
