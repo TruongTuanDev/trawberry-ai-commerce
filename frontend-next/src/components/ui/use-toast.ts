@@ -9,8 +9,14 @@ export interface Toast {
 
 type ToastListener = (toasts: Toast[]) => void;
 
+type ToastStore = {
+  __toasts?: Toast[];
+  __toastListeners?: Set<ToastListener>;
+};
+
 // Bulletproof singleton pattern across dynamic Next.js chunks via window object
-const globalObject: any = typeof window !== "undefined" ? window : {};
+const globalObject: ToastStore =
+  typeof window !== "undefined" ? (window as Window & ToastStore) : {};
 
 if (!globalObject.__toasts) {
   globalObject.__toasts = [];
@@ -19,18 +25,19 @@ if (!globalObject.__toastListeners) {
   globalObject.__toastListeners = new Set<ToastListener>();
 }
 
-const getToasts = (): Toast[] => globalObject.__toasts;
+const getToasts = (): Toast[] => globalObject.__toasts ?? [];
 const setToasts = (newToasts: Toast[]) => {
   globalObject.__toasts = newToasts;
 };
-const getListeners = (): Set<ToastListener> => globalObject.__toastListeners;
+const getListeners = (): Set<ToastListener> =>
+  globalObject.__toastListeners ?? new Set<ToastListener>();
 
 function notify() {
   const currentToasts = getToasts();
   for (const listener of getListeners()) {
     try {
       listener([...currentToasts]);
-    } catch (e) {
+    } catch {
       // Ignored
     }
   }

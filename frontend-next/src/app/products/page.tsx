@@ -267,10 +267,6 @@ function ProductsPageContent({
               value={filters.inStock}
               onChange={(event) => {
                 setFilters((current) => ({ ...current, inStock: event.target.value }));
-                setTimeout(() => {
-                  const form = document.querySelector("#filter-form") as HTMLFormElement;
-                  if (form) form.requestSubmit();
-                }, 50);
               }}
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-stock"
@@ -283,10 +279,6 @@ function ProductsPageContent({
               value={filters.categorySlug}
               onChange={(event) => {
                 setFilters((current) => ({ ...current, categorySlug: event.target.value }));
-                setTimeout(() => {
-                  const form = document.querySelector("#filter-form") as HTMLFormElement;
-                  if (form) form.requestSubmit();
-                }, 50);
               }}
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-category"
@@ -302,10 +294,6 @@ function ProductsPageContent({
               value={filters.sort}
               onChange={(event) => {
                 setFilters((current) => ({ ...current, sort: event.target.value }));
-                setTimeout(() => {
-                  const form = document.querySelector("#filter-form") as HTMLFormElement;
-                  if (form) form.requestSubmit();
-                }, 50);
               }}
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-sort"
