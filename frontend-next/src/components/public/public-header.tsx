@@ -245,7 +245,7 @@ export function PublicHeader() {
                 name="q"
                 defaultValue={searchParams.get("q") ?? ""}
                 placeholder="Search products, brands, categories"
-                className="min-w-0 flex-1 border-none bg-transparent p-0 text-sm outline-none placeholder:text-[var(--muted)]"
+                className="min-w-0 flex-1 border-none bg-transparent p-0 text-sm outline-none placeholder:text-[var(--muted)] focus:outline-none focus:ring-0 focus-visible:outline-none"
                 data-testid="public-header-search"
               />
               <button
