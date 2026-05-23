@@ -2,40 +2,43 @@
 
 import { useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { changeCustomerPassword } from "@/lib/customer-api";
 
 export function CustomerAccountSecurityPageClient() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    setLoading(true);
     setError(null);
     setSuccess(null);
 
-    try {
-      if (newPassword !== confirmPassword) {
-        throw new Error("Mật khẩu xác nhận không khớp.");
-      }
+    await run({
+      action: async () => {
+        if (newPassword !== confirmPassword) {
+          throw new Error("Mật khẩu xác nhận không khớp.");
+        }
 
-      await changeCustomerPassword({
-        currentPassword,
-        newPassword,
-      });
-
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setSuccess("Mật khẩu customer đã được cập nhật.");
-    } catch (issue) {
+        return changeCustomerPassword({
+          currentPassword,
+          newPassword,
+        });
+      },
+      successMessage: "Mật khẩu customer đã được cập nhật.",
+      onSuccess: () => {
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setSuccess("Mật khẩu customer đã được cập nhật.");
+      },
+      errorMessage: "Đổi mật khẩu thất bại.",
+    }).catch((issue) => {
       setError(issue instanceof Error ? issue.message : "Unable to change password.");
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -70,11 +73,11 @@ export function CustomerAccountSecurityPageClient() {
         <button
           type="button"
           onClick={() => void handleSubmit()}
-          disabled={loading}
+          disabled={isRunning}
           className="public-button-primary mt-6 px-5 py-3 text-sm disabled:opacity-60"
           data-testid="customer-security-submit"
         >
-          {loading ? "Đang đổi mật khẩu..." : "Đổi mật khẩu"}
+          {isRunning ? "Đang lưu..." : "Đổi mật khẩu"}
         </button>
       </section>
     </CustomerAccountShell>

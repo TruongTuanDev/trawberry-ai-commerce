@@ -12,6 +12,7 @@ import {
   type SellerReturnRefundCase,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import {
   formatRub,
   isReturnCaseClosed,
@@ -41,7 +42,7 @@ export function SellerReturnsPageClient({
   const [selected, setSelected] = useState<SellerReturnRefundCase | null>(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { run, isRunning: saving } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [action, setAction] = useState<(typeof sellerActions)[number]["value"]>("ACCEPT");
@@ -139,94 +140,108 @@ export function SellerReturnsPageClient({
 
   const handleRespond = async () => {
     if (!currentShopId || !selected) return;
-    setSaving(true);
+
+    if (action === "REJECT") {
+      const confirmed = window.confirm("Từ chối yêu cầu trả hàng/hoàn tiền này?");
+      if (!confirmed) return;
+    }
+
     setError(null);
     setMessage(null);
-    try {
-      const updated = await respondShopReturnRefundCase(
-        currentShopId,
-        selected.id,
-        {
-          action,
-          sellerComment,
-        },
-        "",
-      );
-      setSelected(updated);
-      await refreshList(updated.id);
-      setSellerComment("");
-      setMessage("Seller response saved.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to save seller response.");
-    } finally {
-      setSaving(false);
-    }
+    await run({
+      action: async () => {
+        const updated = await respondShopReturnRefundCase(
+          currentShopId,
+          selected.id,
+          {
+            action,
+            sellerComment,
+          },
+          "",
+        );
+        setSelected(updated);
+        await refreshList(updated.id);
+        setSellerComment("");
+        setMessage("Seller response saved.");
+        return updated;
+      },
+      successMessage: "Phản hồi yêu cầu trả hàng/hoàn tiền thành công!",
+      errorMessage: "Không thể gửi phản hồi.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleSendReply = async () => {
     if (!currentShopId || !selected || !reply.trim()) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await addShopReturnRefundMessage(currentShopId, selected.id, reply, "");
-      setSelected(updated);
-      await refreshList(updated.id);
-      setReply("");
-      setMessage("Reply sent.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to send reply.");
-    } finally {
-      setSaving(false);
-    }
+    await run({
+      action: async () => {
+        const updated = await addShopReturnRefundMessage(currentShopId, selected.id, reply, "");
+        setSelected(updated);
+        await refreshList(updated.id);
+        setReply("");
+        setMessage("Reply sent.");
+        return updated;
+      },
+      successMessage: "Gửi tin nhắn phản hồi thành công!",
+      errorMessage: "Không thể gửi tin nhắn.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleMarkReturnReceived = async () => {
     if (!currentShopId || !selected) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await markShopReturnReceived(currentShopId, selected.id, "");
-      setSelected(updated);
-      await refreshList(updated.id);
-      setMessage("Return marked received.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to mark return received.");
-    } finally {
-      setSaving(false);
-    }
+    await run({
+      action: async () => {
+        const updated = await markShopReturnReceived(currentShopId, selected.id, "");
+        setSelected(updated);
+        await refreshList(updated.id);
+        setMessage("Return marked received.");
+        return updated;
+      },
+      successMessage: "Đã đánh dấu nhận hàng trả lại thành công!",
+      errorMessage: "Không thể cập nhật trạng thái nhận hàng.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleMarkRefundSent = async () => {
     if (!currentShopId || !selected || !refundAmount.trim()) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await markShopRefundSent(
-        currentShopId,
-        selected.id,
-        {
-          amount: Number(refundAmount),
-          method: refundMethod,
-          bankReference,
-          note: refundNote,
-          file: refundProofFile,
-        },
-        "",
-      );
-      setSelected(updated);
-      await refreshList(updated.id);
-      setRefundProofFile(null);
-      setRefundNote("");
-      setBankReference("");
-      setMessage("Refund marked sent.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to mark refund sent.");
-    } finally {
-      setSaving(false);
-    }
+    await run({
+      action: async () => {
+        const updated = await markShopRefundSent(
+          currentShopId,
+          selected.id,
+          {
+            amount: Number(refundAmount),
+            method: refundMethod,
+            bankReference,
+            note: refundNote,
+            file: refundProofFile,
+          },
+          "",
+        );
+        setSelected(updated);
+        await refreshList(updated.id);
+        setRefundProofFile(null);
+        setRefundNote("");
+        setBankReference("");
+        setMessage("Refund marked sent.");
+        return updated;
+      },
+      successMessage: "Xác nhận chuyển khoản hoàn tiền thành công!",
+      errorMessage: "Không thể xác nhận hoàn tiền.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   return (
@@ -327,7 +342,7 @@ export function SellerReturnsPageClient({
                     </select>
                     <textarea value={sellerComment} onChange={(event) => setSellerComment(event.target.value)} rows={4} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="seller-return-comment" />
                     <button type="button" onClick={() => void handleRespond()} disabled={saving} className="mt-3 rounded-full bg-[#2f2025] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="seller-return-respond">
-                      {saving ? "Saving..." : "Save response"}
+                      {saving ? "Đang gửi..." : "Save response"}
                     </button>
                   </div>
 
@@ -347,10 +362,10 @@ export function SellerReturnsPageClient({
                     <input type="file" accept="image/*,.pdf" onChange={(event) => setRefundProofFile(event.target.files?.[0] ?? null)} className="mt-3 block w-full text-sm" data-testid="seller-refund-proof-file" />
                     <div className="mt-3 flex flex-wrap gap-3">
                       <button type="button" onClick={() => void handleMarkReturnReceived()} disabled={saving} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                        Mark return received
+                        {saving ? "Đang cập nhật..." : "Mark return received"}
                       </button>
                       <button type="button" onClick={() => void handleMarkRefundSent()} disabled={saving || !refundAmount.trim()} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="seller-refund-mark-sent">
-                        Mark refund sent
+                        {saving ? "Đang xác nhận..." : "Mark refund sent"}
                       </button>
                     </div>
                   </div>
@@ -373,7 +388,7 @@ export function SellerReturnsPageClient({
                     <div className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4">
                       <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={4} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="seller-return-reply-message" />
                       <button type="button" onClick={() => void handleSendReply()} disabled={saving || !reply.trim()} className="mt-3 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                        Send reply
+                        {saving ? "Đang gửi..." : "Send reply"}
                       </button>
                     </div>
                   ) : null}

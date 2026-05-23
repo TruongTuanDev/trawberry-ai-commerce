@@ -300,6 +300,7 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
     .getByText(shop.name)
     .locator("xpath=ancestor::tr[1]");
   await expect(row).toContainText("9");
+  page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId(`admin-generate-invoice-${shop.id}`).click();
   await expect(
     page.getByText(`Invoice generated for ${shop.name}`),
@@ -324,6 +325,7 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
   const shopInvoice = invoice.find((entry) => entry.shopId === shop.id);
   expect(shopInvoice).toBeTruthy();
 
+  page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId(`admin-mark-invoice-paid-${shopInvoice!.id}`).click();
   await expect(page.getByText("Invoice marked as paid.")).toBeVisible();
 

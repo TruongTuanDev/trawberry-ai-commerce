@@ -9,13 +9,14 @@ import {
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 export function SellerPaymentSettingsPageClient() {
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { run: runSave, isRunning: saving } = useActionFeedback();
+  const { run: runUpload, isRunning: uploading } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -92,86 +93,90 @@ export function SellerPaymentSettingsPageClient() {
 
   const handleSave = async () => {
     if (!currentShopId) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const saved = await updateShopPaymentSettings(
-        currentShopId,
-        {
-          paymentMode: "STATIC_QR",
-          status: form.status,
-          bankName: form.bankName,
-          recipientName: form.recipientName,
-          recipientPhone: form.recipientPhone,
-          recipientAccount: form.recipientAccount,
-          sbpPhone: form.sbpPhone,
-          paymentInstruction: form.paymentInstruction,
-          allowPrepaidQr: form.allowPrepaidQr,
-          allowPayOnDeliverySellerQr: form.allowPayOnDeliverySellerQr,
-          allowDepositPayment: form.allowDepositPayment,
-          depositPercent: form.depositPercent.trim()
-            ? Number(form.depositPercent)
-            : null,
-          depositRequiredAboveAmount: form.depositRequiredAboveAmount.trim()
-            ? Number(form.depositRequiredAboveAmount)
-            : null,
-          codMaxOrderAmount: form.codMaxOrderAmount.trim()
-            ? Number(form.codMaxOrderAmount)
-            : null,
-          yandexCardOnDeliveryStatus:
-            form.yandexCardOnDeliveryStatus as
-              | "NOT_CONFIGURED"
-              | "PROVIDER_PENDING"
-              | "AVAILABLE"
-              | "DISABLED",
-          cashCourierCollectionStatus: "NOT_AVAILABLE",
-        },
-        "",
-      );
-      setForm((current) => ({
-        ...current,
-        status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
-        staticQrImageUrl: saved.staticQrImageUrl ?? "",
-        isReady: saved.isReady,
-        allowPrepaidQr: saved.allowPrepaidQr,
-        allowPayOnDeliverySellerQr: saved.allowPayOnDeliverySellerQr,
-        allowDepositPayment: saved.allowDepositPayment,
-        depositPercent: saved.depositPercent?.toString() ?? "",
-        depositRequiredAboveAmount: saved.depositRequiredAboveAmount ?? "",
-        codMaxOrderAmount: saved.codMaxOrderAmount ?? "",
-        yandexCardOnDeliveryStatus: saved.yandexCardOnDeliveryStatus,
-        cashCourierCollectionStatus: saved.cashCourierCollectionStatus,
-        availableMethods: saved.availableMethods ?? [],
-      }));
-      setMessage("Payment settings saved.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save payment settings.");
-    } finally {
-      setSaving(false);
-    }
+    await runSave({
+      action: async () => {
+        const saved = await updateShopPaymentSettings(
+          currentShopId,
+          {
+            paymentMode: "STATIC_QR",
+            status: form.status,
+            bankName: form.bankName,
+            recipientName: form.recipientName,
+            recipientPhone: form.recipientPhone,
+            recipientAccount: form.recipientAccount,
+            sbpPhone: form.sbpPhone,
+            paymentInstruction: form.paymentInstruction,
+            allowPrepaidQr: form.allowPrepaidQr,
+            allowPayOnDeliverySellerQr: form.allowPayOnDeliverySellerQr,
+            allowDepositPayment: form.allowDepositPayment,
+            depositPercent: form.depositPercent.trim()
+              ? Number(form.depositPercent)
+              : null,
+            depositRequiredAboveAmount: form.depositRequiredAboveAmount.trim()
+              ? Number(form.depositRequiredAboveAmount)
+              : null,
+            codMaxOrderAmount: form.codMaxOrderAmount.trim()
+              ? Number(form.codMaxOrderAmount)
+              : null,
+            yandexCardOnDeliveryStatus:
+              form.yandexCardOnDeliveryStatus as
+                | "NOT_CONFIGURED"
+                | "PROVIDER_PENDING"
+                | "AVAILABLE"
+                | "DISABLED",
+            cashCourierCollectionStatus: "NOT_AVAILABLE",
+          },
+          "",
+        );
+        setForm((current) => ({
+          ...current,
+          status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+          staticQrImageUrl: saved.staticQrImageUrl ?? "",
+          isReady: saved.isReady,
+          allowPrepaidQr: saved.allowPrepaidQr,
+          allowPayOnDeliverySellerQr: saved.allowPayOnDeliverySellerQr,
+          allowDepositPayment: saved.allowDepositPayment,
+          depositPercent: saved.depositPercent?.toString() ?? "",
+          depositRequiredAboveAmount: saved.depositRequiredAboveAmount ?? "",
+          codMaxOrderAmount: saved.codMaxOrderAmount ?? "",
+          yandexCardOnDeliveryStatus: saved.yandexCardOnDeliveryStatus,
+          cashCourierCollectionStatus: saved.cashCourierCollectionStatus,
+          availableMethods: saved.availableMethods ?? [],
+        }));
+        setMessage("Payment settings saved.");
+        return saved;
+      },
+      successMessage: "Lưu cấu hình thanh toán thành công!",
+      errorMessage: "Không thể lưu cấu hình thanh toán.",
+    }).catch((err) => {
+      setError(err.message);
+    });
   };
 
   const handleUpload = async () => {
     if (!currentShopId || !file) return;
-    setUploading(true);
     setError(null);
     setMessage(null);
-    try {
-      const saved = await uploadShopPaymentQr(currentShopId, file, "");
-      setForm((current) => ({
-        ...current,
-        staticQrImageUrl: saved.staticQrImageUrl ?? "",
-        status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
-        isReady: saved.isReady,
-      }));
-      setFile(null);
-      setMessage("Static QR uploaded.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to upload QR image.");
-    } finally {
-      setUploading(false);
-    }
+    await runUpload({
+      action: async () => {
+        const saved = await uploadShopPaymentQr(currentShopId, file, "");
+        setForm((current) => ({
+          ...current,
+          staticQrImageUrl: saved.staticQrImageUrl ?? "",
+          status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+          isReady: saved.isReady,
+        }));
+        setFile(null);
+        setMessage("Static QR uploaded.");
+        return saved;
+      },
+      successMessage: "Tải ảnh QR thanh toán thành công!",
+      errorMessage: "Không thể tải ảnh QR thanh toán.",
+    }).catch((err) => {
+      setError(err.message);
+    });
   };
 
   return (
@@ -285,14 +290,14 @@ export function SellerPaymentSettingsPageClient() {
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="public-input" data-testid="payment-settings-qr-file" />
               <button type="button" onClick={() => void handleUpload()} disabled={uploading || !file} className="public-button-secondary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-qr-upload">
-                {uploading ? "Uploading..." : "Upload QR"}
+                {uploading ? "Đang tải lên..." : "Upload QR"}
               </button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => void handleSave()} disabled={saving} className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-save">
-              {saving ? "Saving..." : "Save payment settings"}
+              {saving ? "Đang lưu..." : "Save payment settings"}
             </button>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${form.isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
               {form.isReady ? "Ready for checkout" : "Not checkout-ready yet"}

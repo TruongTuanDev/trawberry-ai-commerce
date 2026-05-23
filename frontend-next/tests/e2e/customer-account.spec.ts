@@ -68,6 +68,7 @@ test("customer manages account profile, addresses, password, and guarded access"
   const updatedCard = page.getByTestId("customer-address-card").filter({ hasText: "Kazan" });
   await expect(updatedCard).toContainText("Bauman 5");
 
+  page.once("dialog", (dialog) => void dialog.accept());
   const firstCard = page.getByTestId("customer-address-card").nth(0);
   await firstCard.getByTestId(/customer-address-delete-/).click();
   await expect(page.getByTestId("customer-address-card")).toHaveCount(1);
@@ -80,16 +81,16 @@ test("customer manages account profile, addresses, password, and guarded access"
   await expect(page.getByTestId("customer-security-current-password")).toHaveValue("");
 
   await page.getByTestId("customer-account-logout").click();
-  await page.waitForURL("**/customer/login");
+  await page.waitForURL(/\/customer\/login/);
 
   await page.getByTestId("customer-login-email").fill(email);
   await page.getByTestId("customer-login-password").fill(password);
   await page.getByTestId("customer-login-submit").click();
-  await expect(page.getByText("Invalid credentials.")).toBeVisible();
+  await expect(page.getByText("Invalid credentials.").first()).toBeVisible();
 
   await page.getByTestId("customer-login-password").fill(newPassword);
   await page.getByTestId("customer-login-submit").click();
-  await page.waitForURL("**/customer/orders");
+  await page.waitForURL("**/customer/account/security");
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();

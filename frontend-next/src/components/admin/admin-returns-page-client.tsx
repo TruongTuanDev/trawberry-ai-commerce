@@ -17,6 +17,7 @@ import {
   labelForReturnStatus,
   labelForReturnType,
 } from "@/components/returns/return-refund-utils";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const decisionOptions = [
   "APPROVE",
@@ -36,9 +37,9 @@ export function AdminReturnsPageClient({
   const [selected, setSelected] = useState<AdminReturnRefundCase | null>(null);
   const [filterStatus, setFilterStatus] = useState("OPENED");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const { run: runAction, isRunning: saving } = useActionFeedback();
   const [decision, setDecision] = useState<(typeof decisionOptions)[number]>("APPROVE");
   const [approvedAmount, setApprovedAmount] = useState("");
   const [adminNote, setAdminNote] = useState("");
@@ -111,64 +112,67 @@ export function AdminReturnsPageClient({
       setError("Admin note is required.");
       return;
     }
-    setSaving(true);
+    if (decision === "REJECT" && !window.confirm("Bạn có chắc chắn muốn TỪ CHỐI yêu cầu trả hàng/hoàn tiền này không?")) {
+      return;
+    }
+    if (decision === "OVERRIDE_REFUND_CONFIRMED" && !window.confirm("Bạn có chắc chắn muốn GHI ĐÈ xác nhận hoàn tiền này không?")) {
+      return;
+    }
     setError(null);
     setMessage(null);
-    try {
-      const updated = await decideAdminReturnRefundCase(selected.id, {
-        decision,
-        approvedAmount: approvedAmount.trim() ? Number(approvedAmount) : undefined,
-        adminNote,
-      });
-      setSelected(updated);
-      await refreshList(updated.id);
-      setAdminNote("");
-      setMessage("Admin decision saved.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to save admin decision.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        return decideAdminReturnRefundCase(selected.id, {
+          decision,
+          approvedAmount: approvedAmount.trim() ? Number(approvedAmount) : undefined,
+          adminNote,
+        });
+      },
+      successMessage: "Đã lưu quyết định xử lý trả hàng/hoàn tiền.",
+      onSuccess: async (updated) => {
+        setSelected(updated);
+        await refreshList(updated.id);
+        setAdminNote("");
+      }
+    });
   };
 
   const handlePublicMessage = async () => {
     if (!selected || !publicMessage.trim()) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await addAdminReturnRefundMessage(selected.id, {
-        message: publicMessage,
-      });
-      setSelected(updated);
-      await refreshList(updated.id);
-      setPublicMessage("");
-      setMessage("Public admin message sent.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to send admin message.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        return addAdminReturnRefundMessage(selected.id, {
+          message: publicMessage,
+        });
+      },
+      successMessage: "Đã gửi tin nhắn công khai.",
+      onSuccess: async (updated) => {
+        setSelected(updated);
+        await refreshList(updated.id);
+        setPublicMessage("");
+      }
+    });
   };
 
   const handleInternalNote = async () => {
     if (!selected || !internalNote.trim()) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await addAdminReturnRefundInternalNote(selected.id, {
-        message: internalNote,
-      });
-      setSelected(updated);
-      await refreshList(updated.id);
-      setInternalNote("");
-      setMessage("Internal note added.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to add internal note.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        return addAdminReturnRefundInternalNote(selected.id, {
+          message: internalNote,
+        });
+      },
+      successMessage: "Đã thêm ghi chú nội bộ.",
+      onSuccess: async (updated) => {
+        setSelected(updated);
+        await refreshList(updated.id);
+        setInternalNote("");
+      }
+    });
   };
 
   return (
@@ -259,8 +263,18 @@ export function AdminReturnsPageClient({
                       </select>
                       <input value={approvedAmount} onChange={(event) => setApprovedAmount(event.target.value)} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Approved amount" data-testid="admin-return-approved-amount" />
                       <textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} rows={4} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Admin note" data-testid="admin-return-note" />
-                      <button type="button" onClick={() => void handleDecision()} disabled={saving} className="mt-3 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="admin-return-save-decision">
-                        Save decision
+                      <button
+                        type="button"
+                        onClick={() => void handleDecision()}
+                        disabled={saving}
+                        className="mt-3 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        data-testid="admin-return-save-decision"
+                      >
+                        {saving ? (
+                          decision === "APPROVE" ? "Đang xác nhận..." :
+                          decision === "REJECT" ? "Đang từ chối..." :
+                          "Đang cập nhật..."
+                        ) : "Save decision"}
                       </button>
                     </>
                   ) : (
@@ -294,12 +308,12 @@ export function AdminReturnsPageClient({
                   <textarea value={publicMessage} onChange={(event) => setPublicMessage(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Public admin message" data-testid="admin-return-public-message" />
                   <div className="mt-3 flex flex-wrap gap-3">
                     <button type="button" onClick={() => void handlePublicMessage()} disabled={saving || !publicMessage.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                      Send public message
+                      {saving ? "Đang gửi..." : "Send public message"}
                     </button>
                   </div>
                   <textarea value={internalNote} onChange={(event) => setInternalNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Internal admin note" data-testid="admin-return-internal-note" />
                   <button type="button" onClick={() => void handleInternalNote()} disabled={saving || !internalNote.trim()} className="mt-3 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                    Add internal note
+                    {saving ? "Đang gửi..." : "Add internal note"}
                   </button>
                 </div>
               </div>

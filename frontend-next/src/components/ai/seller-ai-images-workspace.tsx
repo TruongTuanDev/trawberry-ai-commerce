@@ -22,6 +22,7 @@ import {
   type ProductListItem,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const POLLING_STATUSES = new Set<AiImageTask["status"]>(["PENDING", "PROCESSING"]);
 const POLLING_INTERVAL_MS = 2000;
@@ -160,10 +161,12 @@ export function SellerAiImagesWorkspace() {
   const [inputModelImageId, setInputModelImageId] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshingTasks, setRefreshingTasks] = useState(false);
-  const [creatingTask, setCreatingTask] = useState(false);
   const [attachingImageId, setAttachingImageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const { run: runCreateTask, isRunning: creatingTask } = useActionFeedback();
+  const { run: runAttach } = useActionFeedback();
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId) ?? null,
@@ -369,33 +372,32 @@ export function SellerAiImagesWorkspace() {
       return;
     }
 
-    setCreatingTask(true);
     setError(null);
     setSuccessMessage(null);
 
-    try {
-      const task = await createAiImageTask(currentShopId, selectedProductId, {
-        mode: "generate",
-        taskType: selectedMode.taskType,
-        quantity: count,
-        stylePreset: selectedMode.stylePreset,
-        sourceImageId: inputFrontImageId,
-        inputFrontImageId,
-        inputBackImageId: inputBackImageId || undefined,
-        inputModelImageId: inputModelImageId || undefined,
-        prompt: prompt.trim() || defaultPrompt(selectedMode.label),
-      });
-
-      await Promise.all([refreshCredits(), refreshTasks({ silent: true })]);
-      setSelectedTaskId(task.id);
-      setSuccessMessage(
-        `AI task ${task.id.slice(0, 8)} created for ${selectedProduct ? getProductTitle(selectedProduct) : "the selected product"}.`,
-      );
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to create AI image task.");
-    } finally {
-      setCreatingTask(false);
-    }
+    await runCreateTask({
+      action: async () => {
+        return createAiImageTask(currentShopId, selectedProductId, {
+          mode: "generate",
+          taskType: selectedMode.taskType,
+          quantity: count,
+          stylePreset: selectedMode.stylePreset,
+          sourceImageId: inputFrontImageId,
+          inputFrontImageId,
+          inputBackImageId: inputBackImageId || undefined,
+          inputModelImageId: inputModelImageId || undefined,
+          prompt: prompt.trim() || defaultPrompt(selectedMode.label),
+        });
+      },
+      successMessage: "Tạo tác vụ AI thành công.",
+      onSuccess: async (task) => {
+        await Promise.all([refreshCredits(), refreshTasks({ silent: true })]);
+        setSelectedTaskId(task.id);
+        setSuccessMessage(
+          `AI task ${task.id.slice(0, 8)} created for ${selectedProduct ? getProductTitle(selectedProduct) : "the selected product"}.`,
+        );
+      },
+    });
   }
 
   async function handleAttach(generatedImageId: string) {
@@ -407,15 +409,19 @@ export function SellerAiImagesWorkspace() {
     setError(null);
     setSuccessMessage(null);
 
-    try {
-      await attachAiGeneratedImage(currentShopId, selectedProductId, generatedImageId);
-      await Promise.all([refreshTasks({ silent: true }), refreshSelectedProductImages()]);
-      setSuccessMessage("AI image attached to the product gallery.");
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Unable to attach generated image.");
-    } finally {
-      setAttachingImageId(null);
-    }
+    await runAttach({
+      action: async () => {
+        return attachAiGeneratedImage(currentShopId, selectedProductId, generatedImageId);
+      },
+      successMessage: "Đã lưu ảnh AI vào bộ sưu tập sản phẩm.",
+      onSuccess: async () => {
+        await Promise.all([refreshTasks({ silent: true }), refreshSelectedProductImages()]);
+        setSuccessMessage("AI image attached to the product gallery.");
+      },
+      onFinally: () => {
+        setAttachingImageId(null);
+      },
+    });
   }
 
   if (loading) {
@@ -669,7 +675,7 @@ export function SellerAiImagesWorkspace() {
               className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="seller-ai-generate-submit"
             >
-              {creatingTask ? "Creating task..." : "Generate AI image"}
+              {creatingTask ? "Đang gửi..." : "Generate AI image"}
             </button>
           </div>
         </SectionCard>

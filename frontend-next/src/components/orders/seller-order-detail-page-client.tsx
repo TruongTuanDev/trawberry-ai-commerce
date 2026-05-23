@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
@@ -71,12 +72,19 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [nextStatus, setNextStatus] =
     useState<SellerOrderListItem["status"]>("NEW");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [delivery, setDelivery] = useState<DeliveryDetail | null>(null);
   const [deliveryOffers, setDeliveryOffers] = useState<DeliveryOffer[]>([]);
-  const [deliveryLoading, setDeliveryLoading] = useState(false);
+
+  const { run: runStatusAction, isRunning: savingStatus } = useActionFeedback();
+  const { run: runPaymentAction, isRunning: savingPayment } = useActionFeedback();
+  const { run: runDeliveryAction, isRunning: runningDelivery } = useActionFeedback();
+  const { run: runManualDeliveryAction, isRunning: runningManualDelivery } = useActionFeedback();
+  const { run: runReportAction, isRunning: runningReport } = useActionFeedback();
+  const { run: runCommentAction, isRunning: runningComment } = useActionFeedback();
+
+  const saving = savingStatus || savingPayment;
+  const deliveryLoading = runningDelivery || runningManualDelivery || runningReport || runningComment;
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupLatitude, setPickupLatitude] = useState<string | null>(null);
@@ -201,27 +209,24 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
   const handleUpdateStatus = async () => {
     if (!currentShopId || !order) return;
-
-    setSaving(true);
     setError(null);
-    setSuccessMessage(null);
-    try {
-      const updated = await updateShopOrderStatus(
-        currentShopId,
-        order.id,
-        nextStatus,
-        "",
-      );
-      setOrder(updated);
-      setNextStatus(updated.status as SellerOrderListItem["status"]);
-      setSuccessMessage(`Order moved to ${updated.status}.`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to update order status.",
-      );
-    } finally {
-      setSaving(false);
-    }
+    await runStatusAction({
+      action: async () => {
+        const updated = await updateShopOrderStatus(
+          currentShopId,
+          order.id,
+          nextStatus,
+          "",
+        );
+        return updated;
+      },
+      successMessage: `Đã cập nhật trạng thái đơn hàng.`,
+      errorMessage: "Không thể cập nhật trạng thái đơn hàng.",
+      onSuccess: async (updated) => {
+        setOrder(updated);
+        setNextStatus(updated.status as SellerOrderListItem["status"]);
+      },
+    }).catch(() => {});
   };
 
   const buildPackageInfo = () => ({
@@ -247,49 +252,47 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     action: "confirm" | "reject",
   ) => {
     if (!currentShopId || !order) return;
-    setSaving(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      if (action === "confirm") {
-        await confirmPayment(
-          currentShopId,
-          order.id,
-          {
-            note:
-              order.paymentStatus === "PAY_ON_DELIVERY_SELECTED"
-                ? "Seller accepted pay-on-delivery via seller QR."
-                : "Seller confirmed delivery payment.",
-          },
-          "",
-        );
-      } else {
-        await rejectPayment(
-          currentShopId,
-          order.id,
-          {
-            note: "Seller did not receive delivery payment and opened dispute.",
-          },
-          "",
-        );
-      }
-      const refreshed = await getShopOrderById(currentShopId, order.id, "");
-      setOrder(refreshed);
-      setNextStatus(refreshed.status as SellerOrderListItem["status"]);
-      setSuccessMessage(
-        action === "confirm"
-          ? "Payment step updated."
-          : "Delivery payment issue recorded.",
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to update delivery payment state.",
-      );
-    } finally {
-      setSaving(false);
+    if (action === "reject") {
+      if (!window.confirm("Bạn có chắc chắn muốn từ chối thanh toán giao hàng?")) return;
     }
+    setError(null);
+    await runPaymentAction({
+      action: async () => {
+        if (action === "confirm") {
+          await confirmPayment(
+            currentShopId,
+            order.id,
+            {
+              note:
+                order.paymentStatus === "PAY_ON_DELIVERY_SELECTED"
+                  ? "Seller accepted pay-on-delivery via seller QR."
+                  : "Seller confirmed delivery payment.",
+            },
+            "",
+          );
+        } else {
+          await rejectPayment(
+            currentShopId,
+            order.id,
+            {
+              note: "Seller did not receive delivery payment and opened dispute.",
+            },
+            "",
+          );
+        }
+        const refreshed = await getShopOrderById(currentShopId, order.id, "");
+        return refreshed;
+      },
+      successMessage:
+        action === "confirm"
+          ? "Đã xác nhận thanh toán."
+          : "Đã ghi nhận tranh chấp thanh toán.",
+      errorMessage: "Không thể cập nhật trạng thái thanh toán.",
+      onSuccess: async (refreshed) => {
+        setOrder(refreshed);
+        setNextStatus(refreshed.status as SellerOrderListItem["status"]);
+      },
+    }).catch(() => {});
   };
 
   const refreshDeliverySnapshot = async () => {
@@ -364,252 +367,243 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     }
 
     if (action === "cancel") {
-      const confirmed = window.confirm("Cancel this delivery shipment?");
-      if (!confirmed) return;
+      if (!window.confirm("Hủy lô giao hàng này?")) return;
     }
 
-    setDeliveryLoading(true);
     setError(null);
     setDeliveryMessage(null);
 
-    try {
-      if (action === "calculate") {
-        const result = await calculateDeliveryOffers(
-          currentShopId,
-          order.id,
-          {
-            pickupAddress: pickupAddress.trim(),
-            packageInfo: buildPackageInfo(),
-          },
-          "",
-        );
-        setDeliveryOffers(result.offers);
-        setSelectedOfferId(
-          result.offers.find((offer) => offer.isRecommended)?.id ??
-            result.offers[0]?.id ??
+    await runDeliveryAction({
+      action: async () => {
+        if (action === "calculate") {
+          const result = await calculateDeliveryOffers(
+            currentShopId,
+            order.id,
+            {
+              pickupAddress: pickupAddress.trim(),
+              packageInfo: buildPackageInfo(),
+            },
             "",
-        );
-        setDeliveryMessage(`Loaded ${result.offers.length} delivery offer(s).`);
-      } else if (action === "create") {
-        await createDeliveryShipment(
-          currentShopId,
-          order.id,
-          {
-            provider: selectedOfferId
-              ? (deliveryOffers.find((offer) => offer.id === selectedOfferId)
-                  ?.provider as "CDEK" | "YANDEX" | undefined)
-              : undefined,
-            pickupAddress: pickupAddress.trim(),
-            selectedOfferId: selectedOfferId || undefined,
-            packageInfo: buildPackageInfo(),
-          },
-          "",
-        );
-        setDeliveryMessage("Delivery shipment created.");
-        await refreshDeliverySnapshot();
-      } else if (action === "accept") {
-        if (!delivery?.activeShipment) {
-          throw new Error("No active shipment exists to accept.");
+          );
+          setDeliveryOffers(result.offers);
+          setSelectedOfferId(
+            result.offers.find((offer) => offer.isRecommended)?.id ??
+              result.offers[0]?.id ??
+              "",
+          );
+          setDeliveryMessage(`Loaded ${result.offers.length} delivery offer(s).`);
+          return;
+        } else if (action === "create") {
+          await createDeliveryShipment(
+            currentShopId,
+            order.id,
+            {
+              provider: selectedOfferId
+                ? (deliveryOffers.find((offer) => offer.id === selectedOfferId)
+                    ?.provider as "CDEK" | "YANDEX" | undefined)
+                : undefined,
+              pickupAddress: pickupAddress.trim(),
+              selectedOfferId: selectedOfferId || undefined,
+              packageInfo: buildPackageInfo(),
+            },
+            "",
+          );
+          setDeliveryMessage("Delivery shipment created.");
+        } else if (action === "accept") {
+          if (!delivery?.activeShipment) {
+            throw new Error("No active shipment exists to accept.");
+          }
+          await acceptDeliveryShipment(
+            currentShopId,
+            order.id,
+            delivery.activeShipment.id,
+            "",
+          );
+          setDeliveryMessage("Delivery shipment accepted.");
+        } else if (action === "refresh") {
+          if (!delivery?.activeShipment) {
+            throw new Error("No active shipment exists to refresh.");
+          }
+          await refreshDeliveryShipment(
+            currentShopId,
+            order.id,
+            delivery.activeShipment.id,
+            "",
+          );
+          setDeliveryMessage("Delivery shipment refreshed.");
+        } else {
+          await cancelDeliveryShipment(
+            currentShopId,
+            order.id,
+            delivery!.activeShipment!.id,
+            { reason: "Seller cancelled shipment from the order detail page." },
+            "",
+          );
+          setDeliveryMessage("Delivery shipment cancelled.");
         }
-        await acceptDeliveryShipment(
-          currentShopId,
-          order.id,
-          delivery.activeShipment.id,
-          "",
-        );
-        setDeliveryMessage("Delivery shipment accepted.");
         await refreshDeliverySnapshot();
-      } else if (action === "refresh") {
-        if (!delivery?.activeShipment) {
-          throw new Error("No active shipment exists to refresh.");
-        }
-        await refreshDeliveryShipment(
-          currentShopId,
-          order.id,
-          delivery.activeShipment.id,
-          "",
-        );
-        setDeliveryMessage("Delivery shipment refreshed.");
-        await refreshDeliverySnapshot();
-      } else {
-        await cancelDeliveryShipment(
-          currentShopId,
-          order.id,
-          delivery!.activeShipment!.id,
-          { reason: "Seller cancelled shipment from the order detail page." },
-          "",
-        );
-        setDeliveryMessage("Delivery shipment cancelled.");
-        await refreshDeliverySnapshot();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Delivery action failed.");
-    } finally {
-      setDeliveryLoading(false);
-    }
+      },
+      successMessage: action === "calculate" ? undefined : "Đã cập nhật giao hàng.",
+      errorMessage: "Thao tác giao hàng thất bại.",
+    }).catch(() => {});
   };
 
   const handleManualDeliveryAction = async (
     action: "save" | "courier-assigned" | "picked-up" | "in-transit" | "delivered" | "cancel",
   ) => {
     if (!currentShopId || !order) return;
-    setDeliveryLoading(true);
+    if (action === "delivered") {
+      if (!window.confirm("Xác nhận đã giao hàng thành công?")) return;
+    }
+    if (action === "cancel") {
+      if (!window.confirm("Hủy giao hàng thủ công này?")) return;
+    }
     setError(null);
     setDeliveryMessage(null);
-    try {
-      if (action === "save") {
-        if (activeShipment) {
-          await updateManualDelivery(
-            currentShopId,
-            order.id,
-            activeShipment.id,
-            buildManualPayload(),
-            "",
-          );
-          setDeliveryMessage("Manual delivery updated.");
+    await runManualDeliveryAction({
+      action: async () => {
+        if (action === "save") {
+          if (activeShipment) {
+            await updateManualDelivery(
+              currentShopId,
+              order.id,
+              activeShipment.id,
+              buildManualPayload(),
+              "",
+            );
+            setDeliveryMessage("Manual delivery updated.");
+          } else {
+            await createManualDelivery(
+              currentShopId,
+              order.id,
+              buildManualPayload(),
+              "",
+            );
+            setDeliveryMessage("Manual delivery saved.");
+          }
         } else {
-          await createManualDelivery(
-            currentShopId,
-            order.id,
-            buildManualPayload(),
-            "",
-          );
-          setDeliveryMessage("Manual delivery saved.");
+          if (!activeShipment) throw new Error("No manual delivery exists yet.");
+          if (action === "in-transit") {
+            await markManualDeliveryInTransit(
+              currentShopId,
+              order.id,
+              activeShipment.id,
+              {
+                note: "Seller marked manual Yandex delivery on the way.",
+                courierName: manualCourierName.trim() || null,
+                courierPhone: manualCourierPhone.trim() || null,
+                estimatedDeliveryAt: manualEstimatedDeliveryAt
+                  ? new Date(manualEstimatedDeliveryAt).toISOString()
+                  : null,
+              },
+              "",
+            );
+            setDeliveryMessage("Manual Yandex delivery marked on the way.");
+          } else if (action === "courier-assigned") {
+            await markManualDeliveryCourierAssigned(
+              currentShopId,
+              order.id,
+              activeShipment.id,
+              {
+                note: "Seller assigned courier in manual Yandex workbench.",
+                courierName: manualCourierName.trim() || null,
+                courierPhone: manualCourierPhone.trim() || null,
+                estimatedDeliveryAt: manualEstimatedDeliveryAt
+                  ? new Date(manualEstimatedDeliveryAt).toISOString()
+                  : null,
+              },
+              "",
+            );
+            setDeliveryMessage("Courier assigned.");
+          } else if (action === "picked-up") {
+            await markManualDeliveryPickedUp(
+              currentShopId,
+              order.id,
+              activeShipment.id,
+              {
+                note: "Seller marked package picked up.",
+                courierName: manualCourierName.trim() || null,
+                courierPhone: manualCourierPhone.trim() || null,
+                estimatedDeliveryAt: manualEstimatedDeliveryAt
+                  ? new Date(manualEstimatedDeliveryAt).toISOString()
+                  : null,
+              },
+              "",
+            );
+            setDeliveryMessage("Package marked picked up.");
+          } else if (action === "delivered") {
+            await markManualDeliveryDelivered(
+              currentShopId,
+              order.id,
+              activeShipment.id,
+              { note: "Seller marked manual delivery delivered." },
+              "",
+            );
+            setDeliveryMessage("Manual delivery marked delivered.");
+          } else {
+            await cancelDeliveryShipment(
+              currentShopId,
+              order.id,
+              activeShipment.id,
+              { reason: "Seller cancelled manual delivery." },
+              "",
+            );
+            setDeliveryMessage("Manual delivery cancelled.");
+          }
         }
-      } else {
-        if (!activeShipment) throw new Error("No manual delivery exists yet.");
-        if (action === "in-transit") {
-          await markManualDeliveryInTransit(
-            currentShopId,
-            order.id,
-            activeShipment.id,
-            {
-              note: "Seller marked manual Yandex delivery on the way.",
-              courierName: manualCourierName.trim() || null,
-              courierPhone: manualCourierPhone.trim() || null,
-              estimatedDeliveryAt: manualEstimatedDeliveryAt
-                ? new Date(manualEstimatedDeliveryAt).toISOString()
-                : null,
-            },
-            "",
-          );
-          setDeliveryMessage("Manual Yandex delivery marked on the way.");
-        } else if (action === "courier-assigned") {
-          await markManualDeliveryCourierAssigned(
-            currentShopId,
-            order.id,
-            activeShipment.id,
-            {
-              note: "Seller assigned courier in manual Yandex workbench.",
-              courierName: manualCourierName.trim() || null,
-              courierPhone: manualCourierPhone.trim() || null,
-              estimatedDeliveryAt: manualEstimatedDeliveryAt
-                ? new Date(manualEstimatedDeliveryAt).toISOString()
-                : null,
-            },
-            "",
-          );
-          setDeliveryMessage("Courier assigned.");
-        } else if (action === "picked-up") {
-          await markManualDeliveryPickedUp(
-            currentShopId,
-            order.id,
-            activeShipment.id,
-            {
-              note: "Seller marked package picked up.",
-              courierName: manualCourierName.trim() || null,
-              courierPhone: manualCourierPhone.trim() || null,
-              estimatedDeliveryAt: manualEstimatedDeliveryAt
-                ? new Date(manualEstimatedDeliveryAt).toISOString()
-                : null,
-            },
-            "",
-          );
-          setDeliveryMessage("Package marked picked up.");
-        } else if (action === "delivered") {
-          await markManualDeliveryDelivered(
-            currentShopId,
-            order.id,
-            activeShipment.id,
-            { note: "Seller marked manual delivery delivered." },
-            "",
-          );
-          setDeliveryMessage("Manual delivery marked delivered.");
-        } else {
-          await cancelDeliveryShipment(
-            currentShopId,
-            order.id,
-            activeShipment.id,
-            { reason: "Seller cancelled manual delivery." },
-            "",
-          );
-          setDeliveryMessage("Manual delivery cancelled.");
-        }
-      }
-      await refreshDeliverySnapshot();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Manual delivery action failed.",
-      );
-    } finally {
-      setDeliveryLoading(false);
-    }
+        await refreshDeliverySnapshot();
+      },
+      successMessage: action === "save" ? "Đã lưu giao hàng." : "Đã cập nhật giao hàng.",
+      errorMessage: "Thao tác giao hàng thủ công thất bại.",
+    }).catch(() => {});
   };
 
   const handleReportProblem = async () => {
     if (!currentShopId || !order || !activeShipment) return;
-    setDeliveryLoading(true);
     setError(null);
     setDeliveryMessage(null);
-    try {
-      await markManualDeliveryFailed(
-        currentShopId,
-        order.id,
-        activeShipment.id,
-        {
-          reasonCode: exceptionReasonCode,
-          reasonText: exceptionReasonText.trim() || null,
-          customerVisibleMessage: exceptionCustomerMessage.trim() || null,
-        },
-        "",
-      );
-      setDeliveryMessage("Delivery problem reported.");
-      await refreshDeliverySnapshot();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to report delivery problem.",
-      );
-    } finally {
-      setDeliveryLoading(false);
-    }
+    await runReportAction({
+      action: async () => {
+        await markManualDeliveryFailed(
+          currentShopId,
+          order.id,
+          activeShipment.id,
+          {
+            reasonCode: exceptionReasonCode,
+            reasonText: exceptionReasonText.trim() || null,
+            customerVisibleMessage: exceptionCustomerMessage.trim() || null,
+          },
+          "",
+        );
+        setDeliveryMessage("Delivery problem reported.");
+        await refreshDeliverySnapshot();
+      },
+      successMessage: "Đã báo cáo sự cố giao hàng.",
+      errorMessage: "Không thể báo cáo sự cố giao hàng.",
+    }).catch(() => {});
   };
 
   const handleAddInternalComment = async () => {
     if (!currentShopId || !order || !activeShipment || !internalComment.trim())
       return;
-    setDeliveryLoading(true);
     setError(null);
     setDeliveryMessage(null);
-    try {
-      await addDeliveryComment(
-        currentShopId,
-        order.id,
-        activeShipment.id,
-        { visibility: "INTERNAL", message: internalComment.trim() },
-        "",
-      );
-      setInternalComment("");
-      setDeliveryMessage("Internal delivery comment added.");
-      await refreshDeliverySnapshot();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to add delivery comment.",
-      );
-    } finally {
-      setDeliveryLoading(false);
-    }
+    await runCommentAction({
+      action: async () => {
+        await addDeliveryComment(
+          currentShopId,
+          order.id,
+          activeShipment.id,
+          { visibility: "INTERNAL", message: internalComment.trim() },
+          "",
+        );
+        setInternalComment("");
+        setDeliveryMessage("Internal delivery comment added.");
+        await refreshDeliverySnapshot();
+      },
+      successMessage: "Đã thêm ghi chú nội bộ.",
+      errorMessage: "Không thể thêm ghi chú.",
+    }).catch(() => {});
   };
 
   if (loading) {
@@ -883,7 +877,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                     data-testid="seller-accept-pay-on-delivery"
                   >
-                    Accept pay on delivery and prepare Yandex
+                    {saving ? "Đang xác nhận..." : "Accept pay on delivery and prepare Yandex"}
                   </button>
                 ) : null}
                 {order.status === "DELIVERED" ||
@@ -897,7 +891,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       className="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                       data-testid="seller-confirm-delivery-payment"
                     >
-                      Đã nhận tiền khi giao hàng
+                      {saving ? "Đang xác nhận..." : "Đã nhận tiền khi giao hàng"}
                     </button>
                     <button
                       type="button"
@@ -906,7 +900,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                       data-testid="seller-reject-delivery-payment"
                     >
-                      Chưa nhận được tiền / mở tranh chấp
+                      {saving ? "Đang từ chối..." : "Chưa nhận được tiền / mở tranh chấp"}
                     </button>
                   </>
                 ) : null}
@@ -942,18 +936,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               disabled={saving}
               className="w-full rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Updating..." : "Update status"}
+              {saving ? "Đang cập nhật..." : "Update status"}
             </button>
             {error ? (
               <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
                 {error}
               </div>
             ) : null}
-            {successMessage ? (
-              <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {successMessage}
-              </div>
-            ) : null}
+
           </div>
         </SectionCard>
       </div>
@@ -1221,7 +1211,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="manual-delivery-save"
                 >
-                  Save delivery
+                  {deliveryLoading ? "Đang lưu..." : "Save delivery"}
                 </button>
                 <button
                   type="button"
@@ -1230,7 +1220,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-courier-assigned"
                 >
-                  Courier assigned
+                  {deliveryLoading ? "Đang cập nhật..." : "Courier assigned"}
                 </button>
                 <button
                   type="button"
@@ -1239,7 +1229,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-picked-up"
                 >
-                  Picked up
+                  {deliveryLoading ? "Đang cập nhật..." : "Picked up"}
                 </button>
                 <button
                   type="button"
@@ -1248,7 +1238,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-in-transit"
                 >
-                  On the way
+                  {deliveryLoading ? "Đang cập nhật..." : "On the way"}
                 </button>
                 <button
                   type="button"
@@ -1257,7 +1247,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-delivered"
                 >
-                  Mark delivered
+                  {deliveryLoading ? "Đang cập nhật..." : "Mark delivered"}
                 </button>
                 <button
                   type="button"
@@ -1270,7 +1260,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="manual-delivery-cancel"
                 >
-                  Cancel delivery
+                  {deliveryLoading ? "Đang hủy..." : "Cancel delivery"}
                 </button>
               </div>
 
@@ -1282,7 +1272,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="delivery-calculate-offers"
                 >
-                  {deliveryLoading ? "Working..." : "Calculate offers"}
+                  {deliveryLoading ? "Đang tính..." : "Calculate offers"}
                 </button>
                 <button
                   type="button"
@@ -1323,7 +1313,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   disabled={deliveryLoading || !activeShipment}
                   className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Cancel
+                  {deliveryLoading ? "Đang hủy..." : "Cancel"}
                 </button>
               </div>
 
@@ -1399,7 +1389,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                     data-testid="delivery-report-problem"
                   >
-                    Submit problem
+                    {deliveryLoading ? "Đang gửi..." : "Submit problem"}
                   </button>
                   <button
                     type="button"
@@ -1412,7 +1402,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                     data-testid="delivery-add-internal-comment"
                   >
-                    Add internal comment
+                    {deliveryLoading ? "Đang gửi..." : "Add internal comment"}
                   </button>
                 </div>
               </div>

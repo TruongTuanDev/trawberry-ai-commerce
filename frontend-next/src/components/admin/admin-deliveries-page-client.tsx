@@ -16,6 +16,7 @@ import {
   type AdminDeliveryRow,
 } from "@/lib/admin-api";
 import type { DeliveryExceptionReasonCode } from "@/lib/seller-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const statusFilters = [
   { label: "Paid without delivery", value: "PAID_WITHOUT_DELIVERY" },
@@ -52,6 +53,12 @@ export function AdminDeliveriesPageClient() {
   const [adminNote, setAdminNote] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [reasonCode, setReasonCode] = useState<DeliveryExceptionReasonCode>("OTHER");
+
+  const { run: runOverride, isRunning: overrideRunning } = useActionFeedback();
+  const { run: runRemind, isRunning: remindRunning } = useActionFeedback();
+  const { run: runFailed, isRunning: failedRunning } = useActionFeedback();
+  const { run: runComment, isRunning: commentRunning } = useActionFeedback();
+  const { run: runCustomerMsg, isRunning: customerMsgRunning } = useActionFeedback();
 
   const query = useMemo(
     () => ({
@@ -90,93 +97,108 @@ export function AdminDeliveriesPageClient() {
 
   const handleOverride = async (action: "courier-assigned" | "picked-up" | "in-transit" | "delivered" | "cancel") => {
     if (!selected?.deliveryShipmentId) return;
+    if (action === "delivered" && !window.confirm("Bạn có chắc chắn muốn xác nhận đơn hàng đã giao thành công?")) {
+      return;
+    }
+    if (action === "cancel" && !window.confirm("Bạn có chắc chắn muốn hủy vận đơn này không?")) {
+      return;
+    }
     setMessage(null);
     setError(null);
-    try {
-      if (action === "courier-assigned") {
-        await adminMarkDeliveryCourierAssigned(selected.deliveryShipmentId, { note: "Admin supervision override." });
-        setMessage("Courier assigned.");
-      } else if (action === "picked-up") {
-        await adminMarkDeliveryPickedUp(selected.deliveryShipmentId, { note: "Admin supervision override." });
-        setMessage("Package marked picked up.");
-      } else if (action === "in-transit") {
-        await adminMarkDeliveryInTransit(selected.deliveryShipmentId, "Admin supervision override.");
-        setMessage("Delivery marked on the way.");
-      } else if (action === "delivered") {
-        await adminMarkDeliveryDelivered(selected.deliveryShipmentId, "Admin supervision override.");
-        setMessage("Delivery marked delivered.");
-      } else {
-        await adminCancelDelivery(selected.deliveryShipmentId, "Admin supervision override.");
-        setMessage("Delivery cancelled.");
+    await runOverride({
+      action: async () => {
+        if (action === "courier-assigned") {
+          return adminMarkDeliveryCourierAssigned(selected.deliveryShipmentId!, { note: "Admin supervision override." });
+        } else if (action === "picked-up") {
+          return adminMarkDeliveryPickedUp(selected.deliveryShipmentId!, { note: "Admin supervision override." });
+        } else if (action === "in-transit") {
+          return adminMarkDeliveryInTransit(selected.deliveryShipmentId!, "Admin supervision override.");
+        } else if (action === "delivered") {
+          return adminMarkDeliveryDelivered(selected.deliveryShipmentId!, "Admin supervision override.");
+        } else {
+          return adminCancelDelivery(selected.deliveryShipmentId!, "Admin supervision override.");
+        }
+      },
+      successMessage: action === "courier-assigned" ? "Đã gán tài xế."
+        : action === "picked-up" ? "Đã lấy hàng thành công."
+        : action === "in-transit" ? "Đang vận chuyển."
+        : action === "delivered" ? "Giao hàng thành công."
+        : "Đã hủy vận đơn.",
+      onSuccess: async () => {
+        await load();
       }
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Admin delivery action failed.");
-    }
+    });
   };
 
   const handleRemindSeller = async () => {
     if (!selected?.orderId) return;
     setMessage(null);
     setError(null);
-    try {
-      const result = await adminRemindYandex(selected.orderId);
-      setMessage(
-        result.reminderCreated
-          ? "Reminder sent."
-          : `Reminder already sent. Next allowed at ${result.nextAllowedAt ? new Date(result.nextAllowedAt).toLocaleString() : "later"}.`,
-      );
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to remind seller.");
-    }
+    await runRemind({
+      action: async () => {
+        return adminRemindYandex(selected.orderId);
+      },
+      successMessage: "Đã gửi nhắc nhở đến người bán.",
+      onSuccess: async (result) => {
+        if (!result.reminderCreated) {
+          setMessage(`Reminder already sent. Next allowed at ${result.nextAllowedAt ? new Date(result.nextAllowedAt).toLocaleString() : "later"}.`);
+        }
+        await load();
+      }
+    });
   };
 
   const handleMarkFailed = async () => {
     if (!selected?.deliveryShipmentId) return;
     setMessage(null);
     setError(null);
-    try {
-      await adminMarkDeliveryFailed(selected.deliveryShipmentId, {
-        reasonCode,
-        reasonText: adminNote.trim() || null,
-        customerVisibleMessage: customerMessage.trim() || null,
-      });
-      setMessage("Delivery marked failed.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to mark failed.");
-    }
+    await runFailed({
+      action: async () => {
+        return adminMarkDeliveryFailed(selected.deliveryShipmentId!, {
+          reasonCode,
+          reasonText: adminNote.trim() || null,
+          customerVisibleMessage: customerMessage.trim() || null,
+        });
+      },
+      successMessage: "Đã cập nhật trạng thái thất bại.",
+      onSuccess: async () => {
+        await load();
+      }
+    });
   };
 
   const handleAddAdminNote = async () => {
     if (!selected?.deliveryShipmentId || !adminNote.trim()) return;
     setMessage(null);
     setError(null);
-    try {
-      await adminAddDeliveryComment(selected.deliveryShipmentId, {
-        visibility: "INTERNAL",
-        message: adminNote.trim(),
-      });
-      setAdminNote("");
-      setMessage("Internal admin comment added.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to add admin comment.");
-    }
+    await runComment({
+      action: async () => {
+        return adminAddDeliveryComment(selected.deliveryShipmentId!, {
+          visibility: "INTERNAL",
+          message: adminNote.trim(),
+        });
+      },
+      successMessage: "Đã lưu ghi chú nội bộ.",
+      onSuccess: async () => {
+        setAdminNote("");
+        await load();
+      }
+    });
   };
 
   const handleUpdateCustomerMessage = async () => {
     if (!selected?.deliveryShipmentId || !customerMessage.trim()) return;
     setMessage(null);
     setError(null);
-    try {
-      await adminUpdateDeliveryCustomerMessage(selected.deliveryShipmentId, customerMessage.trim());
-      setMessage("Customer message updated.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update customer message.");
-    }
+    await runCustomerMsg({
+      action: async () => {
+        return adminUpdateDeliveryCustomerMessage(selected.deliveryShipmentId!, customerMessage.trim());
+      },
+      successMessage: "Đã cập nhật tin nhắn cho khách hàng.",
+      onSuccess: async () => {
+        await load();
+      }
+    });
   };
 
   return (
@@ -311,15 +333,66 @@ export function AdminDeliveriesPageClient() {
                 </p>
               ) : null}
               <div className="flex flex-wrap gap-3">
-                <button type="button" onClick={() => void handleRemindSeller()} className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white" data-testid="admin-remind-seller-yandex">
-                  Nhắc seller
+                <button
+                  type="button"
+                  onClick={() => void handleRemindSeller()}
+                  disabled={overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  data-testid="admin-remind-seller-yandex"
+                >
+                  {remindRunning ? "Đang gửi..." : "Nhắc seller"}
                 </button>
-                <button type="button" onClick={() => void handleOverride("courier-assigned")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Courier assigned</button>
-                <button type="button" onClick={() => void handleOverride("picked-up")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">Picked up</button>
-                <button type="button" onClick={() => void handleOverride("in-transit")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-in-transit">Mark in transit</button>
-                <button type="button" onClick={() => void handleOverride("delivered")} disabled={!selected.deliveryShipmentId} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-mark-delivered">Mark delivered</button>
-                <button type="button" onClick={() => void handleOverride("cancel")} disabled={!selected.deliveryShipmentId} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Cancel</button>
-                <button type="button" onClick={() => void handleMarkFailed()} disabled={!selected.deliveryShipmentId} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" data-testid="admin-delivery-mark-failed">Mark failed</button>
+                <button
+                  type="button"
+                  onClick={() => void handleOverride("courier-assigned")}
+                  disabled={!selected.deliveryShipmentId || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  {overrideRunning ? "Đang cập nhật..." : "Courier assigned"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleOverride("picked-up")}
+                  disabled={!selected.deliveryShipmentId || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  {overrideRunning ? "Đang cập nhật..." : "Picked up"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleOverride("in-transit")}
+                  disabled={!selected.deliveryShipmentId || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  data-testid="admin-delivery-mark-in-transit"
+                >
+                  {overrideRunning ? "Đang cập nhật..." : "Mark in transit"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleOverride("delivered")}
+                  disabled={!selected.deliveryShipmentId || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  data-testid="admin-delivery-mark-delivered"
+                >
+                  {overrideRunning ? "Đang cập nhật..." : "Mark delivered"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleOverride("cancel")}
+                  disabled={!selected.deliveryShipmentId || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {overrideRunning ? "Đang cập nhật..." : "Cancel"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleMarkFailed()}
+                  disabled={!selected.deliveryShipmentId || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning}
+                  className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  data-testid="admin-delivery-mark-failed"
+                >
+                  {failedRunning ? "Đang cập nhật..." : "Mark failed"}
+                </button>
               </div>
               <div className="grid gap-3 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] p-4">
                 <select value={reasonCode} onChange={(event) => setReasonCode(event.target.value as DeliveryExceptionReasonCode)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-reason-code">
@@ -330,8 +403,12 @@ export function AdminDeliveriesPageClient() {
                 <textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} rows={3} placeholder="Internal admin comment" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-internal-comment" />
                 <textarea value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} rows={3} placeholder="Customer-visible message" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-delivery-customer-message" />
                 <div className="flex flex-wrap gap-3">
-                  <button type="button" onClick={() => void handleAddAdminNote()} disabled={!selected.deliveryShipmentId || !adminNote.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-add-comment">Add internal comment</button>
-                  <button type="button" onClick={() => void handleUpdateCustomerMessage()} disabled={!selected.deliveryShipmentId || !customerMessage.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-update-customer-message">Update customer message</button>
+                  <button type="button" onClick={() => void handleAddAdminNote()} disabled={!selected.deliveryShipmentId || !adminNote.trim() || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-add-comment">
+                    {commentRunning ? "Đang gửi..." : "Add internal comment"}
+                  </button>
+                  <button type="button" onClick={() => void handleUpdateCustomerMessage()} disabled={!selected.deliveryShipmentId || !customerMessage.trim() || overrideRunning || remindRunning || failedRunning || commentRunning || customerMsgRunning} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50" data-testid="admin-delivery-update-customer-message">
+                    {customerMsgRunning ? "Đang gửi..." : "Update customer message"}
+                  </button>
                 </div>
               </div>
               {selected.events.length ? (

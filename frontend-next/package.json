@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:e2e": "playwright test",
     "test:e2e:auth-hardening": "playwright test auth-hardening",
+    "test:e2e:action-feedback": "playwright test action-feedback",
     "test:e2e:auth-role-separation": "playwright test auth-role-separation",
     "test:e2e:multi-role-sessions": "playwright test multi-role-sessions",
     "test:e2e:admin-seller-approval": "playwright test admin-seller-approval",

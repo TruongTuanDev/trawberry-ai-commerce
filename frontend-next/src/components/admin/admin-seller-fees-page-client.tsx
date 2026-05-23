@@ -10,6 +10,7 @@ import {
   type AdminSellerFeeRow,
   updateAdminShopCommission,
 } from "@/lib/admin-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 function formatRub(value: string) {
   return new Intl.NumberFormat("ru-RU", {
@@ -29,6 +30,7 @@ export function AdminSellerFeesPageClient() {
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { run: runAction, isRunning } = useActionFeedback();
 
   const invoiceByShop = useMemo(
     () => new Map(invoices.map((invoice) => [`${invoice.shopId}:${invoice.billingPeriod}`, invoice])),
@@ -80,49 +82,67 @@ export function AdminSellerFeesPageClient() {
     }
 
     setSavingShopId(row.shopId);
-    try {
-      await updateAdminShopCommission(row.shopId, { commissionPercent: value });
-      setSuccess(`Commission saved for ${row.shopName}.`);
-      await loadData();
-    } catch (issue) {
-      setError(
-        issue instanceof Error ? issue.message : "Unable to save commission.",
-      );
-    } finally {
-      setSavingShopId(null);
-    }
+    setError(null);
+    setSuccess(null);
+    await runAction({
+      action: async () => {
+        return updateAdminShopCommission(row.shopId, { commissionPercent: value });
+      },
+      successMessage: "Đã lưu hoa hồng thành công.",
+      onSuccess: async () => {
+        setSuccess(`Commission saved for ${row.shopName}.`);
+        await loadData();
+      },
+      onFinally: () => {
+        setSavingShopId(null);
+      }
+    });
   };
 
   const handleGenerateInvoice = async (row: AdminSellerFeeRow) => {
-    setGeneratingShopId(row.shopId);
-    try {
-      await generateAdminSellerFeeInvoice(row.shopId, {
-        billingPeriod: row.billingPeriod,
-      });
-      setSuccess(`Invoice generated for ${row.shopName} (${row.billingPeriod}).`);
-      await loadData();
-    } catch (issue) {
-      setError(
-        issue instanceof Error ? issue.message : "Unable to generate invoice.",
-      );
-    } finally {
-      setGeneratingShopId(null);
+    if (!window.confirm(`Bạn có chắc chắn muốn TẠO hóa đơn mới cho ${row.shopName} (${row.billingPeriod}) không?`)) {
+      return;
     }
+    setGeneratingShopId(row.shopId);
+    setError(null);
+    setSuccess(null);
+    await runAction({
+      action: async () => {
+        return generateAdminSellerFeeInvoice(row.shopId, {
+          billingPeriod: row.billingPeriod,
+        });
+      },
+      successMessage: "Đã tạo hóa đơn thành công.",
+      onSuccess: async () => {
+        setSuccess(`Invoice generated for ${row.shopName} (${row.billingPeriod}).`);
+        await loadData();
+      },
+      onFinally: () => {
+        setGeneratingShopId(null);
+      }
+    });
   };
 
   const handleMarkPaid = async (invoiceId: string) => {
-    setPayingInvoiceId(invoiceId);
-    try {
-      await markAdminSellerFeeInvoicePaid(invoiceId);
-      setSuccess("Invoice marked as paid.");
-      await loadData();
-    } catch (issue) {
-      setError(
-        issue instanceof Error ? issue.message : "Unable to mark invoice paid.",
-      );
-    } finally {
-      setPayingInvoiceId(null);
+    if (!window.confirm("Bạn có chắc chắn muốn XÁC NHẬN hóa đơn này đã được thanh toán không?")) {
+      return;
     }
+    setPayingInvoiceId(invoiceId);
+    setError(null);
+    setSuccess(null);
+    await runAction({
+      action: async () => {
+        return markAdminSellerFeeInvoicePaid(invoiceId);
+      },
+      successMessage: "Đã xác nhận thanh toán hóa đơn.",
+      onSuccess: async () => {
+        setSuccess("Invoice marked as paid.");
+        await loadData();
+      },
+      onFinally: () => {
+        setPayingInvoiceId(null);
+      }
+    });
   };
 
   return (
@@ -229,33 +249,33 @@ export function AdminSellerFeesPageClient() {
                       <button
                         type="button"
                         onClick={() => void handleSaveCommission(row)}
-                        disabled={savingShopId === row.shopId}
+                        disabled={isRunning}
                         data-testid={`admin-save-commission-${row.shopId}`}
                         className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
                       >
-                        {savingShopId === row.shopId ? "Saving..." : "Save commission"}
+                        {savingShopId === row.shopId && isRunning ? "Đang lưu..." : "Save commission"}
                       </button>
                       <button
                         type="button"
                         onClick={() => void handleGenerateInvoice(row)}
-                        disabled={generatingShopId === row.shopId}
+                        disabled={isRunning}
                         data-testid={`admin-generate-invoice-${row.shopId}`}
                         className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--foreground)] disabled:opacity-60"
                       >
-                        {generatingShopId === row.shopId ? "Generating..." : "Generate invoice"}
+                        {generatingShopId === row.shopId && isRunning ? "Đang tạo..." : "Generate invoice"}
                       </button>
                       {invoice ? (
                         <button
                           type="button"
                           onClick={() => void handleMarkPaid(invoice.id)}
-                          disabled={invoice.status === "PAID" || payingInvoiceId === invoice.id}
+                          disabled={invoice.status === "PAID" || isRunning}
                           data-testid={`admin-mark-invoice-paid-${invoice.id}`}
                           className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 disabled:opacity-60"
                         >
                           {invoice.status === "PAID"
                             ? "Already paid"
-                            : payingInvoiceId === invoice.id
-                              ? "Marking..."
+                            : payingInvoiceId === invoice.id && isRunning
+                              ? "Đang xác nhận..."
                               : "Mark paid"}
                         </button>
                       ) : null}

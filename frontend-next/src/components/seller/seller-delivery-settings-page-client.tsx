@@ -5,12 +5,13 @@ import { SectionCard } from "@/components/seller/section-card";
 import { getDeliverySettings, updateDeliverySettings } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 export function SellerDeliverySettingsPageClient() {
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { run: runSave, isRunning: saving } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -92,47 +93,49 @@ export function SellerDeliverySettingsPageClient() {
       return;
     }
 
-    setSaving(true);
     setError(null);
     setSuccessMessage(null);
 
-    try {
-      const saved = await updateDeliverySettings(
-        currentShopId,
-        {
-          pickupAddress: form.pickupAddress,
-          pickupCity: form.pickupCity,
-          pickupPostalCode: form.pickupPostalCode || undefined,
-          pickupContactPhone: form.pickupContactPhone,
-          pickupLatitude: form.pickupLatitude ? Number(form.pickupLatitude) : undefined,
-          pickupLongitude: form.pickupLongitude ? Number(form.pickupLongitude) : undefined,
-          pickupContactName: form.pickupContactName,
-          enabledCarriers,
-          defaultCarrier: form.defaultCarrier,
-          sameCityPreferredCarrier: form.sameCityPreferredCarrier,
-          interCityPreferredCarrier: form.interCityPreferredCarrier,
-          fallbackCarrier: form.fallbackCarrier,
-          defaultWeightGram: Number(form.defaultWeightGram || "0"),
-          defaultLengthCm: Number(form.defaultLengthCm || "0"),
-          defaultWidthCm: Number(form.defaultWidthCm || "0"),
-          defaultHeightCm: Number(form.defaultHeightCm || "0"),
-        },
-        "",
-      );
+    await runSave({
+      action: async () => {
+        const saved = await updateDeliverySettings(
+          currentShopId,
+          {
+            pickupAddress: form.pickupAddress,
+            pickupCity: form.pickupCity,
+            pickupPostalCode: form.pickupPostalCode || undefined,
+            pickupContactPhone: form.pickupContactPhone,
+            pickupLatitude: form.pickupLatitude ? Number(form.pickupLatitude) : undefined,
+            pickupLongitude: form.pickupLongitude ? Number(form.pickupLongitude) : undefined,
+            pickupContactName: form.pickupContactName,
+            enabledCarriers,
+            defaultCarrier: form.defaultCarrier,
+            sameCityPreferredCarrier: form.sameCityPreferredCarrier,
+            interCityPreferredCarrier: form.interCityPreferredCarrier,
+            fallbackCarrier: form.fallbackCarrier,
+            defaultWeightGram: Number(form.defaultWeightGram || "0"),
+            defaultLengthCm: Number(form.defaultLengthCm || "0"),
+            defaultWidthCm: Number(form.defaultWidthCm || "0"),
+            defaultHeightCm: Number(form.defaultHeightCm || "0"),
+          },
+          "",
+        );
 
-      setForm((current) => ({
-        ...current,
-        defaultCarrier: saved.defaultCarrier as "CDEK" | "YANDEX",
-        sameCityPreferredCarrier: saved.sameCityPreferredCarrier as "CDEK" | "YANDEX",
-        interCityPreferredCarrier: saved.interCityPreferredCarrier as "CDEK" | "YANDEX",
-        fallbackCarrier: saved.fallbackCarrier as "CDEK" | "YANDEX",
-      }));
-      setSuccessMessage("Delivery settings saved.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save delivery settings.");
-    } finally {
-      setSaving(false);
-    }
+        setForm((current) => ({
+          ...current,
+          defaultCarrier: saved.defaultCarrier as "CDEK" | "YANDEX",
+          sameCityPreferredCarrier: saved.sameCityPreferredCarrier as "CDEK" | "YANDEX",
+          interCityPreferredCarrier: saved.interCityPreferredCarrier as "CDEK" | "YANDEX",
+          fallbackCarrier: saved.fallbackCarrier as "CDEK" | "YANDEX",
+        }));
+        setSuccessMessage("Delivery settings saved.");
+        return saved;
+      },
+      successMessage: "Lưu cấu hình vận chuyển thành công!",
+      errorMessage: "Không thể lưu cấu hình vận chuyển.",
+    }).catch((err) => {
+      setError(err.message);
+    });
   };
 
   return (
@@ -217,7 +220,7 @@ export function SellerDeliverySettingsPageClient() {
           </div>
 
           <button type="button" onClick={() => void handleSave()} disabled={saving} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="delivery-settings-save">
-            {saving ? "Saving..." : "Save delivery settings"}
+            {saving ? "Đang lưu..." : "Save delivery settings"}
           </button>
 
           {error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}

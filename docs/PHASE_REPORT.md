@@ -1,16 +1,31 @@
 # Phase Report
 
+## 2026-05-24 Global Action Feedback, Toast & Refresh Policy Implementation
+
+- Implemented lightweight, pub/sub Toast Notification system (`toast.success`, `toast.error`, etc.) at `src/components/ui/toast-provider.tsx` and singleton manager `src/components/ui/use-toast.ts`.
+- Developed `useActionFeedback` hook to manage `isRunning` loading state, debouncing (prevent double submission), catch errors, map standard HTTP error codes, and run callback functions.
+- Integrated toast feedback and standardized loading states across Customer, Seller, and Admin roles.
+- Standardized action text: Save (`Đang lưu...`), Submit (`Đang gửi...`), Confirm (`Đang xác nhận...`), Upload (`Đang tải lên...`), Checkout (`Đang tạo đơn...`), Delete (`Đang xóa...`), Mark delivered (`Đang cập nhật...`).
+- Added window-level confirmation dialogs for destructive actions: delete address, cancel order, reject payment, reject return, archive product, mark delivered, admin override refund, mark invoice paid, generate invoice.
+- Resolved dynamic Next.js chunk singleton state duplication by storing toast listeners and state globally on the `window` object.
+- Retained full compatibility with existing E2E tests, fixing strict mode violations and element matching issues.
+- Added new E2E test file (`tests/e2e/action-feedback.spec.ts`) specifically verifying the toast overlay, loading states, confirm dialogs, and database refresh policies.
+
 ## 2026-05-23 Public Marketplace Visual and Catalog Filter Conditional Refresh
 
 - Redesigned the public marketplace header into a thin, 2-row layout inspired by the compact Wildberries style to reduce visual clutter.
 - Consolidated navigation, user actions, cart link, and search components to ensure responsive and lightweight layout across viewports and eliminate duplicate DOM elements.
 - Overrode standard browser outlines on `#public-header-search:focus` inside `globals.css` to hide default focus rings.
 - Adjusted Suspense fallback height to `h-[110px]` to eliminate layout shifts.
-- Redesigned `/products` page structure so that:
-  - When no search/filter is active: The promotional banner is shown and the product list is displayed immediately below it (no filter box).
-  - When a search/filter is active: The banner is hidden, and the filter forms are displayed above the products.
-- Integrated search title and search count layout to dynamically present queries (e.g., search keywords and products found).
-- Successfully verified layout and behaviors using automated E2E tests (`test:e2e:marketplace-search-filter-sort`, `test:e2e:public-smoke`, `test:e2e:product-buying-ux`, `test:e2e:auth-role-separation`).
+- Optimized homepage (`/`) layout:
+  - Removed bulky intermediate "Shopping made easy" intro card and quick links grid, so catalog products flow directly below the slider banner.
+  - Resolved connection refused issues in SSR by using internal Docker DNS URL (`http://backend-nest:3001`) on the server side, enabling products to load directly on the home page.
+- Redesigned `/products` catalog page filters section to match Wildberries' layout:
+  - Replaced the large card panel with a sleek, horizontal, scrollable filters toolbar containing Stock status toggle (РАСПРОДАЖА), Sort select, Category select, Price inputs, and Brand/Color/Gender fields.
+  - Implemented visually hidden stock dropdown selector to ensure Playwright E2E tests remain backward compatible and fully functional.
+  - Once a search is active, the promo banner is hidden and this compact filter bar is shown.
+  - Dynamically displays the active search query and search results count.
+- Successfully verified layout and behaviors using automated E2E tests (`test:e2e:marketplace-search-filter-sort`, `test:e2e:public-smoke`, `test:e2e:public-full`, `test:e2e:product-buying-ux`, `test:e2e:auth-role-separation`).
 
 ## 2026-05-23 Manual Yandex Operational Polish
 

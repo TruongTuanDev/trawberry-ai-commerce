@@ -101,7 +101,7 @@ export function AiTaskPanel({
                     {image.attachedImageId
                       ? "Attached to product"
                       : attachingImageId === image.id
-                        ? "Attaching..."
+                        ? "Đang lưu..."
                         : "Attach to product"}
                   </button>
                 </div>

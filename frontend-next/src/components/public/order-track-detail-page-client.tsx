@@ -12,6 +12,7 @@ import {
   uploadPaymentProof,
   type PublicTrackedOrder,
 } from "@/lib/public-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -22,7 +23,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [buyerNote, setBuyerNote] = useState("");
   const [loading, setLoading] = useState(Boolean(initialPhone));
-  const [uploading, setUploading] = useState(false);
+  const { run: runUpload, isRunning: uploading } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isPayOnDeliverySellerQr =
@@ -91,32 +92,36 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
       return;
     }
 
-    setUploading(true);
     setError(null);
     setSuccessMessage(null);
 
-    try {
-      const updated = await uploadPaymentProof(
-        orderId,
-        phone.trim(),
-        file,
-        buyerNote,
-      );
-      setOrder(updated);
-      setFile(null);
-      setBuyerNote("");
-      setSuccessMessage(
-        isPayOnDeliverySellerQr
+    await runUpload({
+      action: async () => {
+        const updated = await uploadPaymentProof(
+          orderId,
+          phone.trim(),
+          file,
+          buyerNote,
+        );
+        setOrder(updated);
+        setFile(null);
+        setBuyerNote("");
+        const msg = isPayOnDeliverySellerQr
           ? "Marked as paid after delivery. Seller can review it now."
-          : "Payment proof uploaded. Seller can review it now.",
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to upload payment proof.",
-      );
-    } finally {
-      setUploading(false);
-    }
+          : "Payment proof uploaded. Seller can review it now.";
+        setSuccessMessage(msg);
+        router.refresh();
+        return updated;
+      },
+      successMessage: isPayOnDeliverySellerQr
+        ? "Xác nhận đã thanh toán thành công!"
+        : "Tải lên bằng chứng thanh toán thành công!",
+      errorMessage: isPayOnDeliverySellerQr
+        ? "Không thể xác nhận thanh toán."
+        : "Không thể tải lên bằng chứng thanh toán.",
+    }).catch((err) => {
+      setError(err.message);
+    });
   };
 
   return (
@@ -402,7 +407,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       data-testid="payment-proof-submit"
                     >
                       {uploading
-                        ? "Submitting..."
+                        ? (isPayOnDeliverySellerQr ? "Đang xác nhận..." : "Đang tải lên...")
                         : isPayOnDeliverySellerQr
                           ? "Tôi đã thanh toán khi nhận"
                           : "I transferred the money"}

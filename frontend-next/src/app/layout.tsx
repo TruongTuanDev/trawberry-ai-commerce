@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
+import { ToastProvider } from "@/components/ui/toast-provider";
 
 const dmSans = DM_Sans({
   variable: "--font-sans-app",
@@ -25,7 +26,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${spaceGrotesk.variable}`}>
-      <body className="min-h-screen">{children}<AuthBootstrap /></body>
+      <body className="min-h-screen">
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+        <AuthBootstrap />
+      </body>
     </html>
   );
 }

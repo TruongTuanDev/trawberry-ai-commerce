@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import {
   addCustomerSupportCaseMessage,
   createCustomerSupportCase,
@@ -23,7 +24,7 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(receipt.supportCases[0]?.id ?? null);
   const [selectedCase, setSelectedCase] = useState<CustomerSupportCase | null>(null);
   const [loadingCase, setLoadingCase] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [issueType, setIssueType] = useState<string>("DELIVERY_DELAY");
@@ -52,52 +53,58 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
   };
 
   const handleCreate = async () => {
-    setSaving(true);
     setError(null);
     setSuccess(null);
-    try {
-      const created = await createCustomerSupportCase(receipt.checkoutCode, {
-        orderId: targetOrderId || undefined,
-        issueType,
-        subject,
-        description,
-      });
-      receipt.supportCases.unshift({
-        id: created.id,
-        issueType: created.issueType,
-        status: created.status,
-        subject: created.subject,
-        orderId: created.orderId,
-        createdAt: created.createdAt,
-      });
-      setSelectedCase(created);
-      setSelectedCaseId(created.id);
-      setSubject("");
-      setDescription("");
-      setTargetOrderId("");
-      setSuccess("Support case created.");
-    } catch (err) {
+    await run({
+      action: async () => {
+        return createCustomerSupportCase(receipt.checkoutCode, {
+          orderId: targetOrderId || undefined,
+          issueType,
+          subject,
+          description,
+        });
+      },
+      successMessage: "Đã gửi yêu cầu hỗ trợ thành công.",
+      onSuccess: async (created) => {
+        receipt.supportCases.unshift({
+          id: created.id,
+          issueType: created.issueType,
+          status: created.status,
+          subject: created.subject,
+          orderId: created.orderId,
+          createdAt: created.createdAt,
+        });
+        setSelectedCase(created);
+        setSelectedCaseId(created.id);
+        setSubject("");
+        setDescription("");
+        setTargetOrderId("");
+        setSuccess("Support case created.");
+      },
+      errorMessage: "Gửi yêu cầu hỗ trợ thất bại.",
+    }).catch((err) => {
       setError(err instanceof Error ? err.message : "Unable to create support case.");
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const handleReply = async () => {
     if (!selectedCaseId || !replyMessage.trim()) return;
-    setSaving(true);
     setError(null);
     setSuccess(null);
-    try {
-      const updated = await addCustomerSupportCaseMessage(selectedCaseId, replyMessage.trim());
-      setSelectedCase(updated);
-      setReplyMessage("");
-      setSuccess("Reply sent.");
-    } catch (err) {
+    await run({
+      action: async () => {
+        return addCustomerSupportCaseMessage(selectedCaseId, replyMessage.trim());
+      },
+      successMessage: "Đã gửi phản hồi thành công.",
+      onSuccess: async (updated) => {
+        setSelectedCase(updated);
+        setReplyMessage("");
+        setSuccess("Reply sent.");
+      },
+      errorMessage: "Gửi phản hồi thất bại.",
+    }).catch((err) => {
       setError(err instanceof Error ? err.message : "Unable to send reply.");
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   return (
@@ -143,8 +150,14 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
                 Description
                 <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-description" />
               </label>
-              <button type="button" onClick={() => void handleCreate()} disabled={saving || !subject.trim() || !description.trim()} className="public-button-primary px-5 py-3 text-sm" data-testid="customer-support-submit">
-                {saving ? "Submitting..." : "Open support case"}
+              <button
+                type="button"
+                onClick={() => void handleCreate()}
+                disabled={isRunning || !subject.trim() || !description.trim()}
+                className="public-button-primary px-5 py-3 text-sm disabled:opacity-50"
+                data-testid="customer-support-submit"
+              >
+                {isRunning ? "Đang gửi..." : "Open support case"}
               </button>
             </div>
           </div>
@@ -213,8 +226,14 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
                     Reply
                     <textarea value={replyMessage} onChange={(event) => setReplyMessage(event.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-reply-message" />
                   </label>
-                  <button type="button" onClick={() => void handleReply()} disabled={saving || !replyMessage.trim()} className="public-button-secondary mt-3 px-5 py-3 text-sm" data-testid="customer-support-reply-submit">
-                    {saving ? "Sending..." : "Send reply"}
+                  <button
+                    type="button"
+                    onClick={() => void handleReply()}
+                    disabled={isRunning || !replyMessage.trim()}
+                    className="public-button-secondary mt-3 px-5 py-3 text-sm disabled:opacity-50"
+                    data-testid="customer-support-reply-submit"
+                  >
+                    {isRunning ? "Đang gửi..." : "Send reply"}
                   </button>
                 </div>
               ) : null}

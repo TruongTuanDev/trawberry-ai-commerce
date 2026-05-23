@@ -1,5 +1,16 @@
 # Full Commerce Flow Audit
 
+## Global Action Feedback, Toast & Refresh Policy Addendum
+
+- Implemented a global Toast Notification system with action-level visual overlays (`toast-success`, `toast-error`).
+- Standardized visual action feedback states (`isRunning`) and Vietnamese loading labels: Save (`Đang lưu...`), Submit (`Đang gửi...`), Confirm (`Đang xác nhận...`), Upload (`Đang tải lên...`), Checkout (`Đang tạo đơn...`), Delete (`Đang xóa...`), Mark delivered (`Đang cập nhật...`).
+- Added window-level confirmation dialogs (`window.confirm`) to protect critical/destructive actions (delete address, cancel order, reject payment/return, archive product, mark delivered, override refund, mark invoice paid, generate invoice).
+- Enforced strict UX policies: success actions trigger immediate page data refreshes, preventing stale UI.
+- Integrated error maps to translate generic HTTP status codes (401, 403, 409, 429, 500) into friendly Vietnamese notifications.
+- Resolved dynamic Next.js chunk singleton state duplication by storing toast listeners and state globally on the `window` object.
+- Patched all affected Playwright E2E tests (`customer-account.spec.ts`, `return-refund-dispute.spec.ts`, `seller-fee-dashboard.spec.ts`) to handle confirm dialogs and avoid strict mode violations.
+- Verification targets: `test:e2e:action-feedback`, `test:e2e:customer-account`, `test:e2e:seller-fee-dashboard`, `test:e2e:return-refund-dispute`, `test:e2e:three-role-demo`, `test:e2e:public-full`, and `test:e2e:marketplace-search-filter-sort`.
+
 ## Return / Refund / Dispute Addendum
 
 - customer can now open a return/refund/dispute case from order detail

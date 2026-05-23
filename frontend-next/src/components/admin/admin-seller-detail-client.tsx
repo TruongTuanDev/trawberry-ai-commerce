@@ -15,6 +15,7 @@ import {
   type AdminSellerDetail,
 } from "@/lib/admin-api";
 import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 export function AdminSellerDetailClient({ userId }: { userId: string }) {
   const [seller, setSeller] = useState<AdminSellerDetail | null>(null);
@@ -27,6 +28,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { run: runAction, isRunning } = useActionFeedback();
 
   const load = async (showLoading = true) => {
     if (showLoading) {
@@ -60,64 +62,82 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
     setSaving(documentId);
     setMessage(null);
     setError(null);
-    try {
-      await approveAdminSellerDocument(userId, documentId);
-      setMessage("Document approved.");
-      await load(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to approve document.");
-    } finally {
-      setSaving(null);
-    }
+    await runAction({
+      action: async () => {
+        return approveAdminSellerDocument(userId, documentId);
+      },
+      successMessage: "Phê duyệt tài liệu thành công.",
+      onSuccess: async () => {
+        await load(false);
+      },
+      onFinally: () => {
+        setSaving(null);
+      }
+    });
   };
 
   const rejectDocument = async (documentId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn từ chối tài liệu này không?")) {
+      return;
+    }
     setSaving(documentId);
     setMessage(null);
     setError(null);
-    try {
-      await rejectAdminSellerDocument(userId, documentId, documentRejectReasons[documentId]?.trim() || undefined);
-      setMessage("Document rejected.");
-      await load(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to reject document.");
-    } finally {
-      setSaving(null);
-    }
+    await runAction({
+      action: async () => {
+        return rejectAdminSellerDocument(userId, documentId, documentRejectReasons[documentId]?.trim() || undefined);
+      },
+      successMessage: "Từ chối tài liệu thành công.",
+      onSuccess: async () => {
+        await load(false);
+      },
+      onFinally: () => {
+        setSaving(null);
+      }
+    });
   };
 
   const approveSeller = async () => {
     setSaving("seller");
     setMessage(null);
     setError(null);
-    try {
-      await approveAdminSeller(userId);
-      const updated = await getAdminSeller(userId);
-      setSeller(updated);
-      setMessage("Seller approved.");
-      await load(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to approve seller.");
-    } finally {
-      setSaving(null);
-    }
+    await runAction({
+      action: async () => {
+        return approveAdminSeller(userId);
+      },
+      successMessage: "Phê duyệt người bán thành công.",
+      onSuccess: async () => {
+        const updated = await getAdminSeller(userId);
+        setSeller(updated);
+        await load(false);
+      },
+      onFinally: () => {
+        setSaving(null);
+      }
+    });
   };
 
   const rejectSeller = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn từ chối người bán này không?")) {
+      return;
+    }
     setSaving("seller");
     setMessage(null);
     setError(null);
-    try {
-      await rejectAdminSeller(userId, rejectReason.trim() || undefined);
-      const updated = await getAdminSeller(userId);
-      setSeller(updated);
-      setMessage("Seller rejected.");
-      await load(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to reject seller.");
-    } finally {
-      setSaving(null);
-    }
+    await runAction({
+      action: async () => {
+        return rejectAdminSeller(userId, rejectReason.trim() || undefined);
+      },
+      successMessage: "Từ chối người bán thành công.",
+      onSuccess: async () => {
+        const updated = await getAdminSeller(userId);
+        setSeller(updated);
+        await load(false);
+      },
+      onFinally: () => {
+        setSaving(null);
+      }
+    });
   };
 
   return (
@@ -238,20 +258,20 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
                       <button
                         type="button"
                         onClick={() => void approveDocument(document.id)}
-                        disabled={saving === document.id || document.status === "APPROVED"}
+                        disabled={isRunning || document.status === "APPROVED"}
                         className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                         data-testid={`admin-approve-document-${document.id}`}
                       >
-                        Approve document
+                        {saving === document.id && isRunning ? "Đang xác nhận..." : "Approve document"}
                       </button>
                       <button
                         type="button"
                         onClick={() => void rejectDocument(document.id)}
-                        disabled={saving === document.id || document.status === "REJECTED"}
+                        disabled={isRunning || document.status === "REJECTED"}
                         className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
                         data-testid={`admin-reject-document-${document.id}`}
                       >
-                        Reject document
+                        {saving === document.id && isRunning ? "Đang từ chối..." : "Reject document"}
                       </button>
                     </div>
                   </div>
@@ -279,20 +299,20 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
           <button
             type="button"
             onClick={() => void approveSeller()}
-            disabled={saving === "seller" || seller?.sellerApprovalStatus === "APPROVED"}
+            disabled={isRunning || seller?.sellerApprovalStatus === "APPROVED"}
             className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="admin-approve-seller"
           >
-            Approve seller
+            {saving === "seller" && isRunning ? "Đang xác nhận..." : "Approve seller"}
           </button>
           <button
             type="button"
             onClick={() => void rejectSeller()}
-            disabled={saving === "seller" || seller?.sellerApprovalStatus === "REJECTED"}
+            disabled={isRunning || seller?.sellerApprovalStatus === "REJECTED"}
             className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="admin-reject-seller"
           >
-            Reject seller
+            {saving === "seller" && isRunning ? "Đang từ chối..." : "Reject seller"}
           </button>
         </div>
       </section>

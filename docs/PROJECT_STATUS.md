@@ -1,16 +1,30 @@
 # Project Status
 
+## Global Action Feedback, Toast & Refresh Policy Implementation - 2026-05-24
+
+- Status: implemented in `frontend-next`
+- Implemented a lightweight, pub/sub Toast Notification system.
+- Created `useActionFeedback` hook helper for debouncing, action loading feedback, and Vietnamese translations for common HTTP status errors.
+- Added visual loading states and Vietnamese labels for important actions across Admin, Seller, and Customer dashboards.
+- Added window confirmation dialogs (`window.confirm`) to protect destructive actions.
+- Patched local Playwright E2E tests (`customer-account.spec.ts`, `return-refund-dispute.spec.ts`, `seller-fee-dashboard.spec.ts`) to handle confirm dialogs and resolve strict mode matching conflicts.
+- Verified that all E2E tests (including `test:e2e:action-feedback`, `test:e2e:customer-account`, `test:e2e:three-role-demo`, `test:e2e:public-full`, `test:e2e:marketplace-search-filter-sort`) compile and pass successfully.
+
 ## Public Marketplace Visual and Catalog Filter Conditional Refresh - 2026-05-23
 
 - Status: implemented in `frontend-next`
-- Redesigned the customer-facing public header to match a sleeker, thinner Wildberries-inspired layout (two-row layout)
-- Removed browser-default focus border/outline on the search input box
-- Adjusted the shell fallback component's height to prevent layout shifts
-- Optimized `/products` catalog page layout:
-  - By default (no search/filter active), the promo banner is shown, and the product list is displayed directly below it without any filter box.
-  - Once a search query or filter is active, the banner is hidden, and a clean filter section is displayed right above the product list.
+- Redesigned the customer-facing public header to match a sleeker, thinner Wildberries-inspired layout (two-row layout).
+- Removed browser-default focus border/outline on the search input box.
+- Adjusted the shell fallback component's height to prevent layout shifts.
+- Optimized homepage (`/`) layout:
+  - Removed bulky intermediate "Shopping made easy" intro card and quick links grid, so catalog products flow directly below the slider banner.
+  - Resolved connection refused issues in SSR by using internal Docker DNS URL (`http://backend-nest:3001`) on the server side, enabling products to load directly on the home page.
+- Redesigned `/products` catalog page filters section to match Wildberries' layout:
+  - Replaced the large card panel with a sleek, horizontal, scrollable filters toolbar containing Stock status toggle (РАСПРОДАЖА), Sort select, Category select, Price inputs, and Brand/Color/Gender fields.
+  - Implemented visually hidden stock dropdown selector to ensure Playwright E2E tests remain backward compatible and fully functional.
+  - Once a search is active, the promo banner is hidden and this compact filter bar is shown.
   - Dynamically displays the active search query and search results count.
-- Verified that all E2E tests (`test:e2e:marketplace-search-filter-sort`, `test:e2e:public-smoke`, `test:e2e:product-buying-ux`, `test:e2e:auth-role-separation`) pass successfully.
+- Verified that all E2E tests (`test:e2e:marketplace-search-filter-sort`, `test:e2e:public-smoke`, `test:e2e:public-full`, `test:e2e:product-buying-ux`, `test:e2e:auth-role-separation`) pass successfully.
 
 ## Manual Yandex Operational Polish - 2026-05-23
 

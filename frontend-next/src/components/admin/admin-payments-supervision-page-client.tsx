@@ -10,6 +10,7 @@ import {
   type AdminPaymentSupervisionRow,
 } from "@/lib/admin-api";
 import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 export function AdminPaymentsSupervisionPageClient() {
   const [items, setItems] = useState<AdminPaymentSupervisionRow[]>([]);
@@ -17,9 +18,9 @@ export function AdminPaymentsSupervisionPageClient() {
   const [status, setStatus] = useState("BUYER_MARKED_DELIVERY_PAID");
   const [proofStatus, setProofStatus] = useState("BUYER_MARKED_PAID");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const { run: runAction, isRunning: saving } = useActionFeedback();
 
   const load = async (filters?: { status?: string; proofStatus?: string }) => {
     setLoading(true);
@@ -63,8 +64,8 @@ export function AdminPaymentsSupervisionPageClient() {
         setItems(response.items);
         setSelected((current) =>
           current
-            ? response.items.find((item) => item.id === current.id) ?? current
-            : response.items[0] ?? null,
+             ? response.items.find((item) => item.id === current.id) ?? current
+             : response.items[0] ?? null,
         );
         setError(null);
       } catch (err) {
@@ -91,22 +92,26 @@ export function AdminPaymentsSupervisionPageClient() {
 
   const handleAction = async (action: "confirm" | "reject") => {
     if (!selected) return;
-    setSaving(true);
+    const confirmMessage = action === "confirm"
+      ? "Bạn có chắc chắn muốn PHÊ DUYỆT thanh toán này không?"
+      : "Bạn có chắc chắn muốn TỪ CHỐI thanh toán này không?";
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
     setError(null);
     setMessage(null);
-    try {
-      const updated =
-        action === "confirm"
-          ? await adminConfirmPayment(selected.id, {})
-          : await adminRejectPayment(selected.id, {});
-      setSelected(updated);
-      setMessage(action === "confirm" ? "Admin confirmed payment." : "Admin rejected payment.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Admin payment action failed.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        return action === "confirm"
+          ? adminConfirmPayment(selected.id, {})
+          : adminRejectPayment(selected.id, {});
+      },
+      successMessage: action === "confirm" ? "Phê duyệt thanh toán thành công." : "Từ chối thanh toán thành công.",
+      onSuccess: async (updated) => {
+        setSelected(updated);
+        await load();
+      }
+    });
   };
 
   return (
@@ -213,10 +218,10 @@ export function AdminPaymentsSupervisionPageClient() {
               ) : null}
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={() => void handleAction("confirm")} disabled={saving} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="admin-payment-confirm">
-                  {saving ? "Saving..." : "Admin confirm"}
+                  {saving ? "Đang cập nhật..." : "Admin confirm"}
                 </button>
                 <button type="button" onClick={() => void handleAction("reject")} disabled={saving} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="admin-payment-reject">
-                  {saving ? "Saving..." : "Admin reject"}
+                  {saving ? "Đang cập nhật..." : "Admin reject"}
                 </button>
               </div>
             </div>

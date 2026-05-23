@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import {
   cancelCustomerReturnRefundCase,
   confirmCustomerRefundReceived,
@@ -63,8 +64,8 @@ export function CustomerAccountReturnsPageClient({
   const [evidenceLabel, setEvidenceLabel] = useState("");
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { run: runCreate, isRunning: creating } = useActionFeedback();
+  const { run: runAction, isRunning: saving } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -148,109 +149,120 @@ export function CustomerAccountReturnsPageClient({
       setError("Order, requested amount, and comment are required.");
       return;
     }
-    setCreating(true);
     setError(null);
     setMessage(null);
-    try {
-      const created = await createCustomerReturnRefundCase(orderId, {
-        type,
-        reason,
-        requestedAmount: Number(requestedAmount),
-        buyerComment,
-      });
-      if (evidenceFile) {
-        await uploadCustomerReturnRefundEvidence(created.id, {
-          file: evidenceFile,
-          label: evidenceLabel,
+    await runCreate({
+      action: async () => {
+        const created = await createCustomerReturnRefundCase(orderId, {
+          type,
+          reason,
+          requestedAmount: Number(requestedAmount),
+          buyerComment,
         });
-      }
-      await loadList(created.id);
-      const refreshed = await getCustomerReturnRefundCase(created.id);
-      setSelected(refreshed);
-      setBuyerComment("");
-      setRequestedAmount("");
-      setEvidenceFile(null);
-      setEvidenceLabel("");
-      setMessage("Return / refund case opened.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to create return / refund case.");
-    } finally {
-      setCreating(false);
-    }
+        if (evidenceFile) {
+          await uploadCustomerReturnRefundEvidence(created.id, {
+            file: evidenceFile,
+            label: evidenceLabel,
+          });
+        }
+        await loadList(created.id);
+        const refreshed = await getCustomerReturnRefundCase(created.id);
+        setSelected(refreshed);
+        setBuyerComment("");
+        setRequestedAmount("");
+        setEvidenceFile(null);
+        setEvidenceLabel("");
+        return created;
+      },
+      successMessage: "Yêu cầu trả hàng/hoàn tiền đã được tạo thành công!",
+      errorMessage: "Không thể tạo yêu cầu trả hàng/hoàn tiền.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleSendMessage = async () => {
     if (!selected || !reply.trim()) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await addCustomerReturnRefundMessage(selected.id, reply);
-      setSelected(updated);
-      await loadList(updated.id);
-      setReply("");
-      setMessage("Message sent.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to send message.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        const updated = await addCustomerReturnRefundMessage(selected.id, reply);
+        setSelected(updated);
+        await loadList(updated.id);
+        setReply("");
+        return updated;
+      },
+      successMessage: "Gửi tin nhắn thành công!",
+      errorMessage: "Không thể gửi tin nhắn.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleUploadEvidence = async () => {
     if (!selected || !evidenceFile) return;
-    setSaving(true);
     setError(null);
     setMessage(null);
-    try {
-      const updated = await uploadCustomerReturnRefundEvidence(selected.id, {
-        file: evidenceFile,
-        label: evidenceLabel,
-      });
-      setSelected(updated);
-      await loadList(updated.id);
-      setEvidenceFile(null);
-      setEvidenceLabel("");
-      setMessage("Evidence uploaded.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to upload evidence.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        const updated = await uploadCustomerReturnRefundEvidence(selected.id, {
+          file: evidenceFile,
+          label: evidenceLabel,
+        });
+        setSelected(updated);
+        await loadList(updated.id);
+        setEvidenceFile(null);
+        setEvidenceLabel("");
+        return updated;
+      },
+      successMessage: "Tải bằng chứng lên thành công!",
+      errorMessage: "Không thể tải bằng chứng.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleConfirmRefund = async () => {
     if (!selected) return;
-    setSaving(true);
+    if (!window.confirm("Bạn có chắc chắn đã nhận được tiền hoàn? Thao tác này không thể hoàn tác.")) {
+      return;
+    }
     setError(null);
     setMessage(null);
-    try {
-      const updated = await confirmCustomerRefundReceived(selected.id);
-      setSelected(updated);
-      await loadList(updated.id);
-      setMessage("Refund receipt confirmed.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to confirm refund receipt.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        const updated = await confirmCustomerRefundReceived(selected.id);
+        setSelected(updated);
+        await loadList(updated.id);
+        return updated;
+      },
+      successMessage: "Xác nhận đã nhận tiền hoàn thành công!",
+      errorMessage: "Không thể xác nhận nhận tiền hoàn.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   const handleCancelCase = async () => {
     if (!selected) return;
-    setSaving(true);
+    if (!window.confirm("Bạn có chắc chắn muốn hủy yêu cầu trả hàng/hoàn tiền này không?")) {
+      return;
+    }
     setError(null);
     setMessage(null);
-    try {
-      const updated = await cancelCustomerReturnRefundCase(selected.id);
-      setSelected(updated);
-      await loadList(updated.id);
-      setMessage("Case cancelled.");
-    } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to cancel the case.");
-    } finally {
-      setSaving(false);
-    }
+    await runAction({
+      action: async () => {
+        const updated = await cancelCustomerReturnRefundCase(selected.id);
+        setSelected(updated);
+        await loadList(updated.id);
+        return updated;
+      },
+      successMessage: "Đã hủy yêu cầu trả hàng/hoàn tiền.",
+      errorMessage: "Không thể hủy yêu cầu.",
+    }).catch((issue) => {
+      setError(issue.message);
+    });
   };
 
   return (
@@ -318,7 +330,7 @@ export function CustomerAccountReturnsPageClient({
         </label>
         <div className="mt-4 flex flex-wrap gap-3">
           <button type="button" onClick={() => void handleCreate()} disabled={creating || loading} className="public-button-primary px-5 py-3 text-sm disabled:opacity-60" data-testid="customer-return-submit">
-            {creating ? "Opening..." : "Open case"}
+            {creating ? "Đang gửi..." : "Open case"}
           </button>
           <p className="text-sm text-[var(--muted)]">Cases are allowed for payment-confirmed or delivered orders. Payment-dispute-only can be opened before final confirmation.</p>
         </div>
@@ -394,7 +406,7 @@ export function CustomerAccountReturnsPageClient({
                     <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
                       <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={4} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-return-reply" />
                       <button type="button" onClick={() => void handleSendMessage()} disabled={saving || !reply.trim()} className="mt-3 rounded-full bg-[#2f2025] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="customer-return-send-message">
-                        Send message
+                        {saving ? "Đang gửi..." : "Send message"}
                       </button>
                     </div>
                   ) : null}
@@ -415,7 +427,7 @@ export function CustomerAccountReturnsPageClient({
                       <input value={evidenceLabel} onChange={(event) => setEvidenceLabel(event.target.value)} placeholder="Evidence label" className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
                       <input type="file" accept="image/*,.pdf" onChange={(event) => setEvidenceFile(event.target.files?.[0] ?? null)} className="mt-3 block w-full text-sm" data-testid="customer-return-upload-evidence" />
                       <button type="button" onClick={() => void handleUploadEvidence()} disabled={saving || !evidenceFile} className="mt-3 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                        Upload evidence
+                        {saving ? "Đang tải lên..." : "Upload evidence"}
                       </button>
                     </div>
                   ) : null}
@@ -436,12 +448,12 @@ export function CustomerAccountReturnsPageClient({
                   <div className="flex flex-wrap gap-3">
                     {canCustomerConfirmRefund(selected.status) ? (
                       <button type="button" onClick={() => void handleConfirmRefund()} disabled={saving} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="customer-confirm-refund-received">
-                        Confirm refund received
+                        {saving ? "Đang xác nhận..." : "Confirm refund received"}
                       </button>
                     ) : null}
                     {["OPENED", "WAITING_SELLER_RESPONSE", "WAITING_BUYER_EVIDENCE"].includes(selected.status) ? (
                       <button type="button" onClick={() => void handleCancelCase()} disabled={saving} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                        Cancel case
+                        {saving ? "Đang cập nhật..." : "Cancel case"}
                       </button>
                     ) : null}
                   </div>

@@ -249,6 +249,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await expect(sellerPage.getByTestId("seller-return-row")).toHaveCount(1);
   await sellerPage.getByTestId("seller-return-action-select").selectOption("REJECT");
   await sellerPage.getByTestId("seller-return-comment").fill("Seller rejects before admin review.");
+  sellerPage.once("dialog", (dialog) => void dialog.accept());
   await sellerPage.getByTestId("seller-return-respond").click();
   await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Seller rejected");
 
@@ -277,6 +278,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Refund marked sent");
 
   await page.reload();
+  page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("customer-confirm-refund-received").click();
   await expect(page.getByTestId("customer-return-detail")).toContainText("Refund confirmed");
 

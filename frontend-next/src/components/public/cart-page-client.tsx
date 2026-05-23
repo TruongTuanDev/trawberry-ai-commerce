@@ -185,7 +185,10 @@ export function CartPageClient() {
             {items.length ? (
               <button
                 type="button"
-                onClick={clearCart}
+                onClick={() => {
+                  if (!window.confirm("Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?")) return;
+                  clearCart();
+                }}
                 className="public-button-secondary px-4 py-2 text-sm"
               >
                 Clear cart

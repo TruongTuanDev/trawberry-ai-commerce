@@ -155,7 +155,7 @@ export function PublicHeader() {
         <div className="hidden lg:flex items-center justify-between gap-6 border-b border-white/10 pb-2 mb-2 text-xs font-semibold text-white/80">
           <div className="flex items-center gap-1.5 text-white/90">
             <PinIcon />
-            <span className="truncate">Bangkok</span>
+            <span className="truncate">Москва</span>
           </div>
           <nav
             className="flex items-center justify-center gap-5 xl:gap-7"

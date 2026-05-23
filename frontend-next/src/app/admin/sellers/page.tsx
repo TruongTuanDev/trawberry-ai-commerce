@@ -10,6 +10,7 @@ import {
   type AdminSeller,
   type SellerApprovalStatus,
 } from "@/lib/admin-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const statuses: Array<SellerApprovalStatus | "ALL"> = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
@@ -29,6 +30,7 @@ export default function AdminSellersPage() {
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { run: runAction, isRunning } = useActionFeedback();
 
   useEffect(() => {
     let mounted = true;
@@ -68,33 +70,42 @@ export default function AdminSellersPage() {
     setSavingUserId(seller.userId);
     setMessage(null);
     setError(null);
-    try {
-      const updated = await approveAdminSeller(seller.userId);
-      setMessage(`${updated.email} approved.`);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to approve seller.");
-    } finally {
-      setSavingUserId(null);
-    }
+    await runAction({
+      action: async () => {
+        return approveAdminSeller(seller.userId);
+      },
+      successMessage: "Phê duyệt người bán thành công.",
+      onSuccess: async () => {
+        await refresh();
+      },
+      onFinally: () => {
+        setSavingUserId(null);
+      }
+    });
   };
 
   const reject = async () => {
     if (!selectedSeller) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn từ chối người bán ${selectedSeller.email} không?`)) {
+      return;
+    }
     setSavingUserId(selectedSeller.userId);
     setMessage(null);
     setError(null);
-    try {
-      const updated = await rejectAdminSeller(selectedSeller.userId, reason.trim() || undefined);
-      setMessage(`${updated.email} rejected.`);
-      setSelectedSeller(null);
-      setReason("");
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to reject seller.");
-    } finally {
-      setSavingUserId(null);
-    }
+    await runAction({
+      action: async () => {
+        return rejectAdminSeller(selectedSeller.userId, reason.trim() || undefined);
+      },
+      successMessage: "Từ chối người bán thành công.",
+      onSuccess: async () => {
+        setSelectedSeller(null);
+        setReason("");
+        await refresh();
+      },
+      onFinally: () => {
+        setSavingUserId(null);
+      }
+    });
   };
 
   return (
@@ -201,16 +212,16 @@ export default function AdminSellersPage() {
                     <button
                       type="button"
                       onClick={() => void approve(seller)}
-                      disabled={savingUserId === seller.userId || seller.sellerApprovalStatus === "APPROVED"}
+                      disabled={isRunning || seller.sellerApprovalStatus === "APPROVED"}
                       className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid={`approve-seller-${seller.userId}`}
                     >
-                      Approve
+                      {savingUserId === seller.userId && isRunning ? "Đang xác nhận..." : "Approve"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedSeller(seller)}
-                      disabled={savingUserId === seller.userId || seller.sellerApprovalStatus === "REJECTED"}
+                      disabled={isRunning || seller.sellerApprovalStatus === "REJECTED"}
                       className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid={`reject-seller-${seller.userId}`}
                     >
@@ -241,11 +252,11 @@ export default function AdminSellersPage() {
               data-testid="reject-reason-input"
             />
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" onClick={() => setSelectedSeller(null)} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">
+              <button type="button" onClick={() => setSelectedSeller(null)} disabled={isRunning} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">
                 Cancel
               </button>
-              <button type="button" onClick={() => void reject()} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" data-testid="confirm-reject-seller">
-                Reject seller
+              <button type="button" onClick={() => void reject()} disabled={isRunning} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" data-testid="confirm-reject-seller">
+                {isRunning ? "Đang từ chối..." : "Reject seller"}
               </button>
             </div>
           </div>

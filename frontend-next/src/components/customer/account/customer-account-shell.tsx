@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ProtectedShell } from "@/components/auth/protected-shell";
 import { PublicShell } from "@/components/public/public-shell";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { useAuthStore } from "@/stores/auth-store";
 
 const navItems = [
@@ -32,6 +33,7 @@ export function CustomerAccountShell({
   const router = useRouter();
   const user = useAuthStore((state) => state.customerUser);
   const logoutRole = useAuthStore((state) => state.logoutRole);
+  const { run, isRunning } = useActionFeedback();
 
   return (
     <ProtectedShell
@@ -83,12 +85,19 @@ export function CustomerAccountShell({
                 <button
                   type="button"
                   onClick={() =>
-                    void logoutRole("customer").then(() => router.push("/customer/login"))
+                    void run({
+                      action: () => logoutRole("customer"),
+                      successMessage: "Đăng xuất thành công",
+                      onSuccess: () => {
+                        router.push("/customer/login");
+                      },
+                    })
                   }
-                  className="mt-2 rounded-[1.25rem] border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/50"
+                  disabled={isRunning}
+                  className="mt-2 rounded-[1.25rem] border border-[var(--border)] px-4 py-3 text-left text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]/50 disabled:opacity-50"
                   data-testid="customer-account-logout"
                 >
-                  Logout
+                  {isRunning ? "Đang gửi..." : "Logout"}
                 </button>
               </nav>
             </aside>

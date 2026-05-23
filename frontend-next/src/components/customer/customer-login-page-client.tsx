@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { getCustomerMeRequest, roleLoginRequest } from "@/lib/auth-api";
 import { maybeNormalizePhone } from "@/lib/phone";
 import { useAuthStore } from "@/stores/auth-store";
@@ -14,32 +15,36 @@ export function CustomerLoginPageClient() {
   const setSession = useAuthStore((state) => state.setSession);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    setLoading(true);
     setError(null);
-    try {
-      const normalizedIdentifier = identifier.includes("@")
-        ? identifier.trim()
-        : maybeNormalizePhone(identifier);
+    await run({
+      action: async () => {
+        const normalizedIdentifier = identifier.includes("@")
+          ? identifier.trim()
+          : maybeNormalizePhone(identifier);
 
-      await roleLoginRequest("CUSTOMER", {
-        identifier: normalizedIdentifier,
-        password,
-      });
-      const user = await getCustomerMeRequest();
-      if (user.role !== "CUSTOMER") {
-        throw new Error("Customer account is required.");
-      }
-      setSession({ user });
-      router.push(searchParams.get("next") || "/customer/orders");
-    } catch (err) {
+        await roleLoginRequest("CUSTOMER", {
+          identifier: normalizedIdentifier,
+          password,
+        });
+        const user = await getCustomerMeRequest();
+        if (user.role !== "CUSTOMER") {
+          throw new Error("Customer account is required.");
+        }
+        return user;
+      },
+      successMessage: "Đăng nhập thành công",
+      onSuccess: async (user) => {
+        setSession({ user });
+        router.push(searchParams.get("next") || "/customer/orders");
+      },
+      errorMessage: "Thông tin đăng nhập không chính xác.",
+    }).catch((err) => {
       setError(err instanceof Error ? err.message : "Unable to log in.");
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -73,8 +78,14 @@ export function CustomerLoginPageClient() {
               />
             </Field>
             {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
-            <button type="button" onClick={() => void handleSubmit()} disabled={loading} className="public-button-primary px-5 py-3 text-sm disabled:opacity-60" data-testid="customer-login-submit">
-              {loading ? "Signing in..." : "Sign in"}
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={isRunning}
+              className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
+              data-testid="customer-login-submit"
+            >
+              {isRunning ? "Đang gửi..." : "Sign in"}
             </button>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link href="/customer/register" className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">

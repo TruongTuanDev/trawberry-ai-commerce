@@ -8,6 +8,7 @@ import {
   updateAdminSupportCase,
   type SupportCaseDetail,
 } from "@/lib/admin-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const issueTypes = ["", "PAYMENT_PROOF", "DELIVERY_DELAY", "WRONG_ITEM", "DAMAGED_ITEM", "REFUND_REQUEST", "CANCEL_REQUEST", "OTHER"];
 const statuses = ["", "OPEN", "IN_REVIEW", "WAITING_CUSTOMER", "WAITING_SELLER", "RESOLVED", "REJECTED", "CLOSED"];
@@ -27,6 +28,8 @@ export function AdminSupportCasesPageClient() {
   const [message, setMessage] = useState("");
   const [internal, setInternal] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
+  const { run: runUpdateCase, isRunning: isUpdatingCase } = useActionFeedback();
+  const { run: runSendMessage, isRunning: isSendingMessage } = useActionFeedback();
 
   useEffect(() => {
     let cancelled = false;
@@ -142,10 +145,45 @@ export function AdminSupportCasesPageClient() {
                   <p className="mt-2 text-sm text-[var(--muted)]">{selected.checkoutCode}{selected.order ? ` - ${selected.order.orderCode}` : ""}</p>
                 </div>
                 <div className="flex gap-2">
-                  <select value={selected.status} onChange={async (event) => { const updated = await updateAdminSupportCase(selected.id, { status: event.target.value, priority: selected.priority, resolutionNote }); setSelected(updated); await refreshList(); }} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-support-status-select">
+                  <select
+                    value={selected.status}
+                    disabled={isUpdatingCase || isSendingMessage}
+                    onChange={async (event) => {
+                      const newStatus = event.target.value;
+                      await runUpdateCase({
+                        action: async () => {
+                          return updateAdminSupportCase(selected.id, { status: newStatus, priority: selected.priority, resolutionNote });
+                        },
+                        successMessage: "Đã cập nhật trạng thái.",
+                        onSuccess: async (updated) => {
+                          setSelected(updated);
+                          await refreshList();
+                        }
+                      });
+                    }}
+                    className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    data-testid="admin-support-status-select"
+                  >
                     {statuses.filter(Boolean).map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
-                  <select value={selected.priority} onChange={async (event) => { const updated = await updateAdminSupportCase(selected.id, { priority: event.target.value, status: selected.status, resolutionNote }); setSelected(updated); await refreshList(); }} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
+                  <select
+                    value={selected.priority}
+                    disabled={isUpdatingCase || isSendingMessage}
+                    onChange={async (event) => {
+                      const newPriority = event.target.value;
+                      await runUpdateCase({
+                        action: async () => {
+                          return updateAdminSupportCase(selected.id, { priority: newPriority, status: selected.status, resolutionNote });
+                        },
+                        successMessage: "Đã cập nhật độ ưu tiên.",
+                        onSuccess: async (updated) => {
+                          setSelected(updated);
+                          await refreshList();
+                        }
+                      });
+                    }}
+                    className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  >
                     {priorities.filter(Boolean).map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
                 </div>
@@ -155,7 +193,25 @@ export function AdminSupportCasesPageClient() {
                 Resolution note
                 <textarea value={resolutionNote} onChange={(event) => setResolutionNote(event.target.value)} rows={3} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
               </label>
-              <button type="button" onClick={async () => { const updated = await updateAdminSupportCase(selected.id, { resolutionNote }); setSelected(updated); await refreshList(); }} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">Save note</button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await runUpdateCase({
+                    action: async () => {
+                      return updateAdminSupportCase(selected.id, { resolutionNote });
+                    },
+                    successMessage: "Đã lưu ghi chú giải quyết.",
+                    onSuccess: async (updated) => {
+                      setSelected(updated);
+                      await refreshList();
+                    }
+                  });
+                }}
+                disabled={isUpdatingCase || isSendingMessage}
+                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                {isUpdatingCase ? "Đang lưu..." : "Save note"}
+              </button>
               <div className="space-y-3" data-testid="admin-support-thread">
                 {selected.messages.map((entry) => (
                   <article key={entry.id} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
@@ -173,8 +229,27 @@ export function AdminSupportCasesPageClient() {
                   <input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} data-testid="admin-support-internal-toggle" />
                   Internal only
                 </label>
-                <button type="button" onClick={async () => { const updated = await addAdminSupportCaseMessage(selected.id, { message, isInternal: internal }); setSelected(updated); setMessage(""); setInternal(false); await refreshList(); }} disabled={!message.trim()} className="mt-3 rounded-full bg-[#2f2025] px-4 py-2 text-sm font-semibold text-white" data-testid="admin-support-send">
-                  Send message
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await runSendMessage({
+                      action: async () => {
+                        return addAdminSupportCaseMessage(selected.id, { message, isInternal: internal });
+                      },
+                      successMessage: internal ? "Đã lưu ghi chú nội bộ." : "Đã gửi phản hồi thành công.",
+                      onSuccess: async (updated) => {
+                        setSelected(updated);
+                        setMessage("");
+                        setInternal(false);
+                        await refreshList();
+                      }
+                    });
+                  }}
+                  disabled={!message.trim() || isUpdatingCase || isSendingMessage}
+                  className="mt-3 rounded-full bg-[#2f2025] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  data-testid="admin-support-send"
+                >
+                  {isSendingMessage ? "Đang gửi..." : "Send message"}
                 </button>
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import {
   getCustomerProfile,
   updateCustomerProfile,
@@ -20,14 +21,14 @@ export function CustomerAccountProfilePageClient() {
     phone: "",
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const run = async () => {
+    const runInit = async () => {
       try {
         const response = await getCustomerProfile();
         if (!mounted) {
@@ -52,7 +53,7 @@ export function CustomerAccountProfilePageClient() {
       }
     };
 
-    void run();
+    void runInit();
 
     return () => {
       mounted = false;
@@ -60,29 +61,32 @@ export function CustomerAccountProfilePageClient() {
   }, [authUser?.isSyntheticEmail]);
 
   const handleSave = async () => {
-    setSaving(true);
     setError(null);
     setSuccess(null);
 
-    try {
-      const response = await updateCustomerProfile({
-        name: form.name.trim(),
-        email: form.email.trim() || undefined,
-        phone: form.phone.trim() ? maybeNormalizePhone(form.phone) : undefined,
-      });
-      setProfile(response);
-      setForm({
-        name: response.name || "",
-        email: authUser?.isSyntheticEmail ? form.email.trim() : response.email || "",
-        phone: response.phone || "",
-      });
-      await refreshRole("customer");
-      setSuccess("Thông tin cá nhân đã được cập nhật.");
-    } catch (issue) {
+    await run({
+      action: async () => {
+        return updateCustomerProfile({
+          name: form.name.trim(),
+          email: form.email.trim() || undefined,
+          phone: form.phone.trim() ? maybeNormalizePhone(form.phone) : undefined,
+        });
+      },
+      successMessage: "Thông tin cá nhân đã được cập nhật.",
+      onSuccess: async (response) => {
+        setProfile(response);
+        setForm({
+          name: response.name || "",
+          email: authUser?.isSyntheticEmail ? form.email.trim() : response.email || "",
+          phone: response.phone || "",
+        });
+        await refreshRole("customer");
+        setSuccess("Thông tin cá nhân đã được cập nhật.");
+      },
+      errorMessage: "Cập nhật thông tin cá nhân thất bại.",
+    }).catch((issue) => {
       setError(issue instanceof Error ? issue.message : "Unable to update profile.");
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   return (
@@ -141,11 +145,11 @@ export function CustomerAccountProfilePageClient() {
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={loading || saving}
+            disabled={loading || isRunning}
             className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
             data-testid="customer-profile-save"
           >
-            {saving ? "Đang lưu..." : "Lưu thay đổi"}
+            {isRunning ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
           {profile ? (
             <p className="text-sm text-[var(--muted)]">

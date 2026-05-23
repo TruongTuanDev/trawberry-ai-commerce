@@ -32,6 +32,7 @@ import {
   type CheckoutOrderResponse,
   type PublicCartValidationResponse,
 } from "@/lib/public-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { useAuthStore } from "@/stores/auth-store";
 import { type CartItem, useCartStore } from "@/stores/cart-store";
 
@@ -94,7 +95,7 @@ export function CheckoutPageClient({
     useState<CheckoutPaymentMethod>("PREPAID_SELLER_QR");
   const [customer, setCustomer] = useState(initialCustomer);
   const [loading, setLoading] = useState(Boolean(initialProductId));
-  const [submitting, setSubmitting] = useState(false);
+  const { run: runCheckout, isRunning: submitting } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<CheckoutOrderResponse | null>(null);
   const [validation, setValidation] = useState<PublicCartValidationResponse | null>(
@@ -318,105 +319,101 @@ export function CheckoutPageClient({
       return;
     }
 
-    setSubmitting(true);
     setError(null);
 
-    try {
-      const latestValidation = await validatePublicCart(
-        buildCartValidationPayload(items),
-      );
-      setValidation(latestValidation);
-      setValidationError(null);
-
-      if (latestValidation.summary.invalidCount > 0) {
-        setError(
-          "Some cart items changed on the server. Review the validation panel or go back to cart before submitting checkout.",
+    await runCheckout({
+      action: async () => {
+        const latestValidation = await validatePublicCart(
+          buildCartValidationPayload(items),
         );
-        return;
-      }
+        setValidation(latestValidation);
+        setValidationError(null);
 
-      const changedItems = latestValidation.items.filter(
-        (item) => item.status === "PRICE_CHANGED" && item.unitPrice !== null,
-      );
-      if (changedItems.length > 0) {
-        for (const item of changedItems) {
-          if (!item.variantId || item.unitPrice === null) {
-            continue;
-          }
-          patchItem(item.productId, item.variantId, {
-            unitPrice: String(item.unitPrice),
-            availableQuantity: item.maxQuantity,
-            trackInventory: item.trackInventory,
-            productName:
-              item.productName ??
-              items.find(
-                (entry) =>
-                  entry.productId === item.productId &&
-                  entry.variantId === item.variantId,
-              )?.productName,
-            imageUrl:
-              item.imageUrl ??
-              items.find(
-                (entry) =>
-                  entry.productId === item.productId &&
-                  entry.variantId === item.variantId,
-              )?.imageUrl,
-            variantName:
-              item.variantName ??
-              items.find(
-                (entry) =>
-                  entry.productId === item.productId &&
-                  entry.variantId === item.variantId,
-              )?.variantName,
-            shopName:
-              item.shopName ??
-              items.find(
-                (entry) =>
-                  entry.productId === item.productId &&
-                  entry.variantId === item.variantId,
-              )?.shopName,
-          });
+        if (latestValidation.summary.invalidCount > 0) {
+          throw new Error(
+            "Some cart items changed on the server. Review the validation panel or go back to cart before submitting checkout.",
+          );
         }
-        setError(
-          "Server prices changed. The checkout summary was refreshed with the latest price. Review the total and submit again.",
-        );
-        return;
-      }
 
-      const created = await createCheckoutOrder({
-        shopId: items[0].shopId,
-        items: items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
-        customer: {
-          fullName: selectedSavedAddress ? "" : customerForm.fullName.trim(),
-          phone: selectedSavedAddress ? "" : customerForm.phone.trim(),
-          email: customerForm.email.trim() || undefined,
-          address: selectedSavedAddress ? "" : customerForm.address.trim(),
-          note: customerForm.note.trim() || undefined,
-          latitude: selectedSavedAddress?.latitude
-            ? Number(selectedSavedAddress.latitude)
-            : undefined,
-          longitude: selectedSavedAddress?.longitude
-            ? Number(selectedSavedAddress.longitude)
-            : undefined,
-        },
-        addressId: selectedSavedAddress?.id,
-        paymentMethod,
-      });
-      clearCart();
-      setOrder(created);
-    } catch (submitIssue) {
-      setError(
-        submitIssue instanceof Error
-          ? submitIssue.message
-          : "Unable to create order.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+        const changedItems = latestValidation.items.filter(
+          (item) => item.status === "PRICE_CHANGED" && item.unitPrice !== null,
+        );
+        if (changedItems.length > 0) {
+          for (const item of changedItems) {
+            if (!item.variantId || item.unitPrice === null) {
+              continue;
+            }
+            patchItem(item.productId, item.variantId, {
+              unitPrice: String(item.unitPrice),
+              availableQuantity: item.maxQuantity,
+              trackInventory: item.trackInventory,
+              productName:
+                item.productName ??
+                items.find(
+                  (entry) =>
+                    entry.productId === item.productId &&
+                    entry.variantId === item.variantId,
+                )?.productName,
+              imageUrl:
+                item.imageUrl ??
+                items.find(
+                  (entry) =>
+                    entry.productId === item.productId &&
+                    entry.variantId === item.variantId,
+                )?.imageUrl,
+              variantName:
+                item.variantName ??
+                items.find(
+                  (entry) =>
+                    entry.productId === item.productId &&
+                    entry.variantId === item.variantId,
+                )?.variantName,
+              shopName:
+                item.shopName ??
+                items.find(
+                  (entry) =>
+                    entry.productId === item.productId &&
+                    entry.variantId === item.variantId,
+                )?.shopName,
+            });
+          }
+          throw new Error(
+            "Server prices changed. The checkout summary was refreshed with the latest price. Review the total and submit again.",
+          );
+        }
+
+        const created = await createCheckoutOrder({
+          shopId: items[0].shopId,
+          items: items.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+          })),
+          customer: {
+            fullName: selectedSavedAddress ? "" : customerForm.fullName.trim(),
+            phone: selectedSavedAddress ? "" : customerForm.phone.trim(),
+            email: customerForm.email.trim() || undefined,
+            address: selectedSavedAddress ? "" : customerForm.address.trim(),
+            note: customerForm.note.trim() || undefined,
+            latitude: selectedSavedAddress?.latitude
+              ? Number(selectedSavedAddress.latitude)
+              : undefined,
+            longitude: selectedSavedAddress?.longitude
+              ? Number(selectedSavedAddress.longitude)
+              : undefined,
+          },
+          addressId: selectedSavedAddress?.id,
+          paymentMethod,
+        });
+        clearCart();
+        setOrder(created);
+        return created;
+      },
+      successMessage: "Tạo đơn hàng thành công!",
+      errorMessage: "Không thể tạo đơn hàng.",
+    }).catch((submitIssue) => {
+      setError(submitIssue.message);
+    });
   };
 
   return (
@@ -879,7 +876,7 @@ export function CheckoutPageClient({
                     data-testid="checkout-submit"
                   >
                     {submitting
-                      ? "Creating order..."
+                      ? "Đang tạo đơn..."
                       : selectedSavedAddress && !selectedSavedAddress.yandexManualReady
                         ? "Complete saved address details first"
                       : hasBlockingIssues

@@ -21,6 +21,7 @@ import {
 import { getCategories, type PublicCategory } from "@/lib/public-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const PAGE_SIZE = 10;
 
@@ -77,9 +78,10 @@ export function SellerProductsPageClient() {
     loading: false,
     error: null,
   });
-  const [creatingShop, setCreatingShop] = useState(false);
-  const [creatingProduct, setCreatingProduct] = useState(false);
-  const [bulkSaving, setBulkSaving] = useState(false);
+  const { run: runShop, isRunning: creatingShop } = useActionFeedback();
+  const { run: runCreate, isRunning: creatingProduct } = useActionFeedback();
+  const { run: runBulk, isRunning: bulkSaving } = useActionFeedback();
+  const { run: runProductAction } = useActionFeedback();
   const [bulkEditMode, setBulkEditMode] = useState<BulkEditMode>(null);
   const [bulkForm, setBulkForm] = useState({
     categoryId: "",
@@ -236,68 +238,91 @@ export function SellerProductsPageClient() {
     }
 
     setState((current) => ({ ...current, loading: true, error: null }));
-    try {
-      await updateShopProductInventory(currentShopId, product.id, {
-        variantId: product.primaryVariantId ?? undefined,
-        stockQuantity,
-      });
-      await loadProducts();
-    } catch (error) {
+    await runProductAction({
+      action: async () => {
+        const res = await updateShopProductInventory(currentShopId, product.id, {
+          variantId: product.primaryVariantId ?? undefined,
+          stockQuantity,
+        });
+        await loadProducts();
+        return res;
+      },
+      successMessage: "Cập nhật kho hàng thành công!",
+      errorMessage: "Không thể cập nhật kho hàng.",
+    }).catch((error) => {
       setState((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Unable to update stock.",
+        error: error.message,
       }));
       throw error;
-    }
+    });
   };
 
   const handlePublish = async (productId: string) => {
     if (!currentShopId) return;
     setState((current) => ({ ...current, loading: true, error: null }));
-    try {
-      await publishShopProduct(currentShopId, productId);
-      await loadProducts();
-    } catch (error) {
+    await runProductAction({
+      action: async () => {
+        const res = await publishShopProduct(currentShopId, productId);
+        await loadProducts();
+        return res;
+      },
+      successMessage: "Đăng bán sản phẩm thành công!",
+      errorMessage: "Không thể đăng bán sản phẩm.",
+    }).catch((error) => {
       setState((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Unable to publish product.",
+        error: error.message,
       }));
       throw error;
-    }
+    });
   };
 
   const handleUnpublish = async (productId: string) => {
     if (!currentShopId) return;
     setState((current) => ({ ...current, loading: true, error: null }));
-    try {
-      await unpublishShopProduct(currentShopId, productId);
-      await loadProducts();
-    } catch (error) {
+    await runProductAction({
+      action: async () => {
+        const res = await unpublishShopProduct(currentShopId, productId);
+        await loadProducts();
+        return res;
+      },
+      successMessage: "Ngừng đăng bán sản phẩm thành công!",
+      errorMessage: "Không thể ngừng đăng bán sản phẩm.",
+    }).catch((error) => {
       setState((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Unable to unpublish product.",
+        error: error.message,
       }));
       throw error;
-    }
+    });
   };
 
   const handleArchive = async (productId: string) => {
     if (!currentShopId) return;
+    const confirmed = window.confirm("Bạn có chắc chắn muốn lưu trữ sản phẩm này không?");
+    if (!confirmed) return;
+
     setState((current) => ({ ...current, loading: true, error: null }));
-    try {
-      await archiveShopProduct(currentShopId, productId);
-      await loadProducts();
-    } catch (error) {
+    await runProductAction({
+      action: async () => {
+        const res = await archiveShopProduct(currentShopId, productId);
+        await loadProducts();
+        return res;
+      },
+      successMessage: "Lưu trữ sản phẩm thành công!",
+      errorMessage: "Không thể lưu trữ sản phẩm.",
+    }).catch((error) => {
       setState((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Unable to archive product.",
+        error: error.message,
       }));
       throw error;
-    }
+    });
   };
 
   const runBulkLifecycle = async (action: "PUBLISH" | "UNPUBLISH" | "ARCHIVE") => {
@@ -305,23 +330,31 @@ export function SellerProductsPageClient() {
       return;
     }
 
-    setBulkSaving(true);
+    if (action === "ARCHIVE") {
+      const confirmed = window.confirm("Bạn có chắc chắn muốn lưu trữ các sản phẩm đã chọn?");
+      if (!confirmed) return;
+    }
+
     setBulkMessage(null);
     setBulkError(null);
     setBulkResult(null);
-    try {
-      const result = await bulkShopProductAction(currentShopId, {
-        productIds: selectedIds,
-        action,
-      });
-      setBulkMessage(`${action}: ${result.successCount} succeeded, ${result.failureCount} failed.`);
-      setSelectedIds([]);
-      await loadProducts();
-    } catch (error) {
-      setBulkError(error instanceof Error ? error.message : "Unable to run bulk action.");
-    } finally {
-      setBulkSaving(false);
-    }
+
+    await runBulk({
+      action: async () => {
+        const result = await bulkShopProductAction(currentShopId, {
+          productIds: selectedIds,
+          action,
+        });
+        setBulkMessage(`${action}: ${result.successCount} succeeded, ${result.failureCount} failed.`);
+        setSelectedIds([]);
+        await loadProducts();
+        return result;
+      },
+      successMessage: "Cập nhật hàng loạt thành công!",
+      errorMessage: "Thao tác hàng loạt thất bại.",
+    }).catch((error) => {
+      setBulkError(error.message);
+    });
   };
 
   const handleBulkUpdate = async () => {
@@ -363,97 +396,106 @@ export function SellerProductsPageClient() {
       updates.trackInventory = bulkForm.trackInventory;
     }
 
-    setBulkSaving(true);
     setBulkMessage(null);
     setBulkError(null);
-    try {
-      const result = await bulkUpdateShopProducts(currentShopId, {
-        productIds: selectedIds,
-        updates,
-        scope: {
-          variantMode: bulkForm.variantMode,
-        },
-        publishIfReady: bulkForm.publishIfReady,
-      });
-      setBulkResult(result);
-      setBulkMessage(`Bulk edit complete: ${result.updated} updated, ${result.failed} failed.`);
-      await loadProducts();
-    } catch (error) {
-      setBulkError(error instanceof Error ? error.message : "Unable to update selected products.");
-    } finally {
-      setBulkSaving(false);
-    }
+
+    await runBulk({
+      action: async () => {
+        const result = await bulkUpdateShopProducts(currentShopId, {
+          productIds: selectedIds,
+          updates,
+          scope: {
+            variantMode: bulkForm.variantMode,
+          },
+          publishIfReady: bulkForm.publishIfReady,
+        });
+        setBulkResult(result);
+        setBulkMessage(`Bulk edit complete: ${result.updated} updated, ${result.failed} failed.`);
+        await loadProducts();
+        return result;
+      },
+      successMessage: "Lưu cập nhật hàng loạt thành công!",
+      errorMessage: "Cập nhật hàng loạt thất bại.",
+    }).catch((error) => {
+      setBulkError(error.message);
+    });
   };
 
   const handleCreateShop = async () => {
-    setCreatingShop(true);
     setCreateMessage(null);
     setCreateError(null);
-    try {
-      const created = await createSellerShop({
-        name: shopForm.name.trim(),
-        slug: shopForm.slug.trim(),
-        paymentInstructions: "Manual transfer after checkout. Seller confirms payment proof in seller center.",
-      });
-      await loadShops();
-      selectShop(created.id);
-      setCreateMessage(`${created.name} created.`);
-      setShopForm({ name: "", slug: "" });
-    } catch (error) {
-      setCreateError(error instanceof Error ? error.message : "Unable to create shop.");
-    } finally {
-      setCreatingShop(false);
-    }
+    await runShop({
+      action: async () => {
+        const created = await createSellerShop({
+          name: shopForm.name.trim(),
+          slug: shopForm.slug.trim(),
+          paymentInstructions: "Manual transfer after checkout. Seller confirms payment proof in seller center.",
+        });
+        await loadShops();
+        selectShop(created.id);
+        setCreateMessage(`${created.name} created.`);
+        setShopForm({ name: "", slug: "" });
+        router.refresh();
+        return created;
+      },
+      successMessage: "Tạo cửa hàng thành công!",
+      errorMessage: "Không thể tạo cửa hàng.",
+    }).catch((error) => {
+      setCreateError(error.message);
+    });
   };
 
   const handleCreateProduct = async () => {
     if (!currentShopId) return;
 
-    setCreatingProduct(true);
     setCreateMessage(null);
     setCreateError(null);
-    try {
-      const stamp = Date.now();
-      const title = productForm.title.trim();
-      const created = await createShopProduct(currentShopId, {
-        wbNmId: Number(String(stamp).slice(-9)),
-        wbTitle: title,
-        localTitle: title,
-        wbDescription: productForm.description.trim() || undefined,
-        localDescription: productForm.description.trim() || undefined,
-        brand: productForm.brand.trim() || undefined,
-        categoryId: productForm.categoryId ? Number(productForm.categoryId) : undefined,
-        categoryName: productForm.categoryName.trim() || "Seller Created",
-        wbVendorCode: `UI-${stamp}`,
-        seoSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-        visibility: "ACTIVE",
-        variants: [
-          {
-            chrtId: Number(String(stamp).slice(-10)),
-            techSize: "ONE",
-            wbSize: "One size",
-            basePrice: Math.max(1, Number(productForm.price) || 1),
-            stockQuantity: Math.max(0, Number(productForm.stockQuantity) || 0),
-            lowStockThreshold: 2,
-            trackInventory: true,
-          },
-        ],
-      });
-      setProductForm({
-        title: "",
-        description: "",
-        brand: "",
-        categoryId: "",
-        categoryName: "",
-        price: "100",
-        stockQuantity: "5",
-      });
-      router.push(`/seller/products/${created.id}`);
-    } catch (error) {
-      setCreateError(error instanceof Error ? error.message : "Unable to create product.");
-    } finally {
-      setCreatingProduct(false);
-    }
+    await runCreate({
+      action: async () => {
+        const stamp = Date.now();
+        const title = productForm.title.trim();
+        const created = await createShopProduct(currentShopId, {
+          wbNmId: Number(String(stamp).slice(-9)),
+          wbTitle: title,
+          localTitle: title,
+          wbDescription: productForm.description.trim() || undefined,
+          localDescription: productForm.description.trim() || undefined,
+          brand: productForm.brand.trim() || undefined,
+          categoryId: productForm.categoryId ? Number(productForm.categoryId) : undefined,
+          categoryName: productForm.categoryName.trim() || "Seller Created",
+          wbVendorCode: `UI-${stamp}`,
+          seoSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+          visibility: "ACTIVE",
+          variants: [
+            {
+              chrtId: Number(String(stamp).slice(-10)),
+              techSize: "ONE",
+              wbSize: "One size",
+              basePrice: Math.max(1, Number(productForm.price) || 1),
+              stockQuantity: Math.max(0, Number(productForm.stockQuantity) || 0),
+              lowStockThreshold: 2,
+              trackInventory: true,
+            },
+          ],
+        });
+        setProductForm({
+          title: "",
+          description: "",
+          brand: "",
+          categoryId: "",
+          categoryName: "",
+          price: "100",
+          stockQuantity: "5",
+        });
+        router.push(`/seller/products/${created.id}`);
+        router.refresh();
+        return created;
+      },
+      successMessage: "Tạo sản phẩm thành công!",
+      errorMessage: "Không thể tạo sản phẩm.",
+    }).catch((error) => {
+      setCreateError(error.message);
+    });
   };
 
   return (
@@ -500,7 +542,7 @@ export function SellerProductsPageClient() {
                   className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="create-shop-submit"
                 >
-                  {creatingShop ? "Creating..." : "Create shop"}
+                  {creatingShop ? "Đang gửi..." : "Create shop"}
                 </button>
               </div>
             </div>
@@ -552,7 +594,7 @@ export function SellerProductsPageClient() {
                   className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="create-product-submit"
                 >
-                  {creatingProduct ? "Creating..." : "Create product"}
+                  {creatingProduct ? "Đang gửi..." : "Create product"}
                 </button>
               </div>
             </div>
@@ -738,7 +780,7 @@ export function SellerProductsPageClient() {
                       className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid="bulk-apply-submit"
                     >
-                      {bulkSaving ? "Applying..." : "Apply bulk update"}
+                      {bulkSaving ? "Đang lưu..." : "Apply bulk update"}
                     </button>
                   </div>
                 </div>
