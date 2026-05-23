@@ -26,6 +26,8 @@ export type CartValidationProductRecord = {
   visibility: string | null;
   catalogStatus: string;
   categoryId: bigint | null;
+  categoryName: string | null;
+  sourceCategoryName: string | null;
   images: ProductImage[];
   variants: ProductVariant[];
   shop: {
@@ -184,7 +186,7 @@ export class CartValidationService {
           reason === 'MISSING_STOCK' ||
           reason === 'NO_ACTIVE_VARIANT',
       );
-      if (!readiness.ready && !canResolveVariantSpecificIssue) {
+      if (!readiness.publicVisible && !canResolveVariantSpecificIssue) {
         return this.buildUnavailableLine(item, 'PRODUCT_NOT_PUBLIC', product);
       }
 
@@ -489,11 +491,13 @@ export class CartValidationService {
 
   private hasPublicVisibilityAccess(product: CartValidationProductRecord) {
     return (
-      (product.catalogStatus ?? 'PUBLISHED') === 'PUBLISHED' &&
       product.visibility === 'ACTIVE' &&
       product.shop.status === 'ACTIVE' &&
       product.shop.sellerProfile.approvalStatus === 'APPROVED' &&
-      product.images.length > 0
+      product.images.length > 0 &&
+      (product.categoryId !== null ||
+        product.categoryName !== null ||
+        product.sourceCategoryName !== null)
     );
   }
 

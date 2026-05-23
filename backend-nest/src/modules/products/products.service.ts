@@ -68,7 +68,9 @@ export class ProductsService {
         ? {
             visibility: this.resolveVisibilityFilter(query),
           }
-        : {}),
+        : {
+            NOT: { visibility: 'DELETED' },
+          }),
       ...(query.catalogStatus
         ? { catalogStatus: query.catalogStatus }
         : query.published
@@ -145,7 +147,16 @@ export class ProductsService {
       if (query.missingCategory && !warnings.includes('MISSING_CATEGORY')) {
         return false;
       }
+      if (query.missingImage && !warnings.includes('MISSING_IMAGE')) {
+        return false;
+      }
       if (query.readyToPublish && !readiness.ready) {
+        return false;
+      }
+      if (
+        query.publicVisible !== undefined &&
+        readiness.publicVisible !== query.publicVisible
+      ) {
         return false;
       }
       if (query.needsReview && readiness.ready) {
@@ -468,6 +479,7 @@ export class ProductsService {
       where: { id: productId },
       data: {
         catalogStatus: 'UNPUBLISHED',
+        visibility: 'INACTIVE',
         unpublishedAt: new Date(),
       },
     });
@@ -682,8 +694,13 @@ export class ProductsService {
 
   async remove(shopId: string, productId: string) {
     await this.findShopProductOrThrow(shopId, productId);
-    await this.prisma.product.delete({
+    await this.prisma.product.update({
       where: { id: productId },
+      data: {
+        visibility: 'DELETED',
+        catalogStatus: 'ARCHIVED',
+        archivedAt: new Date(),
+      },
     });
   }
 
@@ -876,7 +893,7 @@ export class ProductsService {
   }
 
   private resolveVisibilityFilter(query: ListShopProductsQueryDto) {
-    return query.status ?? query.visibility;
+    return query.visibility ?? query.status;
   }
 
   private resolveManualLifecycleForCreate(visibility?: string) {
@@ -1033,6 +1050,8 @@ export class ProductsService {
       archivedAt: product.archivedAt?.toISOString() ?? null,
       reviewWarnings: readiness.blockingReasons,
       readyToPublish: readiness.ready,
+      readyToSell: readiness.readyToSell,
+      publicVisible: readiness.publicVisible,
       mainImage: mainImage?.localUrl ?? mainImage?.wbUrl ?? null,
       inStock: inventory.inStock,
       stockQuantity: inventory.totalAvailableQuantity,
@@ -1064,6 +1083,8 @@ export class ProductsService {
       brand: product.brand,
       visibility: product.visibility,
       catalogStatus,
+      readyToSell: readiness.readyToSell,
+      publicVisible: readiness.publicVisible,
       source: (product.source ?? 'MANUAL') as ProductSource,
       publishedAt: product.publishedAt?.toISOString() ?? null,
       unpublishedAt: product.unpublishedAt?.toISOString() ?? null,

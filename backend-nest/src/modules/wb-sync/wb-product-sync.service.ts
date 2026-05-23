@@ -527,7 +527,7 @@ export class WbProductSyncService {
         length: mapped.dimensions.length,
         width: mapped.dimensions.width,
         dimensionsValid: mapped.dimensions.isValid ?? false,
-        visibility: existing ? undefined : 'DRAFT',
+        visibility: existing ? undefined : 'ACTIVE',
         source: SOURCE,
         seoSlug: this.slug(
           `${mapped.sellerSku ?? mapped.externalProductId ?? mapped.name}-${mapped.name}`,

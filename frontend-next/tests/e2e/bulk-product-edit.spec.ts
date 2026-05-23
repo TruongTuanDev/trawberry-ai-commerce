@@ -148,13 +148,12 @@ test("seller bulk edits imported products before publishing them", async ({
 
   await page.getByTestId("bulk-open-stock").click();
   await page.getByTestId("bulk-stock-input").fill("5");
-  await page.getByTestId("bulk-publish-if-ready").check();
   await page.getByTestId("bulk-apply-submit").click();
   await expect(page.getByTestId("bulk-edit-result")).toContainText("PUBLISHED");
 
   const sellerProducts = await backendJson<{
     items: Array<{ id: string; title: string; catalogStatus: string }>;
-  }>(request, `/api/shops/${shop.id}/products?page=1&size=10&published=true`, {
+  }>(request, `/api/shops/${shop.id}/products?page=1&size=10&publicVisible=true`, {
     headers: { Authorization: `Bearer ${sellerToken}`, Cookie: "" },
   });
   expect(sellerProducts.items.length).toBeGreaterThan(0);

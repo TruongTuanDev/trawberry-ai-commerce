@@ -133,8 +133,6 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   await expect(page.getByText("Uploaded 1 image.")).toBeVisible();
   await expect(page.getByTestId("product-image-card")).toHaveCount(1);
   await page.goto(new URL(page.url()).pathname.replace(/\/images$/, ""));
-  await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();

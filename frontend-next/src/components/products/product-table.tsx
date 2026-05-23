@@ -2,50 +2,38 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import type { ProductListItem, StockStatus } from "@/lib/seller-api";
+import type { ProductListItem } from "@/lib/seller-api";
 import { FallbackImage } from "@/components/ui/fallback-image";
 
-function CatalogStatusBadge({ status }: { status: ProductListItem["catalogStatus"] }) {
-  const tone =
-    status === "PUBLISHED"
-      ? "bg-emerald-100 text-emerald-700"
-      : status === "READY"
-        ? "bg-sky-100 text-sky-700"
-        : status === "IMPORTED"
-          ? "bg-amber-100 text-amber-700"
-          : status === "ARCHIVED"
-            ? "bg-slate-200 text-slate-700"
-            : "bg-rose-100 text-rose-700";
-
-  return <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-semibold", tone)}>{status}</span>;
+function getProductStatusInfo(product: ProductListItem) {
+  if (product.visibility === "DELETED") {
+    return { label: "Đã xóa", tone: "bg-slate-200 text-slate-700" };
+  }
+  if (product.publicVisible) {
+    return { label: "Đang bán", tone: "bg-emerald-100 text-emerald-700" };
+  }
+  if (product.stockQuantity <= 0) {
+    return { label: "Hết hàng", tone: "bg-rose-100 text-rose-700" };
+  }
+  if (product.reviewWarnings.includes("MISSING_PRICE")) {
+    return { label: "Thiếu giá", tone: "bg-amber-100 text-amber-700" };
+  }
+  if (product.reviewWarnings.includes("MISSING_CATEGORY")) {
+    return { label: "Thiếu danh mục", tone: "bg-amber-100 text-amber-700" };
+  }
+  if (product.reviewWarnings.includes("MISSING_IMAGE")) {
+    return { label: "Thiếu ảnh", tone: "bg-amber-100 text-amber-700" };
+  }
+  if (product.reviewWarnings.includes("NO_ACTIVE_VARIANT")) {
+    return { label: "Thiếu biến thể", tone: "bg-amber-100 text-amber-700" };
+  }
+  return { label: "Cần bổ sung", tone: "bg-amber-100 text-amber-700" };
 }
 
-function StockBadge({
-  stockStatus,
-  trackInventory,
-}: {
-  stockStatus: StockStatus;
-  trackInventory: boolean;
-}) {
-  const tone =
-    stockStatus === "OUT_OF_STOCK"
-      ? "bg-rose-100 text-rose-700"
-      : stockStatus === "LOW_STOCK"
-        ? "bg-amber-100 text-amber-700"
-        : stockStatus === "NOT_TRACKED" || !trackInventory
-          ? "bg-slate-200 text-slate-700"
-          : "bg-emerald-100 text-emerald-700";
-
-  const label =
-    stockStatus === "OUT_OF_STOCK"
-      ? "Out of stock"
-      : stockStatus === "LOW_STOCK"
-        ? "Low stock"
-        : stockStatus === "NOT_TRACKED" || !trackInventory
-          ? "Not tracked"
-          : "In stock";
-
+function ProductStatusBadge({ product }: { product: ProductListItem }) {
+  const { label, tone } = getProductStatusInfo(product);
   return <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-semibold", tone)}>{label}</span>;
 }
 
@@ -60,24 +48,20 @@ export function ProductTable({
   onToggleSelectAll,
   onEdit,
   onQuickUpdate,
-  onPublish,
-  onUnpublish,
-  onArchive,
+  onDelete,
 }: {
   products: ProductListItem[];
   selectedIds: string[];
   onToggleSelect: (productId: string) => void;
   onToggleSelectAll: () => void;
   onEdit: (productId: string) => void;
-  onQuickUpdate: (product: ProductListItem, stockQuantity: number) => Promise<void>;
-  onPublish: (productId: string) => Promise<void>;
-  onUnpublish: (productId: string) => Promise<void>;
-  onArchive: (productId: string) => Promise<void>;
+  onQuickUpdate: (product: ProductListItem, stockQuantity: number, price?: number) => Promise<void>;
+  onDelete: (productId: string) => void;
 }) {
   if (products.length === 0) {
     return (
       <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white px-4 py-8 text-sm text-[var(--muted)]">
-        No products matched the current filters.
+        Không tìm thấy sản phẩm nào khớp với bộ lọc.
       </div>
     );
   }
@@ -86,15 +70,21 @@ export function ProductTable({
 
   return (
     <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-      <div className="hidden grid-cols-[32px_minmax(0,2.2fr)_170px_170px_210px_280px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
+      <div className="hidden grid-cols-[32px_minmax(0,2.2fr)_170px_170px_210px_80px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
         <div>
-          <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} aria-label="Select all products" />
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={onToggleSelectAll}
+            aria-label="Select all products"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
-        <div>Product</div>
-        <div>Catalog</div>
-        <div>Category</div>
-        <div>Pricing and stock</div>
-        <div className="text-right">Actions</div>
+        <div>Sản phẩm</div>
+        <div>Trạng thái</div>
+        <div>Danh mục</div>
+        <div>Giá và Kho hàng</div>
+        <div className="text-right">Thao tác</div>
       </div>
       <div className="divide-y divide-[var(--border)]">
         {products.map((product) => (
@@ -105,9 +95,7 @@ export function ProductTable({
             onToggleSelect={onToggleSelect}
             onEdit={onEdit}
             onQuickUpdate={onQuickUpdate}
-            onPublish={onPublish}
-            onUnpublish={onUnpublish}
-            onArchive={onArchive}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -121,39 +109,25 @@ function ProductRow({
   onToggleSelect,
   onEdit,
   onQuickUpdate,
-  onPublish,
-  onUnpublish,
-  onArchive,
+  onDelete,
 }: {
   product: ProductListItem;
   selected: boolean;
   onToggleSelect: (productId: string) => void;
   onEdit: (productId: string) => void;
-  onQuickUpdate: (product: ProductListItem, stockQuantity: number) => Promise<void>;
-  onPublish: (productId: string) => Promise<void>;
-  onUnpublish: (productId: string) => Promise<void>;
-  onArchive: (productId: string) => Promise<void>;
+  onQuickUpdate: (product: ProductListItem, stockQuantity: number, price?: number) => Promise<void>;
+  onDelete: (productId: string) => void;
 }) {
-  const [actionSaving, setActionSaving] = useState<string | null>(null);
-
-  const runAction = async (action: "publish" | "unpublish" | "archive") => {
-    setActionSaving(action);
-    try {
-      if (action === "publish") {
-        await onPublish(product.id);
-      } else if (action === "unpublish") {
-        await onUnpublish(product.id);
-      } else {
-        await onArchive(product.id);
-      }
-    } finally {
-      setActionSaving(null);
-    }
-  };
+  const router = useRouter();
 
   return (
-    <article key={product.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[32px_minmax(0,2.2fr)_170px_170px_210px_280px] lg:px-5" data-testid="seller-product-row">
-      <div className="pt-1">
+    <article
+      key={product.id}
+      onClick={() => router.push(`/seller/products/${product.id}`)}
+      className="grid gap-4 px-4 py-4 lg:grid-cols-[32px_minmax(0,2.2fr)_170px_170px_210px_80px] lg:px-5 hover:bg-[var(--panel-strong)] cursor-pointer transition items-center"
+      data-testid="seller-product-row"
+    >
+      <div className="pt-1" onClick={(e) => e.stopPropagation()}>
         <input type="checkbox" checked={selected} onChange={() => onToggleSelect(product.id)} aria-label={`Select ${product.title}`} />
       </div>
       <div className="flex min-w-0 gap-4">
@@ -172,158 +146,184 @@ function ProductRow({
         </div>
       </div>
       <div className="space-y-2">
-        <CatalogStatusBadge status={product.catalogStatus} />
-        <div>
-          <StockBadge stockStatus={product.stockStatus} trackInventory={product.trackInventory} />
-        </div>
-        <p className="text-xs text-[var(--muted)]">{product.readyToPublish ? "Ready to publish" : "Needs review"}</p>
+        <ProductStatusBadge product={product} />
         <div className="flex flex-wrap gap-2">
           {product.reviewWarnings.slice(0, 3).map((warning) => (
             <WarningChip key={`${product.id}-${warning}`} warning={warning} />
           ))}
         </div>
       </div>
-      <div className="text-sm text-[var(--muted)] lg:flex lg:items-center">
-        <div>
-          <p>{product.categoryName ?? "Uncategorized"}</p>
-          {product.sourceCategoryName && product.sourceCategoryName !== product.categoryName ? (
-            <p className="mt-1 text-xs">WB: {product.sourceCategoryName}</p>
-          ) : null}
-        </div>
+      <div className="text-sm text-[var(--muted)]">
+        <p>{product.categoryName ?? "Uncategorized"}</p>
+        {product.sourceCategoryName && product.sourceCategoryName !== product.categoryName ? (
+          <p className="mt-1 text-xs">WB: {product.sourceCategoryName}</p>
+        ) : null}
       </div>
-      <div className="text-sm lg:flex lg:items-center">
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <p className="font-semibold text-[var(--foreground)]">{renderPriceSummary(product.minPrice, product.maxPrice)}</p>
-            <p className="text-xs text-[var(--muted)]">
-              {product.minPrice || product.maxPrice ? "Current sell price range" : "Missing price"}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className={product.stockStatus === "OUT_OF_STOCK" ? "font-semibold text-rose-700" : product.stockStatus === "LOW_STOCK" ? "font-semibold text-amber-700" : "text-emerald-700"}>
-              {product.trackInventory ? `${product.stockQuantity} available` : "Inventory not tracked"}
-            </p>
-            {product.trackInventory ? (
-              <p className="text-xs text-[var(--muted)]">
-                Threshold {product.lowStockThreshold} | {product.variantCount} variant{product.variantCount === 1 ? "" : "s"}
-              </p>
-            ) : null}
-          </div>
-          <QuickStockEditor product={product} onSave={onQuickUpdate} />
-        </div>
+      <div className="text-sm">
+        <CompactProductEditor product={product} onSave={onQuickUpdate} />
       </div>
-      <div className="flex flex-wrap justify-start gap-3 lg:justify-end">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void runAction("publish")}
-            disabled={actionSaving !== null || product.catalogStatus === "PUBLISHED"}
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {actionSaving === "publish" ? "Publishing..." : "Publish"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void runAction("unpublish")}
-            disabled={actionSaving !== null || product.catalogStatus !== "PUBLISHED"}
-            className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {actionSaving === "unpublish" ? "Unpublishing..." : "Unpublish"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void runAction("archive")}
-            disabled={actionSaving !== null || product.catalogStatus === "ARCHIVED"}
-            className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {actionSaving === "archive" ? "Archiving..." : "Archive"}
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={`/seller/products/${product.id}`}
-            className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)]"
-          >
-            View details
-          </Link>
-          <button
-            type="button"
-            onClick={() => onEdit(product.id)}
-            className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
-          >
-            Edit
-          </button>
-        </div>
+      <div className="text-right">
+        <ActionsDropdown productId={product.id} onEdit={onEdit} onDelete={onDelete} />
       </div>
     </article>
   );
 }
 
-function renderPriceSummary(minPrice: string | null, maxPrice: string | null) {
-  if (!minPrice && !maxPrice) {
-    return "No price";
-  }
+function ActionsDropdown({
+  productId,
+  onEdit,
+  onDelete,
+}: {
+  productId: string;
+  onEdit: (productId: string) => void;
+  onDelete: (productId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
 
-  if (minPrice && maxPrice && minPrice !== maxPrice) {
-    return `${formatMoney(minPrice)} - ${formatMoney(maxPrice)}`;
-  }
-
-  return formatMoney(minPrice ?? maxPrice ?? "0");
+  return (
+    <div className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-[var(--panel-strong)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+        aria-label="Actions menu"
+      >
+        ⋯
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+            }}
+          />
+          <div className="absolute right-0 mt-1 w-48 rounded-xl border border-[var(--border)] bg-white py-1 shadow-lg z-20">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onEdit(productId);
+              }}
+              className="flex w-full px-4 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
+            >
+              Chỉnh sửa sản phẩm
+            </button>
+            <Link
+              href={`/seller/ai-images?productId=${productId}`}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className="flex w-full px-4 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
+            >
+              Tạo ảnh AI
+            </Link>
+            <a
+              href={`/products/${productId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className="flex w-full px-4 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
+            >
+              Xem trang công khai
+            </a>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onDelete(productId);
+              }}
+              className="flex w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+            >
+              Xóa sản phẩm
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
-function formatMoney(value: string) {
-  const amount = Number(value);
-  if (Number.isNaN(amount)) {
-    return value;
-  }
-  return amount.toLocaleString("en-US");
-}
-
-function QuickStockEditor({
+function CompactProductEditor({
   product,
   onSave,
 }: {
   product: ProductListItem;
-  onSave: (product: ProductListItem, stockQuantity: number) => Promise<void>;
+  onSave: (product: ProductListItem, stockQuantity: number, price?: number) => Promise<void>;
 }) {
-  const [value, setValue] = useState(String(product.stockQuantity));
+  const [price, setPrice] = useState(String(Number(product.minPrice) || 0));
+  const [stock, setStock] = useState(String(product.stockQuantity));
   const [saving, setSaving] = useState(false);
-  const quickUpdateDisabled = !product.trackInventory || product.variantCount !== 1;
+
+  const originalPrice = String(Number(product.minPrice) || 0);
+  const originalStock = String(product.stockQuantity);
+
+  const isDirty = price !== originalPrice || stock !== originalStock;
+  const disabled = !product.trackInventory || product.variantCount !== 1;
+
+  const handleSave = async () => {
+    if (!isDirty || disabled || saving) return;
+    setSaving(true);
+    try {
+      await onSave(product, Math.max(0, Number(stock) || 0), Math.max(0, Number(price) || 0));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-3 lg:min-w-[220px]">
-      <label htmlFor={`quick-stock-${product.id}`} className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-        Quick stock
-      </label>
-      <div className="flex gap-2">
+    <div
+      className="flex items-center gap-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-semibold text-[var(--muted)] uppercase">Giá</label>
         <input
-          id={`quick-stock-${product.id}`}
           type="number"
           min={0}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          disabled={quickUpdateDisabled || saving}
-          className="w-20 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:bg-[var(--panel)]"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleSave();
+          }}
+          disabled={saving}
+          className="w-[80px] rounded-lg border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+          aria-label="Price"
         />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-semibold text-[var(--muted)] uppercase">Kho</label>
+        <input
+          type="number"
+          min={0}
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleSave();
+          }}
+          disabled={disabled || saving}
+          className="w-[72px] rounded-lg border border-[var(--border)] bg-white px-2 py-1 text-xs outline-none focus:border-[var(--accent)] disabled:bg-[var(--panel)] disabled:cursor-not-allowed"
+          aria-label="Stock"
+        />
+      </div>
+      {isDirty && (
         <button
           type="button"
-          disabled={quickUpdateDisabled || saving}
-          onClick={async () => {
-            setSaving(true);
-            try {
-              await onSave(product, Math.max(0, Number(value) || 0));
-            } finally {
-              setSaving(false);
-            }
-          }}
-          className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handleSave}
+          disabled={saving}
+          className="mt-4 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition"
         >
-          {saving ? "Saving..." : "Update"}
+          {saving ? "..." : "Lưu"}
         </button>
-      </div>
-      <p className="text-xs text-[var(--muted)]">
-        {quickUpdateDisabled ? "Use product detail for multi-variant or untracked inventory." : "Applies to the single sellable variant in this MVP."}
-      </p>
+      )}
     </div>
   );
 }

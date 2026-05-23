@@ -64,7 +64,6 @@ export class PublicProductsService {
     const priceRange = this.resolvePriceRange(query);
     const where: Prisma.ProductWhereInput = {
       visibility: 'ACTIVE',
-      catalogStatus: 'PUBLISHED',
       images: {
         some: {},
       },
@@ -245,7 +244,6 @@ export class PublicProductsService {
       this.prisma.product.findMany({
         where: {
           visibility: 'ACTIVE',
-          catalogStatus: 'PUBLISHED',
           images: { some: {} },
           shop: {
             status: 'ACTIVE',
@@ -294,7 +292,6 @@ export class PublicProductsService {
       where: {
         id: productId,
         visibility: 'ACTIVE',
-        catalogStatus: 'PUBLISHED',
         images: {
           some: {},
         },

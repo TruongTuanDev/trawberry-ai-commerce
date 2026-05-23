@@ -104,6 +104,18 @@ export class ListShopProductsQueryDto {
   @IsBoolean()
   published?: boolean;
 
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  publicVisible?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  missingImage?: boolean;
+
   @ApiPropertyOptional({
     example: 'LOW_STOCK',
     enum: ['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK'],

@@ -147,8 +147,8 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
   await page.getByRole("button", { name: "Apply filters" }).click();
   const importedRow = page.getByTestId("seller-product-row").filter({ hasText: productName });
   await expect(importedRow).toBeVisible();
-  await expect(importedRow).toContainText("IMPORTED");
-  await importedRow.getByRole("link", { name: "View details" }).click();
+  await expect(importedRow).toContainText("WILDBERRIES_EXCEL");
+  await importedRow.click();
 
   await expect(page.getByTestId("seller-product-detail-page")).toBeVisible();
   await page.getByTestId("product-price-input").first().fill("1990");
@@ -156,8 +156,6 @@ test("seller imports Wildberries Excel, reviews and publishes it, then customer 
   await page.getByTestId("product-variant-save").first().click();
   await expect(page.getByTestId("product-price-input").first()).toHaveValue("1990");
   await expect(page.getByText("5 available")).toBeVisible();
-  await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();

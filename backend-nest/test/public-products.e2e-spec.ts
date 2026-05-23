@@ -281,6 +281,7 @@ describe('PublicProductsController contract (e2e)', () => {
         id: 'product-unpublished',
         title: 'Hidden Draft Jacket',
         catalogStatus: 'UNPUBLISHED',
+        visibility: 'INACTIVE',
         variants: [
           buildVariant({
             id: 'variant-unpublished',
@@ -922,7 +923,7 @@ describe('PublicProductsController contract (e2e)', () => {
   it('hides products from public list and detail after unpublish', async () => {
     const product = products.find((entry) => entry.id === 'product-ready');
     expect(product).toBeDefined();
-    product!.catalogStatus = 'UNPUBLISHED';
+    product!.visibility = 'INACTIVE';
 
     await request(app.getHttpServer())
       .get('/api/public/products/product-ready')

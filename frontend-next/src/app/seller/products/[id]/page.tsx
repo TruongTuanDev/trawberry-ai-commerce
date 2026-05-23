@@ -7,12 +7,9 @@ import { SectionCard } from "@/components/seller/section-card";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
 import {
-  archiveShopProduct,
   getShopProductById,
   getShopProductInventory,
   getShopProductReadiness,
-  publishShopProduct,
-  unpublishShopProduct,
   updateShopProduct,
   updateShopProductInventory,
   type ProductDetail,
@@ -32,7 +29,6 @@ export default function SellerProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [variantSavingId, setVariantSavingId] = useState<string | null>(null);
-  const [lifecycleSaving, setLifecycleSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -137,30 +133,6 @@ export default function SellerProductDetailPage() {
     }
   };
 
-  const handleLifecycle = async (action: "publish" | "unpublish" | "archive") => {
-    if (!currentShopId || !product) {
-      return;
-    }
-
-    setLifecycleSaving(action);
-    try {
-      const updated =
-        action === "publish"
-          ? await publishShopProduct(currentShopId, product.id)
-          : action === "unpublish"
-            ? await unpublishShopProduct(currentShopId, product.id)
-            : await archiveShopProduct(currentShopId, product.id);
-      setProduct(updated);
-      setReadiness(await getShopProductReadiness(currentShopId, product.id));
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : `Unable to ${action} product.`);
-      throw err;
-    } finally {
-      setLifecycleSaving(null);
-    }
-  };
-
   if (loading) {
     return (
       <SectionCard eyebrow="Product detail" title="Loading product" description="Fetching seller product details from NestJS.">
@@ -194,38 +166,14 @@ export default function SellerProductDetailPage() {
         >
           Manage images
         </Link>
-        <button
-          type="button"
-          onClick={() => void handleLifecycle("publish")}
-          disabled={lifecycleSaving !== null || readiness?.ready === false && product.catalogStatus !== "PUBLISHED"}
-          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {lifecycleSaving === "publish" ? "Publishing..." : "Publish"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleLifecycle("unpublish")}
-          disabled={lifecycleSaving !== null || product.catalogStatus !== "PUBLISHED"}
-          className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {lifecycleSaving === "unpublish" ? "Unpublishing..." : "Unpublish"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleLifecycle("archive")}
-          disabled={lifecycleSaving !== null || product.catalogStatus === "ARCHIVED"}
-          className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {lifecycleSaving === "archive" ? "Archiving..." : "Archive"}
-        </button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
           <SectionCard
             eyebrow="Catalog"
-            title="Publish readiness"
-            description="Wildberries sync/import puts products into the seller catalog first. Only published and ready products become visible on the public marketplace."
+            title="Trạng thái hiển thị"
+            description="Sản phẩm tự động hiển thị trên sàn công khai khi cấu hình đầy đủ thông tin (giá, tồn kho, ảnh, danh mục, biến thể) và shop đang hoạt động."
           >
             <div className="grid gap-4 md:grid-cols-[180px_1fr]">
               <div>
@@ -234,9 +182,9 @@ export default function SellerProductDetailPage() {
                 <p className="mt-2 text-xs text-[var(--muted)]">Source: {product.source}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Readiness</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Hiển thị công khai</p>
                 <p className={`mt-2 text-lg font-semibold ${readiness?.ready ? "text-emerald-700" : "text-amber-700"}`}>
-                  {readiness?.ready ? "Ready to publish" : "Needs review"}
+                  {readiness?.ready ? "Đang bán" : "Cần bổ sung"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(readiness?.blockingReasons ?? []).map((reason) => (
@@ -246,7 +194,7 @@ export default function SellerProductDetailPage() {
                   ))}
                   {readiness && readiness.blockingReasons.length < 1 ? (
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      READY
+                      SẴN SÀNG
                     </span>
                   ) : null}
                 </div>

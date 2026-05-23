@@ -17,6 +17,7 @@ type ProductReadinessVariant = {
 
 type ProductReadinessProduct = {
   catalogStatus: string | null;
+  visibility?: string | null;
   wbTitle: string | null;
   localTitle: string | null;
   categoryId: bigint | null;
@@ -34,6 +35,8 @@ type ProductReadinessProduct = {
 
 export type ProductReadinessResult = {
   ready: boolean;
+  readyToSell: boolean;
+  publicVisible: boolean;
   blockingReasons: ProductReadinessReason[];
   statusSuggestion: ProductCatalogStatus;
 };
@@ -42,11 +45,17 @@ export type ProductReadinessResult = {
 export class ProductReadinessService {
   getReadiness(product: ProductReadinessProduct): ProductReadinessResult {
     const blockingReasons = this.getProductWarnings(product);
+    const readyToSell = !blockingReasons.some(
+      (r) => r !== 'SELLER_NOT_APPROVED' && r !== 'SHOP_INACTIVE',
+    );
+    const publicVisible = blockingReasons.length === 0;
+
     return {
-      ready: blockingReasons.length === 0,
+      ready: publicVisible,
+      readyToSell,
+      publicVisible,
       blockingReasons,
-      statusSuggestion:
-        blockingReasons.length === 0 ? 'READY' : this.fallbackStatus(product),
+      statusSuggestion: publicVisible ? 'READY' : this.fallbackStatus(product),
     };
   }
 
@@ -70,6 +79,10 @@ export class ProductReadinessService {
 
     if (product.catalogStatus === 'ARCHIVED') {
       reasons.push('PRODUCT_ARCHIVED');
+    }
+
+    if (product.visibility === 'DELETED') {
+      reasons.push('PRODUCT_DELETED');
     }
 
     if (!(product.localTitle ?? product.wbTitle)?.trim()) {

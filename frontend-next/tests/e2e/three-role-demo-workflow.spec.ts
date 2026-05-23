@@ -133,8 +133,6 @@ test("three role demo workflow video", async ({ page, request }) => {
   await page.getByTestId("product-image-upload").click();
   await expect(page.getByText("Uploaded 1 image.")).toBeVisible();
   await page.goto(new URL(page.url()).pathname.replace(/\/images$/, ""));
-  await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
   await addCaption(page, "SELLER: product is live and ready for customer checkout.");
   await page.waitForTimeout(1200);
   await page.getByTestId("logout-button").click();

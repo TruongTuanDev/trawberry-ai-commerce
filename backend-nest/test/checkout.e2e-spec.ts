@@ -1320,7 +1320,7 @@ describe('CheckoutController (e2e)', () => {
   });
 
   it('rejects checkout for unpublished products', async () => {
-    products[0].catalogStatus = 'UNPUBLISHED';
+    products[0].visibility = 'DELETED';
 
     await request(app.getHttpServer())
       .post('/api/checkout/orders')

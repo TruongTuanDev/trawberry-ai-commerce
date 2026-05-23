@@ -6,15 +6,14 @@ import { SectionCard } from "@/components/seller/section-card";
 import { ProductFilters } from "@/components/products/product-filters";
 import { ProductTable } from "@/components/products/product-table";
 import {
-  archiveShopProduct,
-  bulkShopProductAction,
   bulkUpdateShopProducts,
   createSellerShop,
   createShopProduct,
   getShopProducts,
-  publishShopProduct,
-  unpublishShopProduct,
   updateShopProductInventory,
+  deleteShopProduct,
+  updateShopProduct,
+  getShopProductById,
   type BulkProductVariantMode,
   type ProductListItem,
 } from "@/lib/seller-api";
@@ -22,20 +21,19 @@ import { getCategories, type PublicCategory } from "@/lib/public-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { toast } from "@/components/ui/use-toast";
 
 const PAGE_SIZE = 10;
 
 const catalogTabs = [
-  { id: "ALL", label: "All" },
-  { id: "IMPORTED", label: "Imported" },
-  { id: "NEEDS_REVIEW", label: "Needs review" },
-  { id: "READY", label: "Ready to publish" },
-  { id: "PUBLISHED", label: "Published" },
-  { id: "UNPUBLISHED", label: "Unpublished" },
-  { id: "ARCHIVED", label: "Archived" },
-  { id: "MISSING_PRICE", label: "Missing price" },
-  { id: "MISSING_STOCK", label: "Missing stock" },
-  { id: "MISSING_CATEGORY", label: "Missing category" },
+  { id: "ALL", label: "Tất cả" },
+  { id: "LIVE", label: "Đang bán" },
+  { id: "NEEDS_INFO", label: "Cần bổ sung" },
+  { id: "OUT_OF_STOCK", label: "Hết hàng" },
+  { id: "MISSING_PRICE", label: "Thiếu giá" },
+  { id: "MISSING_CATEGORY", label: "Thiếu danh mục" },
+  { id: "MISSING_IMAGE", label: "Thiếu ảnh" },
+  { id: "DELETED", label: "Đã xóa" },
 ] as const;
 
 type CatalogTab = (typeof catalogTabs)[number]["id"];
@@ -125,32 +123,27 @@ export function SellerProductsPageClient() {
     };
 
     switch (filters.tab) {
-      case "IMPORTED":
-        tabQuery.catalogStatus = "IMPORTED";
+      case "LIVE":
+        tabQuery.publicVisible = true;
         break;
-      case "NEEDS_REVIEW":
+      case "NEEDS_INFO":
         tabQuery.needsReview = true;
         break;
-      case "READY":
-        tabQuery.readyToPublish = true;
-        break;
-      case "PUBLISHED":
-        tabQuery.published = true;
-        break;
-      case "UNPUBLISHED":
-        tabQuery.catalogStatus = "UNPUBLISHED";
-        break;
-      case "ARCHIVED":
-        tabQuery.catalogStatus = "ARCHIVED";
+      case "OUT_OF_STOCK":
+        tabQuery.stockStatus = "OUT_OF_STOCK";
         break;
       case "MISSING_PRICE":
         tabQuery.missingPrice = true;
         break;
-      case "MISSING_STOCK":
-        tabQuery.missingStock = true;
-        break;
       case "MISSING_CATEGORY":
         tabQuery.missingCategory = true;
+        break;
+      case "MISSING_IMAGE":
+        tabQuery.missingImage = true;
+        break;
+      case "DELETED":
+        tabQuery.visibility = "DELETED";
+        delete tabQuery.status;
         break;
       default:
         break;
@@ -232,7 +225,7 @@ export function SellerProductsPageClient() {
     router.replace(`/seller/products?${params.toString()}`);
   };
 
-  const handleQuickUpdate = async (product: ProductListItem, stockQuantity: number) => {
+  const handleQuickUpdate = async (product: ProductListItem, stockQuantity: number, price?: number) => {
     if (!currentShopId) {
       return;
     }
@@ -240,15 +233,43 @@ export function SellerProductsPageClient() {
     setState((current) => ({ ...current, loading: true, error: null }));
     await runProductAction({
       action: async () => {
-        const res = await updateShopProductInventory(currentShopId, product.id, {
-          variantId: product.primaryVariantId ?? undefined,
+        const detail = await getShopProductById(currentShopId, product.id, "");
+        const primaryVariant = detail.variants[0];
+        if (!primaryVariant) {
+          throw new Error("Sản phẩm không có biến thể.");
+        }
+
+        await updateShopProductInventory(currentShopId, product.id, {
+          variantId: primaryVariant.id,
           stockQuantity,
         });
+
+        if (price !== undefined) {
+          await updateShopProduct(currentShopId, product.id, {
+            variants: [
+              {
+                chrtId: Number(primaryVariant.chrtId),
+                basePrice: price,
+                discountPrice: price,
+              },
+            ],
+          });
+        }
+
+        const updatedProduct = await getShopProductById(currentShopId, product.id, "");
         await loadProducts();
-        return res;
+        return updatedProduct;
       },
-      successMessage: "Cập nhật kho hàng thành công!",
-      errorMessage: "Không thể cập nhật kho hàng.",
+      onSuccess: (updatedProduct) => {
+        if (updatedProduct.variants[0] && updatedProduct.variants[0].stockQuantity <= 0) {
+          toast.success("Sản phẩm đã hết hàng và tạm ẩn khỏi sàn.");
+        } else if (updatedProduct.publicVisible && !product.publicVisible) {
+          toast.success("Sản phẩm đã đủ điều kiện và đang hiển thị trên sàn.");
+        } else {
+          toast.success("Đã cập nhật giá/tồn kho");
+        }
+      },
+      errorMessage: "Không thể cập nhật giá/tồn kho.",
     }).catch((error) => {
       setState((current) => ({
         ...current,
@@ -259,62 +280,20 @@ export function SellerProductsPageClient() {
     });
   };
 
-  const handlePublish = async (productId: string) => {
+  const handleDelete = async (productId: string) => {
     if (!currentShopId) return;
-    setState((current) => ({ ...current, loading: true, error: null }));
-    await runProductAction({
-      action: async () => {
-        const res = await publishShopProduct(currentShopId, productId);
-        await loadProducts();
-        return res;
-      },
-      successMessage: "Đăng bán sản phẩm thành công!",
-      errorMessage: "Không thể đăng bán sản phẩm.",
-    }).catch((error) => {
-      setState((current) => ({
-        ...current,
-        loading: false,
-        error: error.message,
-      }));
-      throw error;
-    });
-  };
-
-  const handleUnpublish = async (productId: string) => {
-    if (!currentShopId) return;
-    setState((current) => ({ ...current, loading: true, error: null }));
-    await runProductAction({
-      action: async () => {
-        const res = await unpublishShopProduct(currentShopId, productId);
-        await loadProducts();
-        return res;
-      },
-      successMessage: "Ngừng đăng bán sản phẩm thành công!",
-      errorMessage: "Không thể ngừng đăng bán sản phẩm.",
-    }).catch((error) => {
-      setState((current) => ({
-        ...current,
-        loading: false,
-        error: error.message,
-      }));
-      throw error;
-    });
-  };
-
-  const handleArchive = async (productId: string) => {
-    if (!currentShopId) return;
-    const confirmed = window.confirm("Bạn có chắc chắn muốn lưu trữ sản phẩm này không?");
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?");
     if (!confirmed) return;
 
     setState((current) => ({ ...current, loading: true, error: null }));
     await runProductAction({
       action: async () => {
-        const res = await archiveShopProduct(currentShopId, productId);
+        const res = await deleteShopProduct(currentShopId, productId);
         await loadProducts();
         return res;
       },
-      successMessage: "Lưu trữ sản phẩm thành công!",
-      errorMessage: "Không thể lưu trữ sản phẩm.",
+      successMessage: "Đã xóa sản phẩm thành công.",
+      errorMessage: "Không thể xóa sản phẩm.",
     }).catch((error) => {
       setState((current) => ({
         ...current,
@@ -325,37 +304,7 @@ export function SellerProductsPageClient() {
     });
   };
 
-  const runBulkLifecycle = async (action: "PUBLISH" | "UNPUBLISH" | "ARCHIVE") => {
-    if (!currentShopId || selectedIds.length < 1) {
-      return;
-    }
 
-    if (action === "ARCHIVE") {
-      const confirmed = window.confirm("Bạn có chắc chắn muốn lưu trữ các sản phẩm đã chọn?");
-      if (!confirmed) return;
-    }
-
-    setBulkMessage(null);
-    setBulkError(null);
-    setBulkResult(null);
-
-    await runBulk({
-      action: async () => {
-        const result = await bulkShopProductAction(currentShopId, {
-          productIds: selectedIds,
-          action,
-        });
-        setBulkMessage(`${action}: ${result.successCount} succeeded, ${result.failureCount} failed.`);
-        setSelectedIds([]);
-        await loadProducts();
-        return result;
-      },
-      successMessage: "Cập nhật hàng loạt thành công!",
-      errorMessage: "Thao tác hàng loạt thất bại.",
-    }).catch((error) => {
-      setBulkError(error.message);
-    });
-  };
 
   const handleBulkUpdate = async () => {
     if (!currentShopId || selectedIds.length < 1 || !bulkEditMode) {
@@ -407,7 +356,7 @@ export function SellerProductsPageClient() {
           scope: {
             variantMode: bulkForm.variantMode,
           },
-          publishIfReady: bulkForm.publishIfReady,
+          publishIfReady: true,
         });
         setBulkResult(result);
         setBulkMessage(`Bulk edit complete: ${result.updated} updated, ${result.failed} failed.`);
@@ -663,31 +612,6 @@ export function SellerProductsPageClient() {
                 >
                   Set stock for selected
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void runBulkLifecycle("PUBLISH")}
-                  disabled={bulkSaving || selectedIds.length < 1}
-                  className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="bulk-publish-selected"
-                >
-                  Publish selected
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void runBulkLifecycle("UNPUBLISH")}
-                  disabled={bulkSaving || selectedIds.length < 1}
-                  className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Unpublish selected
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void runBulkLifecycle("ARCHIVE")}
-                  disabled={bulkSaving || selectedIds.length < 1}
-                  className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Archive selected
-                </button>
               </div>
 
               {bulkEditMode ? (
@@ -752,16 +676,6 @@ export function SellerProductsPageClient() {
                         <option value="MISSING_ONLY">Missing only</option>
                         <option value="FIRST_VARIANT_ONLY">First variant only</option>
                       </select>
-                    </label>
-
-                    <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]">
-                      <input
-                        type="checkbox"
-                        checked={bulkForm.publishIfReady}
-                        onChange={(event) => setBulkForm((current) => ({ ...current, publishIfReady: event.target.checked }))}
-                        data-testid="bulk-publish-if-ready"
-                      />
-                      Publish automatically if a product becomes ready
                     </label>
                   </div>
 
@@ -859,9 +773,7 @@ export function SellerProductsPageClient() {
                   }
                   onEdit={(productId) => router.push(`/seller/products/${productId}`)}
                   onQuickUpdate={handleQuickUpdate}
-                  onPublish={handlePublish}
-                  onUnpublish={handleUnpublish}
-                  onArchive={handleArchive}
+                  onDelete={handleDelete}
                 />
               )}
               <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">

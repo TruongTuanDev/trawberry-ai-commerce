@@ -642,6 +642,8 @@ export type ProductListItem = {
   archivedAt: string | null;
   reviewWarnings: string[];
   readyToPublish: boolean;
+  readyToSell: boolean;
+  publicVisible: boolean;
   mainImage: string | null;
   inStock: boolean;
   stockQuantity: number;
@@ -678,6 +680,8 @@ export type ProductDetail = {
   brand: string | null;
   visibility: string | null;
   catalogStatus: "IMPORTED" | "DRAFT" | "READY" | "PUBLISHED" | "UNPUBLISHED" | "ARCHIVED";
+  readyToSell: boolean;
+  publicVisible: boolean;
   source: "MANUAL" | "WILDBERRIES_EXCEL" | "WILDBERRIES_API";
   publishedAt: string | null;
   unpublishedAt: string | null;
@@ -1191,13 +1195,16 @@ export async function getShopProducts(
     status?: string;
     stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
     catalogStatus?: ProductListItem["catalogStatus"];
+    visibility?: string;
     source?: ProductListItem["source"];
     missingPrice?: boolean;
     missingStock?: boolean;
     missingCategory?: boolean;
+    missingImage?: boolean;
     readyToPublish?: boolean;
     needsReview?: boolean;
     published?: boolean;
+    publicVisible?: boolean;
     sort?: "updatedAt_desc" | "updatedAt_asc" | "title_asc" | "title_desc";
   },
   token?: string,
@@ -1213,6 +1220,9 @@ export async function getShopProducts(
 
   if (query.status) {
     params.set("status", query.status);
+  }
+  if (query.visibility) {
+    params.set("visibility", query.visibility);
   }
   if (query.stockStatus) {
     params.set("stockStatus", query.stockStatus);
@@ -1232,6 +1242,9 @@ export async function getShopProducts(
   if (query.missingCategory) {
     params.set("missingCategory", "true");
   }
+  if (query.missingImage) {
+    params.set("missingImage", "true");
+  }
   if (query.readyToPublish) {
     params.set("readyToPublish", "true");
   }
@@ -1240,6 +1253,9 @@ export async function getShopProducts(
   }
   if (query.published) {
     params.set("published", "true");
+  }
+  if (query.publicVisible) {
+    params.set("publicVisible", "true");
   }
   if (query.sort) {
     params.set("sort", query.sort);
@@ -1361,6 +1377,20 @@ export async function archiveShopProduct(
     `/api/shops/${shopId}/products/${productId}/archive`,
     {
       method: "POST",
+      token,
+    },
+  );
+}
+
+export async function deleteShopProduct(
+  shopId: string,
+  productId: string,
+  token?: string,
+) {
+  return apiRequest<{ success: boolean }>(
+    `/api/shops/${shopId}/products/${productId}`,
+    {
+      method: "DELETE",
       token,
     },
   );

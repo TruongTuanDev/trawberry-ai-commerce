@@ -1000,9 +1000,9 @@ describe('ProductsController (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(204);
 
-    expect(
-      products.find((product) => product.id === createdId),
-    ).toBeUndefined();
+    const deletedProduct = products.find((product) => product.id === createdId);
+    expect(deletedProduct).toBeDefined();
+    expect(deletedProduct?.visibility).toBe('DELETED');
   });
 
   it('forbids access to products in another seller shop', async () => {

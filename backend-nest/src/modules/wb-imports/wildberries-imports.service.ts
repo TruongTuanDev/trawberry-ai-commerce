@@ -240,7 +240,7 @@ export class WildberriesImportsService {
           normalizedProduct.packageHeightCm !== null &&
           normalizedProduct.packageLengthCm !== null &&
           normalizedProduct.packageWidthCm !== null,
-        visibility: existing ? undefined : 'DRAFT',
+        visibility: existing ? undefined : 'ACTIVE',
         source: SOURCE,
         seoSlug: this.slug(
           `${normalizedProduct.sellerSku ?? normalizedProduct.externalProductId ?? normalizedProduct.name}-${normalizedProduct.name}`,

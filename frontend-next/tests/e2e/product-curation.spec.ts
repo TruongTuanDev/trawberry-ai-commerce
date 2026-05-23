@@ -142,16 +142,14 @@ test("seller curates imported Wildberries products before they appear in public 
   await page.getByRole("button", { name: "Apply filters" }).click();
   const importedRow = page.getByTestId("seller-product-row").filter({ hasText: importedProduct.title });
   await expect(importedRow).toBeVisible();
-  await expect(importedRow).toContainText("IMPORTED");
-  await importedRow.getByRole("link", { name: "View details" }).click();
+  await expect(importedRow).toContainText("WILDBERRIES_EXCEL");
+  await importedRow.click();
 
   await expect(page.getByTestId("seller-product-detail-page")).toBeVisible();
   await page.getByTestId("product-price-input").first().fill("1990");
   await page.getByTestId("product-stock-input").first().fill("5");
   await page.getByTestId("product-variant-save").first().click();
   await expect(page.getByText("5 available")).toBeVisible();
-  await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.getByText("Catalog status").locator("..")).toContainText("PUBLISHED");
 
   const publicDetail = await backendJson<{ id: string }>(request, `/api/public/products/${importedProduct.id}`);
   expect(publicDetail.id).toBe(importedProduct.id);
@@ -162,8 +160,9 @@ test("seller curates imported Wildberries products before they appear in public 
   await expect(page.getByTestId(`product-view-${importedProduct.id}`)).toBeVisible();
 
   await page.goto(`/seller/products/${importedProduct.id}`);
-  await page.getByRole("button", { name: "Unpublish", exact: true }).click();
-  await expect(page.getByText("Catalog status").locator("..")).toContainText("UNPUBLISHED");
+  await page.getByTestId("product-stock-input").first().fill("0");
+  await page.getByTestId("product-variant-save").first().click();
+  await expect(page.getByText("0 available")).toBeVisible();
 
   const notFoundAfterUnpublish = await request.get(`${backendBaseUrl}/api/public/products/${importedProduct.id}`);
   expect(notFoundAfterUnpublish.status()).toBe(404);
