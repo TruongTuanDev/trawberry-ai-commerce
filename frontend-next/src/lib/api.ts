@@ -1,5 +1,12 @@
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
-const API_URL = rawApiUrl.replace("://localhost", "://127.0.0.1");
+const getApiUrl = () => {
+  if (typeof window === "undefined") {
+    return "http://backend-nest:3001";
+  }
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
+  return rawApiUrl.replace("://localhost", "://127.0.0.1");
+};
+
+const API_URL = getApiUrl();
 
 type RequestOptions = RequestInit & {
   token?: string | null;

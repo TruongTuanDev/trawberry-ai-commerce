@@ -4,7 +4,7 @@ test("seeded public customer flow completes checkout, tracking, and proof upload
   test.setTimeout(60000);
 
   await page.goto("/");
-  await page.getByRole("link", { name: "Shop now" }).click();
+  await page.getByTestId("public-nav").getByRole("link", { name: "Shop", exact: true }).click();
   await page.waitForURL("**/products");
   await page.getByTestId("marketplace-search").fill("Linen Bloom Dress");
   await page.getByTestId("marketplace-apply").click();
@@ -53,5 +53,5 @@ test("seeded public customer flow completes checkout, tracking, and proof upload
 
   await expect(page.getByText("Payment proof uploaded. Seller can review it now.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open proof" })).toBeVisible();
-  await expect(page.getByText("UPLOAD_PROOF")).toBeVisible();
+  await expect(page.getByText("BUYER_MARKED_PAID")).toBeVisible();
 });

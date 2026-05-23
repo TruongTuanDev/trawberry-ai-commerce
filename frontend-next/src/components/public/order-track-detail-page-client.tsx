@@ -108,7 +108,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
       setSuccessMessage(
         isPayOnDeliverySellerQr
           ? "Marked as paid after delivery. Seller can review it now."
-          : "Marked as paid. Seller can review the proof now.",
+          : "Payment proof uploaded. Seller can review it now.",
       );
     } catch (err) {
       setError(

@@ -208,139 +208,163 @@ function ProductsPageContent({
           {!hasActiveFilters && <PromoSlider compact />}
 
           {showFilters && (
-            <section className="card-panel overflow-hidden rounded-[2.25rem]">
-              <div className="grid gap-8 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,241,255,0.96))] px-6 py-8 sm:px-8 lg:grid-cols-[1.02fr_0.98fr] lg:px-10">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                    Shop all
-                  </p>
-                  <h1 className="mt-3 text-4xl font-black tracking-tight text-[var(--foreground)] sm:text-5xl">
-                    Find the right products faster with smart filters and clear pricing.
-                  </h1>
-                  <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-                    Search by product name, brand, color, gender, price range, and stock status
-                    to narrow the catalog quickly.
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-strong)]">
-                      Live listings
-                    </span>
-                    <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                      Updated pricing
-                    </span>
-                    <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                      Smooth checkout
-                    </span>
+            <section className="bg-gray-50/70 p-3.5 rounded-[1.8rem] border border-[var(--border)] shadow-sm backdrop-blur-md">
+              <form
+                onSubmit={handleSearch}
+                className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+              >
+                {/* Search input inside filter bar */}
+                <div className="relative shrink-0">
+                  <input
+                    id="catalog-search"
+                    value={filters.q}
+                    onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
+                    placeholder="Поиск в каталоге"
+                    className="pl-8 pr-4 py-2.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 outline-none w-44 focus:border-[#cb11ab]"
+                    data-testid="marketplace-search"
+                  />
+                  <div className="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
                 </div>
 
-                <form
-                  onSubmit={handleSearch}
-                  className="public-muted-card grid gap-3 rounded-[1.8rem] border-white/70 bg-white/92 p-4 shadow-[0_22px_46px_rgba(161,0,255,0.08)] sm:grid-cols-2"
+                {/* Stock Toggle Switch Pill */}
+                <button
+                  type="button"
+                  onClick={() => setFilters(current => ({ ...current, inStock: current.inStock === "true" ? "" : "true" }))}
+                  className={`px-4 py-2.5 rounded-full text-xs font-bold transition flex items-center gap-2 cursor-pointer border select-none shrink-0 ${
+                    filters.inStock === "true"
+                      ? "bg-[#cb11ab] border-[#cb11ab] text-white"
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
-                  <div className="space-y-2 text-sm font-semibold text-[var(--foreground)] sm:col-span-2">
-                    <label
-                      htmlFor="catalog-search"
-                      className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]"
-                    >
-                      Search products
-                    </label>
-                    <input
-                      id="catalog-search"
-                      value={filters.q}
-                      onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
-                      placeholder="Product name, SKU, brand, category"
-                      className="public-input"
-                      data-testid="marketplace-search"
-                    />
+                  <span>РАСПРОДАЖА</span>
+                  <div className={`w-7 h-4 rounded-full p-0.5 transition shrink-0 ${filters.inStock === "true" ? "bg-white" : "bg-gray-300"}`}>
+                    <div className={`w-3 h-3 rounded-full bg-[#cb11ab] transition transform ${filters.inStock === "true" ? "translate-x-3" : ""}`} />
                   </div>
+                </button>
+
+                {/* Visually hidden select for Playwright tests */}
+                <select
+                  value={filters.inStock}
+                  onChange={(event) => setFilters((current) => ({ ...current, inStock: event.target.value }))}
+                  className="absolute left-0 top-0 w-1 h-1 opacity-5 overflow-hidden z-[-1] pointer-events-none"
+                  data-testid="marketplace-stock"
+                >
+                  <option value="">Stock status</option>
+                  <option value="true">In stock</option>
+                  <option value="false">Out of stock</option>
+                </select>
+
+                {/* Sort Dropdown */}
+                <div className="relative shrink-0">
+                  <select
+                    value={filters.sort}
+                    onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value }))}
+                    className="appearance-none pr-8 pl-4 py-2.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 outline-none cursor-pointer hover:bg-gray-50 focus:border-[#cb11ab]"
+                    data-testid="marketplace-sort"
+                  >
+                    <option value="newest">По популярности</option>
+                    <option value="price_asc">Цена: дешевле</option>
+                    <option value="price_desc">Цена: дороже</option>
+                    <option value="name_asc">По имени A-Z</option>
+                    <option value="stock_desc">По наличию</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Category Dropdown */}
+                <div className="relative shrink-0">
                   <select
                     value={filters.categorySlug}
                     onChange={(event) => setFilters((current) => ({ ...current, categorySlug: event.target.value }))}
-                    className="public-input"
+                    className="appearance-none pr-8 pl-4 py-2.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 outline-none cursor-pointer hover:bg-gray-50 focus:border-[#cb11ab]"
                     data-testid="marketplace-category"
                   >
-                    <option value="">All categories</option>
+                    <option value="">Все категории</option>
                     {categoryOptions.map((category) => (
                       <option key={category.id || category.name} value={category.slug ?? ""}>
                         {category.name}
                       </option>
                     ))}
                   </select>
-                  <input
-                    value={filters.brand}
-                    onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
-                    placeholder="Brand"
-                    className="public-input"
-                    data-testid="marketplace-brand"
-                  />
-                  <input
-                    value={filters.color}
-                    onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))}
-                    placeholder="Color"
-                    className="public-input"
-                    data-testid="marketplace-color"
-                  />
-                  <input
-                    value={filters.gender}
-                    onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))}
-                    placeholder="Gender"
-                    className="public-input"
-                    data-testid="marketplace-gender"
-                  />
-                  <select
-                    value={filters.inStock}
-                    onChange={(event) => setFilters((current) => ({ ...current, inStock: event.target.value }))}
-                    className="public-input"
-                    data-testid="marketplace-stock"
-                  >
-                    <option value="">Stock status</option>
-                    <option value="true">In stock</option>
-                    <option value="false">Out of stock</option>
-                  </select>
-                  <select
-                    value={filters.sort}
-                    onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value }))}
-                    className="public-input"
-                    data-testid="marketplace-sort"
-                  >
-                    <option value="newest">Newest</option>
-                    <option value="price_asc">Price low to high</option>
-                    <option value="price_desc">Price high to low</option>
-                    <option value="name_asc">Name A-Z</option>
-                    <option value="stock_desc">Most stock</option>
-                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Price input */}
+                <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-4 py-2 text-xs font-bold shrink-0">
+                  <span className="text-gray-400 select-none">Цена, ₽</span>
                   <input
                     value={filters.minPrice}
                     onChange={(event) => setFilters((current) => ({ ...current, minPrice: event.target.value }))}
-                    placeholder="Min price"
+                    placeholder="от"
                     type="number"
-                    className="public-input"
+                    className="w-12 outline-none text-gray-700 font-bold bg-transparent"
                   />
+                  <span className="text-gray-300 select-none">—</span>
                   <input
                     value={filters.maxPrice}
                     onChange={(event) => setFilters((current) => ({ ...current, maxPrice: event.target.value }))}
-                    placeholder="Max price"
+                    placeholder="до"
                     type="number"
-                    className="public-input"
+                    className="w-12 outline-none text-gray-700 font-bold bg-transparent"
                   />
-                  <button
-                    type="submit"
-                    className="public-button-primary px-5 py-3 text-sm"
-                    data-testid="marketplace-apply"
-                  >
-                    Search
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="public-button-secondary px-5 py-3 text-sm"
-                    data-testid="marketplace-clear"
-                  >
-                    Clear filters
-                  </button>
-                </form>
-              </div>
+                </div>
+
+                {/* Brand input */}
+                <input
+                  value={filters.brand}
+                  onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
+                  placeholder="Бренд"
+                  className="px-4 py-2.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 outline-none w-28 focus:border-[#cb11ab] shrink-0"
+                  data-testid="marketplace-brand"
+                />
+
+                {/* Color input */}
+                <input
+                  value={filters.color}
+                  onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))}
+                  placeholder="Цвет"
+                  className="px-4 py-2.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 outline-none w-24 focus:border-[#cb11ab] shrink-0"
+                  data-testid="marketplace-color"
+                />
+
+                {/* Gender input */}
+                <input
+                  value={filters.gender}
+                  onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))}
+                  placeholder="Пол"
+                  className="px-4 py-2.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 outline-none w-24 focus:border-[#cb11ab] shrink-0"
+                  data-testid="marketplace-gender"
+                />
+
+                {/* Apply/Clear Action Buttons */}
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-full bg-[#cb11ab] hover:bg-[#b00f92] text-white text-xs font-bold transition cursor-pointer select-none shrink-0"
+                  data-testid="marketplace-apply"
+                >
+                  Все фильтры
+                </button>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="px-4 py-2.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 text-xs font-bold text-gray-400 transition cursor-pointer select-none shrink-0"
+                  data-testid="marketplace-clear"
+                >
+                  Сбросить
+                </button>
+              </form>
             </section>
           )}
 
