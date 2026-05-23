@@ -883,10 +883,12 @@ describe('SellerFinance (e2e)', () => {
     );
     await app.init();
     sellerFinanceService = moduleFixture.get(SellerFinanceService);
+    jest.spyOn(Date, 'now').mockReturnValue(now.getTime());
   });
 
   afterEach(async () => {
     await app.close();
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 

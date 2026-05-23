@@ -295,7 +295,7 @@ export class SellerFinanceService {
 
   async listAdminSellerFees() {
     const financePrisma = this.asFinanceExecutor(this.prisma);
-    const now = new Date();
+    const now = new Date(Date.now());
     const billingPeriod = this.getBillingPeriod(now);
     const monthRange = this.getBillingPeriodRange(billingPeriod);
     const todayRange = this.getDayRange(now);
@@ -491,7 +491,7 @@ export class SellerFinanceService {
       throw new NotFoundException(`Shop ${shopId} was not found.`);
     }
 
-    const now = new Date();
+    const now = new Date(Date.now());
     await this.prisma.$transaction(async (tx) => {
       const financeTx = this.asFinanceExecutor(tx);
       await financeTx.shopCommissionSetting.updateMany({
@@ -549,7 +549,7 @@ export class SellerFinanceService {
       throw new NotFoundException(`Shop ${shopId} was not found.`);
     }
 
-    const now = new Date();
+    const now = new Date(Date.now());
     return this.prisma.$transaction(async (tx) => {
       const financeTx = this.asFinanceExecutor(tx);
       const pendingEntries = await financeTx.sellerFeeLedgerEntry.findMany({
@@ -639,7 +639,7 @@ export class SellerFinanceService {
   }
 
   async markInvoicePaid(invoiceId: string) {
-    const now = new Date();
+    const now = new Date(Date.now());
     return this.prisma.$transaction(async (tx) => {
       const financeTx = this.asFinanceExecutor(tx);
       const invoice = await financeTx.sellerMonthlyInvoice.findUnique({
@@ -705,7 +705,7 @@ export class SellerFinanceService {
 
   async getSellerDashboardMetrics(shopId: string) {
     const financePrisma = this.asFinanceExecutor(this.prisma);
-    const now = new Date();
+    const now = new Date(Date.now());
     const billingPeriod = this.getBillingPeriod(now);
     const todayRange = this.getDayRange(now);
     const monthRange = this.getBillingPeriodRange(billingPeriod);
