@@ -1,5 +1,17 @@
 # Phase Report
 
+## 2026-05-23 Public Marketplace Visual and Catalog Filter Conditional Refresh
+
+- Redesigned the public marketplace header into a thin, 2-row layout inspired by the compact Wildberries style to reduce visual clutter.
+- Consolidated navigation, user actions, cart link, and search components to ensure responsive and lightweight layout across viewports and eliminate duplicate DOM elements.
+- Overrode standard browser outlines on `#public-header-search:focus` inside `globals.css` to hide default focus rings.
+- Adjusted Suspense fallback height to `h-[110px]` to eliminate layout shifts.
+- Redesigned `/products` page structure so that:
+  - When no search/filter is active: The promotional banner is shown and the product list is displayed immediately below it (no filter box).
+  - When a search/filter is active: The banner is hidden, and the filter forms are displayed above the products.
+- Integrated search title and search count layout to dynamically present queries (e.g., search keywords and products found).
+- Successfully verified layout and behaviors using automated E2E tests (`test:e2e:marketplace-search-filter-sort`, `test:e2e:public-smoke`, `test:e2e:product-buying-ux`, `test:e2e:auth-role-separation`).
+
 ## 2026-05-23 Manual Yandex Operational Polish
 
 - polished the seller-operated Yandex delivery workflow without introducing real Yandex API calls

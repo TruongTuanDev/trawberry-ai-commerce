@@ -1,5 +1,17 @@
 # Project Status
 
+## Public Marketplace Visual and Catalog Filter Conditional Refresh - 2026-05-23
+
+- Status: implemented in `frontend-next`
+- Redesigned the customer-facing public header to match a sleeker, thinner Wildberries-inspired layout (two-row layout)
+- Removed browser-default focus border/outline on the search input box
+- Adjusted the shell fallback component's height to prevent layout shifts
+- Optimized `/products` catalog page layout:
+  - By default (no search/filter active), the promo banner is shown, and the product list is displayed directly below it without any filter box.
+  - Once a search query or filter is active, the banner is hidden, and a clean filter section is displayed right above the product list.
+  - Dynamically displays the active search query and search results count.
+- Verified that all E2E tests (`test:e2e:marketplace-search-filter-sort`, `test:e2e:public-smoke`, `test:e2e:product-buying-ux`, `test:e2e:auth-role-separation`) pass successfully.
+
 ## Manual Yandex Operational Polish - 2026-05-23
 
 - Status: implemented in `backend-nest` and `frontend-next`
