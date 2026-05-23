@@ -1292,3 +1292,21 @@ Current gap:
 - real Yandex geocoder is still future work
 - no real map picker or map tiles in default runtime
 - future real Yandex claim creation should tighten API-ready enforcement
+
+# Public Header Wildberries Redesign Status
+
+Implemented:
+
+- thin, modern 2-row layout matching Wildberries design
+- horizontal top-bar navigation including test-essential and user links
+- single-instance responsive icons for Address, Account, and Cart
+- updated Suspense fallback height
+- fixed duplicate ID strict mode violations in E2E tests
+
+Verification:
+
+- `npm run lint`: pass
+- `npm run build`: pass
+- `npm run test:e2e:auth-role-separation`: pass
+- `npm run test:e2e:public-smoke`: pass
+- `npm run test:e2e:product-buying-ux`: pass

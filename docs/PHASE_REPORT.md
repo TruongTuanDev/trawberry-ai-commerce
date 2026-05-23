@@ -2129,3 +2129,20 @@ Retained non-goals:
 - no real Yandex map SDK
 - no real Yandex Delivery API calls
 - no forced coordinate requirement for the current manual checkout flow
+
+# Phase Report: Public Header Wildberries Redesign
+
+Implemented:
+
+- Redesigned the public header component (`public-header.tsx`) to match the sleeker, thinner Wildberries layout.
+- Reduced the visual height and clutter of the header (from a bulky 3-row layout to a compact 2-row layout).
+- Restructured navigation: merged links into a single horizontal top bar matching the Wildberries style.
+- Updated action items (Address, Account, Cart) to look premium with vertical icon-text alignments and without bulky background wrappers.
+- Fixed strict mode duplicate element errors in Playwright tests by consolidating desktop and mobile DOM nodes for Account and Cart icons.
+- Updated `public-shell.tsx` Suspense fallback height to match the new thin header layout.
+- Verified all public flow E2E tests (auth-role-separation, public-smoke, product-buying-ux).
+
+Retained non-goals:
+
+- No changes to checkout business logic.
+- No changes to admin/seller dashboards.

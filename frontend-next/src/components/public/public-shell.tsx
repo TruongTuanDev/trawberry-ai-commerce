@@ -21,7 +21,7 @@ export function PublicShell({
       }}
     >
       <div className="relative z-10 flex min-h-screen flex-col">
-        <Suspense fallback={<div className="h-[172px] sm:h-[188px]" />}>
+        <Suspense fallback={<div className="h-[110px]" />}>
           <PublicHeader />
         </Suspense>
         <div className="flex-1">{children}</div>
