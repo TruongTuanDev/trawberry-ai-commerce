@@ -185,6 +185,13 @@ textarea,
   transform: translateY(-1px);
 }
 
+#public-header-search:focus,
+#public-header-search:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
 .promo-slide-enter {
   animation: promo-slide-enter 380ms ease;
 }
