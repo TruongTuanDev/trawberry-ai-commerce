@@ -106,26 +106,26 @@ export function PublicProductDetailPageClient({
     selectedVariant?.originalPrice ?? product?.oldPrice ?? null,
   );
   const specRows = [
-    { label: "Артикул / SKU", value: selectedVariant?.sellerSku ?? product?.sellerSku ?? null },
-    { label: "Бренд", value: product?.brand ?? null },
-    { label: "Категория", value: product?.categoryName ?? product?.sourceCategoryName ?? null },
-    { label: "Цвет", value: product?.color ?? null },
-    { label: "Пол", value: product?.gender ?? null },
-    { label: "Состав", value: product?.composition ?? null },
-    { label: "Источник", value: product?.sourceCategoryName ?? null },
+    { label: t("productDetail.sku"), value: selectedVariant?.sellerSku ?? product?.sellerSku ?? null },
+    { label: t("productDetail.brand"), value: product?.brand ?? null },
+    { label: t("productDetail.category"), value: product?.categoryName ?? product?.sourceCategoryName ?? null },
+    { label: t("productDetail.color"), value: product?.color ?? null },
+    { label: t("productDetail.gender"), value: product?.gender ?? null },
+    { label: t("productDetail.composition"), value: product?.composition ?? null },
+    { label: t("productDetail.source"), value: product?.sourceCategoryName ?? null },
   ].filter((row) => row.value);
 
   const reviewLabel =
     product?.averageRating && Number(product.feedbackCount) > 0
-      ? `${Number(product.averageRating).toFixed(1)} · ${product.feedbackCount} review(s)`
+      ? t("productDetail.reviews", { rating: Number(product.averageRating).toFixed(1), count: product.feedbackCount })
       : null;
 
   const stockLabel = !selectedVariant
     ? t("productDetail.selectSize")
     : !selectedVariant.inStock
-      ? "Нет в наличии"
+      ? t("productDetail.outOfStock")
       : selectedVariant.trackInventory
-        ? `${formatCount(selectedVariant.availableQuantity)} available`
+        ? t("productDetail.availableCount", { count: formatCount(selectedVariant.availableQuantity) })
         : t("productDetail.availableToOrder");
 
   const stockTone = !selectedVariant?.inStock
@@ -211,24 +211,24 @@ export function PublicProductDetailPageClient({
               data-testid={isUnavailableState ? "product-unavailable-state" : "product-detail-error"}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                {isUnavailableState ? "Unavailable" : "Load error"}
+                {isUnavailableState ? t("productDetail.unavailable") : t("productDetail.loadError")}
               </p>
               <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
                 {isUnavailableState
-                  ? "Sản phẩm không còn bán hoặc đã bị ẩn"
-                  : "Unable to load this product right now"}
+                  ? t("productDetail.unavailableTitle")
+                  : t("productDetail.loadErrorTitle")}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
                 {isUnavailableState
-                  ? "Product is no longer public, has been unpublished, or does not exist in the marketplace."
-                  : error ?? "Please try again in a moment."}
+                  ? t("productDetail.unavailableDescription")
+                  : (error ?? t("productDetail.tryAgain"))}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   href="/products"
                   className="public-button-primary inline-flex px-5 py-3 text-sm"
                 >
-                  Back to products
+                  {t("productDetail.backToProducts")}
                 </Link>
                 {!isUnavailableState ? (
                   <button
@@ -236,7 +236,7 @@ export function PublicProductDetailPageClient({
                     onClick={() => setRequestKey((current) => current + 1)}
                     className="public-button-secondary px-5 py-3 text-sm"
                   >
-                    Retry
+                    {t("catalog.tryAgain")}
                   </button>
                 ) : null}
               </div>
@@ -262,9 +262,9 @@ export function PublicProductDetailPageClient({
                       </h1>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
                         {reviewLabel ? <span>{reviewLabel}</span> : null}
-                        {product.feedbackCount > 0 ? <span>{product.feedbackCount} questions</span> : null}
+                        {product.feedbackCount > 0 ? <span>{t("productDetail.questionsCount", { count: product.feedbackCount })}</span> : null}
                         {!reviewLabel && product.feedbackCount === 0 ? (
-                          <span>Marketplace selection ready for checkout</span>
+                          <span>{t("productDetail.readyForCheckout")}</span>
                         ) : null}
                       </div>
                     </div>
@@ -272,7 +272,7 @@ export function PublicProductDetailPageClient({
                     {product.images.length > 1 ? (
                       <div className="space-y-3">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Preview
+                          {t("productDetail.preview")}
                         </p>
                         <div className="flex flex-wrap gap-3">
                           {product.images.slice(0, 5).map((image, index) => (
@@ -295,10 +295,10 @@ export function PublicProductDetailPageClient({
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Sizes
+                          {t("productDetail.sizes")}
                         </p>
                         <p className="text-xs text-[var(--muted)]">
-                          Choose an in-stock variant
+                          {t("productDetail.chooseVariant")}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-3" data-testid="product-size-selector">
@@ -321,9 +321,9 @@ export function PublicProductDetailPageClient({
                               <div className="mt-1 text-xs">
                                 {variant.inStock
                                   ? variant.trackInventory
-                                    ? `${formatCount(variant.availableQuantity)} pcs`
-                                    : "Available"
-                                  : "Out of stock"}
+                                    ? t("productDetail.pcsCount", { count: formatCount(variant.availableQuantity) })
+                                    : t("productDetail.available")
+                                  : t("productDetail.outOfStock")}
                               </div>
                             </button>
                           );
@@ -334,7 +334,7 @@ export function PublicProductDetailPageClient({
                     <div className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] px-5 py-5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Selected variant
+                          {t("productDetail.selectedVariant")}
                         </p>
                         <StockBadge label={stockLabel} tone={stockTone} />
                       </div>
@@ -346,14 +346,14 @@ export function PublicProductDetailPageClient({
                           className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
                           data-testid="product-out-of-stock-state"
                         >
-                          This product is currently out of stock for all visible variants.
+                          {t("productDetail.allVariantsOutOfStock")}
                         </p>
                       ) : null}
                     </div>
 
                     <div className="space-y-3">
                       <p className="text-sm font-semibold text-[var(--foreground)]">
-                        Characteristics
+                        {t("productDetail.characteristics")}
                       </p>
                       <div className="space-y-2 rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-4">
                         {specRows.map((row) => (
@@ -370,10 +370,10 @@ export function PublicProductDetailPageClient({
 
                     <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-5">
                       <p className="text-sm font-semibold text-[var(--foreground)]">
-                        Description
+                        {t("productDetail.description")}
                       </p>
                       <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                        {product.description ?? "No description provided yet."}
+                        {product.description ?? t("productDetail.noDescription")}
                       </p>
                     </div>
                   </div>
@@ -383,7 +383,7 @@ export function PublicProductDetailPageClient({
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-end gap-3">
                           <p className="text-gradient-primary text-4xl font-bold">
-                            {formatMoney(currentPrice) ?? "Contact shop"}
+                            {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
                           </p>
                           {oldPrice ? (
                             <p className="pb-1 text-base text-[var(--muted)] line-through">
@@ -392,14 +392,14 @@ export function PublicProductDetailPageClient({
                           ) : null}
                         </div>
                         <p className="text-sm text-[var(--muted)]">
-                          {selectedVariant ? `Size ${selectedVariantLabel}` : "Select a size"}
+                          {selectedVariant ? t("productDetail.selectedSizeLabel", { size: selectedVariantLabel }) : t("productDetail.selectSize")}
                         </p>
                       </div>
 
                       <div className="mt-5 space-y-4">
                         <div className="rounded-[1.5rem] bg-[var(--panel)] p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                            Quantity
+                            {t("productDetail.quantity")}
                           </p>
                           <div className="mt-3">
                             <QuantityStepper
@@ -415,7 +415,7 @@ export function PublicProductDetailPageClient({
 
                         {cartItem ? (
                           <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent-strong)]">
-                            В корзине: {cartItem.quantity}
+                            {t("productDetail.inCartCount", { count: cartItem.quantity })}
                           </div>
                         ) : null}
 
@@ -426,7 +426,7 @@ export function PublicProductDetailPageClient({
                           className="public-button-primary w-full px-5 py-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                           data-testid="add-to-cart"
                         >
-                          {cartItem ? "В корзине" : "Добавить в корзину"}
+                          {cartItem ? t("productDetail.inCart") : t("productDetail.addToCart")}
                         </button>
                         <button
                           type="button"
@@ -435,19 +435,19 @@ export function PublicProductDetailPageClient({
                           className="w-full rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-5 py-3.5 text-sm font-semibold text-[var(--accent-strong)] transition-all duration-200 hover:bg-[var(--accent-soft)]/80 disabled:cursor-not-allowed disabled:opacity-50"
                           data-testid="continue-to-checkout"
                         >
-                          Купить сейчас
+                          {t("productDetail.buyNow")}
                         </button>
                       </div>
 
                       <div className="mt-5 space-y-3 border-t border-[var(--border)] pt-5 text-sm text-[var(--muted)]">
-                        <p>{selectedVariant?.inStock ? "Доставка рассчитывается при оформлении" : "Самовывоз/доставка по договоренности"}</p>
-                        <p>Shop: <span className="font-semibold text-[var(--foreground)]">{product.shop.name}</span></p>
-                        <p>Stock: <span className="font-semibold text-[var(--foreground)]">{stockLabel}</span></p>
+                        <p>{selectedVariant?.inStock ? t("productDetail.deliveryCalculatedAtCheckout") : t("productDetail.pickupDeliveryByAgreement")}</p>
+                        <p>{t("productDetail.shopLabel")}: <span className="font-semibold text-[var(--foreground)]">{product.shop.name}</span></p>
+                        <p>{t("productDetail.stockLabel")}: <span className="font-semibold text-[var(--foreground)]">{stockLabel}</span></p>
                         {product.shop.paymentInstructions ? (
                           <p>{product.shop.paymentInstructions}</p>
                         ) : null}
                         <p className="text-xs leading-6">
-                          Trusted price and stock are validated again server-side during checkout.
+                          {t("productDetail.trustedValidationNotice")}
                         </p>
                       </div>
                     </div>
@@ -463,15 +463,15 @@ export function PublicProductDetailPageClient({
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-gradient-primary text-xl font-bold">
-                        {formatMoney(currentPrice) ?? "Contact shop"}
+                        {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
                       </p>
                       <p className="mt-1 text-xs text-[var(--muted)]">
-                        {selectedVariant ? selectedVariantLabel : "Select a size"}
+                        {selectedVariant ? t("productDetail.selectedSizeLabel", { size: selectedVariantLabel }) : t("productDetail.selectSize")}
                       </p>
                     </div>
                     <div className="min-w-0 text-right">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                        Qty
+                        {t("productDetail.mobileQty")}
                       </p>
                       <div className="mt-2">
                         <QuantityStepper
@@ -494,7 +494,7 @@ export function PublicProductDetailPageClient({
                       className="public-button-primary min-w-0 flex-1 px-4 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid="mobile-add-to-cart"
                     >
-                      {cartItem ? "В корзине" : "Добавить в корзину"}
+                      {cartItem ? t("productDetail.inCart") : t("productDetail.addToCart")}
                     </button>
                     <button
                       type="button"
@@ -503,7 +503,7 @@ export function PublicProductDetailPageClient({
                       className="min-w-0 flex-1 rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent-strong)] transition-all duration-200 hover:bg-[var(--accent-soft)]/80 disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid="mobile-buy-now"
                     >
-                      Купить сейчас
+                      {t("productDetail.buyNow")}
                     </button>
                   </div>
                 </div>

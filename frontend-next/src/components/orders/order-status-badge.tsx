@@ -1,3 +1,8 @@
+"use client";
+
+import { translate } from "@/i18n/use-i18n";
+import { useLocaleStore } from "@/i18n/locale-store";
+
 const toneByStatus: Record<string, string> = {
   PENDING: "bg-yellow-50 text-yellow-700",
   NEW: "bg-amber-50 text-amber-700",
@@ -13,9 +18,15 @@ const toneByStatus: Record<string, string> = {
 };
 
 export function OrderStatusBadge({ status }: { status: string }) {
+  const { cookieLocale, roleLocales } = useLocaleStore();
+  const locale = cookieLocale ?? roleLocales.seller ?? "ru";
+
   return (
-    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneByStatus[status] ?? "bg-slate-100 text-slate-700"}`}>
-      {status}
+    <span
+      data-status={status}
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneByStatus[status] ?? "bg-slate-100 text-slate-700"}`}
+    >
+      {translate(locale, `common.status.order.${status}`)}
     </span>
   );
 }

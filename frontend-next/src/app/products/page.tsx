@@ -8,6 +8,7 @@ import { PromoSlider } from "@/components/public/promo-slider";
 import { PublicShell } from "@/components/public/public-shell";
 import { getPublicProducts, type PaginatedPublicProducts, type PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
+import { useI18n } from "@/i18n/use-i18n";
 
 type ProductsMeta = {
   page: number;
@@ -68,6 +69,7 @@ function ProductsPageContent({
   searchParams: ReturnType<typeof useSearchParams>;
   router: ReturnType<typeof useRouter>;
 }) {
+  const { t } = useI18n("customer");
   const hydrateCart = useCartStore((state) => state.hydrate);
   const [items, setItems] = useState<PublicProduct[]>([]);
   const [meta, setMeta] = useState<ProductsMeta>(initialMeta);
@@ -99,21 +101,21 @@ function ProductsPageContent({
   const activeFilterSummary = useMemo(
     () =>
       [
-        filters.q.trim() ? `Keyword: ${filters.q.trim()}` : null,
-        filters.categorySlug ? `Category: ${filters.categorySlug}` : null,
-        filters.brand.trim() ? `Brand: ${filters.brand.trim()}` : null,
-        filters.color.trim() ? `Color: ${filters.color.trim()}` : null,
-        filters.gender.trim() ? `Gender: ${filters.gender.trim()}` : null,
+        filters.q.trim() ? `${t("catalog.filterSummary.keyword")}: ${filters.q.trim()}` : null,
+        filters.categorySlug ? `${t("catalog.filterSummary.category")}: ${filters.categorySlug}` : null,
+        filters.brand.trim() ? `${t("catalog.filterSummary.brand")}: ${filters.brand.trim()}` : null,
+        filters.color.trim() ? `${t("catalog.filterSummary.color")}: ${filters.color.trim()}` : null,
+        filters.gender.trim() ? `${t("catalog.filterSummary.gender")}: ${filters.gender.trim()}` : null,
         filters.inStock === "true"
-          ? "In-stock items only"
+          ? t("catalog.filterSummary.inStockOnly")
           : filters.inStock === "false"
-            ? "Out-of-stock items only"
+            ? t("catalog.filterSummary.outOfStockOnly")
             : null,
-        filters.minPrice ? `Min price: ${filters.minPrice}` : null,
-        filters.maxPrice ? `Max price: ${filters.maxPrice}` : null,
-        filters.sort !== "newest" ? `Sort: ${filters.sort}` : null,
+        filters.minPrice ? `${t("catalog.filterSummary.minPrice")}: ${filters.minPrice}` : null,
+        filters.maxPrice ? `${t("catalog.filterSummary.maxPrice")}: ${filters.maxPrice}` : null,
+        filters.sort !== "newest" ? `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}` : null,
       ].filter(Boolean) as string[],
-    [filters],
+    [filters, t],
   );
 
   useEffect(() => {
@@ -380,7 +382,7 @@ function ProductsPageContent({
                           : "bg-[#f6f6fa] text-gray-800 border-transparent hover:bg-[#ececf3]"
                       }`}
                     >
-                      <span>РАСПРОДАЖА</span>
+                      <span>{t("catalog.sale")}</span>
                       <div className={`w-7 h-4 rounded-full p-0.5 transition shrink-0 ${filters.inStock === "true" ? "bg-white" : "bg-gray-300"}`}>
                         <div className={`w-3 h-3 rounded-full bg-[#f100bb] transition transform ${filters.inStock === "true" ? "translate-x-3" : ""}`} />
                       </div>
@@ -398,11 +400,7 @@ function ProductsPageContent({
                         }`}
                       >
                         <span>
-                          {filters.sort === "newest" && "По популярности"}
-                          {filters.sort === "price_asc" && "Цена: дешевле"}
-                          {filters.sort === "price_desc" && "Цена: дороже"}
-                          {filters.sort === "name_asc" && "По имени A-Z"}
-                          {filters.sort === "stock_desc" && "По наличию"}
+                          {t(`catalog.sortOptions.${filters.sort}`)}
                         </span>
                         <svg
                           className={`w-3 h-3 text-gray-400 transition-transform ${activeDropdown === "sort" ? "rotate-180" : ""}`}
@@ -416,11 +414,11 @@ function ProductsPageContent({
                       {activeDropdown === "sort" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-2.5 min-w-[200px] flex flex-col gap-1">
                           {[
-                            { label: "По популярности", value: "newest" },
-                            { label: "Цена: дешевле", value: "price_asc" },
-                            { label: "Цена: дороже", value: "price_desc" },
-                            { label: "По имени A-Z", value: "name_asc" },
-                            { label: "По наличию", value: "stock_desc" },
+                            { label: t("catalog.sortOptions.newest"), value: "newest" },
+                            { label: t("catalog.sortOptions.price_asc"), value: "price_asc" },
+                            { label: t("catalog.sortOptions.price_desc"), value: "price_desc" },
+                            { label: t("catalog.sortOptions.name_asc"), value: "name_asc" },
+                            { label: t("catalog.sortOptions.stock_desc"), value: "stock_desc" },
                           ].map((opt) => (
                             <button
                               key={opt.value}
@@ -460,7 +458,7 @@ function ProductsPageContent({
                       <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                       </svg>
-                      <span>Все фильтры</span>
+                      <span>{t("catalog.allFilters")}</span>
                     </button>
 
                     {/* Custom Price Dropdown Pill */}
@@ -476,8 +474,8 @@ function ProductsPageContent({
                       >
                         <span>
                           {filters.minPrice || filters.maxPrice
-                            ? `Цена: ${filters.minPrice ? `от ${filters.minPrice}` : ""} ${filters.maxPrice ? `до ${filters.maxPrice}` : ""}`
-                            : "Цена, ₽"}
+                            ? `${t("catalog.priceFilter")}: ${filters.minPrice ? `${t("catalog.priceFrom")} ${filters.minPrice}` : ""} ${filters.maxPrice ? `${t("catalog.priceTo")} ${filters.maxPrice}` : ""}`
+                            : t("catalog.priceFilter")}
                         </span>
                         <svg
                           className={`w-3 h-3 text-gray-400 transition-transform ${activeDropdown === "price" ? "rotate-180" : ""}`}
@@ -490,10 +488,10 @@ function ProductsPageContent({
                       </button>
                       {activeDropdown === "price" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[240px] flex flex-col gap-3">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Цена, ₽</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.priceFilter")}</div>
                           <div className="flex items-center gap-2">
                             <div className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 flex flex-col">
-                              <span className="text-[9px] font-bold text-gray-400 uppercase select-none">от</span>
+                              <span className="text-[9px] font-bold text-gray-400 uppercase select-none">{t("catalog.priceFrom")}</span>
                               <input
                                 value={filters.minPrice}
                                 onChange={(event) => setFilters((current) => ({ ...current, minPrice: event.target.value }))}
@@ -504,7 +502,7 @@ function ProductsPageContent({
                             </div>
                             <span className="text-gray-300 text-sm select-none">—</span>
                             <div className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 flex flex-col">
-                              <span className="text-[9px] font-bold text-gray-400 uppercase select-none">до</span>
+                              <span className="text-[9px] font-bold text-gray-400 uppercase select-none">{t("catalog.priceTo")}</span>
                               <input
                                 value={filters.maxPrice}
                                 onChange={(event) => setFilters((current) => ({ ...current, maxPrice: event.target.value }))}
@@ -526,7 +524,7 @@ function ProductsPageContent({
                               }}
                               className="flex-1 py-2 text-center rounded-xl bg-[#cb11ab] hover:bg-[#b00f92] text-white text-xs font-bold transition cursor-pointer select-none"
                             >
-                              Применить
+                              {t("catalog.apply")}
                             </button>
                             <button
                               type="button"
@@ -540,7 +538,7 @@ function ProductsPageContent({
                               }}
                               className="px-3 py-2 text-center rounded-xl border border-gray-200 text-gray-400 text-xs font-bold hover:bg-gray-50 transition cursor-pointer select-none"
                             >
-                              Сбросить
+                              {t("catalog.reset")}
                             </button>
                           </div>
                         </div>
@@ -558,14 +556,14 @@ function ProductsPageContent({
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
-                        <span>Срок доставки</span>
+                        <span>{t("catalog.deliveryTime")}</span>
                         <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
                       {activeDropdown === "delivery" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Срок доставки</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.deliveryTime")}</div>
                           {["Завтра", "До 2 дней", "До 3 дней", "До 5 дней"].map((d) => (
                             <label key={d} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
                               <input type="radio" name="mock-delivery" className="accent-[#cb11ab]" />
@@ -587,7 +585,7 @@ function ProductsPageContent({
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
-                        <span>{filters.color ? `Цвет: ${filters.color}` : "Цвет"}</span>
+                        <span>{filters.color ? `${t("catalog.color")}: ${filters.color}` : t("catalog.color")}</span>
                         <svg
                           className={`w-3 h-3 text-gray-400 transition-transform ${activeDropdown === "color" ? "rotate-180" : ""}`}
                           fill="none"
@@ -599,11 +597,11 @@ function ProductsPageContent({
                       </button>
                       {activeDropdown === "color" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[220px] max-h-[300px] overflow-y-auto scrollbar-thin flex flex-col gap-3">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Выбор цвета</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseColor")}</div>
                           <input
                             value={filters.color}
                             onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))}
-                            placeholder="Найти или ввести"
+                            placeholder={t("catalog.searchOrEnter")}
                             className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#cb11ab] font-bold"
                           />
                           {facets?.colors && facets.colors.length > 0 ? (
@@ -644,7 +642,7 @@ function ProductsPageContent({
                               }}
                               className="flex-1 py-2 text-center rounded-xl bg-[#cb11ab] text-white text-xs font-bold hover:bg-[#b00f92] transition cursor-pointer select-none"
                             >
-                              Ок
+                              {t("catalog.ok")}
                             </button>
                             <button
                               type="button"
@@ -658,7 +656,7 @@ function ProductsPageContent({
                               }}
                               className="px-3 py-2 text-center rounded-xl border border-gray-200 text-gray-400 text-xs font-bold hover:bg-gray-50 transition cursor-pointer select-none"
                             >
-                              Сбросить
+                              {t("catalog.reset")}
                             </button>
                           </div>
                         </div>
@@ -676,14 +674,14 @@ function ProductsPageContent({
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
-                        <span>Размеры одежды</span>
+                        <span>{t("catalog.clothingSizes")}</span>
                         <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
                       {activeDropdown === "sizes" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Размеры</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.sizes")}</div>
                           <div className="grid grid-cols-3 gap-2">
                             {["42", "44", "46", "48", "50", "52"].map((s) => (
                               <button key={s} type="button" className="py-1.5 px-2 border rounded-lg text-xs font-bold hover:border-[#cb11ab] hover:text-[#cb11ab] transition">
@@ -706,18 +704,18 @@ function ProductsPageContent({
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
-                        <span>Детский рост</span>
+                        <span>{t("catalog.childHeight")}</span>
                         <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
                       {activeDropdown === "height" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Рост ребенка</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.childHeightTitle")}</div>
                           {["92-98", "104-110", "116-122", "128-134"].map((h) => (
                             <label key={h} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
                               <input type="checkbox" className="rounded text-[#cb11ab]" />
-                              <span>{h} см</span>
+                              <span>{h} {t("catalog.cm", { defaultValue: "см" })}</span>
                             </label>
                           ))}
                         </div>
@@ -735,7 +733,7 @@ function ProductsPageContent({
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
-                        <span>{filters.gender ? `Пол: ${filters.gender}` : "Пол"}</span>
+                        <span>{filters.gender ? `${t("catalog.gender")}: ${filters.gender}` : t("catalog.gender")}</span>
                         <svg
                           className={`w-3 h-3 text-gray-400 transition-transform ${activeDropdown === "gender" ? "rotate-180" : ""}`}
                           fill="none"
@@ -747,11 +745,11 @@ function ProductsPageContent({
                       </button>
                       {activeDropdown === "gender" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-3">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Выбор пола</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseGender")}</div>
                           <input
                             value={filters.gender}
                             onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))}
-                            placeholder="Ввести или выбрать"
+                            placeholder={t("catalog.enterOrChoose")}
                             className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#cb11ab] font-bold"
                           />
                           {facets?.genders && facets.genders.length > 0 ? (
@@ -792,7 +790,7 @@ function ProductsPageContent({
                               }}
                               className="flex-1 py-2 text-center rounded-xl bg-[#cb11ab] text-white text-xs font-bold hover:bg-[#b00f92] transition cursor-pointer select-none"
                             >
-                              Ок
+                              {t("catalog.ok")}
                             </button>
                             <button
                               type="button"
@@ -806,7 +804,7 @@ function ProductsPageContent({
                               }}
                               className="px-3 py-2 text-center rounded-xl border border-gray-200 text-gray-400 text-xs font-bold hover:bg-gray-50 transition cursor-pointer select-none"
                             >
-                              Сбросить
+                              {t("catalog.reset")}
                             </button>
                           </div>
                         </div>
@@ -824,7 +822,7 @@ function ProductsPageContent({
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
-                        <span>{filters.brand ? `Бренд: ${filters.brand}` : "Бренд"}</span>
+                        <span>{filters.brand ? `${t("catalog.brand")}: ${filters.brand}` : t("catalog.brand")}</span>
                         <svg
                           className={`w-3 h-3 text-gray-400 transition-transform ${activeDropdown === "brand" ? "rotate-180" : ""}`}
                           fill="none"
@@ -836,11 +834,11 @@ function ProductsPageContent({
                       </button>
                       {activeDropdown === "brand" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[240px] max-h-[300px] overflow-y-auto scrollbar-thin flex flex-col gap-3">
-                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">Выбор бренда</div>
+                          <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseBrand")}</div>
                           <input
                             value={filters.brand}
                             onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
-                            placeholder="Найти или ввести"
+                            placeholder={t("catalog.searchOrEnter")}
                             className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#cb11ab] font-bold"
                           />
                           {facets?.brands && facets.brands.length > 0 ? (
@@ -881,7 +879,7 @@ function ProductsPageContent({
                               }}
                               className="flex-1 py-2 text-center rounded-xl bg-[#cb11ab] text-white text-xs font-bold hover:bg-[#b00f92] transition cursor-pointer select-none"
                             >
-                              Ок
+                              {t("catalog.ok")}
                             </button>
                             <button
                               type="button"
@@ -895,7 +893,7 @@ function ProductsPageContent({
                               }}
                               className="px-3 py-2 text-center rounded-xl border border-gray-200 text-gray-400 text-xs font-bold hover:bg-gray-50 transition cursor-pointer select-none"
                             >
-                              Сбросить
+                              {t("catalog.reset")}
                             </button>
                           </div>
                         </div>
@@ -909,7 +907,7 @@ function ProductsPageContent({
                       type="button"
                       onClick={() => setLayoutCols("4")}
                       className={`p-1.5 rounded-lg transition hover:bg-gray-100 cursor-pointer ${layoutCols === "4" ? "text-[#cb11ab] bg-[#cb11ab]/5" : "text-gray-400"}`}
-                      aria-label="4 columns layout"
+                      aria-label={t("catalog.layout4Cols")}
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -919,7 +917,7 @@ function ProductsPageContent({
                       type="button"
                       onClick={() => setLayoutCols("3")}
                       className={`p-1.5 rounded-lg transition hover:bg-gray-100 cursor-pointer ${layoutCols === "3" ? "text-[#cb11ab] bg-[#cb11ab]/5" : "text-gray-400"}`}
-                      aria-label="3 columns layout"
+                      aria-label={t("catalog.layout3Cols")}
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M3 4a1 1 0 011-1h3a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM9 4a1 1 0 011-1h3a1 1 0 011 1v12a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zM16 4a1 1 0 011-1h1a1 1 0 011 1v12a1 1 0 01-1 1h-1a1 1 0 01-1-1V4z" />
@@ -960,7 +958,7 @@ function ProductsPageContent({
               className="rounded-[1.75rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-5 py-5 text-sm text-[var(--accent-strong)]"
               data-testid="products-error-state"
             >
-              <p className="font-semibold">Unable to load the product catalog.</p>
+              <p className="font-semibold">{t("catalog.loadError")}</p>
               <p className="mt-2 text-[var(--muted)]">{error}</p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
@@ -969,14 +967,14 @@ function ProductsPageContent({
                   className="public-button-primary px-5 py-3 text-sm"
                   data-testid="products-error-retry"
                 >
-                  Try again
+                  {t("catalog.tryAgain")}
                 </button>
                 <button
                   type="button"
                   onClick={clearFilters}
                   className="public-button-secondary px-5 py-3 text-sm"
                 >
-                  Clear filters
+                  {t("catalog.clearFilters")}
                 </button>
               </div>
             </div>
@@ -984,10 +982,10 @@ function ProductsPageContent({
 
           <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-4 border-b border-[var(--border)] pb-4">
             <h2 className="text-3xl font-black tracking-tight text-[var(--foreground)] capitalize">
-              {filters.q ? filters.q : "Все товары"}
+              {filters.q ? filters.q : t("catalog.allProducts")}
             </h2>
             <p className="text-sm text-[var(--muted)] font-medium">
-              {meta.total} {meta.total === 1 ? "товар найден" : "товаров найдено"}
+              {t(meta.total === 1 ? "catalog.productsFound" : "catalog.productsFoundPlural", { count: meta.total })}
             </p>
           </div>
 
@@ -1017,15 +1015,15 @@ function ProductsPageContent({
               data-testid={hasActiveFilters ? "products-no-results-state" : "products-empty-state"}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                {hasActiveFilters ? "Search results" : "Catalog"}
+                {hasActiveFilters ? t("catalog.searchResults") : t("catalog.catalogTitle")}
               </p>
               <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-                {hasActiveFilters ? "No matching products found" : "No products available yet"}
+                {hasActiveFilters ? t("catalog.noResults") : t("catalog.noProducts")}
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
                 {hasActiveFilters
-                  ? "Try a different keyword or remove some filters to see more products."
-                  : "Products will appear here once sellers publish items that are ready for sale."}
+                  ? t("catalog.noResultsDesc")
+                  : t("catalog.noProductsDesc")}
               </p>
               {activeFilterSummary.length ? (
                 <div className="mt-5 flex flex-wrap justify-center gap-2" data-testid="products-filter-summary">
@@ -1046,14 +1044,14 @@ function ProductsPageContent({
                   className="public-button-primary inline-flex px-5 py-3 text-sm"
                   data-testid="products-empty-clear"
                 >
-                  Clear filters
+                  {t("catalog.clearFilters")}
                 </Link>
                 <Link
                   href="/"
                   className="public-button-secondary inline-flex px-5 py-3 text-sm"
                   data-testid="products-empty-home"
                 >
-                  Back home
+                  {t("catalog.backHome")}
                 </Link>
               </div>
             </section>
@@ -1061,7 +1059,7 @@ function ProductsPageContent({
 
           <div className="public-muted-card flex flex-col gap-4 rounded-[1.5rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[var(--muted)]">
-              Page {meta.page} of {Math.max(meta.totalPages, 1)}. {meta.total} products found.
+              {t("catalog.pageInfo", { page: meta.page, totalPages: Math.max(meta.totalPages, 1), total: meta.total })}
             </p>
             <div className="flex gap-3">
               <button
@@ -1070,7 +1068,7 @@ function ProductsPageContent({
                 onClick={() => router.replace(pageUrl(page - 1))}
                 className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Previous
+                {t("catalog.previous")}
               </button>
               <button
                 type="button"
@@ -1078,7 +1076,7 @@ function ProductsPageContent({
                 onClick={() => router.replace(pageUrl(page + 1))}
                 className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Next
+                {t("catalog.next")}
               </button>
             </div>
           </div>

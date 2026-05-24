@@ -1,5 +1,24 @@
 # Project Status
 
+## Public Commerce i18n Completion (Phase 1) - 2026-05-25
+
+- Status: implemented in `frontend-next`
+- Public/customer flow defaults to Russian (`ru`) and supports switching to English (`en`).
+- Vietnamese (`vi`) option and text are completely removed from the buyer-facing UI (including header language switcher).
+- Fully localized the public customer flow pages and components:
+  - Public Header & Footer (fully localized, language switcher restricts options correctly)
+  - Home / Products Listing (fully localized filters, pagination, sort, empty, and fallback states)
+  - Product Card & Product Detail (fully localized CTAs, info tables, color/gender/size labels)
+  - Cart page (stale validations, accepting new price, empty states, warnings)
+  - Checkout page (removed Vietnamese hardcoded warnings, localized preflight/payment options)
+  - PaymentDetailsPanel (fully localized bank, recipient info; rendered with `role="customer"` in checkout and order tracking)
+  - Order Tracking (fully localized status/timeline, payment proof uploading)
+- Localized buyer-facing API validation error codes: `CUSTOMER_ADDRESS_REQUIRED`, `CUSTOMER_ADDRESS_NOT_YANDEX_READY`, `SHOP_PAYMENT_METHOD_NOT_SUPPORTED`, `OUT_OF_STOCK`, `PRODUCT_NOT_AVAILABLE`.
+- Verified that all public-facing dictionaries contain no `??????`, `TODO`, `MISSING`, or empty values.
+- E2E Test Coverage:
+  - Created `frontend-next/tests/e2e/i18n-public-customer.spec.ts` asserting default RU, switching to EN, language switcher restrictions (no VI), and checkout empty states/tracking translation updates.
+  - Playwright and NestJS test runs are skipped for verification per user request (CI does tests), but the build and lint steps passed successfully.
+
 ## Seller Operations i18n Completion + Workspace Hydration - 2026-05-25
 
 - Status: implemented in `frontend-next`

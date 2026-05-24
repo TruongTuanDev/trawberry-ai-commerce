@@ -1,3 +1,8 @@
+"use client";
+
+import { translate } from "@/i18n/use-i18n";
+import { useLocaleStore } from "@/i18n/locale-store";
+
 const toneByPaymentStatus: Record<string, string> = {
   PENDING: "bg-amber-50 text-amber-700",
   UNPAID: "bg-orange-50 text-orange-700",
@@ -15,13 +20,16 @@ export function PaymentStatusBadge({
   status: string;
   testId?: string;
 }) {
+  const { cookieLocale, roleLocales } = useLocaleStore();
+  const locale = cookieLocale ?? roleLocales.seller ?? "ru";
+
   return (
     <span
       data-testid={testId}
       data-status={status}
       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneByPaymentStatus[status] ?? "bg-slate-100 text-slate-700"}`}
     >
-      {status}
+      {translate(locale, `common.status.payment.${status}`)}
     </span>
   );
 }

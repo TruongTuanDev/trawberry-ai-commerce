@@ -326,9 +326,7 @@ export function CheckoutPageClient({
       return;
     }
     if (customerRequiresSavedAddress && !selectedSavedAddress) {
-      setError(
-        "Bạn cần cấu hình địa chỉ giao hàng đủ thông tin trước khi đặt hàng.",
-      );
+      setError(t("errors.CUSTOMER_ADDRESS_REQUIRED"));
       return;
     }
     if (
@@ -336,9 +334,7 @@ export function CheckoutPageClient({
       selectedSavedAddress &&
       !selectedSavedAddress.yandexManualReady
     ) {
-      setError(
-        "Địa chỉ đã lưu chưa đủ điều kiện cho Yandex delivery. Hãy cập nhật địa chỉ trước khi đặt hàng.",
-      );
+      setError(t("errors.CUSTOMER_ADDRESS_NOT_YANDEX_READY"));
       return;
     }
     if (
@@ -347,7 +343,7 @@ export function CheckoutPageClient({
         !customerForm.phone.trim() ||
         !customerForm.address.trim())
     ) {
-      setError("Full name, phone, and address are required.");
+      setError(t("checkout.fullNamePhoneAddressRequired"));
       return;
     }
 
@@ -444,8 +440,8 @@ export function CheckoutPageClient({
         setOrder(created);
         return created;
       },
-      successMessage: "Tạo đơn hàng thành công!",
-      errorMessage: "Không thể tạo đơn hàng.",
+      successMessage: t("checkout.orderCreatedSuccess"),
+      errorMessage: t("checkout.orderCreateFailed"),
     }).catch((submitIssue) => {
       setError(submitIssue.message);
     });
@@ -506,11 +502,11 @@ export function CheckoutPageClient({
                         {splitOrder.shopName}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        Order code{" "}
+                        {t("orderTrack.orderCode")}{" "}
                         <span className="font-semibold text-[var(--foreground)]">
                           {splitOrder.orderCode}
                         </span>{" "}
-                        - ID {splitOrder.orderId} - {splitOrder.itemsCount} item(s) -{" "}
+                        - {t("orderTrack.orderId")} {splitOrder.orderId} - {t("checkout.itemsCountText", { count: splitOrder.itemsCount })} -{" "}
                         {splitOrder.totalAmount}
                       </p>
                       {splitOrder.paymentMethodLabel ? (
@@ -523,10 +519,11 @@ export function CheckoutPageClient({
                         title={
                           splitOrder.paymentMethod ===
                           "PAY_ON_DELIVERY_SELLER_QR"
-                            ? `Pay ${splitOrder.shopName} after delivery`
-                            : `Pay ${splitOrder.shopName} directly`
+                            ? t("checkout.payShopAfterDelivery", { shopName: splitOrder.shopName })
+                            : t("checkout.payShopDirectly", { shopName: splitOrder.shopName })
                         }
                         className="mt-4"
+                        role="customer"
                       />
                     </div>
                     <div className="flex items-center">
@@ -624,7 +621,7 @@ export function CheckoutPageClient({
                                       entry.variantId === item.variantId,
                                   )?.unitPrice ?? 0,
                                 ),
-                              })}
+                              }, t)}
                             </div>
                           ))}
                       </div>
@@ -646,10 +643,10 @@ export function CheckoutPageClient({
                         data-testid="checkout-address-required-banner"
                       >
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Bạn cần cấu hình địa chỉ giao hàng đủ thông tin trước khi đặt hàng.
+                          {t("checkout.addressRequiredTitle")}
                         </p>
                         <p className="mt-2 text-sm text-[var(--muted)]">
-                          Checkout của customer dùng địa chỉ đã lưu trong tài khoản để seller xử lý Yandex delivery thủ công đúng nghiệp vụ.
+                          {t("checkout.addressRequiredDescription")}
                         </p>
                         <div className="mt-3">
                           <Link
@@ -657,7 +654,7 @@ export function CheckoutPageClient({
                             className="public-button-secondary inline-flex px-4 py-2 text-sm"
                             data-testid="checkout-configure-addresses"
                           >
-                            Cấu hình địa chỉ
+                            {t("checkout.configureAddress")}
                           </Link>
                         </div>
                       </div>
@@ -900,15 +897,15 @@ export function CheckoutPageClient({
                   </p>
                   <div className="mt-4 grid gap-3">
                     <PaymentOption
-                      label="Trả trước qua QR người bán"
-                      description="Buyer chuyển trước bằng QR/SBP của người bán, rồi seller xác nhận."
+                      label={t("checkout.prepaidSellerQrLabel")}
+                      description={t("checkout.prepaidSellerQrDescription")}
                       checked={paymentMethod === "PREPAID_SELLER_QR"}
                       onChange={() => setPaymentMethod("PREPAID_SELLER_QR")}
                       testId="payment-method-prepaid-seller-qr"
                     />
                     <PaymentOption
-                      label="Thanh toán khi nhận hàng bằng QR/SBP cho người bán"
-                      description="Bạn nhận hàng từ tài xế Yandex, sau đó thanh toán trực tiếp cho người bán bằng QR/SBP. Tài xế Yandex không thu tiền hộ."
+                      label={t("checkout.podSellerQrLabel")}
+                      description={t("checkout.podSellerQrDescription")}
                       checked={paymentMethod === "PAY_ON_DELIVERY_SELLER_QR"}
                       onChange={() =>
                         setPaymentMethod("PAY_ON_DELIVERY_SELLER_QR")
@@ -916,8 +913,8 @@ export function CheckoutPageClient({
                       testId="payment-method-pay-on-delivery-seller-qr"
                     />
                     <PaymentOption
-                      label="Đặt cọc trước, trả phần còn lại khi nhận"
-                      description="Flow deposit được seller bật theo shop; phần còn lại vẫn trả trực tiếp cho người bán khi nhận."
+                      label={t("checkout.depositLabel")}
+                      description={t("checkout.depositDescription")}
                       checked={paymentMethod === "DEPOSIT_THEN_DELIVERY_PAYMENT"}
                       onChange={() =>
                         setPaymentMethod("DEPOSIT_THEN_DELIVERY_PAYMENT")
@@ -933,17 +930,15 @@ export function CheckoutPageClient({
                     data-testid="checkout-submit"
                   >
                     {submitting
-                      ? "Đang tạo đơn..."
+                      ? t("checkout.creatingOrder")
                       : requiresDeliveryReadyAddress
-                        ? "Configure a delivery-ready address first"
+                        ? t("checkout.configureAddressFirst")
                       : hasBlockingIssues
-                        ? "Resolve cart issues first"
-                        : "Create order"}
+                        ? t("cart.resolveIssues")
+                        : t("checkout.createOrder")}
                   </button>
                   <p className="mt-4 text-xs leading-6 text-[var(--muted)]">
-                    Checkout runs a preflight validation first, then the backend
-                    recalculates trusted totals from current variant prices and stock
-                    again before creating the order.
+                    {t("checkout.preflightDescription")}
                   </p>
                 </section>
               </section>

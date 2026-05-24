@@ -251,7 +251,5 @@ test("customer can cart checkout multiple items and track them", async ({
 
   await page.getByTestId("confirmation-track-link").click();
   await expect(page.getByTestId("tracked-order-page")).toBeVisible();
-  await expect(
-    page.locator("section").filter({ hasText: "Items" }).locator("article"),
-  ).toHaveCount(2);
+  await expect(page.getByTestId("tracked-order-item")).toHaveCount(2);
 });
