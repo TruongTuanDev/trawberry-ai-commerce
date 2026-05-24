@@ -73,6 +73,13 @@ jobs:
 
       - run: npm ci
       - run: npx prisma generate
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Enable PostgreSQL extensions
+        run: psql "$DATABASE_URL" -c 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+
       - run: npx prisma db push
       - run: npm run lint
       - run: npm test -- --runInBand
