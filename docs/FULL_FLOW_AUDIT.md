@@ -1,5 +1,13 @@
 # Full Commerce Flow Audit
 
+## Register To Login Flow Addendum
+
+- customer register now creates the account, shows a success toast, and redirects to `/customer/login?registered=1`
+- seller register now creates the account, shows a success toast, and redirects to `/seller/login?registered=1`
+- no frontend auto-login happens after register
+- no immediate `/api/auth/customer/me` or `/api/auth/seller/me` call is part of the successful register path
+- unauthorized session messaging is now reserved for session restoration and protected-route checks, not public registration forms
+
 ## Global Action Feedback, Toast & Refresh Policy Addendum
 
 - Implemented a global Toast Notification system with action-level visual overlays (`toast-success`, `toast-error`).

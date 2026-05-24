@@ -146,7 +146,7 @@ export class AuthService {
       });
 
       if (existingEmail) {
-        throw new ConflictException('Email is already registered.');
+        throw new ConflictException('EMAIL_ALREADY_EXISTS');
       }
     }
 
@@ -157,7 +157,7 @@ export class AuthService {
       });
 
       if (existingPhone) {
-        throw new ConflictException('Phone is already registered.');
+        throw new ConflictException('PHONE_ALREADY_EXISTS');
       }
     }
 
@@ -220,7 +220,11 @@ export class AuthService {
       );
     }
 
-    return this.buildAuthResponse(user);
+    return {
+      ...(await this.buildAuthResponse(user)),
+      success: true,
+      message: 'REGISTERED',
+    };
   }
 
   private async loginForRoles(dto: LoginDto, allowedRoles: string[]) {

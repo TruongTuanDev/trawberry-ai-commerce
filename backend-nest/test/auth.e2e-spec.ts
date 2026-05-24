@@ -265,6 +265,8 @@ describe('AuthController (e2e)', () => {
     const body = readBody<AuthResponseDto>(response);
 
     expect(body.email).toBe('customer@example.com');
+    expect(body.success).toBe(true);
+    expect(body.message).toBe('REGISTERED');
     expect(body.phone).toBeNull();
     expect(body.role).toBe('CUSTOMER');
     expect(body.status).toBe('ACTIVE');
@@ -300,6 +302,8 @@ describe('AuthController (e2e)', () => {
     const body = readBody<AuthResponseDto>(response);
 
     expect(body.role).toBe('SELLER');
+    expect(body.success).toBe(true);
+    expect(body.message).toBe('REGISTERED');
     expect(body.approvalStatus).toBe('PENDING');
     expect(users.at(-1)?.sellerProfile?.approvalStatus).toBe('PENDING');
   });
@@ -355,13 +359,17 @@ describe('AuthController (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .post('/api/auth/customer/register')
       .send({
         email: 'customer@example.com',
         password: 'password123',
       })
       .expect(409);
+
+    expect(readBody<{ message: string }>(response).message).toBe(
+      'EMAIL_ALREADY_EXISTS',
+    );
   });
 
   it('rejects duplicate phone safely', async () => {
@@ -373,13 +381,57 @@ describe('AuthController (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .post('/api/auth/seller/register')
       .send({
         phone: '8 999 000 00 13',
         password: 'password123',
       })
       .expect(409);
+
+    expect(readBody<{ message: string }>(response).message).toBe(
+      'PHONE_ALREADY_EXISTS',
+    );
+  });
+
+  it('allows customer login after register succeeds', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'register-then-login@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'register-then-login@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    expect(readBody<AuthResponseDto>(response).role).toBe('CUSTOMER');
+  });
+
+  it('allows seller login after register succeeds', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        email: 'seller-register-then-login@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: 'seller-register-then-login@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    expect(readBody<AuthResponseDto>(response).role).toBe('SELLER');
   });
 
   it('logs customer in by email', async () => {

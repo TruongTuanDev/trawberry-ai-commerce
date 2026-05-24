@@ -1,5 +1,13 @@
 # Project Status
 
+## Register Redirect-To-Login Auth Flow Fix - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Successful customer and seller registration now end on the role-specific login page instead of creating an implicit session in the UI.
+- Register pages no longer trigger `login -> /me -> hydrate` as part of account creation.
+- Auth error mapping now distinguishes `register`, `login`, and `session` contexts, preventing false `session expired` messaging on public register screens.
+- Backend register responses now return explicit success metadata: `success: true`, `message: REGISTERED`.
+
 ## Global Action Feedback, Toast & Refresh Policy Implementation - 2026-05-24
 
 - Status: implemented in `frontend-next`

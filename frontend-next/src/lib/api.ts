@@ -12,6 +12,16 @@ type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { token, headers, body, ...rest } = options;
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
@@ -42,7 +52,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       message = response.statusText || message;
     }
 
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
 
   if (response.status === 204) {

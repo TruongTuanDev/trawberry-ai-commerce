@@ -15,6 +15,11 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.getByTestId("customer-register-password").fill(password);
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
+  await page.waitForURL("**/customer/login?registered=1");
+
+  await page.getByTestId("customer-login-email").fill(email);
+  await page.getByTestId("customer-login-password").fill(password);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
   await page.goto("/products");
@@ -86,7 +91,7 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.getByTestId("customer-login-email").fill(email);
   await page.getByTestId("customer-login-password").fill(password);
   await page.getByTestId("customer-login-submit").click();
-  await expect(page.getByText("Invalid credentials.").first()).toBeVisible();
+  await expect(page.getByText("Thông tin đăng nhập không chính xác.").first()).toBeVisible();
 
   await page.getByTestId("customer-login-password").fill(newPassword);
   await page.getByTestId("customer-login-submit").click();
@@ -101,10 +106,13 @@ test("customer manages account profile, addresses, password, and guarded access"
   await sellerPage.getByTestId("seller-register-password").fill(password);
   await sellerPage.getByTestId("seller-register-confirm-password").fill(password);
   await sellerPage.getByTestId("seller-register-submit").click();
+  await sellerPage.waitForURL("**/seller/login?registered=1");
+  await sellerPage.getByTestId("seller-login-email").fill(sellerEmail);
+  await sellerPage.getByTestId("seller-login-password").fill(password);
+  await sellerPage.getByTestId("seller-login-submit").click();
   await sellerPage.waitForURL("**/seller/onboarding");
   await sellerPage.goto("/customer/account");
   await sellerPage.waitForURL(/\/customer\/login\?next=/);
-  await sellerContext.close();
 
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
@@ -115,5 +123,4 @@ test("customer manages account profile, addresses, password, and guarded access"
   await adminPage.waitForURL("**/admin/dashboard");
   await adminPage.goto("/customer/account");
   await adminPage.waitForURL(/\/customer\/login\?next=/);
-  await adminContext.close();
 });

@@ -4,6 +4,7 @@ import { create } from "zustand";
 import {
   getAdminMeRequest,
   getCustomerMeRequest,
+  getAuthErrorMessage,
   getSellerMeRequest,
   logoutAdminRequest,
   logoutAllRequest,
@@ -223,7 +224,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
         sessionError: {
           ...state.sessionError,
-          [role]: error instanceof Error ? error.message : "Session expired.",
+          [role]: getAuthErrorMessage(error, "session"),
         },
       }));
       return false;

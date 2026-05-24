@@ -13,7 +13,7 @@ test("auth role separation keeps admin hidden from public marketplace", async ({
   await expect(page.getByRole("link", { name: /Admin login/i })).toHaveCount(0);
 });
 
-test("customer registration supports email/password and redirects to customer area", async ({ page }) => {
+test("customer registration supports email/password and redirects to customer login", async ({ page }) => {
   const stamp = Date.now();
   const email = `auth-role-customer-${stamp}@example.com`;
   const password = "password123";
@@ -25,6 +25,15 @@ test("customer registration supports email/password and redirects to customer ar
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
 
+  await expect(page.getByTestId("toast-success").filter({ hasText: "Đăng ký thành công. Vui lòng đăng nhập." })).toBeVisible();
+  await page.waitForURL("**/customer/login?registered=1");
+  await expect(page.getByText("Tài khoản đã được tạo. Vui lòng đăng nhập.")).toBeVisible();
+  await expect(page.getByText("Unauthorized")).toHaveCount(0);
+  await expect(page.getByText("Phiên đăng nhập đã hết hạn")).toHaveCount(0);
+
+  await page.getByTestId("customer-login-email").fill(email);
+  await page.getByTestId("customer-login-password").fill(password);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
   await expect(page.getByTestId("public-customer-link")).toContainText("Auth Role Customer");
 });
@@ -40,7 +49,8 @@ test("customer registration supports phone/password and customer login by phone 
   await page.getByTestId("customer-register-password").fill(password);
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
-  await page.waitForURL("**/customer/orders");
+  await expect(page.getByTestId("toast-success").filter({ hasText: "Đăng ký thành công. Vui lòng đăng nhập." })).toBeVisible();
+  await page.waitForURL("**/customer/login?registered=1");
 
   await context.clearCookies();
   await page.goto("/customer/login");
@@ -61,8 +71,11 @@ test("seller registration and login stay separate from admin flow", async ({ pag
   await page.getByTestId("seller-register-password").fill(password);
   await page.getByTestId("seller-register-confirm-password").fill(password);
   await page.getByTestId("seller-register-submit").click();
-  await page.waitForURL("**/seller/onboarding");
-  await expect(page.getByTestId("seller-onboarding-page")).toBeVisible();
+  await expect(page.getByTestId("toast-success").filter({ hasText: "Đăng ký thành công. Vui lòng đăng nhập." })).toBeVisible();
+  await page.waitForURL("**/seller/login?registered=1");
+  await expect(page.getByText("Tài khoản đã được tạo. Vui lòng đăng nhập.")).toBeVisible();
+  await expect(page.getByText("Unauthorized")).toHaveCount(0);
+  await expect(page.getByText("Phiên đăng nhập đã hết hạn")).toHaveCount(0);
 
   await context.clearCookies();
   await page.goto("/seller/login");
@@ -91,10 +104,13 @@ test("admin login route works, has no register link, and customer or seller cann
   await customerPage.getByTestId("customer-register-password").fill(customerPassword);
   await customerPage.getByTestId("customer-register-confirm-password").fill(customerPassword);
   await customerPage.getByTestId("customer-register-submit").click();
+  await customerPage.waitForURL("**/customer/login?registered=1");
+  await customerPage.getByTestId("customer-login-email").fill(customerEmail);
+  await customerPage.getByTestId("customer-login-password").fill(customerPassword);
+  await customerPage.getByTestId("customer-login-submit").click();
   await customerPage.waitForURL("**/customer/orders");
   await customerPage.goto("/admin/dashboard");
   await customerPage.waitForURL(/\/admin-login\?next=/);
-  await customerContext.close();
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
@@ -107,8 +123,11 @@ test("admin login route works, has no register link, and customer or seller cann
   await sellerPage.getByTestId("seller-register-password").fill(sellerPassword);
   await sellerPage.getByTestId("seller-register-confirm-password").fill(sellerPassword);
   await sellerPage.getByTestId("seller-register-submit").click();
+  await sellerPage.waitForURL("**/seller/login?registered=1");
+  await sellerPage.getByTestId("seller-login-email").fill(sellerEmail);
+  await sellerPage.getByTestId("seller-login-password").fill(sellerPassword);
+  await sellerPage.getByTestId("seller-login-submit").click();
   await sellerPage.waitForURL("**/seller/onboarding");
   await sellerPage.goto("/admin/dashboard");
   await sellerPage.waitForURL(/\/admin-login\?next=/);
-  await sellerContext.close();
 });

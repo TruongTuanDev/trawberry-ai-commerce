@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AuthResponseDto {
+  @ApiProperty({ required: false })
+  success?: boolean;
+
+  @ApiProperty({ required: false, example: 'REGISTERED' })
+  message?: string;
+
   @ApiProperty()
   userId!: string;
 

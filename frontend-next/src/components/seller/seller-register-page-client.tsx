@@ -4,56 +4,52 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
-import { getSellerMeRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
-import { getRoleHome } from "@/lib/auth-redirect";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { roleRegisterRequest } from "@/lib/auth-api";
 import { maybeNormalizePhone } from "@/lib/phone";
-import { useAuthStore } from "@/stores/auth-store";
 
 export function SellerRegisterPageClient() {
   const router = useRouter();
-  const setSession = useAuthStore((state) => state.setSession);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { run, isRunning } = useActionFeedback();
 
   const handleSubmit = async () => {
-    setLoading(true);
     setError(null);
 
-    try {
-      if (!email.trim() && !phone.trim()) {
-        throw new Error("Email or phone is required.");
-      }
-      if (password !== confirmPassword) {
-        throw new Error("Passwords do not match.");
-      }
-      const normalizedPhone = phone.trim() ? maybeNormalizePhone(phone) : "";
+    await run({
+      action: async () => {
+        if (!email.trim() && !phone.trim()) {
+          throw new Error("Email hoặc số điện thoại là bắt buộc.");
+        }
+        if (password !== confirmPassword) {
+          throw new Error("Mật khẩu xác nhận không khớp.");
+        }
 
-      await roleRegisterRequest("SELLER", {
-        email: email.trim() || undefined,
-        phone: normalizedPhone || undefined,
-        password,
-        fullName,
-      });
-      await roleLoginRequest("SELLER", {
-        identifier: email.trim() || normalizedPhone,
-        password,
-      });
-      const user = await getSellerMeRequest();
-      if (user.role !== "SELLER") {
-        throw new Error("Seller account is required.");
-      }
-      setSession({ user });
-      router.push(getRoleHome(user));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to register seller.");
-    } finally {
-      setLoading(false);
-    }
+        const normalizedPhone = phone.trim() ? maybeNormalizePhone(phone) : "";
+
+        return roleRegisterRequest("SELLER", {
+          email: email.trim() || undefined,
+          phone: normalizedPhone || undefined,
+          password,
+          fullName,
+        });
+      },
+      authMode: "register",
+      successMessage: "Đăng ký thành công. Vui lòng đăng nhập.",
+      errorMessage: "Không thể đăng ký. Vui lòng thử lại.",
+      onSuccess: async () => {
+        setError(null);
+        router.push("/seller/login?registered=1");
+      },
+      onError: (_error, message) => {
+        setError(message);
+      },
+    }).catch(() => undefined);
   };
 
   return (
@@ -85,8 +81,8 @@ export function SellerRegisterPageClient() {
               <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="seller-register-confirm-password" />
             </Field>
             {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
-            <button type="button" onClick={() => void handleSubmit()} disabled={loading} className="public-button-primary px-5 py-3 text-sm disabled:opacity-60" data-testid="seller-register-submit">
-              {loading ? "Creating seller account..." : "Create seller account"}
+            <button type="button" onClick={() => void handleSubmit()} disabled={isRunning} className="public-button-primary px-5 py-3 text-sm disabled:opacity-60" data-testid="seller-register-submit">
+              {isRunning ? "Đang đăng ký..." : "Create seller account"}
             </button>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link href="/seller/login" className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">

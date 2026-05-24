@@ -60,6 +60,13 @@ Compatibility note:
 Base path:
 - `/api/auth`
 
+### Register flow policy
+- public register endpoints create the account only
+- frontend must not treat register as an authenticated session
+- frontend must not call `/api/auth/*/me` immediately after register
+- successful register redirects the user to the matching login screen
+- login remains the only flow that is expected to establish role cookies for normal UI navigation
+
 ### POST `/api/auth/register`
 Register a customer or seller.
 
@@ -79,7 +86,8 @@ Accepted roles:
 - `USER` -> normalized to `CUSTOMER`
 
 Behavior:
-- duplicate email -> `400 Bad Request`
+- duplicate email -> `409 Conflict` with `EMAIL_ALREADY_EXISTS`
+- duplicate phone -> `409 Conflict` with `PHONE_ALREADY_EXISTS`
 - password is hashed with bcrypt
 - seller registration creates `seller_profiles` row with `PENDING`
 - customer registration does not create seller profile
@@ -87,6 +95,8 @@ Behavior:
 Response:
 ```json
 {
+  "success": true,
+  "message": "REGISTERED",
   "userId": "uuid",
   "accessToken": "jwt",
   "refreshToken": "jwt",
@@ -98,6 +108,11 @@ Response:
   "approvalStatus": "PENDING"
 }
 ```
+
+Notes:
+- `accessToken` and `refreshToken` may still be present for backward compatibility, but the web frontend does not auto-login from register responses
+- customer UI redirects to `/customer/login?registered=1`
+- seller UI redirects to `/seller/login?registered=1`
 
 ### POST `/api/auth/login`
 Authenticate user with email and password.

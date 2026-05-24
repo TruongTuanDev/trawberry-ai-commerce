@@ -36,15 +36,17 @@ export function CustomerLoginPageClient() {
         }
         return user;
       },
+      authMode: "login",
       successMessage: "Đăng nhập thành công",
       onSuccess: async (user) => {
         setSession({ user });
         router.push(searchParams.get("next") || "/customer/orders");
       },
+      onError: (_error, message) => {
+        setError(message);
+      },
       errorMessage: "Thông tin đăng nhập không chính xác.",
-    }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Unable to log in.");
-    });
+    }).catch(() => undefined);
   };
 
   return (
@@ -56,6 +58,11 @@ export function CustomerLoginPageClient() {
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
             Sign in with the email or phone number you used when creating the account.
           </p>
+          {searchParams.get("registered") === "1" ? (
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Tài khoản đã được tạo. Vui lòng đăng nhập.
+            </div>
+          ) : null}
           <div className="mt-6 grid gap-4">
             <Field label="Email or phone">
               <input
@@ -85,7 +92,7 @@ export function CustomerLoginPageClient() {
               className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
               data-testid="customer-login-submit"
             >
-              {isRunning ? "Đang gửi..." : "Sign in"}
+              {isRunning ? "Đang đăng nhập..." : "Sign in"}
             </button>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link href="/customer/register" className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">

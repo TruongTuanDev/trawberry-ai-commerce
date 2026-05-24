@@ -8,6 +8,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   getAdminMeRequest,
+  getAuthErrorMessage,
   getCustomerMeRequest,
   getSellerMeRequest,
   loginRequest,
@@ -125,7 +126,7 @@ export function RoleLoginForm({
           defaultRedirect,
       );
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to log in.");
+      setFormError(getAuthErrorMessage(error, "login"));
     } finally {
       setLoading(false);
     }
@@ -138,6 +139,11 @@ export function RoleLoginForm({
         {title}
       </h2>
       {description ? <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{description}</p> : null}
+      {searchParams.get("registered") === "1" ? (
+        <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Tài khoản đã được tạo. Vui lòng đăng nhập.
+        </div>
+      ) : null}
       <form className="mt-8 space-y-5" onSubmit={onSubmit}>
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor={`${testIdPrefix}-email`}>

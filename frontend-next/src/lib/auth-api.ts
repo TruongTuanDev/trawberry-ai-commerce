@@ -1,4 +1,22 @@
-import { apiRequest } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
+
+export type RegisterResponse = {
+  success: true;
+  message: "REGISTERED";
+  userId: string;
+  email: string;
+  phone: string | null;
+  fullName: string | null;
+  role: string;
+  status: string;
+  approvalStatus: string | null;
+  sellerNextStep: string | null;
+  sellerOnboardingComplete: boolean | null;
+  isSyntheticEmail: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+};
 
 export type AuthResponse = {
   userId: string;
@@ -35,6 +53,7 @@ export type CurrentUserResponse = {
 export type PublicRole = "CUSTOMER" | "SELLER";
 export type StaffRole = "ADMIN" | "SELLER" | "CUSTOMER";
 export type AuthRoleKey = "admin" | "seller" | "customer";
+export type AuthMode = "register" | "login" | "session";
 
 export async function loginRequest(input: {
   identifier?: string;
@@ -75,7 +94,7 @@ export async function registerRequest(input: {
   fullName?: string;
   role?: "CUSTOMER" | "SELLER" | "USER";
 }) {
-  return apiRequest<AuthResponse>("/api/auth/register", {
+  return apiRequest<RegisterResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -90,10 +109,74 @@ export async function roleRegisterRequest(
     fullName?: string;
   },
 ) {
-  return apiRequest<AuthResponse>(`/api/auth/${role.toLowerCase()}/register`, {
+  return apiRequest<RegisterResponse>(`/api/auth/${role.toLowerCase()}/register`, {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function getAuthErrorMessage(error: unknown, mode: AuthMode): string {
+  const fallbackByMode: Record<AuthMode, string> = {
+    register: "Không thể đăng ký. Vui lòng thử lại.",
+    login: "Thông tin đăng nhập không chính xác.",
+    session: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  };
+
+  if (error instanceof ApiError) {
+    const message = error.message.trim();
+
+    if (message === "EMAIL_ALREADY_EXISTS") {
+      return "Email đã được sử dụng.";
+    }
+
+    if (message === "PHONE_ALREADY_EXISTS") {
+      return "Số điện thoại đã được sử dụng.";
+    }
+
+    if (mode === "session") {
+      if (error.status === 401) {
+        return fallbackByMode.session;
+      }
+      if (error.status === 403) {
+        return "Bạn không có quyền thực hiện thao tác này.";
+      }
+    }
+
+    if (mode === "register") {
+      if (error.status === 401 || error.status === 403) {
+        return fallbackByMode.register;
+      }
+    }
+
+    if (mode === "login") {
+      if (error.status === 401) {
+        return fallbackByMode.login;
+      }
+      if (error.status === 403) {
+        return "Bạn không có quyền đăng nhập vào khu vực này.";
+      }
+    }
+
+    if (error.status === 409) {
+      return message;
+    }
+
+    if (error.status === 429) {
+      return "Bạn thao tác quá nhanh. Vui lòng thử lại sau.";
+    }
+
+    if (error.status >= 500) {
+      return "Có lỗi hệ thống. Vui lòng thử lại.";
+    }
+
+    return message || fallbackByMode[mode];
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallbackByMode[mode];
 }
 
 export async function currentUserRequest(token?: string) {

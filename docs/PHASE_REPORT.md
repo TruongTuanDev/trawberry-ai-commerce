@@ -1,5 +1,14 @@
 # Phase Report
 
+## 2026-05-24 Register Redirect-To-Login Auth Flow Fix
+
+- Fixed customer and seller registration UX so a successful register no longer auto-logs in or fetches `/me`.
+- Customer register now shows `Đăng ký thành công. Vui lòng đăng nhập.` and redirects to `/customer/login?registered=1`.
+- Seller register now shows `Đăng ký thành công. Vui lòng đăng nhập.` and redirects to `/seller/login?registered=1`.
+- Added auth-context-aware error mapping so `401/403` on register no longer become `Phiên đăng nhập đã hết hạn`.
+- Backend register responses now expose `success: true` and `message: REGISTERED` while preserving login behavior.
+- Updated backend auth E2E coverage and frontend Playwright coverage for register-then-login flows and post-register regression checks.
+
 ## 2026-05-24 Global Action Feedback, Toast & Refresh Policy Implementation
 
 - Implemented lightweight, pub/sub Toast Notification system (`toast.success`, `toast.error`, etc.) at `src/components/ui/toast-provider.tsx` and singleton manager `src/components/ui/use-toast.ts`.

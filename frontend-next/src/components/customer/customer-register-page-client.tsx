@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
-import { getCustomerMeRequest, roleLoginRequest, roleRegisterRequest } from "@/lib/auth-api";
+import { roleRegisterRequest } from "@/lib/auth-api";
 import { maybeNormalizePhone } from "@/lib/phone";
-import { useAuthStore } from "@/stores/auth-store";
 
 export function CustomerRegisterPageClient() {
   const router = useRouter();
-  const setSession = useAuthStore((state) => state.setSession);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -22,38 +20,36 @@ export function CustomerRegisterPageClient() {
 
   const handleSubmit = async () => {
     setError(null);
+
     await run({
       action: async () => {
         if (!email.trim() && !phone.trim()) {
-          throw new Error("Email or phone is required.");
+          throw new Error("Email hoặc số điện thoại là bắt buộc.");
         }
         if (password !== confirmPassword) {
-          throw new Error("Passwords do not match.");
+          throw new Error("Mật khẩu xác nhận không khớp.");
         }
+
         const normalizedPhone = phone.trim() ? maybeNormalizePhone(phone) : "";
 
-        await roleRegisterRequest("CUSTOMER", {
+        return roleRegisterRequest("CUSTOMER", {
           email: email.trim() || undefined,
           phone: normalizedPhone || undefined,
           password,
           fullName,
         });
-        await roleLoginRequest("CUSTOMER", {
-          identifier: email.trim() || normalizedPhone,
-          password,
-        });
-        const user = await getCustomerMeRequest();
-        return user;
       },
-      successMessage: "Đăng ký tài khoản thành công",
-      onSuccess: async (user) => {
-        setSession({ user });
-        router.push("/customer/orders");
+      authMode: "register",
+      successMessage: "Đăng ký thành công. Vui lòng đăng nhập.",
+      errorMessage: "Không thể đăng ký. Vui lòng thử lại.",
+      onSuccess: async () => {
+        setError(null);
+        router.push("/customer/login?registered=1");
       },
-      errorMessage: "Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.",
-    }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Unable to register.");
-    });
+      onError: (_error, message) => {
+        setError(message);
+      },
+    }).catch(() => undefined);
   };
 
   return (
@@ -89,7 +85,7 @@ export function CustomerRegisterPageClient() {
               className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
               data-testid="customer-register-submit"
             >
-              {isRunning ? "Đang gửi..." : "Create account"}
+              {isRunning ? "Đang đăng ký..." : "Create account"}
             </button>
             <div className="flex flex-wrap gap-3 text-sm">
               <Link href="/customer/login" className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">
