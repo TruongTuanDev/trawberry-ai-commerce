@@ -218,7 +218,7 @@ export function PublicHeader() {
               tr
             </span>
             <span className="hidden font-[family-name:var(--font-sans-app)] text-2xl font-extrabold tracking-tight text-white hover:opacity-90 md:inline">
-              trawberry
+              strawberry
             </span>
           </Link>
 

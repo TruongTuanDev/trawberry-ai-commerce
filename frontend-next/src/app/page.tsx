@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ProductCard } from "@/components/public/product-card";
 import { PromoSlider } from "@/components/public/promo-slider";
 import { PublicShell } from "@/components/public/public-shell";
 import { getPublicProducts, type PublicProduct } from "@/lib/public-api";
+import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
+import { translate } from "@/i18n/use-i18n";
 
 async function loadHomepageCatalog() {
   try {
@@ -38,6 +41,8 @@ async function loadHomepageCatalog() {
 
 export default async function HomePage() {
   const { items, total } = await loadHomepageCatalog();
+  const cookieStore = await cookies();
+  const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_KEY)?.value) ?? "ru";
 
   return (
     <PublicShell tone="hero">
@@ -49,20 +54,20 @@ export default async function HomePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Marketplace catalog
+                  {translate(locale, "home.catalogTitle")}
                 </p>
                 <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)] sm:text-4xl">
-                  All published products
+                  {translate(locale, "home.allProducts")}
                 </h2>
                 <p className="mt-2 text-sm font-medium text-[var(--muted)]">
-                  {total} {total === 1 ? "product" : "products"} available on the live storefront
+                  {translate(locale, "home.availableProductsCount", { count: total })}
                 </p>
               </div>
               <Link
                 href="/products"
                 className="inline-flex items-center rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] shadow-[0_12px_26px_rgba(31,31,41,0.05)] transition hover:-translate-y-0.5"
               >
-                Open filters
+                {translate(locale, "home.openFilters")}
               </Link>
             </div>
 
@@ -78,20 +83,20 @@ export default async function HomePage() {
                 data-testid="products-empty-state"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                  Marketplace catalog
+                  {translate(locale, "home.catalogTitle")}
                 </p>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-[var(--foreground)]">
-                  No published products on the homepage yet
+                  {translate(locale, "home.noProductsTitle")}
                 </h2>
                 <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-                  The homepage now uses the same public catalog feed as the storefront. Products will appear here once sellers publish items that are ready for sale.
+                  {translate(locale, "home.noProductsDesc")}
                 </p>
                 <div className="mt-6 flex justify-center">
                   <Link
                     href="/products"
                     className="public-button-primary inline-flex px-5 py-3 text-sm"
                   >
-                    Browse catalog
+                    {translate(locale, "home.browseCatalog")}
                   </Link>
                 </div>
               </section>

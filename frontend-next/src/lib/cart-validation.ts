@@ -42,38 +42,51 @@ export function canAdjustValidatedQuantity(status: CartValidationStatus) {
   );
 }
 
-export function getValidationMessage(input: {
-  status: CartValidationStatus;
-  productName: string | null;
-  variantName: string | null;
-  currentStock: number;
-  maxQuantity: number;
-  requestedQuantity: number;
-  unitPrice: number | null;
-  localUnitPrice?: number;
-}) {
-  const name = input.productName ?? "This item";
+export function getValidationMessage(
+  input: {
+    status: CartValidationStatus;
+    productName: string | null;
+    variantName: string | null;
+    currentStock: number;
+    maxQuantity: number;
+    requestedQuantity: number;
+    unitPrice: number | null;
+    localUnitPrice?: number;
+  },
+  t: (key: string, args?: Record<string, string | number>) => string,
+) {
+  const name = input.productName ?? t("cart.validation.defaultItemName");
   const variant = input.variantName ? ` (${input.variantName})` : "";
 
   switch (input.status) {
     case "PRODUCT_NOT_FOUND":
-      return `${name}${variant} no longer exists in the marketplace.`;
+      return t("cart.validation.productNotFound", { name, variant });
     case "PRODUCT_NOT_PUBLIC":
-      return `${name}${variant} is no longer public and cannot be purchased.`;
+      return t("cart.validation.productNotPublic", { name, variant });
     case "PRODUCT_ARCHIVED":
-      return `${name}${variant} was archived by the seller and is no longer available.`;
+      return t("cart.validation.productArchived", { name, variant });
     case "VARIANT_NOT_FOUND":
-      return `${name}${variant} no longer has the selected variant.`;
+      return t("cart.validation.variantNotFound", { name, variant });
     case "OUT_OF_STOCK":
-      return `${name}${variant} is out of stock.`;
+      return t("cart.validation.outOfStock", { name, variant });
     case "QUANTITY_EXCEEDS_STOCK":
-      return `Only ${input.maxQuantity} left for ${name}${variant}. Your cart requested ${input.requestedQuantity}.`;
+      return t("cart.validation.quantityExceedsStock", {
+        name,
+        variant,
+        maxQuantity: input.maxQuantity,
+        requestedQuantity: input.requestedQuantity,
+      });
     case "MISSING_PRICE":
-      return `${name}${variant} is missing a valid price and cannot be purchased right now.`;
+      return t("cart.validation.missingPrice", { name, variant });
     case "PRICE_CHANGED":
-      return `Price changed for ${name}${variant}: ${formatMoneyNumber(input.localUnitPrice)} -> ${formatMoneyNumber(input.unitPrice)}.`;
+      return t("cart.validation.priceChanged", {
+        name,
+        variant,
+        oldPrice: formatMoneyNumber(input.localUnitPrice) ?? "N/A",
+        newPrice: formatMoneyNumber(input.unitPrice) ?? "N/A",
+      });
     default:
-      return `${name}${variant} is ready for checkout.`;
+      return t("cart.validation.ready", { name, variant });
   }
 }
 

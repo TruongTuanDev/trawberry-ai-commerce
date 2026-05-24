@@ -343,7 +343,7 @@ export function CartPageClient() {
                                     requestedQuantity: validated.requestedQuantity,
                                     unitPrice: validated.unitPrice,
                                     localUnitPrice,
-                                  })}
+                                  }, t)}
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {validated.status === "QUANTITY_EXCEEDS_STOCK" &&

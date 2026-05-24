@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/i18n/use-i18n";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import { QuantityStepper } from "@/components/public/quantity-stepper";
 import {
@@ -18,6 +19,7 @@ import type { PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
 export function ProductCard({ product }: { product: PublicProduct }) {
+  const { t } = useI18n("customer");
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
@@ -66,7 +68,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         <div className="absolute bottom-4 left-4 z-10 flex flex-wrap gap-2">
           {inCartQuantity > 0 ? (
             <span className="inline-flex items-center rounded-full bg-gradient-primary px-3 py-1 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(203,17,171,0.24)]">
-              In cart {inCartQuantity}
+              {t("productDetail.inCartCount", { count: inCartQuantity })}
             </span>
           ) : null}
         </div>
@@ -86,7 +88,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                {product.shop.name ?? "Marketplace shop"}
+                {product.shop.name ?? t("productDetail.marketplaceShop")}
               </p>
               <Link
                 href={`/products/${product.id}`}
@@ -116,7 +118,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
           <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,#fff8fe_0%,#ffffff_100%)] p-3">
             <div>
               <p className="text-3xl font-black tracking-tight text-[#cb11ab]">
-                {formattedPrice ?? "Contact shop"}
+                {formattedPrice ?? t("productDetail.contactShop")}
               </p>
               {formattedOldPrice ? (
                 <p className="mt-1 text-sm text-[var(--muted)] line-through">
@@ -134,7 +136,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
           {inCartQuantity > 0 && primaryVariant ? (
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-semibold text-[var(--accent-strong)]">
-                In cart
+                {t("productDetail.inCart")}
               </span>
               <QuantityStepper
                 size="sm"
@@ -155,10 +157,10 @@ export function ProductCard({ product }: { product: PublicProduct }) {
               data-testid={`product-primary-action-${product.id}`}
             >
               {requiresSelection
-                ? "Выбрать размер"
+                ? t("productDetail.selectSize")
                 : primaryVariant?.inStock
-                  ? "В корзину"
-                  : "Нет в наличии"}
+                  ? t("productDetail.addToCart")
+                  : t("productDetail.outOfStock")}
             </button>
           )}
 
@@ -166,7 +168,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
             href={`/products/${product.id}`}
             className="public-button-secondary inline-flex w-full justify-center px-4 py-3 text-sm"
           >
-            View
+            {t("productDetail.view")}
           </Link>
         </div>
       </div>

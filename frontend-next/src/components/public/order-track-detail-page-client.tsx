@@ -13,8 +13,10 @@ import {
   type PublicTrackedOrder,
 } from "@/lib/public-api";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 
 export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
+  const { t } = useI18n("customer");
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialPhone = searchParams.get("phone") ?? "";
@@ -28,7 +30,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isPayOnDeliverySellerQr =
     order?.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
-  const fulfillmentStatus = order ? getBuyerFulfillmentStatus(order) : null;
+  const fulfillmentStatus = order ? getBuyerFulfillmentStatus(order, t) : null;
 
   useEffect(() => {
     let mounted = true;
@@ -66,7 +68,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
 
   const handleLookup = async () => {
     if (!phone.trim()) {
-      setError("Phone is required.");
+      setError(t("errors.validation"));
       return;
     }
 
@@ -89,7 +91,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
 
   const handleUpload = async () => {
     if (!phone.trim() || (!file && !isPayOnDeliverySellerQr)) {
-      setError("Phone and payment proof file are required.");
+      setError(t("errors.validation"));
       return;
     }
 
@@ -108,18 +110,18 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
         setFile(null);
         setBuyerNote("");
         const msg = isPayOnDeliverySellerQr
-          ? "Marked as paid after delivery. Seller can review it now."
-          : "Marked as paid. Seller can review the proof now.";
+          ? t("orderTrack.confirmSuccess")
+          : t("orderTrack.uploadSuccess");
         setSuccessMessage(msg);
         router.refresh();
         return updated;
       },
       successMessage: isPayOnDeliverySellerQr
-        ? "Xác nhận đã thanh toán thành công!"
-        : "Tải lên bằng chứng thanh toán thành công!",
+        ? t("orderTrack.confirmSuccess")
+        : t("orderTrack.uploadSuccess"),
       errorMessage: isPayOnDeliverySellerQr
-        ? "Không thể xác nhận thanh toán."
-        : "Không thể tải lên bằng chứng thanh toán.",
+        ? t("orderTrack.confirmFailed")
+        : t("orderTrack.uploadFailed"),
     }).catch((err) => {
       setError(err.message);
     });
@@ -134,13 +136,13 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
               href="/orders/track"
               className="public-button-secondary inline-flex px-4 py-2 text-sm"
             >
-              Back to tracking
+              {t("orderTrack.backToTracking")}
             </Link>
             <Link
               href="/products"
               className="public-button-secondary inline-flex px-4 py-2 text-sm"
             >
-              Marketplace
+              {t("orderTrack.marketplace")}
             </Link>
           </div>
 
@@ -160,17 +162,17 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
             data-testid="tracked-order-page"
           >
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-              Order lookup
+              {t("orderTrack.lookup")}
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
-              <Field label="Order id">
+              <Field label={t("orderTrack.orderId")}>
                 <input
                   value={orderId}
                   disabled
                   className="public-input bg-[var(--panel)] text-[var(--muted)]"
                 />
               </Field>
-              <Field label="Phone">
+              <Field label={t("orderTrack.phone")}>
                 <input
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
@@ -186,7 +188,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="track-detail-load-order"
                 >
-                  {loading ? "Loading..." : "Load order"}
+                  {loading ? t("orderTrack.tracking") : t("orderTrack.loadOrder")}
                 </button>
               </div>
             </div>
@@ -197,13 +199,13 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
               <section className="space-y-6">
                 <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Order snapshot
+                    {t("orderTrack.snapshot")}
                   </p>
                   <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold">
                     {order.orderCode}
                   </h1>
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <Metric label="Order status">
+                    <Metric label={t("orderTrack.orderStatus")}>
                       <div data-testid="tracked-order-status">
                         <OrderStatusBadge
                           status={fulfillmentStatus?.code ?? order.status}
@@ -215,49 +217,50 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         </p>
                       ) : null}
                     </Metric>
-                    <Metric label="Payment status">
+                    <Metric label={t("orderTrack.paymentStatus")}>
                       <PaymentStatusBadge
                         status={order.paymentStatus}
                         testId="tracked-payment-status"
                       />
                     </Metric>
-                    <Metric label="Payment confirmed">
+                    <Metric label={t("orderTrack.paymentConfirmed")}>
                       {isPaymentConfirmed(order.paymentStatus)
-                        ? "Yes"
-                        : "Pending review"}
+                        ? t("common.yes")
+                        : t("orderTrack.pendingReview")}
                     </Metric>
-                    <Metric label="Payment method">
+                    <Metric label={t("orderTrack.paymentMethod")}>
                       {order.paymentMethodLabel ??
                         order.paymentMethod ??
-                        "Unknown"}
+                        t("common.unknown")}
                     </Metric>
-                    <Metric label="Total">{order.totalAmount}</Metric>
+                    <Metric label={t("seller.paymentDetail.total")}>{order.totalAmount}</Metric>
                   </div>
                   <PaymentDetailsPanel
                     details={order.paymentDetails}
                     title={
                       isPayOnDeliverySellerQr
-                        ? "Seller QR / SBP payment after delivery"
-                        : "Direct seller payment"
+                        ? t("orderTrack.sellerQrAfterDelivery")
+                        : t("orderTrack.directSellerPayment")
                     }
                     className="mt-6"
+                    role="customer"
                   />
                   {isPayOnDeliverySellerQr ? (
                     <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 text-sm leading-6 text-[var(--foreground)]">
                       {order.delivery?.status === "DELIVERED"
-                        ? "Vui lòng thanh toán cho người bán bằng QR/SBP nếu chưa thanh toán."
-                        : "Bạn sẽ thanh toán cho người bán khi nhận hàng."}
+                        ? t("orderTrack.payIfPending")
+                        : t("orderTrack.payAfterDelivery")}
                     </div>
                   ) : null}
                   <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-2">
-                    <TextMetric label="Customer" value={order.customer.name} />
-                    <TextMetric label="Phone" value={order.customer.phone} />
+                    <TextMetric label={t("seller.paymentDetail.customer")} value={order.customer.name} />
+                    <TextMetric label={t("seller.paymentDetail.phone")} value={order.customer.phone} />
                     <TextMetric
-                      label="Email"
-                      value={order.customer.email ?? "Not provided"}
+                      label={t("checkout.email")}
+                      value={order.customer.email ?? t("common.notProvided")}
                     />
                     <TextMetric
-                      label="Address"
+                      label={t("checkout.address")}
                       value={order.customer.addressFullName ?? order.customer.address}
                     />
                   </div>
@@ -297,20 +300,21 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   ) : null}
                   {order.customerNote ? (
                     <p className="mt-4 text-sm text-[var(--muted)]">
-                      Customer note: {order.customerNote}
+                      {t("checkout.note")}: {order.customerNote}
                     </p>
                   ) : null}
                 </section>
 
                 <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Items
+                    {t("seller.paymentDetail.itemsEyebrow")}
                   </p>
                   <div className="mt-4 space-y-4">
                     {order.items.map((item) => (
                       <article
                         key={item.id}
                         className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4"
+                        data-testid="tracked-order-item"
                       >
                         <div className="flex gap-4">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -332,14 +336,13 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                               </p>
                             ) : null}
                             <p className="mt-1 text-sm text-[var(--muted)]">
-                              Quantity: {item.quantity}
+                              {t("seller.paymentDetail.qty", { value: item.quantity })}
                             </p>
                             <p className="mt-1 text-sm text-[var(--muted)]">
-                              Unit price:{" "}
-                              {item.unitPrice ?? item.priceAtPurchase}
+                              {t("seller.paymentDetail.unit", { value: item.unitPrice ?? item.priceAtPurchase })}
                             </p>
                             <p className="mt-1 text-sm text-[var(--muted)]">
-                              Line total: {item.lineTotal}
+                              {t("seller.paymentDetail.line", { value: item.lineTotal })}
                             </p>
                           </div>
                         </div>
@@ -352,20 +355,19 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
               <section className="space-y-6">
                 <section className="card-panel rounded-[2rem] px-6 py-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Payment proof
+                    {t("seller.paymentDetail.paymentProof")}
                   </p>
                   {order.paymentProof ? (
                     <div className="mt-4 space-y-3 rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
                       <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {order.paymentProof.originalName ?? "Uploaded proof"}
+                        {order.paymentProof.originalName ?? t("seller.paymentDetail.uploadedProof")}
                       </p>
                       <p className="text-sm text-[var(--muted)]">
-                        Uploaded at:{" "}
-                        {order.paymentProof.uploadedAt
-                          ? new Date(
-                              order.paymentProof.uploadedAt,
-                            ).toLocaleString()
-                          : "Unknown"}
+                        {t("seller.paymentDetail.uploadedAt", {
+                          value: order.paymentProof.uploadedAt
+                            ? new Date(order.paymentProof.uploadedAt).toLocaleString()
+                            : t("common.unknown")
+                        })}
                       </p>
                       <a
                         href={order.paymentProof.url}
@@ -374,28 +376,28 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         className="public-button-secondary inline-flex px-4 py-2 text-sm"
                         data-testid="tracked-payment-proof-link"
                       >
-                        Open proof
+                        {t("seller.paymentDetail.openProof")}
                       </a>
                     </div>
                   ) : (
                     <p className="mt-4 text-sm text-[var(--muted)]">
                       {isPayOnDeliverySellerQr
-                        ? "No delivery payment mark submitted yet."
-                        : "No payment proof uploaded yet."}
+                        ? t("orderTrack.noPodMark")
+                        : t("orderTrack.noProof")}
                     </p>
                   )}
 
                   <div className="mt-6 grid gap-4">
-                    <Field label="Buyer note">
+                    <Field label={t("orderTrack.buyerNote")}>
                       <textarea
                         value={buyerNote}
                         onChange={(event) => setBuyerNote(event.target.value)}
                         rows={3}
                         className="public-input min-h-24"
-                        placeholder="Optional bank transfer reference or note for the seller"
+                        placeholder={t("orderTrack.buyerNotePlaceholder")}
                       />
                     </Field>
-                    <Field label="Upload proof">
+                    <Field label={t("orderTrack.uploadProof")}>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -407,8 +409,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       />
                       {isPayOnDeliverySellerQr ? (
                         <p className="text-xs leading-6 text-[var(--muted)]">
-                          Bill upload is optional for payment-on-delivery via
-                          seller QR.
+                          {t("orderTrack.podUploadNote")}
                         </p>
                       ) : null}
                     </Field>
@@ -420,27 +421,27 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       data-testid="payment-proof-submit"
                     >
                       {uploading
-                        ? (isPayOnDeliverySellerQr ? "Đang xác nhận..." : "Đang tải lên...")
+                        ? (isPayOnDeliverySellerQr ? t("orderTrack.confirming") : t("orderTrack.uploading"))
                         : isPayOnDeliverySellerQr
-                          ? "Tôi đã thanh toán khi nhận"
-                          : "I transferred the money"}
+                          ? t("orderTrack.confirmPaidOnDelivery")
+                          : t("orderTrack.transferredMoney")}
                     </button>
                   </div>
                   {order.buyerPaymentNote ? (
                     <p className="mt-4 text-sm text-[var(--muted)]">
-                      Latest buyer note: {order.buyerPaymentNote}
+                      {t("seller.paymentDetail.buyerPaymentNote", { value: order.buyerPaymentNote })}
                     </p>
                   ) : null}
                 </section>
 
                 <section className="card-panel rounded-[2rem] px-6 py-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Delivery
+                    {t("sellerOrders.delivery")}
                   </p>
                   {order.delivery ? (
                     <div className="mt-4 space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
-                        <Metric label="Provider">
+                        <Metric label={t("orderTrack.provider")}>
                           <p
                             className="text-sm font-semibold text-[var(--foreground)]"
                             data-testid="tracked-delivery-provider"
@@ -448,7 +449,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             {order.delivery.provider}
                           </p>
                         </Metric>
-                        <Metric label="Status">
+                        <Metric label={t("common.status.ready")}>
                           <p
                             className="text-sm font-semibold text-[var(--foreground)]"
                             data-testid="tracked-delivery-status"
@@ -466,10 +467,10 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
                           {order.delivery.status === "FAILED"
-                            ? "Delivery issue"
+                            ? t("orderTrack.deliveryIssue")
                             : order.delivery.status === "CANCELLED"
-                              ? "Delivery cancelled"
-                              : "Claim reference"}
+                              ? t("orderTrack.deliveryCancelled")
+                              : t("orderTrack.claimReference")}
                         </p>
                         <p
                           className="mt-2 text-sm text-[var(--foreground)]"
@@ -490,32 +491,32 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                               </p>
                             ) : null}
                             <p className="mt-1">
-                              Please contact support if you need help with the
-                              next delivery step.
+                              {t("orderTrack.deliverySupportNote")}
                             </p>
                           </div>
                         ) : null}
                         <p className="mt-2 text-sm text-[var(--muted)]">
                           {order.delivery.providerShipmentId ??
-                            "Awaiting provider shipment id."}
+                            t("orderTrack.awaitingProviderId")}
                         </p>
                         <p className="mt-3 text-sm text-[var(--muted)]">
-                          Tracking number:{" "}
-                          {order.delivery.trackingNumber ?? "Not assigned yet."}
+                          {t("orderTrack.trackingNumber", {
+                            value: order.delivery.trackingNumber ?? t("orderTrack.trackingNumberNotAssigned")
+                          })}
                         </p>
                         {order.delivery.manualYandexOrderId ? (
                           <p
                             className="mt-3 text-sm font-semibold text-[var(--foreground)]"
                             data-testid="tracked-yandex-order-id"
                           >
-                            Mã vận đơn Yandex: {order.delivery.manualYandexOrderId}
+                            {t("orderTrack.yandexWaybill", { id: order.delivery.manualYandexOrderId })}
                           </p>
                         ) : (
                           <p
                             className="mt-3 text-sm text-[var(--muted)]"
                             data-testid="tracked-yandex-order-id-pending"
                           >
-                            Shop đang tạo đơn giao hàng Yandex.
+                            {t("orderTrack.yandexCreating")}
                           </p>
                         )}
                         {order.delivery.courierPhone ? (
@@ -523,12 +524,12 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             className="mt-3 text-sm text-[var(--muted)]"
                             data-testid="tracked-delivery-courier-phone"
                           >
-                            Courier phone: {order.delivery.courierPhone}
+                            {t("orderTrack.courierPhone")}: {order.delivery.courierPhone}
                           </p>
                         ) : null}
                         {order.delivery.courierName ? (
                           <p className="mt-3 text-sm text-[var(--muted)]">
-                            Courier: {order.delivery.courierName}
+                            {t("orderTrack.courier")}: {order.delivery.courierName}
                           </p>
                         ) : null}
                         {order.delivery.estimatedDeliveryAt ? (
@@ -536,10 +537,9 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             className="mt-3 text-sm text-[var(--muted)]"
                             data-testid="tracked-delivery-eta"
                           >
-                            ETA:{" "}
-                            {new Date(
-                              order.delivery.estimatedDeliveryAt,
-                            ).toLocaleString()}
+                            {t("orderTrack.deliveryEta", {
+                              value: new Date(order.delivery.estimatedDeliveryAt).toLocaleString()
+                            })}
                           </p>
                         ) : null}
                         {order.delivery.deliveryNote ? (
@@ -552,16 +552,16 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         ) : null}
                         <div className="mt-4 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
                           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                            Timeline
+                            {t("orderTrack.timelineLabel")}
                           </p>
                           <ol className="mt-3 space-y-2 text-sm text-[var(--foreground)]">
                             {[
-                              "Payment confirmed",
-                              order.delivery.status === "YANDEX_MANUAL_CREATED" || order.delivery.status === "COURIER_ASSIGNED" || order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "Yandex order created" : null,
-                              order.delivery.status === "COURIER_ASSIGNED" || order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "Courier assigned" : null,
-                              order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "Package picked up" : null,
-                              order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? "On the way" : null,
-                              order.delivery.status === "DELIVERED" ? "Delivered" : null,
+                              t("orderTrack.paymentConfirmed"),
+                              order.delivery.status === "YANDEX_MANUAL_CREATED" || order.delivery.status === "COURIER_ASSIGNED" || order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? t("orderTrack.timeline.yandexCreated") : null,
+                              order.delivery.status === "COURIER_ASSIGNED" || order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? t("orderTrack.timeline.courierAssigned") : null,
+                              order.delivery.status === "PICKED_UP" || order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? t("orderTrack.timeline.pickedUp") : null,
+                              order.delivery.status === "ON_THE_WAY" || order.delivery.status === "DELIVERED" ? t("orderTrack.timeline.onTheWay") : null,
+                              order.delivery.status === "DELIVERED" ? t("orderTrack.timeline.delivered") : null,
                             ].filter(Boolean).map((item) => (
                               <li key={item}>{item}</li>
                             ))}
@@ -591,13 +591,12 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             data-testid="tracked-delivery-link"
                           >
                             {order.delivery.manualYandexOrderId
-                              ? "Theo dõi Yandex"
-                              : "Open delivery tracking"}
+                              ? t("orderTrack.yandexTracking")
+                              : t("sellerOrders.trackYandex")}
                           </a>
                         ) : (
                           <p className="mt-3 text-sm text-[var(--muted)]">
-                            Tracking link will appear after the seller accepts
-                            the delivery claim.
+                            {t("orderTrack.trackingLinkAwaiting")}
                           </p>
                         )}
                       </div>
@@ -605,15 +604,15 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   ) : (
                     <p className="mt-4 text-sm text-[var(--muted)]">
                       {order.status === "READY_TO_CREATE_YANDEX"
-                        ? "Shop đang tạo đơn giao hàng Yandex."
-                        : "Delivery has not been created for this order yet."}
+                        ? t("orderTrack.yandexCreating")
+                        : t("orderTrack.noProof")}
                     </p>
                   )}
                 </section>
 
                 <section className="card-panel rounded-[2rem] px-6 py-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Payment log
+                    {t("orderTrack.paymentLog")}
                   </p>
                   <div className="mt-4 space-y-4">
                     {order.paymentLogs.length ? (
@@ -635,13 +634,13 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             {log.toStatus ? `-> ${log.toStatus}` : ""}
                           </p>
                           <p className="mt-2 text-sm text-[var(--foreground)]">
-                            {log.note ?? "No note attached."}
+                            {log.note ?? t("seller.paymentDetail.noNote")}
                           </p>
                         </article>
                       ))
                     ) : (
                       <p className="text-sm text-[var(--muted)]">
-                        No payment activity recorded yet.
+                        {t("orderTrack.noPaymentActivity")}
                       </p>
                     )}
                   </div>
@@ -711,26 +710,26 @@ function isPaymentConfirmed(paymentStatus: string) {
   ].includes(paymentStatus);
 }
 
-function getBuyerFulfillmentStatus(order: PublicTrackedOrder) {
+function getBuyerFulfillmentStatus(order: PublicTrackedOrder, t: (key: string) => string) {
   if (order.delivery?.status === "FAILED" || order.status === "CANCELLED") {
-    return { code: "CANCELLED", label: "Đã hủy" };
+    return { code: "CANCELLED", label: t("orderTrack.status.cancelled") };
   }
   if (order.delivery?.status === "DELIVERED" || order.status === "DELIVERED") {
-    return { code: "DELIVERED", label: "Hoàn thành" };
+    return { code: "DELIVERED", label: t("orderTrack.status.completed") };
   }
   if (
     ["COURIER_ASSIGNED", "PICKED_UP", "ON_THE_WAY", "IN_TRANSIT", "SHIPPING"].includes(
       order.delivery?.status ?? order.status,
     )
   ) {
-    return { code: "SHIPPING", label: "Đang giao hàng" };
+    return { code: "SHIPPING", label: t("orderTrack.status.shipping") };
   }
   if (
     ["READY_TO_CREATE_YANDEX", "YANDEX_MANUAL_CREATED", "CREATED_MANUALLY", "CREATED", "ASSEMBLING"].includes(
       order.delivery?.status ?? order.status,
     )
   ) {
-    return { code: "ASSEMBLING", label: "Lắp ráp" };
+    return { code: "ASSEMBLING", label: t("orderTrack.status.assembling") };
   }
-  return { code: "NEW", label: "Mới" };
+  return { code: "NEW", label: t("orderTrack.status.new") };
 }

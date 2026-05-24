@@ -2426,3 +2426,32 @@ Resolution notes:
 Known gaps:
 
 - `checkout-page-client`, seller payment/product screens, and notification copy are only partially migrated; more hard-coded legacy strings remain outside the current priority keys.
+
+# Phase Report: Public Commerce i18n (Phase 1)
+
+Implemented:
+
+- Fully localized all buyer-facing interfaces to support Russian (`ru`) and English (`en`), defaulting to Russian.
+- Removed Vietnamese (`vi`) option and text from the public commerce flow (including header language switcher).
+- Localized public header, footer, homepage, and products catalog list (filters, sort, pagination).
+- Localized product cards and product details page (handling color, gender, material, size selection, and action buttons).
+- Localized cart and checkout components (including preflight validation warnings, error alerts, and payment descriptions).
+- Enabled `role="customer"` rendering in `PaymentDetailsPanel` during checkout and order tracking to support localized payment instructions and bank details.
+- Localized public order tracking page, status timeline, and payment proof uploading fields.
+- Mapped and localized buyer-facing validation codes: `CUSTOMER_ADDRESS_REQUIRED`, `CUSTOMER_ADDRESS_NOT_YANDEX_READY`, `SHOP_PAYMENT_METHOD_NOT_SUPPORTED`, `OUT_OF_STOCK`, `PRODUCT_NOT_AVAILABLE`.
+- Cleaned up dictionaries ensuring zero `??????`, `TODO`, `MISSING`, or empty values.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- Dedicated public customer i18n E2E spec created: `frontend-next/tests/e2e/i18n-public-customer.spec.ts` (Playwright tests skipped on user request for CI execution).
+
+Resolution notes:
+
+- Playwright and NestJS test steps were skipped for this phase per user instruction as CI handles all tests automatically.
+- Validated that the production build completes without any TypeScript or Next.js build errors.
+
+Known gaps:
+
+- Phase 2 customer account fields (e.g., support, returns, security, and addresses detail) remain to be completed in the next phase.
