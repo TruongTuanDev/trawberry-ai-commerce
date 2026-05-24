@@ -14,6 +14,8 @@ import {
   getAiCredits,
   getAiImageTask,
   getShopAiImageTasks,
+  getSellerProductById,
+  getSellerProductImages,
   getShopProductById,
   getShopProductImages,
   updateShopProductImage,
@@ -34,7 +36,10 @@ const MAX_POLL_ATTEMPTS = 30;
 export default function SellerProductImagesPage() {
   const params = useParams<{ id: string }>();
   const productId = params.id;
+  const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
+  const hydrateWorkspace = useSellerWorkspaceStore((state) => state.hydrate);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
+  const selectShop = useSellerWorkspaceStore((state) => state.selectShop);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [images, setImages] = useState<ProductImage[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -53,20 +58,40 @@ export default function SellerProductImagesPage() {
   const pollingActive = Boolean(currentTask && POLLING_STATUSES.has(currentTask.status));
 
   useEffect(() => {
+    hydrateWorkspace();
+  }, [hydrateWorkspace]);
+
+  useEffect(() => {
     let mounted = true;
 
     const run = async () => {
-      if (!currentShopId) {
-        setLoading(false);
+      if (!hydrated) {
         return;
       }
 
       try {
-        const [productResult, imagesResult, tasksResult, creditsResult] = await Promise.all([
-          getShopProductById(currentShopId, productId),
-          getShopProductImages(currentShopId, productId),
-          getShopAiImageTasks(currentShopId, { productId }),
-          getAiCredits(currentShopId),
+        let productResult: ProductDetail;
+        let imagesResult: ProductImage[];
+        let shopId = currentShopId;
+        if (shopId) {
+          try {
+            [productResult, imagesResult] = await Promise.all([
+              getShopProductById(shopId, productId),
+              getShopProductImages(shopId, productId),
+            ]);
+          } catch {
+            productResult = await getSellerProductById(productId);
+            imagesResult = await getSellerProductImages(productId);
+            shopId = productResult.shop.id;
+          }
+        } else {
+          productResult = await getSellerProductById(productId);
+          imagesResult = await getSellerProductImages(productId);
+          shopId = productResult.shop.id;
+        }
+        const [tasksResult, creditsResult] = await Promise.all([
+          getShopAiImageTasks(shopId!, { productId }),
+          getAiCredits(shopId!),
         ]);
 
         if (!mounted) {
@@ -77,6 +102,9 @@ export default function SellerProductImagesPage() {
         setImages(imagesResult);
         setCurrentTask(tasksResult[0] ?? null);
         setCredits(creditsResult);
+        if (shopId && shopId !== useSellerWorkspaceStore.getState().currentShopId) {
+          selectShop(shopId);
+        }
         setError(null);
       } catch (err) {
         if (mounted) {
@@ -94,7 +122,7 @@ export default function SellerProductImagesPage() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, productId]);
+  }, [currentShopId, hydrated, productId, selectShop]);
 
   useEffect(() => {
     if (!currentShopId || !currentTask || !POLLING_STATUSES.has(currentTask.status)) {

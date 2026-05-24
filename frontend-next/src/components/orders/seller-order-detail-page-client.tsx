@@ -17,6 +17,7 @@ import {
   createManualDelivery,
   getDeliverySettings,
   getOrderDelivery,
+  getSellerOrderById,
   getShopOrderById,
   markManualDeliveryCourierAssigned,
   markManualDeliveryDelivered,
@@ -67,7 +68,10 @@ const exceptionReasons: DeliveryExceptionReasonCode[] = [
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const user = useAuthStore((state) => state.sellerUser);
+  const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
+  const hydrateWorkspace = useSellerWorkspaceStore((state) => state.hydrate);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
+  const selectShop = useSellerWorkspaceStore((state) => state.selectShop);
   const [order, setOrder] = useState<SellerOrderListItem | null>(null);
   const [nextStatus, setNextStatus] =
     useState<SellerOrderListItem["status"]>("NEW");
@@ -116,6 +120,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const isPayOnDeliverySellerQr =
     order?.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR";
 
+  useEffect(() => {
+    hydrateWorkspace();
+  }, [hydrateWorkspace]);
+
   function hydrateManualForm(deliveryResult: DeliveryDetail) {
     const shipment = deliveryResult.activeShipment;
     if (!shipment) return;
@@ -143,18 +151,30 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     let mounted = true;
 
     const run = async () => {
-      if (!user || !currentShopId) {
-        setLoading(false);
+      if (!user || !hydrated) {
         return;
       }
 
       try {
-        const [orderResult, deliveryResult] = await Promise.all([
-          getShopOrderById(currentShopId, orderId, ""),
-          getOrderDelivery(currentShopId, orderId, "").catch(() => null),
-        ]);
+        let orderResult: SellerOrderListItem;
+        if (currentShopId) {
+          try {
+            orderResult = await getShopOrderById(currentShopId, orderId, "");
+          } catch {
+            orderResult = await getSellerOrderById(orderId, "");
+          }
+        } else {
+          orderResult = await getSellerOrderById(orderId, "");
+        }
+        const shopId = orderResult.shopId;
+        const deliveryResult = await getOrderDelivery(shopId, orderId, "").catch(
+          () => null,
+        );
         if (!mounted) return;
         setOrder(orderResult);
+        if (shopId && shopId !== useSellerWorkspaceStore.getState().currentShopId) {
+          selectShop(shopId);
+        }
         setNextStatus(orderResult.status as SellerOrderListItem["status"]);
         if (deliveryResult) {
           setDelivery(deliveryResult);
@@ -170,7 +190,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         }
 
         try {
-          const settings = await getDeliverySettings(currentShopId, "");
+          const settings = await getDeliverySettings(shopId, "");
           if (!mounted) return;
           setPickupAddress((current) =>
             deliveryResult?.activeShipment
@@ -205,7 +225,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, orderId, user]);
+  }, [currentShopId, hydrated, orderId, selectShop, user]);
 
   const handleUpdateStatus = async () => {
     if (!currentShopId || !order) return;

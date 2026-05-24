@@ -302,7 +302,7 @@ test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
   await expect(notifItem).toBeVisible();
   const actionBtn = notifItem.getByTestId("notification-action-btn");
   await expect(actionBtn).toBeVisible();
-  await expect(actionBtn).toContainText("Mở đơn hàng");
+  await expect(actionBtn).toContainText("Открыть");
 
   // Click action button to navigate
   await actionBtn.click();
@@ -325,12 +325,12 @@ test("Notification Center Role Layouts and Empty States", async ({ browser }) =>
   await expect(adminPage.getByTestId("admin-shell")).toHaveCount(1);
 
   // Verify heading title
-  await expect(adminPage.getByRole("heading", { name: "Trung tâm vận hành" })).toBeVisible();
+  await expect(adminPage.getByRole("heading", { name: "Operations center" })).toBeVisible();
 
   // Select empty category to trigger empty state (e.g. Finance tab)
   await adminPage.getByTestId("category-tab-FINANCE").click();
-  await expect(adminPage.getByTestId("empty-state-title")).toContainText("Chưa có việc nào cần admin xử lý");
-  await expect(adminPage.getByTestId("empty-state-description")).toContainText("Thông báo sẽ xuất hiện khi có đơn quá hạn, tranh chấp hoàn tiền, seller chờ duyệt hoặc vấn đề thanh toán.");
+  await expect(adminPage.getByTestId("empty-state-title")).toContainText("No admin actions pending");
+  await expect(adminPage.getByTestId("empty-state-description")).toContainText("Notifications will appear here when there are overdue orders");
 
   // 2. Seller Layouts & Empty State
   // Create a clean seller profile login
@@ -347,12 +347,12 @@ test("Notification Center Role Layouts and Empty States", async ({ browser }) =>
   await expect(sellerPage.getByTestId("seller-shell")).toHaveCount(1);
 
   // Verify heading title
-  await expect(sellerPage.getByRole("heading", { name: "Việc cần xử lý", exact: true })).toBeVisible();
+  await expect(sellerPage.getByRole("heading", { name: "Задачи к обработке", exact: true })).toBeVisible();
 
   // Select empty category to trigger empty state (e.g. Finance tab)
   await sellerPage.getByTestId("category-tab-FINANCE").click();
-  await expect(sellerPage.getByTestId("empty-state-title")).toContainText("Bạn chưa có việc cần xử lý");
-  await expect(sellerPage.getByTestId("empty-state-description")).toContainText("Khi có đơn mới, bill thanh toán, yêu cầu trả hàng hoặc nhắc tạo Yandex, thông báo sẽ xuất hiện ở đây.");
+  await expect(sellerPage.getByTestId("empty-state-title")).toContainText("Нет задач для продавца");
+  await expect(sellerPage.getByTestId("empty-state-description")).toContainText("Когда появятся новые заказы");
 
   // 3. Customer Layouts & Empty State
   const customerContext = await browser.newContext();
@@ -368,12 +368,12 @@ test("Notification Center Role Layouts and Empty States", async ({ browser }) =>
   await expect(customerPage.getByTestId("customer-account-nav")).toHaveCount(1);
 
   // Verify heading title
-  await expect(customerPage.getByRole("heading", { name: "Thông báo của tôi" })).toBeVisible();
+  await expect(customerPage.getByRole("heading", { name: "Мои уведомления" })).toBeVisible();
 
   // Select empty category to trigger empty state (e.g. System tab)
   await customerPage.getByTestId("category-tab-SYSTEM").click();
-  await expect(customerPage.getByTestId("empty-state-title")).toContainText("Bạn chưa có cập nhật mới");
-  await expect(customerPage.getByTestId("empty-state-description")).toContainText("Khi đơn hàng hoặc thanh toán thay đổi trạng thái, thông báo sẽ xuất hiện ở đây.");
+  await expect(customerPage.getByTestId("empty-state-title")).toContainText("Нет новых обновлений");
+  await expect(customerPage.getByTestId("empty-state-description")).toContainText("Уведомления появятся здесь");
 
   await adminContext.close();
   await sellerContext.close();

@@ -1,5 +1,27 @@
 # Project Status
 
+## Seller Operations i18n Completion + Workspace Hydration - 2026-05-25
+
+- Status: implemented in `frontend-next`
+- seller operational locale support is now stable across `ru`, `en`, and `vi`
+- seller direct routes no longer depend on `currentShopId` already being hydrated before first render:
+  - `/seller/orders`
+  - `/seller/orders/[id]`
+  - `/seller/payments`
+  - `/seller/payments/[orderId]`
+  - `/seller/products/[id]`
+  - `/seller/products/[id]/images`
+- seller workspace now bootstraps from accessible shop/detail payloads after login and after refresh, which restored:
+  - seller orders tab rendering after refresh
+  - direct seller payment review page rendering
+  - seller finance dashboard hydration
+  - seller product lifecycle stability
+- seller payment review business E2E no longer relies on English-only success copy and now asserts stable payment-status / order-bucket outcomes
+- admin remains English-only
+- public/customer remain `ru` + `en` with default Russian unchanged
+- current remaining gap:
+  - some seller detail screens still contain legacy hard-coded operational copy outside the surfaces covered by this phase
+
 ## Public Product / Cart / Checkout UX + Yandex Address Enforcement - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

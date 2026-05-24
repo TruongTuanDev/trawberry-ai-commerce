@@ -9,7 +9,61 @@
     "yes": "Có",
     "unknown": "Không rõ",
     "notProvided": "Chưa cung cấp",
-    "pageOf": "Trang {{page}} / {{total}}"
+    "pageOf": "Trang {{page}} / {{total}}",
+    "actions": {
+      "save": "Lưu",
+      "cancel": "Hủy",
+      "delete": "Xóa",
+      "confirm": "Xác nhận",
+      "reject": "Từ chối",
+      "archive": "Lưu trữ",
+      "view": "Xem",
+      "edit": "Sửa",
+      "search": "Tìm kiếm",
+      "filter": "Lọc",
+      "clear": "Xóa lọc",
+      "copy": "Sao chép",
+      "open": "Mở",
+      "retry": "Thử lại",
+      "back": "Quay lại",
+      "next": "Tiếp",
+      "close": "Đóng",
+      "reload": "Tải lại"
+    },
+    "status": {
+      "ready": "Sẵn sàng",
+      "needsReview": "Cần review",
+      "updated": "Đã cập nhật",
+      "failed": "Thất bại",
+      "none": "Không có",
+      "unknown": "Không rõ",
+      "read": "Đã đọc",
+      "unread": "Chưa đọc",
+      "archived": "Lưu trữ",
+      "urgent": "Khẩn cấp",
+      "pending": "Đang chờ",
+      "confirmed": "Đã xác nhận",
+      "rejected": "Đã từ chối",
+      "disabled": "Đã tắt",
+      "available": "Khả dụng",
+      "notAvailable": "Không khả dụng"
+    },
+    "empty": {
+      "noData": "Chưa có dữ liệu."
+    },
+    "confirm": {
+      "deleteProduct": "Bạn có chắc chắn muốn xóa sản phẩm này?",
+      "rejectPayment": "Bạn có chắc chắn muốn từ chối minh chứng thanh toán này?",
+      "rejectReturn": "Bạn có chắc chắn muốn từ chối yêu cầu trả hàng hoặc hoàn tiền này?",
+      "cancelOrder": "Bạn có chắc chắn muốn hủy đơn hàng này?",
+      "markPaid": "Đánh dấu thanh toán này là đã nhận?",
+      "rejectThisPayment": "Từ chối thanh toán này?"
+    },
+    "toast": {
+      "saved": "Đã lưu thành công.",
+      "uploaded": "Đã tải lên thành công.",
+      "sent": "Đã gửi thành công."
+    }
   },
   "language": {
     "label": "Ngôn ngữ",
@@ -358,5 +412,148 @@
     "VALIDATION_ERROR": "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại.",
     "OUT_OF_STOCK": "Một hoặc nhiều sản phẩm đã hết hàng.",
     "PRODUCT_NOT_AVAILABLE": "Một hoặc nhiều sản phẩm không còn khả dụng."
+  },
+  "seller": {
+    "notifications": {
+      "heading": "Việc cần xử lý",
+      "emptyTitle": "Bạn chưa có việc cần xử lý",
+      "emptyDescription": "Khi có đơn mới, minh chứng thanh toán, yêu cầu trả hàng hoặc nhắc tạo Yandex, thông báo sẽ xuất hiện ở đây."
+    },
+    "products": {
+      "title": "Sản phẩm",
+      "subtitle": "Catalog của seller tách khỏi marketplace public. Sản phẩm import sẽ ở trạng thái private cho đến khi seller review và publish.",
+      "createFirstShop": "Tạo shop đầu tiên",
+      "createProduct": "Tạo sản phẩm",
+      "shopName": "Tên shop",
+      "shopSlug": "Slug shop",
+      "name": "Tên",
+      "brand": "Thương hiệu",
+      "internalCategory": "Danh mục nội bộ",
+      "noInternalCategory": "Không có danh mục nội bộ",
+      "category": "Danh mục",
+      "price": "Giá",
+      "initialStock": "Tồn kho ban đầu",
+      "description": "Mô tả",
+      "tabs": {
+        "all": "Tất cả",
+        "live": "Đang bán",
+        "needsInfo": "Cần bổ sung",
+        "outOfStock": "Hết hàng",
+        "missingPrice": "Thiếu giá",
+        "missingCategory": "Thiếu danh mục",
+        "missingImage": "Thiếu ảnh",
+        "deleted": "Đã xóa"
+      },
+      "summary": {
+        "tracked": "Sản phẩm có theo dõi tồn kho",
+        "lowStockPage": "Sắp hết hàng trên trang này",
+        "outOfStockPage": "Hết hàng trên trang này"
+      },
+      "bulk": {
+        "selected": "Đã chọn {{count}}",
+        "setCategory": "Đặt danh mục cho mục đã chọn",
+        "setPrice": "Đặt giá cho mục đã chọn",
+        "setStock": "Đặt tồn kho cho mục đã chọn",
+        "selectCategory": "Chọn danh mục",
+        "stockQuantity": "Số lượng tồn",
+        "trackInventory": "Tiếp tục theo dõi tồn kho sau cập nhật",
+        "variantMode": "Chế độ variant",
+        "allVariants": "Tất cả variant",
+        "missingOnly": "Chỉ mục còn thiếu",
+        "firstVariantOnly": "Chỉ variant đầu tiên",
+        "apply": "Áp dụng cập nhật hàng loạt",
+        "complete": "Đã hoàn tất cập nhật hàng loạt: {{updated}} thành công, {{failed}} lỗi.",
+        "pageSelected": "{{count}} mục được chọn trên trang",
+        "pricePositive": "Giá cập nhật hàng loạt phải lớn hơn 0.",
+        "stockNonNegative": "Tồn kho cập nhật hàng loạt phải từ 0 trở lên.",
+        "categoryRequired": "Chọn danh mục nội bộ trước khi áp dụng cập nhật hàng loạt."
+      },
+      "table": {
+        "selectAll": "Chọn tất cả sản phẩm",
+        "product": "Sản phẩm",
+        "status": "Trạng thái",
+        "priceStock": "Giá và tồn kho",
+        "actions": "Hành động",
+        "noImage": "Không có ảnh",
+        "vendor": "Vendor",
+        "source": "Nguồn",
+        "uncategorized": "Chưa phân loại",
+        "wbCategory": "WB: {{name}}",
+        "empty": "Không có sản phẩm nào khớp bộ lọc hiện tại."
+      },
+      "statusBadges": {
+        "deleted": "Đã xóa",
+        "live": "Đang bán",
+        "outOfStock": "Hết hàng",
+        "missingPrice": "Thiếu giá",
+        "missingStock": "Thiếu tồn kho",
+        "missingCategory": "Thiếu danh mục",
+        "missingImage": "Thiếu ảnh",
+        "missingVariant": "Thiếu biến thể",
+        "needsInfo": "Cần bổ sung"
+      },
+      "actions": {
+        "editProduct": "Sửa sản phẩm",
+        "generateAiImages": "Tạo ảnh AI",
+        "viewPublicPage": "Xem trang công khai",
+        "deleteProduct": "Xóa sản phẩm"
+      },
+      "editor": {
+        "price": "Giá",
+        "stock": "Kho"
+      },
+      "results": {
+        "showing": "Trang {{page}} / {{totalPages}} | tổng {{total}} sản phẩm",
+        "noData": "Chưa tải dữ liệu",
+        "pickShop": "Chọn shop seller để tải sản phẩm.",
+        "loading": "Đang tải sản phẩm..."
+      },
+      "messages": {
+        "noVariant": "Sản phẩm không có biến thể.",
+        "hiddenOutOfStock": "Sản phẩm đã hết hàng và tạm ẩn khỏi sàn.",
+        "publishedReady": "Sản phẩm đã đủ điều kiện và đang hiển thị trên sàn.",
+        "updatedPriceStock": "Đã cập nhật giá và tồn kho.",
+        "updateFailed": "Không thể cập nhật giá và tồn kho.",
+        "deleted": "Đã xóa sản phẩm thành công.",
+        "deleteFailed": "Không thể xóa sản phẩm.",
+        "shopCreated": "Đã tạo shop thành công.",
+        "shopCreateFailed": "Không thể tạo shop.",
+        "productCreated": "Đã tạo sản phẩm thành công.",
+        "productCreateFailed": "Không thể tạo sản phẩm.",
+        "bulkSaved": "Đã lưu cập nhật hàng loạt.",
+        "bulkFailed": "Cập nhật hàng loạt thất bại."
+      }
+    },
+    "payments": {
+      "title": "Duyệt thanh toán",
+      "subtitle": "Chỉ hiển thị các đơn đang chờ người bán duyệt minh chứng thanh toán trước khi đưa sang luồng xử lý đơn.",
+      "queueTitle": "Đơn chờ duyệt minh chứng thanh toán",
+      "queueSubtitle": "Xác nhận thành công sẽ đưa đơn sang Orders > Mới. Từ chối sẽ giữ đơn ở luồng thanh toán và không cho sang fulfillment.",
+      "tabs": {
+        "pending": "Chờ duyệt",
+        "rejected": "Đã từ chối",
+        "confirmed": "Đã xác nhận"
+      },
+      "pendingOnPage": "Đang chờ duyệt trên trang này: {{count}}",
+      "searchPlaceholder": "Tìm theo đơn, khách, phương thức thanh toán",
+      "reloadQueue": "Tải lại queue",
+      "columns": {
+        "order": "Đơn",
+        "buyer": "Buyer",
+        "products": "Sản phẩm",
+        "amount": "Số tiền",
+        "proofSent": "Gửi proof",
+        "image": "Ảnh",
+        "actions": "Hành động"
+      },
+      "proofPreview": "Xem proof",
+      "notImageProof": "Proof này không phải ảnh. Hãy mở file gốc ở tab mới để xem nội dung.",
+      "openOriginal": "Mở file gốc",
+      "loading": "Đang tải queue duyệt thanh toán...",
+      "empty": "Không còn đơn nào trong queue này.",
+      "confirmedToast": "Đã xác nhận thanh toán và chuyển đơn sang Orders > Mới.",
+      "rejectedToast": "Đã từ chối minh chứng thanh toán.",
+      "updateFailed": "Không thể cập nhật trạng thái thanh toán."
+    }
   }
 }

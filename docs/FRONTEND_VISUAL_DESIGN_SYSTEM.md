@@ -1,5 +1,14 @@
 # Frontend Visual Design System
 
+## Seller Center i18n Addendum
+
+- Seller Center now follows role-based locale policy:
+  - default `ru`
+  - switchable to `en` and `vi`
+- Shared seller operational UI should pass translated labels from feature callers into shared UI components rather than hard-code role copy inside generic controls.
+- Non-i18n E2E contracts should prefer stable attributes such as `data-testid` and raw status attributes instead of localized success copy.
+- Payment review/status surfaces now expose stable status contracts for tests through badge-level attributes, so locale changes do not break business-flow verification.
+
 ## Public Marketplace Header / Slider Layout
 
 - Public marketplace now uses a Wildberries-inspired top structure on `/` and `/products`.

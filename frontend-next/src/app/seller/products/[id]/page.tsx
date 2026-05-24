@@ -7,6 +7,9 @@ import { SectionCard } from "@/components/seller/section-card";
 import { ProductForm } from "@/components/products/product-form";
 import { ProductImageGallery } from "@/components/products/product-image-gallery";
 import {
+  getSellerProductById,
+  getSellerProductInventory,
+  getSellerProductReadiness,
   getShopProductById,
   getShopProductInventory,
   getShopProductReadiness,
@@ -22,7 +25,10 @@ import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 export default function SellerProductDetailPage() {
   const params = useParams<{ id: string }>();
   const productId = params.id;
+  const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
+  const hydrateWorkspace = useSellerWorkspaceStore((state) => state.hydrate);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
+  const selectShop = useSellerWorkspaceStore((state) => state.selectShop);
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [inventory, setInventory] = useState<ProductInventory | null>(null);
   const [readiness, setReadiness] = useState<ProductReadiness | null>(null);
@@ -32,24 +38,49 @@ export default function SellerProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    hydrateWorkspace();
+  }, [hydrateWorkspace]);
+
+  useEffect(() => {
     let mounted = true;
 
     const run = async () => {
-      if (!currentShopId) {
-        setLoading(false);
+      if (!hydrated) {
         return;
       }
 
       try {
-        const [productResult, inventoryResult] = await Promise.all([
-          getShopProductById(currentShopId, productId),
-          getShopProductInventory(currentShopId, productId),
-        ]);
-        const readinessResult = await getShopProductReadiness(currentShopId, productId);
+        let productResult: ProductDetail;
+        let inventoryResult: ProductInventory;
+        let readinessResult: ProductReadiness;
+        if (currentShopId) {
+          try {
+            [productResult, inventoryResult] = await Promise.all([
+              getShopProductById(currentShopId, productId),
+              getShopProductInventory(currentShopId, productId),
+            ]);
+            readinessResult = await getShopProductReadiness(currentShopId, productId);
+          } catch {
+            [productResult, inventoryResult, readinessResult] = await Promise.all([
+              getSellerProductById(productId),
+              getSellerProductInventory(productId),
+              getSellerProductReadiness(productId),
+            ]);
+          }
+        } else {
+          [productResult, inventoryResult, readinessResult] = await Promise.all([
+            getSellerProductById(productId),
+            getSellerProductInventory(productId),
+            getSellerProductReadiness(productId),
+          ]);
+        }
         if (mounted) {
           setProduct(productResult);
           setInventory(inventoryResult);
           setReadiness(readinessResult);
+          if (productResult.shop.id !== useSellerWorkspaceStore.getState().currentShopId) {
+            selectShop(productResult.shop.id);
+          }
           setError(null);
         }
       } catch (err) {
@@ -68,7 +99,7 @@ export default function SellerProductDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, productId]);
+  }, [currentShopId, hydrated, productId, selectShop]);
 
   const handleSave = async (payload: UpdateProductPayload) => {
     if (!currentShopId || !product) {

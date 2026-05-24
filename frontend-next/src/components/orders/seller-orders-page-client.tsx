@@ -42,6 +42,10 @@ type ShipmentPanelState = {
 export function SellerOrdersPageClient() {
   const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
+  const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
+  const hydrateWorkspace = useSellerWorkspaceStore((state) => state.hydrate);
+  const shops = useSellerWorkspaceStore((state) => state.shops);
+  const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [response, setResponse] = useState<SellerOrdersResponse | null>(null);
   const [page, setPage] = useState(1);
@@ -92,16 +96,28 @@ export function SellerOrdersPageClient() {
     [localizedSellerTabs, status, t],
   );
 
+  useEffect(() => {
+    hydrateWorkspace();
+  }, [hydrateWorkspace]);
+
   const load = async () => {
-    if (!user || !currentShopId) {
-      setLoading(false);
+    if (!user || !hydrated) {
       return;
     }
 
     setLoading(true);
     try {
+      if (shops.length < 1) {
+        await loadShops();
+      }
+      const shopId = useSellerWorkspaceStore.getState().currentShopId;
+      if (!shopId) {
+        setResponse(null);
+        setError(null);
+        return;
+      }
       const next = await getShopOrders(
-        currentShopId,
+        shopId,
         {
           page,
           size,
@@ -127,7 +143,7 @@ export function SellerOrdersPageClient() {
     }, 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentShopId, dateFrom, dateTo, page, search, size, status, user]);
+  }, [currentShopId, dateFrom, dateTo, hydrated, loadShops, page, search, shops.length, size, status, user]);
 
   const handleArchive = async (order: SellerOrderListItem) => {
     if (!currentShopId) return;

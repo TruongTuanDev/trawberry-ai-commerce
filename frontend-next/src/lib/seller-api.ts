@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api";
+import { ApiError, apiRequest } from "@/lib/api";
 
 export type SellerOrderStatus =
   | "PENDING"
@@ -1152,6 +1152,35 @@ export async function getSellerShops(token?: string) {
   });
 }
 
+async function findAcrossSellerShops<T>(
+  resolver: (shopId: string) => Promise<T>,
+  token?: string,
+) {
+  const shops = await getSellerShops(token);
+  let lastError: Error | null = null;
+
+  for (const shop of shops) {
+    try {
+      return await resolver(shop.id);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 404)
+      ) {
+        lastError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  throw new Error("No accessible seller shop matched this resource.");
+}
+
 export async function getSellerDashboardMetrics(
   shopId: string,
   token?: string,
@@ -1298,6 +1327,16 @@ export async function getShopProductById(
   );
 }
 
+export async function getSellerProductById(
+  productId: string,
+  token?: string,
+) {
+  return findAcrossSellerShops(
+    (shopId) => getShopProductById(shopId, productId, token),
+    token,
+  );
+}
+
 export async function updateShopProduct(
   shopId: string,
   productId: string,
@@ -1328,6 +1367,16 @@ export async function getShopProductInventory(
   );
 }
 
+export async function getSellerProductInventory(
+  productId: string,
+  token?: string,
+) {
+  return findAcrossSellerShops(
+    (shopId) => getShopProductInventory(shopId, productId, token),
+    token,
+  );
+}
+
 export async function getShopProductReadiness(
   shopId: string,
   productId: string,
@@ -1339,6 +1388,16 @@ export async function getShopProductReadiness(
       method: "GET",
       token,
     },
+  );
+}
+
+export async function getSellerProductReadiness(
+  productId: string,
+  token?: string,
+) {
+  return findAcrossSellerShops(
+    (shopId) => getShopProductReadiness(shopId, productId, token),
+    token,
   );
 }
 
@@ -1659,6 +1718,16 @@ export async function getShopProductImages(
   );
 }
 
+export async function getSellerProductImages(
+  productId: string,
+  token?: string,
+) {
+  return findAcrossSellerShops(
+    (shopId) => getShopProductImages(shopId, productId, token),
+    token,
+  );
+}
+
 export async function uploadShopProductImages(
   shopId: string,
   productId: string,
@@ -1875,6 +1944,16 @@ export async function getShopOrderById(
   );
 }
 
+export async function getSellerOrderById(
+  orderId: string,
+  token?: string,
+) {
+  return findAcrossSellerShops(
+    (shopId) => getShopOrderById(shopId, orderId, token),
+    token,
+  );
+}
+
 export async function listPayments(
   shopId: string,
   query: {
@@ -1920,6 +1999,16 @@ export async function getPaymentDetail(
       method: "GET",
       token,
     },
+  );
+}
+
+export async function getSellerPaymentDetail(
+  orderId: string,
+  token?: string,
+) {
+  return findAcrossSellerShops(
+    (shopId) => getPaymentDetail(shopId, orderId, token),
+    token,
   );
 }
 

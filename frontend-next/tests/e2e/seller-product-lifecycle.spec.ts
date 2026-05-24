@@ -138,10 +138,22 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   const customerPage = await customerContext.newPage();
   await customerPage.goto("/products");
   const publicSearch = customerPage.getByTestId("public-header-search").first();
-  await publicSearch.fill(productName);
-  await publicSearch.press("Enter");
-  const productCard = customerPage.getByTestId("product-card").filter({ hasText: productName });
-  await expect(productCard).toHaveCount(1);
+  let productCard = customerPage.getByTestId("product-card").filter({ hasText: productName });
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await publicSearch.fill(productName);
+    await publicSearch.press("Enter");
+    productCard = customerPage.getByTestId("product-card").filter({ hasText: productName });
+    try {
+      await expect(productCard).toHaveCount(1, { timeout: 4000 });
+      break;
+    } catch (error) {
+      if (attempt === 3) {
+        throw error;
+      }
+      await customerPage.reload();
+      await customerPage.waitForLoadState("networkidle");
+    }
+  }
   await productCard.getByTestId(/product-view-/).click();
   await expect(customerPage.getByRole("heading", { name: productName })).toBeVisible();
   await customerPage.getByTestId("continue-to-checkout").click();

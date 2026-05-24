@@ -7,10 +7,12 @@ import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { SectionCard } from "@/components/seller/section-card";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   addPaymentNote,
   confirmPayment,
   getPaymentDetail,
+  getSellerPaymentDetail,
   rejectPayment,
   type SellerPaymentItem,
 } from "@/lib/seller-api";
@@ -23,8 +25,14 @@ export function SellerPaymentDetailPageClient({
   orderId: string;
 }) {
   const router = useRouter();
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
+  const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
+  const hydrateWorkspace = useSellerWorkspaceStore((state) => state.hydrate);
+  const shops = useSellerWorkspaceStore((state) => state.shops);
+  const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
+  const selectShop = useSellerWorkspaceStore((state) => state.selectShop);
   const [payment, setPayment] = useState<SellerPaymentItem | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(true);
@@ -33,25 +41,47 @@ export function SellerPaymentDetailPageClient({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    hydrateWorkspace();
+  }, [hydrateWorkspace]);
+
+  useEffect(() => {
     let mounted = true;
 
     const run = async () => {
-      if (!user || !currentShopId) {
-        setLoading(false);
+      if (!user || !hydrated) {
         return;
       }
 
       try {
-        const result = await getPaymentDetail(currentShopId, orderId, "");
-        if (!mounted) return;
+        if (shops.length < 1) {
+          await loadShops();
+        }
+
+        let result: SellerPaymentItem;
+        const shopId = useSellerWorkspaceStore.getState().currentShopId;
+        if (shopId) {
+          try {
+            result = await getPaymentDetail(shopId, orderId, "");
+          } catch {
+            result = await getSellerPaymentDetail(orderId, "");
+          }
+        } else {
+          result = await getSellerPaymentDetail(orderId, "");
+        }
+        if (!mounted) {
+          return;
+        }
         setPayment(result);
+        if (result.shopId && result.shopId !== useSellerWorkspaceStore.getState().currentShopId) {
+          selectShop(result.shopId);
+        }
         setError(null);
       } catch (err) {
         if (mounted) {
           setError(
             err instanceof Error
               ? err.message
-              : "Unable to load payment detail.",
+              : t("seller.paymentDetail.errorDescription"),
           );
         }
       } finally {
@@ -65,18 +95,19 @@ export function SellerPaymentDetailPageClient({
     return () => {
       mounted = false;
     };
-  }, [currentShopId, orderId, user]);
+  }, [currentShopId, hydrated, loadShops, orderId, selectShop, shops.length, t, user]);
 
   const performAction = async (action: "markPaid" | "reject" | "note") => {
-    if (!currentShopId || !payment) {
+    const activeShopId = payment?.shopId ?? currentShopId;
+    if (!activeShopId || !payment) {
       return;
     }
 
     if (action !== "note") {
       const confirmed = window.confirm(
         action === "markPaid"
-          ? "Mark this payment as paid?"
-          : "Reject this payment?",
+          ? t("common.confirm.markPaid")
+          : t("common.confirm.rejectThisPayment"),
       );
       if (!confirmed) {
         return;
@@ -91,28 +122,28 @@ export function SellerPaymentDetailPageClient({
       let updated: SellerPaymentItem;
       if (action === "markPaid") {
         updated = await confirmPayment(
-          currentShopId,
+          activeShopId,
           payment.id,
           note.trim() ? { note: note.trim() } : undefined,
           "",
         );
-        setSuccessMessage("Payment confirmed.");
+        setSuccessMessage(t("seller.paymentDetail.paymentConfirmed"));
       } else if (action === "reject") {
         updated = await rejectPayment(
-          currentShopId,
+          activeShopId,
           payment.id,
           note.trim() ? { note: note.trim() } : undefined,
           "",
         );
-        setSuccessMessage("Payment rejected.");
+        setSuccessMessage(t("seller.paymentDetail.paymentRejected"));
       } else {
         updated = await addPaymentNote(
-          currentShopId,
+          activeShopId,
           payment.id,
           { note: note.trim() },
           "",
         );
-        setSuccessMessage("Payment note added.");
+        setSuccessMessage(t("seller.paymentDetail.paymentNoteAdded"));
       }
 
       setPayment(updated);
@@ -120,7 +151,9 @@ export function SellerPaymentDetailPageClient({
         setNote("");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment action failed.");
+      setError(
+        err instanceof Error ? err.message : t("seller.paymentDetail.paymentActionFailed"),
+      );
     } finally {
       setSaving(false);
     }
@@ -129,11 +162,11 @@ export function SellerPaymentDetailPageClient({
   if (loading) {
     return (
       <SectionCard
-        eyebrow="Payment detail"
-        title="Loading payment"
-        description="Fetching payment review detail from the NestJS API."
+        eyebrow={t("seller.paymentDetail.eyebrow")}
+        title={t("seller.paymentDetail.loadingTitle")}
+        description={t("seller.paymentDetail.loadingDescription")}
       >
-        <p className="text-sm text-[var(--muted)]">Loading...</p>
+        <p className="text-sm text-[var(--muted)]">{t("common.loading")}</p>
       </SectionCard>
     );
   }
@@ -141,12 +174,12 @@ export function SellerPaymentDetailPageClient({
   if (error || !payment) {
     return (
       <SectionCard
-        eyebrow="Payment detail"
-        title="Unable to load payment"
-        description="The selected payment record could not be loaded for the current shop."
+        eyebrow={t("seller.paymentDetail.eyebrow")}
+        title={t("seller.paymentDetail.errorTitle")}
+        description={t("seller.paymentDetail.errorDescription")}
       >
         <p className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
-          {error ?? "Payment not found."}
+          {error ?? t("seller.paymentDetail.notFound")}
         </p>
       </SectionCard>
     );
@@ -159,13 +192,13 @@ export function SellerPaymentDetailPageClient({
           variant="outline"
           onClick={() => router.push("/seller/payments")}
         >
-          Back to payments
+          {t("seller.paymentDetail.backToPayments")}
         </Button>
         <Button
           variant="outline"
           onClick={() => router.push(`/seller/orders/${payment.id}`)}
         >
-          Open order
+          {t("seller.paymentDetail.openOrder")}
         </Button>
       </div>
 
@@ -174,26 +207,29 @@ export function SellerPaymentDetailPageClient({
         data-testid="seller-payment-detail-page"
       >
         <SectionCard
-          eyebrow="Payment"
+          eyebrow={t("seller.paymentDetail.payment")}
           title={payment.orderNumber}
-          description="Direct seller QR payment review state for the selected order."
+          description={t("seller.paymentDetail.description")}
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <Metric label="Customer" value={payment.customer.name} />
-            <Metric label="Phone" value={payment.customer.phone} />
+            <Metric label={t("seller.paymentDetail.customer")} value={payment.customer.name} />
+            <Metric label={t("seller.paymentDetail.phone")} value={payment.customer.phone} />
             <Metric
-              label="Payment method"
-              value={payment.paymentMethod ?? "Unknown"}
+              label={t("seller.paymentDetail.paymentMethod")}
+              value={payment.paymentMethod ?? t("common.unknown")}
             />
-            <Metric label="Proof status" value={payment.paymentProofStatus} />
-            <Metric label="Total" value={payment.totalAmount} />
             <Metric
-              label="Created"
+              label={t("seller.paymentDetail.proofStatus")}
+              value={payment.paymentProofStatus}
+            />
+            <Metric label={t("seller.paymentDetail.total")} value={payment.totalAmount} />
+            <Metric
+              label={t("seller.paymentDetail.created")}
               value={new Date(payment.createdAt).toLocaleString()}
             />
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Payment status
+                {t("seller.paymentDetail.paymentStatus")}
               </p>
               <div className="mt-3">
                 <PaymentStatusBadge
@@ -204,7 +240,7 @@ export function SellerPaymentDetailPageClient({
             </div>
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Order status
+                {t("seller.paymentDetail.orderStatus")}
               </p>
               <div className="mt-3">
                 <OrderStatusBadge status={payment.status} />
@@ -215,11 +251,11 @@ export function SellerPaymentDetailPageClient({
           <div className="mt-6 space-y-4">
             <PaymentDetailsPanel
               details={payment.paymentDetails}
-              title="Seller direct payment details"
+              title={t("seller.paymentDetail.sellerDetails")}
             />
             <div>
               <p className="text-sm font-semibold text-[var(--foreground)]">
-                Shipping address
+                {t("seller.paymentDetail.shippingAddress")}
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {payment.shippingAddress}
@@ -227,27 +263,33 @@ export function SellerPaymentDetailPageClient({
             </div>
             {payment.customerNote ? (
               <p className="text-sm text-[var(--muted)]">
-                Customer note: {payment.customerNote}
+                {t("seller.paymentDetail.customerNote", {
+                  value: payment.customerNote,
+                })}
               </p>
             ) : null}
             {payment.buyerPaymentNote ? (
               <p className="text-sm text-[var(--muted)]">
-                Buyer payment note: {payment.buyerPaymentNote}
+                {t("seller.paymentDetail.buyerPaymentNote", {
+                  value: payment.buyerPaymentNote,
+                })}
               </p>
             ) : null}
             {payment.paymentProof ? (
               <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
                 <p className="text-sm font-semibold text-[var(--foreground)]">
-                  Payment proof
+                  {t("seller.paymentDetail.paymentProof")}
                 </p>
                 <p className="mt-2 text-sm text-[var(--muted)]">
-                  {payment.paymentProof.originalName ?? "Uploaded proof"}
+                  {payment.paymentProof.originalName ??
+                    t("seller.paymentDetail.uploadedProof")}
                 </p>
                 <p className="mt-1 text-xs text-[var(--muted)]">
-                  Uploaded:{" "}
-                  {payment.paymentProof.uploadedAt
-                    ? new Date(payment.paymentProof.uploadedAt).toLocaleString()
-                    : "Unknown"}
+                  {t("seller.paymentDetail.uploadedAt", {
+                    value: payment.paymentProof.uploadedAt
+                      ? new Date(payment.paymentProof.uploadedAt).toLocaleString()
+                      : t("common.unknown"),
+                  })}
                 </p>
                 <a
                   href={payment.paymentProof.url}
@@ -256,7 +298,7 @@ export function SellerPaymentDetailPageClient({
                   className="mt-3 inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
                   data-testid="seller-payment-proof-link"
                 >
-                  Open proof
+                  {t("seller.paymentDetail.openProof")}
                 </a>
               </div>
             ) : null}
@@ -264,16 +306,16 @@ export function SellerPaymentDetailPageClient({
         </SectionCard>
 
         <SectionCard
-          eyebrow="Review actions"
-          title="Seller review"
-          description="Add notes, confirm direct seller payment after checking your bank account, or reject the proof."
+          eyebrow={t("seller.paymentDetail.reviewActions")}
+          title={t("seller.paymentDetail.reviewTitle")}
+          description={t("seller.paymentDetail.reviewDescription")}
         >
           <div className="space-y-4">
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               rows={5}
-              placeholder="Optional review note"
+              placeholder={t("seller.paymentDetail.optionalReviewNote")}
               className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
             />
             <div className="grid gap-3 sm:grid-cols-3">
@@ -283,7 +325,7 @@ export function SellerPaymentDetailPageClient({
                 disabled={saving || !note.trim()}
                 loading={saving}
               >
-                Add note
+                {t("seller.paymentDetail.addNote")}
               </Button>
               <Button
                 variant="success"
@@ -292,7 +334,7 @@ export function SellerPaymentDetailPageClient({
                 loading={saving}
                 data-testid="seller-mark-paid-button"
               >
-                Confirm payment received
+                {t("seller.paymentDetail.confirmPaymentReceived")}
               </Button>
               <Button
                 variant="danger"
@@ -300,7 +342,7 @@ export function SellerPaymentDetailPageClient({
                 disabled={saving}
                 loading={saving}
               >
-                Reject proof
+                {t("seller.paymentDetail.rejectProof")}
               </Button>
             </div>
             {error ? (
@@ -318,9 +360,9 @@ export function SellerPaymentDetailPageClient({
       </div>
 
       <SectionCard
-        eyebrow="Items"
-        title="Payment order items"
-        description="Line totals are based on checkout-time snapshots."
+        eyebrow={t("seller.paymentDetail.itemsEyebrow")}
+        title={t("seller.paymentDetail.itemsTitle")}
+        description={t("seller.paymentDetail.itemsDescription")}
       >
         <div className="grid gap-4">
           {payment.items.map((item) => (
@@ -343,16 +385,22 @@ export function SellerPaymentDetailPageClient({
                 </p>
                 {item.variantNameSnapshot ? (
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    Variant: {item.variantNameSnapshot}
+                    {t("seller.paymentDetail.variant", {
+                      value: item.variantNameSnapshot,
+                    })}
                   </p>
                 ) : null}
               </div>
               <div className="text-sm text-[var(--muted)] md:text-right">
-                <p>Qty: {item.quantity}</p>
+                <p>{t("seller.paymentDetail.qty", { value: item.quantity })}</p>
                 <p className="mt-1">
-                  Unit: {item.unitPrice ?? item.priceAtPurchase}
+                  {t("seller.paymentDetail.unit", {
+                    value: item.unitPrice ?? item.priceAtPurchase,
+                  })}
                 </p>
-                <p className="mt-1">Line: {item.lineTotal}</p>
+                <p className="mt-1">
+                  {t("seller.paymentDetail.line", { value: item.lineTotal })}
+                </p>
               </div>
             </article>
           ))}
@@ -360,9 +408,9 @@ export function SellerPaymentDetailPageClient({
       </SectionCard>
 
       <SectionCard
-        eyebrow="Audit trail"
-        title="Payment review logs"
-        description="Every seller action is stored as a basic payment audit record."
+        eyebrow={t("seller.paymentDetail.auditEyebrow")}
+        title={t("seller.paymentDetail.auditTitle")}
+        description={t("seller.paymentDetail.auditDescription")}
       >
         <div className="space-y-4">
           {payment.reviewLogs.length ? (
@@ -377,8 +425,10 @@ export function SellerPaymentDetailPageClient({
                       {log.action}
                     </span>
                     <p className="text-sm text-[var(--muted)]">
-                      {log.fromStatus ?? "N/A"}{" "}
-                      {log.toStatus ? `-> ${log.toStatus}` : ""}
+                      {t("seller.paymentDetail.transition", {
+                        from: log.fromStatus ?? "N/A",
+                        to: log.toStatus ?? "",
+                      }).trim()}
                     </p>
                   </div>
                   <p className="text-xs text-[var(--muted)]">
@@ -386,16 +436,18 @@ export function SellerPaymentDetailPageClient({
                   </p>
                 </div>
                 <p className="mt-3 text-sm text-[var(--foreground)]">
-                  {log.note ?? "No note attached."}
+                  {log.note ?? t("seller.paymentDetail.noNote")}
                 </p>
                 <p className="mt-2 text-xs text-[var(--muted)]">
-                  Reviewer: {log.reviewerName ?? log.reviewerUserId}
+                  {t("seller.paymentDetail.reviewer", {
+                    value: log.reviewerName ?? log.reviewerUserId,
+                  })}
                 </p>
               </article>
             ))
           ) : (
             <p className="text-sm text-[var(--muted)]">
-              No payment review logs recorded yet.
+              {t("seller.paymentDetail.noLog")}
             </p>
           )}
         </div>

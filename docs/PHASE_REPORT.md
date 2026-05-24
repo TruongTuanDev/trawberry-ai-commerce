@@ -1,5 +1,44 @@
 # Phase Report
 
+## 2026-05-25 Seller Operations i18n Completion + Workspace Hydration
+
+- completed seller-facing i18n migration for the main operations surfaces already covered by the role-based locale foundation:
+  - seller nav
+  - seller products labels/statuses/actions
+  - seller orders tabs and key actions
+  - seller payment review queue/detail
+  - seller notifications heading and empty/filter states
+- fixed seller workspace hydration so refresh and direct route entry no longer require `currentShopId` to be preselected in client state
+- added seller-wide detail fallbacks in `seller-api` to resolve order/payment/product context across accessible shops and then sync the workspace store after load
+- hardened `ProtectedShell` so an already hydrated persisted user does not get blocked by a transient session-loading gate after refresh
+- updated payment review E2E contract to assert business outcomes instead of hard-coded English text:
+  - seller payment status moves to `PAID`
+  - reviewed order appears in seller `NEW` bucket
+  - customer tracking shows stable paid status
+- added stable payment badge status attributes for locale-safe assertions
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+- `frontend-next npm run test:e2e:i18n-role-locale`: pass
+- `frontend-next npm run test:e2e:seller-product-lifecycle`: pass
+- `frontend-next npm run test:e2e:seller-manual-yandex-workbench`: pass
+- `frontend-next npm run test:e2e:seller-fee-dashboard`: pass
+- `frontend-next npm run test:e2e:public-payment-review`: pass
+- `frontend-next npm run test:e2e:notifications`: pass
+- `frontend-next npm run test:e2e:action-feedback`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+- runtime health checks for backend, frontend, and ai-service: pass
+
+Remaining gaps:
+
+- seller finance, returns, and delivery detail copy are not fully migrated to dictionaries yet
+- some shared/common actions still coexist with older screen-local strings outside the seller operations priority surfaces
+
 ## 2026-05-24 Public Product / Cart / Checkout UX + Yandex Address Enforcement
 
 - made public header `Address` clickable and routed it into customer address management

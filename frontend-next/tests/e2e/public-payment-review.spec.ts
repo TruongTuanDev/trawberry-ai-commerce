@@ -250,18 +250,22 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
   await expect(sellerPage.getByTestId("seller-payment-detail-page")).toBeVisible();
   await expect(sellerPage.getByText(orderCode)).toBeVisible();
   await expect(sellerPage.getByTestId("seller-payment-proof-link")).toBeVisible();
-  await expect(sellerPage.getByTestId("seller-payment-status")).toHaveText("PENDING");
+  await expect(sellerPage.getByTestId("seller-payment-status")).toHaveAttribute("data-status", "PENDING");
 
   sellerPage.once("dialog", (dialog) => dialog.accept());
   await sellerPage.getByTestId("seller-mark-paid-button").click();
 
-  await expect(sellerPage.getByText("Payment confirmed.")).toBeVisible();
-  await expect(sellerPage.getByTestId("seller-payment-status")).toHaveText("PAID");
+  await expect(sellerPage.getByTestId("seller-payment-status")).toHaveAttribute("data-status", "PAID");
   await expect(sellerPage.locator("span").filter({ hasText: "SELLER_CONFIRMED" }).first()).toBeVisible();
+  await sellerPage.goto("/seller/orders");
+  await sellerPage.getByTestId("seller-order-tab-NEW").click();
+  await expect(
+    sellerPage.getByTestId("seller-order-card").filter({ hasText: orderCode }),
+  ).toBeVisible();
 
   await customerPage.reload();
   await expect(customerPage.getByTestId("tracked-order-page")).toBeVisible();
-  await expect(customerPage.getByTestId("tracked-payment-status")).toHaveText("PAID");
+  await expect(customerPage.getByTestId("tracked-payment-status")).toHaveAttribute("data-status", "PAID");
 
   await sellerContext.close();
   await customerContext.close();

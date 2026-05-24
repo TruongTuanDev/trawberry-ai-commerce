@@ -30,6 +30,8 @@
     "test:e2e:admin-delivery-supervision": "playwright test admin-delivery-supervision",
     "test:e2e:admin-fulfillment-supervision": "playwright test admin-fulfillment-supervision",
     "test:e2e:notifications": "playwright test notifications.spec.ts",
+    "test:e2e:i18n-role-locale": "playwright test tests/e2e/i18n-role-locale.spec.ts",
+    "test:e2e:i18n-seller-operations": "playwright test tests/e2e/i18n-seller-operations.spec.ts",
     "test:e2e:admin-dashboard": "playwright test admin-dashboard",
     "test:e2e:admin-queues": "playwright test admin-queues",
     "test:e2e:admin-task-ownership": "playwright test admin-task-ownership",

@@ -9,11 +9,11 @@ import {
   bulkUpdateShopProducts,
   createSellerShop,
   createShopProduct,
-  getShopProducts,
-  updateShopProductInventory,
   deleteShopProduct,
-  updateShopProduct,
   getShopProductById,
+  getShopProducts,
+  updateShopProduct,
+  updateShopProductInventory,
   type BulkProductVariantMode,
   type ProductListItem,
 } from "@/lib/seller-api";
@@ -22,30 +22,35 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { toast } from "@/components/ui/use-toast";
+import { useI18n } from "@/i18n/use-i18n";
 
 const PAGE_SIZE = 10;
 
-const catalogTabs = [
-  { id: "ALL", label: "Tất cả" },
-  { id: "LIVE", label: "Đang bán" },
-  { id: "NEEDS_INFO", label: "Cần bổ sung" },
-  { id: "OUT_OF_STOCK", label: "Hết hàng" },
-  { id: "MISSING_PRICE", label: "Thiếu giá" },
-  { id: "MISSING_CATEGORY", label: "Thiếu danh mục" },
-  { id: "MISSING_IMAGE", label: "Thiếu ảnh" },
-  { id: "DELETED", label: "Đã xóa" },
-] as const;
-
-type CatalogTab = (typeof catalogTabs)[number]["id"];
+type CatalogTab = "ALL" | "LIVE" | "NEEDS_INFO" | "OUT_OF_STOCK" | "MISSING_PRICE" | "MISSING_CATEGORY" | "MISSING_IMAGE" | "DELETED";
 type BulkEditMode = "CATEGORY" | "PRICE" | "STOCK" | null;
 
 export function SellerProductsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const selectShop = useSellerWorkspaceStore((state) => state.selectShop);
+
+  const catalogTabs = useMemo(
+    () => [
+      { id: "ALL" as const, label: t("seller.products.tabs.all") },
+      { id: "LIVE" as const, label: t("seller.products.tabs.live") },
+      { id: "NEEDS_INFO" as const, label: t("seller.products.tabs.needsInfo") },
+      { id: "OUT_OF_STOCK" as const, label: t("seller.products.tabs.outOfStock") },
+      { id: "MISSING_PRICE" as const, label: t("seller.products.tabs.missingPrice") },
+      { id: "MISSING_CATEGORY" as const, label: t("seller.products.tabs.missingCategory") },
+      { id: "MISSING_IMAGE" as const, label: t("seller.products.tabs.missingImage") },
+      { id: "DELETED" as const, label: t("seller.products.tabs.deleted") },
+    ],
+    [t],
+  );
 
   const [shopForm, setShopForm] = useState({ name: "", slug: "" });
   const [productForm, setProductForm] = useState({
@@ -70,12 +75,7 @@ export function SellerProductsPageClient() {
     meta: Awaited<ReturnType<typeof getShopProducts>>["meta"] | null;
     loading: boolean;
     error: string | null;
-  }>({
-    items: [],
-    meta: null,
-    loading: false,
-    error: null,
-  });
+  }>({ items: [], meta: null, loading: false, error: null });
   const { run: runShop, isRunning: creatingShop } = useActionFeedback();
   const { run: runCreate, isRunning: creatingProduct } = useActionFeedback();
   const { run: runBulk, isRunning: bulkSaving } = useActionFeedback();
@@ -87,7 +87,6 @@ export function SellerProductsPageClient() {
     stockQuantity: "",
     trackInventory: true,
     variantMode: "MISSING_ONLY" as BulkProductVariantMode,
-    publishIfReady: false,
   });
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
@@ -98,10 +97,7 @@ export function SellerProductsPageClient() {
 
   const totalPages = useMemo(() => state.meta?.totalPages ?? 0, [state.meta]);
   const allCategories = useMemo(() => flattenCategories(categories), [categories]);
-  const selectedProducts = useMemo(
-    () => state.items.filter((item) => selectedIds.includes(item.id)),
-    [selectedIds, state.items],
-  );
+  const selectedProducts = useMemo(() => state.items.filter((item) => selectedIds.includes(item.id)), [selectedIds, state.items]);
 
   useEffect(() => {
     setFilters({
@@ -160,23 +156,16 @@ export function SellerProductsPageClient() {
     setState((current) => ({ ...current, loading: true, error: null }));
     try {
       const response = await getShopProducts(currentShopId, listQuery, "");
-      setState({
-        items: response.items,
-        meta: response.meta,
-        loading: false,
-        error: null,
-      });
-      setSelectedIds((current) =>
-        current.filter((productId) => response.items.some((item) => item.id === productId)),
-      );
+      setState({ items: response.items, meta: response.meta, loading: false, error: null });
+      setSelectedIds((current) => current.filter((productId) => response.items.some((item) => item.id === productId)));
     } catch (error) {
       setState((current) => ({
         ...current,
         loading: false,
-        error: error instanceof Error ? error.message : "Unable to load products.",
+        error: error instanceof Error ? error.message : t("seller.products.messages.updateFailed"),
       }));
     }
-  }, [currentShopId, listQuery, user]);
+  }, [currentShopId, listQuery, t, user]);
 
   useEffect(() => {
     void loadProducts();
@@ -186,10 +175,14 @@ export function SellerProductsPageClient() {
     let mounted = true;
     getCategories()
       .then((items) => {
-        if (mounted) setCategories(items);
+        if (mounted) {
+          setCategories(items);
+        }
       })
       .catch(() => {
-        if (mounted) setCategories([]);
+        if (mounted) {
+          setCategories([]);
+        }
       });
     return () => {
       mounted = false;
@@ -236,7 +229,7 @@ export function SellerProductsPageClient() {
         const detail = await getShopProductById(currentShopId, product.id, "");
         const primaryVariant = detail.variants[0];
         if (!primaryVariant) {
-          throw new Error("Sản phẩm không có biến thể.");
+          throw new Error(t("seller.products.messages.noVariant"));
         }
 
         await updateShopProductInventory(currentShopId, product.id, {
@@ -246,13 +239,7 @@ export function SellerProductsPageClient() {
 
         if (price !== undefined) {
           await updateShopProduct(currentShopId, product.id, {
-            variants: [
-              {
-                chrtId: Number(primaryVariant.chrtId),
-                basePrice: price,
-                discountPrice: price,
-              },
-            ],
+            variants: [{ chrtId: Number(primaryVariant.chrtId), basePrice: price, discountPrice: price }],
           });
         }
 
@@ -262,28 +249,28 @@ export function SellerProductsPageClient() {
       },
       onSuccess: (updatedProduct) => {
         if (updatedProduct.variants[0] && updatedProduct.variants[0].stockQuantity <= 0) {
-          toast.success("Sản phẩm đã hết hàng và tạm ẩn khỏi sàn.");
+          toast.success(t("seller.products.messages.hiddenOutOfStock"));
         } else if (updatedProduct.publicVisible && !product.publicVisible) {
-          toast.success("Sản phẩm đã đủ điều kiện và đang hiển thị trên sàn.");
+          toast.success(t("seller.products.messages.publishedReady"));
         } else {
-          toast.success("Đã cập nhật giá/tồn kho");
+          toast.success(t("seller.products.messages.updatedPriceStock"));
         }
       },
-      errorMessage: "Không thể cập nhật giá/tồn kho.",
+      errorMessage: t("seller.products.messages.updateFailed"),
     }).catch((error) => {
-      setState((current) => ({
-        ...current,
-        loading: false,
-        error: error.message,
-      }));
+      setState((current) => ({ ...current, loading: false, error: error.message }));
       throw error;
     });
   };
 
   const handleDelete = async (productId: string) => {
-    if (!currentShopId) return;
-    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?");
-    if (!confirmed) return;
+    if (!currentShopId) {
+      return;
+    }
+    const confirmed = window.confirm(t("common.confirm.deleteProduct"));
+    if (!confirmed) {
+      return;
+    }
 
     setState((current) => ({ ...current, loading: true, error: null }));
     await runProductAction({
@@ -292,35 +279,24 @@ export function SellerProductsPageClient() {
         await loadProducts();
         return res;
       },
-      successMessage: "Đã xóa sản phẩm thành công.",
-      errorMessage: "Không thể xóa sản phẩm.",
+      successMessage: t("seller.products.messages.deleted"),
+      errorMessage: t("seller.products.messages.deleteFailed"),
     }).catch((error) => {
-      setState((current) => ({
-        ...current,
-        loading: false,
-        error: error.message,
-      }));
+      setState((current) => ({ ...current, loading: false, error: error.message }));
       throw error;
     });
   };
-
-
 
   const handleBulkUpdate = async () => {
     if (!currentShopId || selectedIds.length < 1 || !bulkEditMode) {
       return;
     }
 
-    const updates: {
-      categoryId?: number;
-      price?: number;
-      stockQuantity?: number;
-      trackInventory?: boolean;
-    } = {};
+    const updates: { categoryId?: number; price?: number; stockQuantity?: number; trackInventory?: boolean } = {};
 
     if (bulkEditMode === "CATEGORY") {
       if (!bulkForm.categoryId) {
-        setBulkError("Select an internal category before applying the bulk update.");
+        setBulkError(t("seller.products.bulk.categoryRequired"));
         return;
       }
       updates.categoryId = Number(bulkForm.categoryId);
@@ -329,7 +305,7 @@ export function SellerProductsPageClient() {
     if (bulkEditMode === "PRICE") {
       const price = Number(bulkForm.price);
       if (!Number.isFinite(price) || price <= 0) {
-        setBulkError("Bulk price must be greater than zero.");
+        setBulkError(t("seller.products.bulk.pricePositive"));
         return;
       }
       updates.price = price;
@@ -338,7 +314,7 @@ export function SellerProductsPageClient() {
     if (bulkEditMode === "STOCK") {
       const stockQuantity = Number(bulkForm.stockQuantity);
       if (!Number.isFinite(stockQuantity) || stockQuantity < 0) {
-        setBulkError("Bulk stock must be zero or greater.");
+        setBulkError(t("seller.products.bulk.stockNonNegative"));
         return;
       }
       updates.stockQuantity = stockQuantity;
@@ -353,18 +329,16 @@ export function SellerProductsPageClient() {
         const result = await bulkUpdateShopProducts(currentShopId, {
           productIds: selectedIds,
           updates,
-          scope: {
-            variantMode: bulkForm.variantMode,
-          },
+          scope: { variantMode: bulkForm.variantMode },
           publishIfReady: true,
         });
         setBulkResult(result);
-        setBulkMessage(`Bulk edit complete: ${result.updated} updated, ${result.failed} failed.`);
+        setBulkMessage(t("seller.products.bulk.complete", { updated: result.updated, failed: result.failed }));
         await loadProducts();
         return result;
       },
-      successMessage: "Lưu cập nhật hàng loạt thành công!",
-      errorMessage: "Cập nhật hàng loạt thất bại.",
+      successMessage: t("seller.products.messages.bulkSaved"),
+      errorMessage: t("seller.products.messages.bulkFailed"),
     }).catch((error) => {
       setBulkError(error.message);
     });
@@ -387,15 +361,17 @@ export function SellerProductsPageClient() {
         router.refresh();
         return created;
       },
-      successMessage: "Tạo cửa hàng thành công!",
-      errorMessage: "Không thể tạo cửa hàng.",
+      successMessage: t("seller.products.messages.shopCreated"),
+      errorMessage: t("seller.products.messages.shopCreateFailed"),
     }).catch((error) => {
       setCreateError(error.message);
     });
   };
 
   const handleCreateProduct = async () => {
-    if (!currentShopId) return;
+    if (!currentShopId) {
+      return;
+    }
 
     setCreateMessage(null);
     setCreateError(null);
@@ -415,33 +391,23 @@ export function SellerProductsPageClient() {
           wbVendorCode: `UI-${stamp}`,
           seoSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
           visibility: "ACTIVE",
-          variants: [
-            {
-              chrtId: Number(String(stamp).slice(-10)),
-              techSize: "ONE",
-              wbSize: "One size",
-              basePrice: Math.max(1, Number(productForm.price) || 1),
-              stockQuantity: Math.max(0, Number(productForm.stockQuantity) || 0),
-              lowStockThreshold: 2,
-              trackInventory: true,
-            },
-          ],
+          variants: [{
+            chrtId: Number(String(stamp).slice(-10)),
+            techSize: "ONE",
+            wbSize: "One size",
+            basePrice: Math.max(1, Number(productForm.price) || 1),
+            stockQuantity: Math.max(0, Number(productForm.stockQuantity) || 0),
+            lowStockThreshold: 2,
+            trackInventory: true,
+          }],
         });
-        setProductForm({
-          title: "",
-          description: "",
-          brand: "",
-          categoryId: "",
-          categoryName: "",
-          price: "100",
-          stockQuantity: "5",
-        });
+        setProductForm({ title: "", description: "", brand: "", categoryId: "", categoryName: "", price: "100", stockQuantity: "5" });
         router.push(`/seller/products/${created.id}`);
         router.refresh();
         return created;
       },
-      successMessage: "Tạo sản phẩm thành công!",
-      errorMessage: "Không thể tạo sản phẩm.",
+      successMessage: t("seller.products.messages.productCreated"),
+      errorMessage: t("seller.products.messages.productCreateFailed"),
     }).catch((error) => {
       setCreateError(error.message);
     });
@@ -449,101 +415,62 @@ export function SellerProductsPageClient() {
 
   return (
     <div className="space-y-6" data-testid="seller-products-page">
-      <SectionCard
-        eyebrow="Catalog"
-        title="Products"
-        description="Seller catalog is separate from the public marketplace. Imported products stay private until the seller reviews and publishes them."
-      >
+      <SectionCard eyebrow="Catalog" title={t("seller.products.title")} description={t("seller.products.subtitle")}>
         <div className="space-y-5">
-          {createMessage ? (
-            <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{createMessage}</div>
-          ) : null}
-          {createError ? (
-            <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{createError}</div>
-          ) : null}
+          {createMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{createMessage}</div> : null}
+          {createError ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{createError}</div> : null}
 
           {!currentShopId ? (
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-shop-panel">
-              <p className="text-sm font-semibold text-[var(--foreground)]">Create your first shop</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.products.createFirstShop")}</p>
               <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                  <span>Shop name</span>
-                  <input
-                    value={shopForm.name}
-                    onChange={(event) => setShopForm((current) => ({ ...current, name: event.target.value }))}
-                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                    data-testid="create-shop-name"
-                  />
+                  <span>{t("seller.products.shopName")}</span>
+                  <input value={shopForm.name} onChange={(event) => setShopForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-shop-name" />
                 </label>
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                  <span>Shop slug</span>
-                  <input
-                    value={shopForm.slug}
-                    onChange={(event) => setShopForm((current) => ({ ...current, slug: event.target.value }))}
-                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                    data-testid="create-shop-slug"
-                  />
+                  <span>{t("seller.products.shopSlug")}</span>
+                  <input value={shopForm.slug} onChange={(event) => setShopForm((current) => ({ ...current, slug: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-shop-slug" />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => void handleCreateShop()}
-                  disabled={creatingShop || !shopForm.name.trim() || !shopForm.slug.trim()}
-                  className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                  data-testid="create-shop-submit"
-                >
-                  {creatingShop ? "Đang gửi..." : "Create shop"}
+                <button type="button" onClick={() => void handleCreateShop()} disabled={creatingShop || !shopForm.name.trim() || !shopForm.slug.trim()} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="create-shop-submit">
+                  {creatingShop ? t("common.loading") : t("seller.products.createFirstShop")}
                 </button>
               </div>
             </div>
           ) : (
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-product-panel">
-              <p className="text-sm font-semibold text-[var(--foreground)]">Create product</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.products.createProduct")}</p>
               <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                <CreateInput label="Name" value={productForm.title} onChange={(value) => setProductForm((current) => ({ ...current, title: value }))} testId="create-product-name" />
-                <CreateInput label="Brand" value={productForm.brand} onChange={(value) => setProductForm((current) => ({ ...current, brand: value }))} testId="create-product-brand" />
+                <CreateInput label={t("seller.products.name")} value={productForm.title} onChange={(value) => setProductForm((current) => ({ ...current, title: value }))} testId="create-product-name" />
+                <CreateInput label={t("seller.products.brand")} value={productForm.brand} onChange={(value) => setProductForm((current) => ({ ...current, brand: value }))} testId="create-product-brand" />
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                  <span>Internal category</span>
+                  <span>{t("seller.products.internalCategory")}</span>
                   <select
                     value={productForm.categoryId}
                     onChange={(event) => {
                       const selected = allCategories.find((category) => category.id === event.target.value);
-                      setProductForm((current) => ({
-                        ...current,
-                        categoryId: event.target.value,
-                        categoryName: selected?.name ?? current.categoryName,
-                      }));
+                      setProductForm((current) => ({ ...current, categoryId: event.target.value, categoryName: selected?.name ?? current.categoryName }));
                     }}
                     className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="create-product-category-id"
                   >
-                    <option value="">No internal category</option>
+                    <option value="">{t("seller.products.noInternalCategory")}</option>
                     {allCategories.map((category) => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
                 </label>
-                <CreateInput label="Category" value={productForm.categoryName} onChange={(value) => setProductForm((current) => ({ ...current, categoryName: value }))} testId="create-product-category" />
-                <CreateInput label="Price" type="number" value={productForm.price} onChange={(value) => setProductForm((current) => ({ ...current, price: value }))} testId="create-product-price" />
-                <CreateInput label="Initial stock" type="number" value={productForm.stockQuantity} onChange={(value) => setProductForm((current) => ({ ...current, stockQuantity: value }))} testId="create-product-stock" />
+                <CreateInput label={t("seller.products.category")} value={productForm.categoryName} onChange={(value) => setProductForm((current) => ({ ...current, categoryName: value }))} testId="create-product-category" />
+                <CreateInput label={t("seller.products.price")} type="number" value={productForm.price} onChange={(value) => setProductForm((current) => ({ ...current, price: value }))} testId="create-product-price" />
+                <CreateInput label={t("seller.products.initialStock")} type="number" value={productForm.stockQuantity} onChange={(value) => setProductForm((current) => ({ ...current, stockQuantity: value }))} testId="create-product-stock" />
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)] lg:col-span-3">
-                  <span>Description</span>
-                  <textarea
-                    value={productForm.description}
-                    onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))}
-                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                    data-testid="create-product-description"
-                  />
+                  <span>{t("seller.products.description")}</span>
+                  <textarea value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-product-description" />
                 </label>
               </div>
               <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => void handleCreateProduct()}
-                  disabled={creatingProduct || !productForm.title.trim()}
-                  className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                  data-testid="create-product-submit"
-                >
-                  {creatingProduct ? "Đang gửi..." : "Create product"}
+                <button type="button" onClick={() => void handleCreateProduct()} disabled={creatingProduct || !productForm.title.trim()} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="create-product-submit">
+                  {creatingProduct ? t("common.loading") : t("seller.products.createProduct")}
                 </button>
               </div>
             </div>
@@ -551,66 +478,32 @@ export function SellerProductsPageClient() {
 
           <div className="flex flex-wrap gap-2">
             {catalogTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFilters((current) => ({ ...current, tab: tab.id }))}
-                className={filters.tab === tab.id ? "rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"}
-              >
+              <button key={tab.id} type="button" onClick={() => setFilters((current) => ({ ...current, tab: tab.id }))} className={filters.tab === tab.id ? "rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"}>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <ProductFilters
-            value={filters}
-            onChange={(value) =>
-              setFilters((current) => ({
-                ...current,
-                search: value.search,
-                status: value.status,
-                stockStatus: value.stockStatus,
-              }))
-            }
-            onSubmit={applyFilters}
-          />
+          <ProductFilters value={filters} onChange={(value) => setFilters((current) => ({ ...current, search: value.search, status: value.status, stockStatus: value.stockStatus }))} onSubmit={applyFilters} />
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <InventorySummaryCard label="Tracked products" value={String(stockCounts.tracked)} tone="neutral" />
-            <InventorySummaryCard label="Low stock on this page" value={String(stockCounts.lowStock)} tone={stockCounts.lowStock > 0 ? "warn" : "ok"} />
-            <InventorySummaryCard label="Out of stock on this page" value={String(stockCounts.outOfStock)} tone={stockCounts.outOfStock > 0 ? "danger" : "ok"} />
+            <InventorySummaryCard label={t("seller.products.summary.tracked")} value={String(stockCounts.tracked)} tone="neutral" />
+            <InventorySummaryCard label={t("seller.products.summary.lowStockPage")} value={String(stockCounts.lowStock)} tone={stockCounts.lowStock > 0 ? "warn" : "ok"} />
+            <InventorySummaryCard label={t("seller.products.summary.outOfStockPage")} value={String(stockCounts.outOfStock)} tone={stockCounts.outOfStock > 0 ? "danger" : "ok"} />
           </div>
 
           {currentShopId ? (
             <div className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4" data-testid="bulk-edit-toolbar">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm font-semibold text-[var(--foreground)]">{selectedIds.length} selected</span>
-                <button
-                  type="button"
-                  onClick={() => setBulkEditMode("CATEGORY")}
-                  disabled={selectedIds.length < 1}
-                  className={bulkEditMode === "CATEGORY" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
-                  data-testid="bulk-open-category"
-                >
-                  Set category for selected
+                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.products.bulk.selected", { count: selectedIds.length })}</span>
+                <button type="button" onClick={() => setBulkEditMode("CATEGORY")} disabled={selectedIds.length < 1} className={bulkEditMode === "CATEGORY" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"} data-testid="bulk-open-category">
+                  {t("seller.products.bulk.setCategory")}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkEditMode("PRICE")}
-                  disabled={selectedIds.length < 1}
-                  className={bulkEditMode === "PRICE" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
-                  data-testid="bulk-open-price"
-                >
-                  Set price for selected
+                <button type="button" onClick={() => setBulkEditMode("PRICE")} disabled={selectedIds.length < 1} className={bulkEditMode === "PRICE" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"} data-testid="bulk-open-price">
+                  {t("seller.products.bulk.setPrice")}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkEditMode("STOCK")}
-                  disabled={selectedIds.length < 1}
-                  className={bulkEditMode === "STOCK" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
-                  data-testid="bulk-open-stock"
-                >
-                  Set stock for selected
+                <button type="button" onClick={() => setBulkEditMode("STOCK")} disabled={selectedIds.length < 1} className={bulkEditMode === "STOCK" ? "rounded-full bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]" : "rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"} data-testid="bulk-open-stock">
+                  {t("seller.products.bulk.setStock")}
                 </button>
               </div>
 
@@ -619,14 +512,9 @@ export function SellerProductsPageClient() {
                   <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
                     {bulkEditMode === "CATEGORY" ? (
                       <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                        <span>Internal category</span>
-                        <select
-                          value={bulkForm.categoryId}
-                          onChange={(event) => setBulkForm((current) => ({ ...current, categoryId: event.target.value }))}
-                          className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                          data-testid="bulk-category-select"
-                        >
-                          <option value="">Select a category</option>
+                        <span>{t("seller.products.internalCategory")}</span>
+                        <select value={bulkForm.categoryId} onChange={(event) => setBulkForm((current) => ({ ...current, categoryId: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="bulk-category-select">
+                          <option value="">{t("seller.products.bulk.selectCategory")}</option>
                           {allCategories.map((category) => (
                             <option key={category.id} value={category.id}>{category.name}</option>
                           ))}
@@ -635,104 +523,59 @@ export function SellerProductsPageClient() {
                     ) : null}
 
                     {bulkEditMode === "PRICE" ? (
-                      <CreateInput
-                        label="Price"
-                        type="number"
-                        value={bulkForm.price}
-                        onChange={(value) => setBulkForm((current) => ({ ...current, price: value }))}
-                        testId="bulk-price-input"
-                      />
+                      <CreateInput label={t("seller.products.price")} type="number" value={bulkForm.price} onChange={(value) => setBulkForm((current) => ({ ...current, price: value }))} testId="bulk-price-input" />
                     ) : null}
 
                     {bulkEditMode === "STOCK" ? (
                       <>
-                        <CreateInput
-                          label="Stock quantity"
-                          type="number"
-                          value={bulkForm.stockQuantity}
-                          onChange={(value) => setBulkForm((current) => ({ ...current, stockQuantity: value }))}
-                          testId="bulk-stock-input"
-                        />
+                        <CreateInput label={t("seller.products.bulk.stockQuantity")} type="number" value={bulkForm.stockQuantity} onChange={(value) => setBulkForm((current) => ({ ...current, stockQuantity: value }))} testId="bulk-stock-input" />
                         <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)]">
-                          <input
-                            type="checkbox"
-                            checked={bulkForm.trackInventory}
-                            onChange={(event) => setBulkForm((current) => ({ ...current, trackInventory: event.target.checked }))}
-                          />
-                          Track inventory after update
+                          <input type="checkbox" checked={bulkForm.trackInventory} onChange={(event) => setBulkForm((current) => ({ ...current, trackInventory: event.target.checked }))} />
+                          {t("seller.products.bulk.trackInventory")}
                         </label>
                       </>
                     ) : null}
 
                     <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                      <span>Variant mode</span>
-                      <select
-                        value={bulkForm.variantMode}
-                        onChange={(event) => setBulkForm((current) => ({ ...current, variantMode: event.target.value as BulkProductVariantMode }))}
-                        className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                        data-testid="bulk-variant-mode"
-                      >
-                        <option value="ALL_VARIANTS">All variants</option>
-                        <option value="MISSING_ONLY">Missing only</option>
-                        <option value="FIRST_VARIANT_ONLY">First variant only</option>
+                      <span>{t("seller.products.bulk.variantMode")}</span>
+                      <select value={bulkForm.variantMode} onChange={(event) => setBulkForm((current) => ({ ...current, variantMode: event.target.value as BulkProductVariantMode }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="bulk-variant-mode">
+                        <option value="ALL_VARIANTS">{t("seller.products.bulk.allVariants")}</option>
+                        <option value="MISSING_ONLY">{t("seller.products.bulk.missingOnly")}</option>
+                        <option value="FIRST_VARIANT_ONLY">{t("seller.products.bulk.firstVariantOnly")}</option>
                       </select>
                     </label>
                   </div>
 
                   <div className="flex items-end justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setBulkEditMode(null)}
-                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
-                    >
-                      Close
+                    <button type="button" onClick={() => setBulkEditMode(null)} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+                      {t("common.actions.close")}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleBulkUpdate()}
-                      disabled={bulkSaving || selectedIds.length < 1}
-                      className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                      data-testid="bulk-apply-submit"
-                    >
-                      {bulkSaving ? "Đang lưu..." : "Apply bulk update"}
+                    <button type="button" onClick={() => void handleBulkUpdate()} disabled={bulkSaving || selectedIds.length < 1} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" data-testid="bulk-apply-submit">
+                      {bulkSaving ? t("common.loading") : t("seller.products.bulk.apply")}
                     </button>
                   </div>
                 </div>
               ) : null}
 
-              {bulkMessage ? (
-                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{bulkMessage}</div>
-              ) : null}
-              {bulkError ? (
-                <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{bulkError}</div>
-              ) : null}
+              {bulkMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{bulkMessage}</div> : null}
+              {bulkError ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{bulkError}</div> : null}
               {bulkResult ? (
                 <div className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4" data-testid="bulk-edit-result">
                   <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--muted)]">
-                    <span>{bulkResult.updated} updated</span>
-                    <span>{bulkResult.failed} failed</span>
-                    <span>{selectedProducts.length} selected on page</span>
+                    <span>{t("common.status.updated")}: {bulkResult.updated}</span>
+                    <span>{t("common.status.failed")}: {bulkResult.failed}</span>
+                    <span>{t("seller.products.bulk.pageSelected", { count: selectedProducts.length })}</span>
                   </div>
                   <div className="mt-3 space-y-2">
                     {bulkResult.items.map((item) => (
                       <div key={item.productId} className="rounded-xl border border-[var(--border)] px-3 py-3 text-sm">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="font-semibold text-[var(--foreground)]">{item.productId}</span>
-                          <span className={item.success ? "text-emerald-700" : "text-rose-700"}>
-                            {item.success ? "Updated" : "Failed"}
-                          </span>
-                          {item.readiness ? (
-                            <span className="text-[var(--muted)]">
-                              {item.readiness.catalogStatus} | {item.readiness.ready ? "Ready" : "Needs review"}
-                            </span>
-                          ) : null}
+                          <span className={item.success ? "text-emerald-700" : "text-rose-700"}>{item.success ? t("common.status.updated") : t("common.status.failed")}</span>
+                          {item.readiness ? <span className="text-[var(--muted)]">{item.readiness.catalogStatus} | {item.readiness.ready ? t("common.status.ready") : t("common.status.needsReview")}</span> : null}
                         </div>
                         {item.error ? <p className="mt-2 text-rose-700">{item.error}</p> : null}
-                        {item.readiness && item.readiness.blockingReasons.length > 0 ? (
-                          <p className="mt-2 text-[var(--muted)]">
-                            Blocking reasons: {item.readiness.blockingReasons.join(", ")}
-                          </p>
-                        ) : null}
+                        {item.readiness && item.readiness.blockingReasons.length > 0 ? <p className="mt-2 text-[var(--muted)]">{item.readiness.blockingReasons.join(", ")}</p> : null}
                       </div>
                     ))}
                   </div>
@@ -741,36 +584,18 @@ export function SellerProductsPageClient() {
             </div>
           ) : null}
 
-          {state.error ? (
-            <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
-              {state.error}
-            </div>
-          ) : null}
+          {state.error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{state.error}</div> : null}
 
           {currentShopId ? (
             <>
               {state.loading ? (
-                <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-8 text-sm text-[var(--muted)]">
-                  Loading products...
-                </div>
+                <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-8 text-sm text-[var(--muted)]">{t("seller.products.results.loading")}</div>
               ) : (
                 <ProductTable
                   products={state.items}
                   selectedIds={selectedIds}
-                  onToggleSelect={(productId) =>
-                    setSelectedIds((current) =>
-                      current.includes(productId)
-                        ? current.filter((id) => id !== productId)
-                        : [...current, productId],
-                    )
-                  }
-                  onToggleSelectAll={() =>
-                    setSelectedIds((current) =>
-                      state.items.every((item) => current.includes(item.id))
-                        ? []
-                        : state.items.map((item) => item.id),
-                    )
-                  }
+                  onToggleSelect={(productId) => setSelectedIds((current) => current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId])}
+                  onToggleSelectAll={() => setSelectedIds((current) => state.items.every((item) => current.includes(item.id)) ? [] : state.items.map((item) => item.id))}
                   onEdit={(productId) => router.push(`/seller/products/${productId}`)}
                   onQuickUpdate={handleQuickUpdate}
                   onDelete={handleDelete}
@@ -778,31 +603,21 @@ export function SellerProductsPageClient() {
               )}
               <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-[var(--muted)]">
-                  {state.meta ? `Showing page ${state.meta.page} of ${Math.max(state.meta.totalPages, 1)} | ${state.meta.total} total products` : "No data loaded yet"}
+                  {state.meta ? t("seller.products.results.showing", { page: state.meta.page, totalPages: Math.max(state.meta.totalPages, 1), total: state.meta.total }) : t("seller.products.results.noData")}
                 </p>
                 <div className="flex gap-3">
-                  <button
-                    type="button"
-                    disabled={page <= 1 || state.loading}
-                    onClick={() => handlePageChange(page - 1)}
-                    className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Previous
+                  <button type="button" disabled={page <= 1 || state.loading} onClick={() => handlePageChange(page - 1)} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
+                    {t("common.actions.back")}
                   </button>
-                  <button
-                    type="button"
-                    disabled={state.loading || totalPages === 0 || page >= totalPages}
-                    onClick={() => handlePageChange(page + 1)}
-                    className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
+                  <button type="button" disabled={state.loading || totalPages === 0 || page >= totalPages} onClick={() => handlePageChange(page + 1)} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50">
+                    {t("common.actions.next")}
                   </button>
                 </div>
               </div>
             </>
           ) : (
             <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-white px-4 py-8 text-sm text-[var(--muted)]">
-              Pick a seller shop to load products.
+              {t("seller.products.results.pickShop")}
             </div>
           )}
         </div>
@@ -820,14 +635,7 @@ function InventorySummaryCard({
   value: string;
   tone: "neutral" | "ok" | "warn" | "danger";
 }) {
-  const colorClass =
-    tone === "ok"
-      ? "text-emerald-700"
-      : tone === "warn"
-        ? "text-amber-700"
-        : tone === "danger"
-          ? "text-rose-700"
-          : "text-[var(--foreground)]";
+  const colorClass = tone === "ok" ? "text-emerald-700" : tone === "warn" ? "text-amber-700" : tone === "danger" ? "text-rose-700" : "text-[var(--foreground)]";
 
   return (
     <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
@@ -838,10 +646,7 @@ function InventorySummaryCard({
 }
 
 function flattenCategories(categories: PublicCategory[]): PublicCategory[] {
-  return categories.flatMap((category) => [
-    category,
-    ...flattenCategories(category.children ?? []),
-  ]);
+  return categories.flatMap((category) => [category, ...flattenCategories(category.children ?? [])]);
 }
 
 function CreateInput({
@@ -860,13 +665,7 @@ function CreateInput({
   return (
     <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
       <span>{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-        data-testid={testId}
-      />
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid={testId} />
     </label>
   );
 }

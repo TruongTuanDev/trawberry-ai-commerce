@@ -5,12 +5,14 @@ import { Bell } from "lucide-react";
 import { type AuthRoleKey, useAuthStore } from "@/stores/auth-store";
 import { useNotificationStore } from "@/stores/notification-store";
 import { NotificationDropdown } from "./notification-dropdown";
+import { useI18n } from "@/i18n/use-i18n";
 
 interface NotificationBellProps {
   role: AuthRoleKey;
 }
 
 export function NotificationBell({ role }: NotificationBellProps) {
+  const { t } = useI18n(role === "admin" ? "admin" : role === "seller" ? "seller" : "customer");
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export function NotificationBell({ role }: NotificationBellProps) {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative p-2 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/12 transition cursor-pointer flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20"
-        aria-label="Open notifications"
+        aria-label={t("notifications.customerTitle")}
         data-testid="notification-bell"
       >
         <Bell className="h-5 w-5" />

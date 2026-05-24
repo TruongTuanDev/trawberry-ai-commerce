@@ -18,6 +18,7 @@ export function PaymentStatusBadge({
   return (
     <span
       data-testid={testId}
+      data-status={status}
       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneByPaymentStatus[status] ?? "bg-slate-100 text-slate-700"}`}
     >
       {status}

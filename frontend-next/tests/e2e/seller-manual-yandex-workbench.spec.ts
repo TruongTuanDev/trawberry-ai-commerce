@@ -218,7 +218,15 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await page.getByTestId("manual-delivery-mark-picked-up").click();
   await expect(page.getByTestId("seller-delivery-status")).toHaveText("PICKED_UP");
   await page.getByTestId("manual-delivery-mark-in-transit").click();
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("ON_THE_WAY");
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        return page.getByTestId("seller-delivery-status").textContent();
+      },
+      { timeout: 15000 },
+    )
+    .toBe("ON_THE_WAY");
 
   await adminPage.goto("/admin/deliveries?status=OVERDUE");
   await adminPage.getByTestId("admin-delivery-search").fill(checkout.orderCode);

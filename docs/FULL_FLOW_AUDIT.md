@@ -1,5 +1,19 @@
 # Full Commerce Flow Audit
 
+## Seller Workspace Hydration Addendum
+
+- seller operational pages now tolerate direct deep links and page refreshes without assuming `currentShopId` is already present in the client workspace store
+- seller detail flows resolve the owning shop from seller-accessible detail APIs and then synchronize the workspace store after the payload is loaded
+- verified restored paths:
+  - seller payment review detail from direct URL
+  - seller orders board after refresh with persisted locale
+  - seller finance dashboard metrics after login/refresh
+  - seller product detail and images routes in lifecycle E2E
+- locale switching remains orthogonal to auth/session/shop hydration:
+  - seller default `ru`
+  - seller switch `ru -> vi -> en` persists after refresh
+  - no regression to payment/order/delivery contracts was observed in required seller regression suites
+
 ## Admin Fulfillment Supervision Addendum
 
 - admin supervision now follows the same normalized fulfillment buckets already released on the seller side

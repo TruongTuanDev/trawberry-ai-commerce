@@ -38,6 +38,9 @@ export function ProtectedShell({
   const lastToastErrorRef = useRef<string | null>(null);
   const roleLabel =
     role === "customer" ? "customer" : role === "admin" ? "admin" : "seller";
+  const roleAllowed = user
+    ? !allowedRoles?.length || allowedRoles.includes(user.role)
+    : false;
 
   useEffect(() => {
     if (!hydrated || sessionChecked) {
@@ -90,13 +93,7 @@ export function ProtectedShell({
     user,
   ]);
 
-  if (
-    !hydrated ||
-    sessionLoading ||
-    !sessionChecked ||
-    !user ||
-    (allowedRoles?.length ? !allowedRoles.includes(user.role) : false)
-  ) {
+  if (!hydrated || !user || !roleAllowed) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-panel max-w-md rounded-[1.5rem] px-8 py-6 text-center">
