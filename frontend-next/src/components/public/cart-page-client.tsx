@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import { getLocalizedErrorMessage } from "@/i18n/error-messages";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   buildCartValidationPayload,
   buildValidationMap,
@@ -42,7 +44,8 @@ function groupItemsByShop(
       subtotal: 0,
     };
     existing.items.push(item);
-    existing.subtotal += lineTotals.get(cartItemKey(item.productId, item.variantId)) ??
+    existing.subtotal +=
+      lineTotals.get(cartItemKey(item.productId, item.variantId)) ??
       Number(item.unitPrice || 0) * item.quantity;
     groups.set(item.shopId, existing);
   }
@@ -50,6 +53,7 @@ function groupItemsByShop(
 }
 
 export function CartPageClient() {
+  const { t } = useI18n("customer");
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const hydrated = useCartStore((state) => state.hydrated);
@@ -70,10 +74,7 @@ export function CartPageClient() {
   }, [hydrate]);
 
   useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    if (!items.length) {
+    if (!hydrated || !items.length) {
       return;
     }
 
@@ -94,9 +95,11 @@ export function CartPageClient() {
         }
         setValidation(null);
         setValidationError(
-          error instanceof Error
-            ? error.message
-            : "Unable to validate cart right now.",
+          getLocalizedErrorMessage({
+            role: "customer",
+            error,
+            fallbackKey: "errors.validation",
+          }),
         );
       } finally {
         if (mounted) {
@@ -139,10 +142,9 @@ export function CartPageClient() {
       }),
     );
   }, [items, validationMap]);
-  const subtotal = activeValidation?.summary.subtotal ?? items.reduce(
-    (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
-    0,
-  );
+  const subtotal =
+    activeValidation?.summary.subtotal ??
+    items.reduce((sum, item) => sum + Number(item.unitPrice || 0) * item.quantity, 0);
   const shopGroups = useMemo(
     () => groupItemsByShop(items, lineTotals, shopNames),
     [items, lineTotals, shopNames],
@@ -176,32 +178,31 @@ export function CartPageClient() {
       <main className="px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/products"
-              className="public-button-secondary inline-flex px-4 py-2 text-sm"
-            >
-              Back to products
+            <Link href="/products" className="public-button-secondary inline-flex px-4 py-2 text-sm">
+              {t("cart.backToProducts")}
             </Link>
             {items.length ? (
               <button
                 type="button"
                 onClick={() => {
-                  if (!window.confirm("Bạn có chắc chắn muốn xóa toàn bộ giỏ hàng?")) return;
+                  if (!window.confirm(t("cart.clearCartConfirm"))) {
+                    return;
+                  }
                   clearCart();
                 }}
                 className="public-button-secondary px-4 py-2 text-sm"
               >
-                Clear cart
+                {t("cart.clearCart")}
               </button>
             ) : null}
           </div>
 
           <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-              Cart
+              {t("publicHeader.cart")}
             </p>
             <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold">
-              Shopping cart
+              {t("cart.title")}
             </h1>
           </section>
 
@@ -211,21 +212,20 @@ export function CartPageClient() {
               data-testid="cart-empty-state"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                Cart
+                {t("publicHeader.cart")}
               </p>
               <h2 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
-                Your cart is empty
+                {t("cart.emptyTitle")}
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-[var(--muted)]">
-                Add products from the marketplace to start checkout. Prices and stock
-                will still be validated again on the server during checkout.
+                {t("cart.emptyDescription")}
               </p>
               <Link
                 href="/products"
                 className="public-button-primary mt-6 inline-flex px-5 py-3 text-sm"
                 data-testid="cart-empty-continue-shopping"
               >
-                Continue shopping
+                {t("cart.continueShopping")}
               </Link>
             </section>
           ) : (
@@ -233,7 +233,7 @@ export function CartPageClient() {
               <section className="space-y-4" data-testid="cart-items">
                 {activeValidationLoading ? (
                   <section className="rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-4 text-sm text-[var(--muted)]">
-                    Checking latest stock and price...
+                    {t("cart.checkingLatest")}
                   </section>
                 ) : null}
 
@@ -246,7 +246,7 @@ export function CartPageClient() {
                       className="public-button-secondary mt-3 px-4 py-2 text-sm"
                       data-testid="cart-validation-retry"
                     >
-                      Retry validation
+                      {t("cart.retryValidation")}
                     </button>
                   </section>
                 ) : null}
@@ -256,15 +256,13 @@ export function CartPageClient() {
                     className="rounded-[1.75rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700"
                     data-testid="cart-validation-banner"
                   >
-                    Some items need attention before checkout. Remove unavailable
-                    products or adjust quantities to continue.
+                    {t("cart.blockingBanner")}
                   </section>
                 ) : null}
 
                 {hasPriceChanges ? (
                   <section className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-                    One or more items have a new server price. Review and accept the
-                    updated price before you continue.
+                    {t("cart.priceChangedBanner")}
                   </section>
                 ) : null}
 
@@ -277,7 +275,7 @@ export function CartPageClient() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                          Shop
+                          {t("cart.shop")}
                         </p>
                         <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
                           {group.shopName}
@@ -366,7 +364,7 @@ export function CartPageClient() {
                                       className="public-button-secondary px-3 py-2 text-xs"
                                       data-testid={`cart-validation-set-max-${item.productId}-${item.variantId}`}
                                     >
-                                      Set to max
+                                      {t("cart.setToMax")}
                                     </button>
                                   ) : null}
                                   {validated.status === "PRICE_CHANGED" ? (
@@ -376,7 +374,7 @@ export function CartPageClient() {
                                       className="public-button-secondary px-3 py-2 text-xs"
                                       data-testid={`cart-validation-accept-price-${item.productId}-${item.variantId}`}
                                     >
-                                      Accept new price
+                                      {t("cart.acceptNewPrice")}
                                     </button>
                                   ) : null}
                                   {validated.status !== "OK" ? (
@@ -386,7 +384,7 @@ export function CartPageClient() {
                                       className="public-button-secondary px-3 py-2 text-xs"
                                       data-testid={`cart-validation-remove-${item.productId}-${item.variantId}`}
                                     >
-                                      Remove
+                                      {t("cart.remove")}
                                     </button>
                                   ) : null}
                                 </div>
@@ -395,7 +393,7 @@ export function CartPageClient() {
                           </div>
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                              Quantity
+                              {t("cart.quantity")}
                             </p>
                             <div className="mt-2 flex items-center gap-2">
                               <button
@@ -408,7 +406,7 @@ export function CartPageClient() {
                                   )
                                 }
                                 className="public-button-secondary h-10 w-10"
-                                aria-label="Decrease quantity"
+                                aria-label={t("cart.quantity")}
                                 disabled={!canAdjust}
                               >
                                 -
@@ -439,7 +437,7 @@ export function CartPageClient() {
                                   )
                                 }
                                 className="public-button-secondary h-10 w-10"
-                                aria-label="Increase quantity"
+                                aria-label={t("cart.quantity")}
                                 disabled={!canAdjust}
                               >
                                 +
@@ -450,21 +448,25 @@ export function CartPageClient() {
                               onClick={() => removeItem(item.productId, item.variantId)}
                               className="mt-3 text-sm font-semibold text-[var(--accent-strong)] transition-colors hover:text-[var(--accent)]"
                             >
-                              Remove
+                              {t("cart.remove")}
                             </button>
                             {blocking ? (
                               <p className="mt-2 text-xs text-rose-700">
-                                Checkout is blocked until this item is fixed.
+                                {t("cart.checkoutBlocked")}
                               </p>
                             ) : null}
                           </div>
                           <div className="text-sm md:text-right">
                             <p className="text-[var(--muted)]">
-                              Unit {formatMoneyNumber(displayUnitPrice)}
+                              {t("cart.unit", {
+                                amount: formatMoneyNumber(displayUnitPrice) ?? displayUnitPrice,
+                              })}
                             </p>
                             {validated?.status === "PRICE_CHANGED" ? (
                               <p className="mt-1 text-xs text-[var(--muted)] line-through">
-                                Was {formatMoneyNumber(localUnitPrice)}
+                                {t("cart.was", {
+                                  amount: formatMoneyNumber(localUnitPrice) ?? localUnitPrice,
+                                })}
                               </p>
                             ) : null}
                             <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
@@ -480,17 +482,16 @@ export function CartPageClient() {
 
               <aside className="card-panel h-fit rounded-[2rem] px-6 py-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Summary
+                  {t("cart.summary")}
                 </p>
                 <div className="mt-5 flex items-center justify-between text-sm">
-                  <span className="text-[var(--muted)]">Grand total</span>
+                  <span className="text-[var(--muted)]">{t("cart.grandTotal")}</span>
                   <span className="text-gradient-primary text-xl font-bold">
                     {subtotal.toFixed(2)}
                   </span>
                 </div>
                 <p className="mt-4 text-xs leading-6 text-[var(--muted)]">
-                  Local cart data is only a snapshot. Stock, price, and public
-                  visibility are revalidated against the backend before checkout.
+                  {t("cart.snapshotDescription")}
                 </p>
                 <button
                   type="button"
@@ -499,7 +500,7 @@ export function CartPageClient() {
                   className="public-button-primary mt-5 inline-flex w-full justify-center px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="cart-checkout"
                 >
-                  {checkoutDisabled ? "Resolve cart issues first" : "Checkout"}
+                  {checkoutDisabled ? t("cart.resolveIssues") : t("cart.checkout")}
                 </button>
               </aside>
             </div>

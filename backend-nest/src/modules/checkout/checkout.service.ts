@@ -113,11 +113,11 @@ export class CheckoutService {
     if (firstInvalid) {
       if (firstInvalid.status === 'PRODUCT_NOT_FOUND') {
         throw new NotFoundException(
-          this.buildValidationErrorMessage(firstInvalid),
+          this.buildValidationErrorPayload(firstInvalid),
         );
       }
       throw new BadRequestException(
-        this.buildValidationErrorMessage(firstInvalid),
+        this.buildValidationErrorPayload(firstInvalid),
       );
     }
 
@@ -237,9 +237,11 @@ export class CheckoutService {
         });
 
         if (updatedVariant.count !== 1) {
-          throw new BadRequestException(
-            `Product ${item.input.productId} stock changed during checkout. Please refresh and try again.`,
-          );
+          throw new BadRequestException({
+            code: 'VALIDATION_ERROR',
+            message:
+              'Product stock changed during checkout. Please refresh and try again.',
+          });
         }
       }
 
@@ -490,9 +492,10 @@ export class CheckoutService {
         !dto.customer.phone.trim() ||
         !dto.customer.address?.trim()
       ) {
-        throw new BadRequestException(
-          'Full name, phone, and address are required.',
-        );
+        throw new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: 'Full name, phone, and address are required.',
+        });
       }
 
       return {
@@ -743,26 +746,50 @@ export class CheckoutService {
     return `CHK-${Date.now()}-${Math.round(Math.random() * 1000)}`;
   }
 
-  private buildValidationErrorMessage(item: CartValidationLine) {
+  private buildValidationErrorPayload(item: CartValidationLine) {
     const variantId = item.variant?.id ?? item.input.variantId ?? 'unknown';
 
     switch (item.status) {
       case 'PRODUCT_NOT_FOUND':
-        return `Product ${item.input.productId} was not found.`;
+        return {
+          code: 'PRODUCT_NOT_AVAILABLE',
+          message: `Product ${item.input.productId} was not found.`,
+        };
       case 'PRODUCT_ARCHIVED':
-        return `Product ${item.input.productId} is archived and no longer available for checkout.`;
+        return {
+          code: 'PRODUCT_NOT_AVAILABLE',
+          message: `Product ${item.input.productId} is archived and no longer available for checkout.`,
+        };
       case 'PRODUCT_NOT_PUBLIC':
-        return `Product ${item.input.productId} is not available for checkout.`;
+        return {
+          code: 'PRODUCT_NOT_AVAILABLE',
+          message: `Product ${item.input.productId} is not available for checkout.`,
+        };
       case 'VARIANT_NOT_FOUND':
-        return `Variant ${variantId} is not available for product ${item.input.productId}.`;
+        return {
+          code: 'PRODUCT_NOT_AVAILABLE',
+          message: `Variant ${variantId} is not available for product ${item.input.productId}.`,
+        };
       case 'OUT_OF_STOCK':
-        return `Product ${item.input.productId} variant ${variantId} is out of stock.`;
+        return {
+          code: 'OUT_OF_STOCK',
+          message: `Product ${item.input.productId} variant ${variantId} is out of stock.`,
+        };
       case 'QUANTITY_EXCEEDS_STOCK':
-        return `Product ${item.input.productId} variant ${variantId} does not have enough stock. Requested ${item.input.quantity}, available ${item.maxQuantity}.`;
+        return {
+          code: 'VALIDATION_ERROR',
+          message: `Product ${item.input.productId} variant ${variantId} does not have enough stock. Requested ${item.input.quantity}, available ${item.maxQuantity}.`,
+        };
       case 'MISSING_PRICE':
-        return `Product ${item.input.productId} is not purchasable because its price is missing.`;
+        return {
+          code: 'PRODUCT_NOT_AVAILABLE',
+          message: `Product ${item.input.productId} is not purchasable because its price is missing.`,
+        };
       default:
-        return `Product ${item.input.productId} is not available for checkout.`;
+        return {
+          code: 'PRODUCT_NOT_AVAILABLE',
+          message: `Product ${item.input.productId} is not available for checkout.`,
+        };
     }
   }
 
@@ -773,9 +800,10 @@ export class CheckoutService {
     paymentPanel: ReturnType<typeof resolveShopPaymentPanel>,
   ) {
     const unsupported = () =>
-      new BadRequestException(
-        `SHOP_PAYMENT_METHOD_NOT_SUPPORTED: ${shopName} does not support ${paymentMethod}.`,
-      );
+      new BadRequestException({
+        code: 'SHOP_PAYMENT_METHOD_NOT_SUPPORTED',
+        message: `${shopName} does not support ${paymentMethod}.`,
+      });
 
     switch (paymentMethod) {
       case 'PREPAID_SELLER_QR':
@@ -799,9 +827,10 @@ export class CheckoutService {
             new Prisma.Decimal(paymentPanel.capabilities.codMaxOrderAmount),
           )
         ) {
-          throw new BadRequestException(
-            `SHOP_PAYMENT_METHOD_NOT_SUPPORTED: ${shopName} exceeds the pay-on-delivery limit.`,
-          );
+          throw new BadRequestException({
+            code: 'SHOP_PAYMENT_METHOD_NOT_SUPPORTED',
+            message: `${shopName} exceeds the pay-on-delivery limit.`,
+          });
         }
         return;
       case 'DEPOSIT_THEN_DELIVERY_PAYMENT':

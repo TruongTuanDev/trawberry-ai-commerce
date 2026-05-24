@@ -3,20 +3,11 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect } from "react";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { useI18n } from "@/i18n/use-i18n";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
-import { NotificationBell } from "@/components/notifications/notification-bell";
-
-const primaryLinks = [
-  { href: "/", label: "Home" },
-  { href: "/products", label: "Shop" },
-  { href: "/orders/track", label: "Track order" },
-  { href: "/seller/register", label: "Sell with trawberry" },
-  { href: "/seller/login", label: "Seller login" },
-  { href: "/products?q=new", label: "New arrivals" },
-  { href: "/products?sort=price_desc", label: "Brands" },
-  { href: "/products?inStock=true", label: "Editors' picks" },
-];
 
 function MenuIcon() {
   return (
@@ -92,6 +83,7 @@ function CartIcon() {
 }
 
 export function PublicHeader() {
+  const { t } = useI18n("customer");
   const router = useRouter();
   const searchParams = useSearchParams();
   const hydrateCart = useCartStore((state) => state.hydrate);
@@ -149,16 +141,28 @@ export function PublicHeader() {
     user?.role === "CUSTOMER"
       ? "/customer/account/addresses"
       : "/customer/login?next=%2Fcustomer%2Faccount%2Faddresses";
-  const accountLabel = user?.role === "CUSTOMER" ? (user.fullName || "Account") : "Login";
+  const accountLabel =
+    user?.role === "CUSTOMER"
+      ? user.fullName || t("publicHeader.account")
+      : t("publicHeader.login");
+  const primaryLinks = [
+    { href: "/", label: t("publicHeader.home") },
+    { href: "/products", label: t("publicHeader.shop") },
+    { href: "/orders/track", label: t("publicHeader.trackOrder") },
+    { href: "/seller/register", label: t("publicHeader.sellWithUs") },
+    { href: "/seller/login", label: t("publicHeader.sellerLogin") },
+    { href: "/products?q=new", label: t("publicHeader.newArrivals") },
+    { href: "/products?sort=price_desc", label: t("publicHeader.brands") },
+    { href: "/products?inStock=true", label: t("publicHeader.editorsPicks") },
+  ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-primary text-white shadow-md">
       <div className="mx-auto max-w-[1600px] px-4 py-2 sm:px-6">
-        {/* Top bar (Row 1): Thin, text-xs */}
-        <div className="hidden lg:flex items-center justify-between gap-6 border-b border-white/10 pb-2 mb-2 text-xs font-semibold text-white/80">
+        <div className="mb-2 hidden items-center justify-between gap-6 border-b border-white/10 pb-2 text-xs font-semibold text-white/80 lg:flex">
           <div className="flex items-center gap-1.5 text-white/90">
             <PinIcon />
-            <span className="truncate">Москва</span>
+            <span className="truncate">{t("publicHeader.city")}</span>
           </div>
           <nav
             className="flex items-center justify-center gap-5 xl:gap-7"
@@ -176,70 +180,62 @@ export function PublicHeader() {
             ))}
           </nav>
           <div className="flex items-center justify-end gap-4">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-bold text-yellow-300 uppercase tracking-wider">
-              КЕШБЭК 💰
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-300">
+              {t("publicHeader.cashback")}
             </span>
             <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/90">
-              RUB 🇷🇺
+              {t("publicHeader.currency")}
             </span>
+            <LanguageSwitcher role="customer" />
             {!user?.role ? (
               <Link
                 href="/customer/register"
                 className="rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-semibold text-white/90 hover:bg-white/18"
                 data-testid="public-customer-register-link"
               >
-                Register
+                {t("publicHeader.register")}
               </Link>
             ) : (
               <button
                 type="button"
                 onClick={() => void logoutRole("customer")}
-                className="rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-semibold text-white/90 hover:bg-white/18 cursor-pointer"
+                className="cursor-pointer rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-semibold text-white/90 hover:bg-white/18"
                 data-testid="public-customer-logout"
               >
-                Log out
+                {t("common.logout")}
               </button>
             )}
           </div>
         </div>
 
-        {/* Main Row (Row 2): Logo, Catalog Menu, Search, Actions */}
-        <div className="flex items-center justify-between gap-3 sm:gap-4 md:gap-6 py-1">
-          {/* Logo */}
+        <div className="flex items-center justify-between gap-3 py-1 sm:gap-4 md:gap-6">
           <Link
             href="/"
-            className="flex items-center shrink-0"
+            className="flex shrink-0 items-center"
             data-testid="public-logo"
           >
-            {/* Mobile logo icon */}
             <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[#cb11ab] shadow-sm md:hidden">
               tr
             </span>
-            {/* Desktop logo text */}
-            <span className="hidden md:inline font-[family-name:var(--font-sans-app)] text-2xl font-extrabold tracking-tight text-white hover:opacity-90">
+            <span className="hidden font-[family-name:var(--font-sans-app)] text-2xl font-extrabold tracking-tight text-white hover:opacity-90 md:inline">
               trawberry
             </span>
           </Link>
 
-          {/* Menu button */}
           <button
             type="button"
-            className="flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-xl border border-white/18 bg-white/10 text-white hover:bg-white/15 transition cursor-pointer"
-            aria-label="Open catalog menu"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/18 bg-white/10 text-white transition hover:bg-white/15 md:h-10 md:w-10"
+            aria-label={t("publicHeader.openCatalogMenu")}
           >
             <MenuIcon />
           </button>
 
-          {/* Search bar */}
-          <form
-            onSubmit={handleSearch}
-            className="flex-1 max-w-4xl"
-          >
+          <form onSubmit={handleSearch} className="max-w-4xl flex-1">
             <label htmlFor="public-header-search" className="sr-only">
-              Search products
+              {t("publicHeader.searchProducts")}
             </label>
-            <div className="public-header-search-wrap flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-[var(--foreground)] shadow-sm h-9 md:h-10">
-              <span className="text-[var(--muted)] flex-shrink-0">
+            <div className="public-header-search-wrap flex h-9 items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-[var(--foreground)] shadow-sm md:h-10">
+              <span className="flex-shrink-0 text-[var(--muted)]">
                 <SearchIcon />
               </span>
               <input
@@ -247,16 +243,16 @@ export function PublicHeader() {
                 id="public-header-search"
                 name="q"
                 defaultValue={searchParams.get("q") ?? ""}
-                placeholder="Search products, brands, categories"
+                placeholder={t("publicHeader.searchPlaceholder")}
                 className="min-w-0 flex-1 border-none bg-transparent p-0 text-sm outline-none placeholder:text-[var(--muted)] focus:outline-none focus:ring-0 focus-visible:outline-none"
                 data-testid="public-header-search"
               />
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
-                aria-label="Search by image"
+                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600"
+                aria-label={t("publicHeader.searchByImage")}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -264,79 +260,73 @@ export function PublicHeader() {
             </div>
           </form>
 
-          {/* Action items */}
-          <div className="flex items-center gap-3 sm:gap-5 md:gap-6 shrink-0">
-            {/* Address */}
+          <div className="flex shrink-0 items-center gap-3 sm:gap-5 md:gap-6">
             <Link
               href={customerAddressHref}
               className="hidden cursor-pointer flex-col items-center justify-center text-center text-white/90 transition hover:text-white md:flex"
-              title="Manage delivery address"
-              aria-label="Open customer address settings"
+              title={t("publicHeader.manageAddress")}
+              aria-label={t("publicHeader.openAddressSettings")}
               data-testid="public-address-link"
             >
-              <span className="w-5 h-5 flex items-center justify-center">
+              <span className="flex h-5 w-5 items-center justify-center">
                 <PinIcon />
               </span>
-              <span className="text-[10px] font-semibold mt-0.5 tracking-tight">Address</span>
+              <span className="mt-0.5 text-[10px] font-semibold tracking-tight">
+                {t("publicHeader.address")}
+              </span>
             </Link>
 
-            {/* Notifications */}
-            {user?.role === "CUSTOMER" && (
-              <NotificationBell role="customer" />
-            )}
+            {user?.role === "CUSTOMER" && <NotificationBell role="customer" />}
 
-            {/* Account */}
             <Link
               href={customerHref}
-              className="flex flex-col items-center justify-center text-center text-white/90 hover:text-white transition"
+              className="flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
               data-testid="public-customer-link"
             >
-              <span className="w-5 h-5 flex items-center justify-center">
+              <span className="flex h-5 w-5 items-center justify-center">
                 <AccountIcon />
               </span>
-              <span className="hidden md:inline text-[10px] font-semibold mt-0.5 tracking-tight truncate max-w-[80px]">
+              <span className="hidden max-w-[80px] truncate text-[10px] font-semibold tracking-tight md:inline">
                 {accountLabel}
               </span>
             </Link>
 
-            {/* Cart */}
             <Link
               href="/cart"
-              className="relative flex flex-col items-center justify-center text-center text-white/90 hover:text-white transition"
+              className="relative flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
               data-testid="public-cart-link"
             >
-              <div className="relative w-5 h-5 flex items-center justify-center">
+              <div className="relative flex h-5 w-5 items-center justify-center">
                 <CartIcon />
                 {cartCount > 0 && (
                   <span
-                    className="cart-badge-pop absolute -top-1.5 -right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ffcf33] px-1 text-[9px] font-bold text-[#5c0f59]"
+                    className="cart-badge-pop absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ffcf33] px-1 text-[9px] font-bold text-[#5c0f59]"
                     data-testid="public-cart-count"
                   >
                     {cartCount}
                   </span>
                 )}
               </div>
-              <span className="hidden md:inline text-[10px] font-semibold mt-0.5 tracking-tight">
-                Cart
+              <span className="hidden text-[10px] font-semibold tracking-tight md:inline">
+                {t("publicHeader.cart")}
               </span>
             </Link>
           </div>
         </div>
 
-        {/* Mobile secondary actions (Login/Register) when logged out */}
         {!user?.role && (
-          <div className="flex gap-2 pt-2 pb-1 lg:hidden">
+          <div className="flex gap-2 pb-1 pt-2 lg:hidden">
             <Link
               href={customerHref}
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg border border-white/18 bg-white/12 px-3 text-xs font-semibold text-white backdrop-blur"
             >
-              Login
+              {t("publicHeader.login")}
             </Link>
             <Link
               href="/customer/register"
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[#cb11ab]"
             >
-              Register
+              {t("publicHeader.register")}
             </Link>
           </div>
         )}

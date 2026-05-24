@@ -210,7 +210,7 @@ test("public marketplace product buying UX supports size selection, in-cart stat
   await page.getByTestId("product-detail-title").click();
   await expect(page.getByTestId("product-quantity-stepper-value")).toHaveValue("3");
   await expect(page.getByTestId("toast-warning").first()).toContainText(
-    "Số lượng vượt quá tồn kho hiện có.",
+    /Количество превышает доступный остаток\.|Số lượng vượt quá tồn kho hiện có\./,
   );
 
   await page.getByTestId("add-to-cart").click();

@@ -11,6 +11,8 @@ import {
 import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PublicShell } from "@/components/public/public-shell";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import { getLocalizedErrorMessage } from "@/i18n/error-messages";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   buildCartValidationPayload,
   buildValidationMap,
@@ -82,6 +84,7 @@ export function CheckoutPageClient({
   initialVariantId: string | null;
   initialQuantity: number;
 }) {
+  const { t } = useI18n("customer");
   const items = useCartStore((state) => state.items);
   const hydrated = useCartStore((state) => state.hydrated);
   const hydrateCart = useCartStore((state) => state.hydrate);
@@ -314,7 +317,12 @@ export function CheckoutPageClient({
 
   const handleSubmit = async () => {
     if (!items.length) {
-      setError("Cart is empty.");
+      setError(
+        getLocalizedErrorMessage({
+          role: "customer",
+          error: { message: "VALIDATION_ERROR" },
+        }),
+      );
       return;
     }
     if (customerRequiresSavedAddress && !selectedSavedAddress) {
@@ -449,7 +457,7 @@ export function CheckoutPageClient({
         <div className="mx-auto max-w-7xl space-y-6">
           {loading ? (
             <section className="card-panel rounded-[2rem] px-6 py-10 text-sm text-[var(--muted)]">
-              Loading checkout...
+              {t("checkout.loading")}
             </section>
           ) : order ? (
             <section
@@ -457,16 +465,16 @@ export function CheckoutPageClient({
               data-testid="checkout-confirmation"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                Orders created
+                {t("checkout.created")}
               </p>
               <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-4xl font-bold">
-                Confirmation
+                {t("checkout.confirmation")}
               </h1>
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Metric label="Orders" value={String(order.orders.length)} />
-                <Metric label="Receipt" value={order.checkoutCode} />
-                <Metric label="Grand total" value={order.grandTotal} />
-                <Metric label="First order" value={order.orderCode} />
+                <Metric label={t("checkout.orders")} value={String(order.orders.length)} />
+                <Metric label={t("checkout.receipt")} value={order.checkoutCode} />
+                <Metric label={t("checkout.grandTotal")} value={order.grandTotal} />
+                <Metric label={t("checkout.firstOrder")} value={order.orderCode} />
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
@@ -474,7 +482,7 @@ export function CheckoutPageClient({
                   className="public-button-primary px-5 py-3 text-sm"
                   data-testid="checkout-receipt-link"
                 >
-                  Open receipt
+                  {t("checkout.openReceipt")}
                 </Link>
                 {authUser?.role === "CUSTOMER" ? (
                   <Link
@@ -482,7 +490,7 @@ export function CheckoutPageClient({
                     className="public-button-secondary px-5 py-3 text-sm"
                     data-testid="checkout-customer-order-link"
                   >
-                    Save in my orders
+                    {t("checkout.saveInOrders")}
                   </Link>
                 ) : null}
               </div>
@@ -531,7 +539,7 @@ export function CheckoutPageClient({
                             : "confirmation-track-link-extra"
                         }
                       >
-                        Open tracking
+                        {t("checkout.openTracking")}
                       </Link>
                     </div>
                   </article>
@@ -541,13 +549,13 @@ export function CheckoutPageClient({
           ) : !items.length ? (
             <section className="card-panel rounded-[2rem] px-6 py-10 text-center">
               <p className="text-sm text-[var(--muted)]">
-                Checkout needs cart items.
+                {t("checkout.empty")}
               </p>
               <Link
                 href="/products"
                 className="public-button-primary mt-5 inline-flex px-5 py-3 text-sm"
               >
-                Open marketplace
+                {t("checkout.openMarketplace")}
               </Link>
             </section>
           ) : (
@@ -626,10 +634,10 @@ export function CheckoutPageClient({
 
                 <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Customer info
+                    {t("checkout.customerInfo")}
                   </p>
                   <h1 className="text-gradient-primary mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
-                    Delivery details
+                    {t("checkout.deliveryDetails")}
                   </h1>
                   <div className="mt-6 grid gap-4">
                     {customerRequiresSavedAddress && requiresDeliveryReadyAddress ? (
@@ -656,7 +664,7 @@ export function CheckoutPageClient({
                     ) : null}
 
                     {customerRequiresSavedAddress && savedAddresses.length ? (
-                      <Field label="Saved addresses">
+                      <Field label={t("checkout.savedAddresses")}>
                         <select
                           value={selectedAddressId}
                           onChange={(event) => setSelectedAddressId(event.target.value)}
@@ -682,7 +690,7 @@ export function CheckoutPageClient({
                             </p>
                             {selectedSavedAddress.isDefault ? (
                               <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-                                Default
+                                {t("checkout.default")}
                               </span>
                             ) : null}
                           </div>
@@ -705,24 +713,24 @@ export function CheckoutPageClient({
                           </p>
                           <p className="mt-2 text-xs text-[var(--muted)]">
                             {selectedSavedAddress.yandexApiReady
-                              ? "Yandex-ready"
+                              ? t("checkout.yandexReady")
                               : selectedSavedAddress.yandexManualReady
-                                ? "Manual delivery allowed"
-                                : "Structured address still needs more detail"}
+                                ? t("checkout.manualDeliveryAllowed")
+                                : t("checkout.structuredAddressMissing")}
                           </p>
                           {!selectedSavedAddress.yandexManualReady &&
                           selectedSavedAddress.missingYandexFields.length ? (
                             <p className="mt-2 text-xs text-rose-700" data-testid="checkout-address-missing-details">
-                              Missing details: {selectedSavedAddress.missingYandexFields.join(", ")}
+                              {t("checkout.missingDetails", { fields: selectedSavedAddress.missingYandexFields.join(", ") })}
                             </p>
                           ) : null}
                           {!isCustomerAddressGeoReady(selectedSavedAddress) ? (
                             <p className="mt-2 text-xs text-amber-700">
-                              Coordinates missing - seller may need to verify manually before Yandex dispatch.
+                              {t("checkout.coordinatesMissing")}
                             </p>
                           ) : null}
                         </div>
-                        <Field label="Email">
+                        <Field label={t("checkout.email")}>
                           <input
                             value={customerForm.email}
                             onChange={(event) =>
@@ -738,7 +746,7 @@ export function CheckoutPageClient({
                       </>
                     ) : customerRequiresSavedAddress ? null : (
                       <>
-                        <Field label="Full name">
+                        <Field label={t("checkout.fullName")}>
                           <input
                             value={customerForm.fullName}
                             onChange={(event) =>
@@ -752,7 +760,7 @@ export function CheckoutPageClient({
                           />
                         </Field>
                         <div className="grid gap-4 md:grid-cols-2">
-                          <Field label="Phone">
+                          <Field label={t("checkout.phone")}>
                             <input
                               value={customerForm.phone}
                               onChange={(event) =>
@@ -765,7 +773,7 @@ export function CheckoutPageClient({
                               data-testid="checkout-phone"
                             />
                           </Field>
-                          <Field label="Email">
+                          <Field label={t("checkout.email")}>
                             <input
                               value={customerForm.email}
                               onChange={(event) =>
@@ -779,7 +787,7 @@ export function CheckoutPageClient({
                             />
                           </Field>
                         </div>
-                        <Field label="Address">
+                        <Field label={t("checkout.address")}>
                           <textarea
                             value={customer.address}
                             onChange={(event) =>
@@ -796,7 +804,7 @@ export function CheckoutPageClient({
                       </>
                     )}
 
-                    <Field label="Note">
+                    <Field label={t("checkout.note")}>
                       <textarea
                         value={customer.note}
                         onChange={(event) =>
@@ -817,11 +825,11 @@ export function CheckoutPageClient({
               <section className="space-y-6">
                 <section className="card-panel rounded-[2rem] px-6 py-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    Order summary
+                    {t("checkout.orderSummary")}
                   </p>
                   {activeValidationLoading ? (
                     <p className="mt-4 text-sm text-[var(--muted)]">
-                      Checking latest marketplace price and stock...
+                      {t("checkout.checkingLatest")}
                     </p>
                   ) : null}
                   <div className="mt-5 space-y-4" data-testid="checkout-order-items">
@@ -879,7 +887,7 @@ export function CheckoutPageClient({
                     ))}
                   </div>
                   <div className="mt-5 flex items-center justify-between text-sm">
-                    <span className="text-[var(--muted)]">Subtotal</span>
+                    <span className="text-[var(--muted)]">{t("checkout.subtotal")}</span>
                     <span className="text-gradient-primary text-xl font-bold">
                       {subtotal.toFixed(2)}
                     </span>
@@ -888,7 +896,7 @@ export function CheckoutPageClient({
 
                 <section className="card-panel rounded-[2rem] px-6 py-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    Payment method
+                    {t("checkout.paymentMethod")}
                   </p>
                   <div className="mt-4 grid gap-3">
                     <PaymentOption

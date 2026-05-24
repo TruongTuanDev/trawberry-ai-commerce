@@ -16,6 +16,7 @@ import { QuantityStepper } from "@/components/public/quantity-stepper";
 import { StockBadge } from "@/components/public/stock-badge";
 import { toast } from "@/components/ui/use-toast";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import { useI18n } from "@/i18n/use-i18n";
 import { getPublicProduct, type PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -24,6 +25,7 @@ export function PublicProductDetailPageClient({
 }: {
   productId: string;
 }) {
+  const { t } = useI18n("customer");
   const router = useRouter();
   const [product, setProduct] = useState<PublicProduct | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
@@ -54,7 +56,7 @@ export function PublicProductDetailPageClient({
     return Math.min(normalized, maxQuantity);
   }, [maxQuantity, quantity]);
   const displayQuantity = cartItem?.quantity ?? safeQuantity;
-  const selectedVariantLabel = selectedVariant ? getVariantLabel(selectedVariant) : "No variant available";
+  const selectedVariantLabel = selectedVariant ? getVariantLabel(selectedVariant) : t("productDetail.noVariant");
   const isUnavailableState =
     normalizedError.includes("not found") ||
     normalizedError.includes("no longer") ||
@@ -119,12 +121,12 @@ export function PublicProductDetailPageClient({
       : null;
 
   const stockLabel = !selectedVariant
-    ? "Select a size to continue"
+    ? t("productDetail.selectSize")
     : !selectedVariant.inStock
       ? "Нет в наличии"
       : selectedVariant.trackInventory
         ? `${formatCount(selectedVariant.availableQuantity)} available`
-        : "Available to order";
+        : t("productDetail.availableToOrder");
 
   const stockTone = !selectedVariant?.inStock
     ? "text-rose-700 bg-rose-50 border-rose-200"
@@ -154,7 +156,7 @@ export function PublicProductDetailPageClient({
   };
 
   const handleQuantityMaxExceeded = () => {
-    toast.warning("Số lượng vượt quá tồn kho hiện có.");
+    toast.warning(t("productDetail.quantityExceeded"));
   };
 
   const handleAddToCart = () => {
@@ -189,19 +191,19 @@ export function PublicProductDetailPageClient({
               href="/products"
               className="public-button-secondary inline-flex px-4 py-2 text-sm"
             >
-              Back to products
+              {t("productDetail.backToProducts")}
             </Link>
             <Link
               href="/cart"
               className="public-button-secondary inline-flex px-4 py-2 text-sm"
             >
-              Open cart
+              {t("productDetail.openCart")}
             </Link>
           </div>
 
           {loading ? (
             <section className="card-panel rounded-[2rem] px-6 py-12 text-sm text-[var(--muted)]">
-              Loading product...
+              {t("productDetail.loadingProduct")}
             </section>
           ) : error || !product ? (
             <section

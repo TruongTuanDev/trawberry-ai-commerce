@@ -488,3 +488,14 @@ Future audit item: design an optional marketplace parent order for combined rece
 - public and cart image fallback no longer depends on a remote placeholder provider
 - product detail unavailable state is explicit for hidden/unpublished/nonexistent products
 - mobile sticky CTA remains reachable without masking the fallback states above it
+
+# Role-Based i18n Audit Addendum
+
+- locale policy is now role-aware in `frontend-next` and does not expose admin locale switching in public navigation
+- preferred locale can be stored in backend user state and in cookie fallback
+- public/customer and seller locale switching is designed to avoid touching auth, cart, checkout, and order identifiers
+- checkout/backend business rules remain source-of-truth and unchanged by locale switching
+- dedicated locale E2E coverage is now passing after rebuilding the runtime and isolating locale state per browser context
+- public runtime default is Russian when no user preference and no locale cookie exist
+- seller runtime supports `ru -> vi -> en` switching with persistence
+- admin runtime remains English-only with no language switcher

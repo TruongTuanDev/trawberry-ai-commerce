@@ -24,11 +24,13 @@ const refreshInFlight = new Map<AuthRoleKey, Promise<boolean>>();
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -71,21 +73,29 @@ function shouldSkipRefresh(path: string) {
   );
 }
 
-async function readErrorMessage(response: Response) {
+async function readErrorBody(response: Response) {
   let message = "Request failed";
+  let code: string | undefined;
 
   try {
-    const body = (await response.json()) as { message?: string | string[] };
+    const body = (await response.json()) as {
+      code?: string;
+      message?: string | string[];
+      error?: string;
+    };
     if (Array.isArray(body.message)) {
       message = body.message.join(", ");
     } else if (body.message) {
       message = body.message;
+    } else if (body.error) {
+      message = body.error;
     }
+    code = body.code;
   } catch {
     message = response.statusText || message;
   }
 
-  return message;
+  return { message, code };
 }
 
 async function requestRefresh(role: AuthRoleKey): Promise<boolean> {
@@ -157,7 +167,8 @@ async function executeRequest<T>(
       }
     }
 
-    throw new ApiError(await readErrorMessage(response), response.status);
+    const errorBody = await readErrorBody(response);
+    throw new ApiError(errorBody.message, response.status, errorBody.code);
   }
 
   if (response.status === 204) {

@@ -2340,3 +2340,50 @@ Retained non-goals:
 - No backend changes to the notification engine or database models.
 - No push notification or SMS/email integrations.
 - No legacy app changes.
+
+# Phase Report: Role-Based i18n Foundation
+
+Implemented:
+
+- Added `frontend-next/src/i18n/*` foundation with role policy for `admin`, `seller`, and `customer/public`.
+- Added locale dictionaries for `en`, `ru`, and `vi`.
+- Added cookie-backed locale store, `useI18n`, and role-aware `LanguageSwitcher`.
+- Wired public header and seller shell to the new i18n layer.
+- Refactored core public surfaces (`public-header`, `cart`, `order-track`, partial `checkout`, partial `product-detail`) away from newly added hard-coded strings.
+- Added backend `User.preferredLocale` support plus `PATCH /api/users/locale`.
+- Extended current-user payloads with `preferredLocale`.
+- Added frontend error-code localization mapping for key checkout/auth cases.
+- Added a focused Playwright spec for role-based locale behavior.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npm run test:e2e:public-marketplace-contract`: pass
+- `frontend-next npm run test:e2e:product-buying-ux`: pass
+- `frontend-next npm run test:e2e:cart-checkout`: pass
+- `frontend-next npm run test:e2e:customer-account`: pass
+- `frontend-next npm run test:e2e:seller-product-lifecycle`: pass
+- `frontend-next npm run test:e2e:seller-manual-yandex-workbench`: pass
+- `frontend-next npm run test:e2e:admin-fulfillment-supervision`: pass
+- `frontend-next npm run test:e2e:notifications`: pass
+- `frontend-next npm run test:e2e:action-feedback`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-role-locale.spec.ts --workers=1`: pass
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+
+Resolution notes:
+
+- root cause of the original public-default-Russian failure was not the locale policy itself
+- two issues combined:
+  - the runtime on `localhost:3000` had not been rebuilt from the latest i18n source
+  - the new Playwright spec was reusing stale locale state and had a seller login wait condition that matched `/seller/login` too early
+- the locale spec now uses clean browser contexts per surface and stable selectors
+- targeted regression specs that depended on old English/Vietnamese copy were updated to use stable test ids or locale-safe assertions where needed
+
+Known gaps:
+
+- `checkout-page-client`, seller payment/product screens, and notification copy are only partially migrated; more hard-coded legacy strings remain outside the current priority keys.

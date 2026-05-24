@@ -1437,3 +1437,28 @@ Verification:
 Current gap:
 
 - A future backend endpoint (e.g. `GET /api/notifications/summary`) could be implemented to fetch all counts in a single query rather than orchestrating parallel API queries on the client.
+
+# Role-Based i18n Foundation Status
+
+Implemented:
+
+- role policy established:
+  - admin: `en` only
+  - seller: `ru`, `en`, `vi`
+  - customer/public: `ru`, `en`
+- frontend i18n foundation added under `frontend-next/src/i18n`
+- cookie-backed locale switching added to public header and seller shell
+- backend user locale preference persisted via `preferredLocale` and `PATCH /api/users/locale`
+- core public and seller navigation surfaces migrated to translation keys
+
+Verification:
+
+- frontend lint/build: pass
+- backend prisma generate/db push/lint/test/build: pass
+- core marketplace/account/order/seller/admin/frontend regression suites listed in phase report: pass
+- dedicated role-based locale E2E: pass
+
+Current gap:
+
+- several seller/customer screens still contain legacy hard-coded strings and need phase-2 migration
+- some older E2E specs needed selector/copy hardening because public and seller surfaces now default to localized text instead of legacy English/Vietnamese assumptions

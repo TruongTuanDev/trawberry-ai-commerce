@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/seller/section-card";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   archiveShopOrder,
   createManualDelivery,
@@ -39,6 +40,7 @@ type ShipmentPanelState = {
 };
 
 export function SellerOrdersPageClient() {
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [response, setResponse] = useState<SellerOrdersResponse | null>(null);
@@ -52,6 +54,27 @@ export function SellerOrdersPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [shipmentPanel, setShipmentPanel] = useState<ShipmentPanelState | null>(null);
   const { run: runAction, isRunning } = useActionFeedback();
+  const localizedSellerTabs = useMemo(
+    () =>
+      sellerTabs.map((tab) => ({
+        value: tab.value,
+        label:
+          tab.value === "ALL"
+            ? t("sellerOrders.all")
+            : tab.value === "NEW"
+              ? t("sellerOrders.new")
+              : tab.value === "ASSEMBLING"
+                ? t("sellerOrders.assembling")
+                : tab.value === "IN_TRANSIT"
+                  ? t("sellerOrders.inTransit")
+                  : tab.value === "COMPLETED"
+                    ? t("sellerOrders.completed")
+                    : tab.value === "CANCELLED"
+                      ? t("sellerOrders.cancelled")
+                      : t("sellerOrders.archived"),
+      })),
+    [t],
+  );
 
   const orders = response?.items ?? [];
   const summary = response?.summary ?? {
@@ -65,8 +88,8 @@ export function SellerOrdersPageClient() {
   };
 
   const title = useMemo(
-    () => sellerTabs.find((tab) => tab.value === status)?.label ?? "Orders",
-    [status],
+    () => localizedSellerTabs.find((tab) => tab.value === status)?.label ?? t("sellerOrders.orders"),
+    [localizedSellerTabs, status, t],
   );
 
   const load = async () => {
@@ -226,12 +249,12 @@ export function SellerOrdersPageClient() {
   return (
     <div className="space-y-6">
       <SectionCard
-        eyebrow="Fulfillment"
-        title="Seller orders"
+        eyebrow={t("sellerOrders.fulfillment")}
+        title={t("sellerOrders.title")}
         description="Luồng xử lý đơn hàng tách riêng khỏi payment review. Chỉ các đơn đã xác nhận thanh toán mới xuất hiện trong các bucket vận hành."
       >
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seller order filters">
-          {sellerTabs.map((tab) => (
+          {localizedSellerTabs.map((tab) => (
             <button
               key={tab.value}
               type="button"
@@ -258,7 +281,8 @@ export function SellerOrdersPageClient() {
               setSearch(event.target.value);
               setPage(1);
             }}
-            placeholder="Search by order, customer, phone, product"
+            placeholder={t("sellerOrders.searchPlaceholder")}
+            data-testid="seller-order-search"
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           />
           <input
@@ -289,7 +313,7 @@ export function SellerOrdersPageClient() {
       </SectionCard>
 
       <SectionCard
-        eyebrow="Orders"
+        eyebrow={t("sellerOrders.orders")}
         title={title}
         description="Hành động thay đổi theo bucket để seller biết rõ bước tiếp theo của từng đơn."
       >
@@ -300,7 +324,7 @@ export function SellerOrdersPageClient() {
         <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
           <div className="hidden grid-cols-[140px_1.2fr_1.2fr_140px_170px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
             <div>Đơn</div>
-            <div>Buyer</div>
+            <div>{t("sellerOrders.buyer")}</div>
             <div>Sản phẩm</div>
             <div>Số tiền</div>
             <div>Vận chuyển</div>
@@ -429,7 +453,7 @@ export function SellerOrdersPageClient() {
               disabled={page <= 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
-              Previous
+              {t("sellerOrders.previous")}
             </Button>
             <Button
               variant="outline"
@@ -437,7 +461,7 @@ export function SellerOrdersPageClient() {
               disabled={page >= (response?.meta.totalPages ?? 1)}
               onClick={() => setPage((current) => current + 1)}
             >
-              Next
+              {t("sellerOrders.next")}
             </Button>
           </div>
         </div>

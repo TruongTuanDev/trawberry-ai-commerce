@@ -13,6 +13,9 @@ export class CurrentUserResponseDto {
   @ApiProperty({ nullable: true })
   phone!: string | null;
 
+  @ApiProperty({ nullable: true, enum: ['en', 'ru', 'vi'] })
+  preferredLocale!: 'en' | 'ru' | 'vi' | null;
+
   @ApiProperty()
   role!: string;
 

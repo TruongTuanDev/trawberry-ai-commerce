@@ -39,6 +39,7 @@ export type CurrentUserResponse = {
   email: string;
   fullName: string | null;
   phone: string | null;
+  preferredLocale: "en" | "ru" | "vi" | null;
   role: string;
   status: string;
   sellerProfileId: string | null;
@@ -275,5 +276,16 @@ export async function logoutAllRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/logout-all", {
     method: "POST",
     retryOnAuthFailure: false,
+  });
+}
+
+export async function updateMyPreferredLocale(
+  locale: "en" | "ru" | "vi",
+  authRole: AuthRoleKey,
+) {
+  return apiRequest<{ preferredLocale: "en" | "ru" | "vi" | null }>("/api/users/locale", {
+    method: "PATCH",
+    authRole,
+    body: JSON.stringify({ preferredLocale: locale }),
   });
 }

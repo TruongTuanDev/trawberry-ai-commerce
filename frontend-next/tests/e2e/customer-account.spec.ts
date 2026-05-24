@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("customer manages account profile, addresses, password, and guarded access", async ({ browser, page }) => {
+test("customer manages account profile, addresses, password, and guarded access", async ({
+  browser,
+  page,
+}) => {
   test.setTimeout(180000);
 
   const stamp = Date.now();
@@ -23,10 +26,11 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.waitForURL("**/customer/orders");
 
   await page.goto("/products");
-  await expect(page.getByTestId("public-customer-link")).toContainText("Customer Account");
-  await page.getByTestId("public-customer-link").click();
+  const publicCustomerLink = page.getByTestId("public-customer-link").first();
+  await expect(publicCustomerLink).toBeVisible();
+  await publicCustomerLink.click();
   await page.waitForURL("**/customer/account");
-  await expect(page.getByRole("heading", { name: "Tài khoản của tôi" })).toBeVisible();
+  await expect(page.getByTestId("customer-account-nav")).toBeVisible();
 
   await page.goto("/customer/account/profile");
   await page.getByTestId("customer-profile-name").fill("Customer Account Prime");

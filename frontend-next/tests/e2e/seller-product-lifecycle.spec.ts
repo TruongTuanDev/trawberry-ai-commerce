@@ -137,11 +137,12 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();
   await customerPage.goto("/products");
-  await customerPage.getByLabel("Search catalog").fill(productName);
-  await customerPage.getByRole("button", { name: "Search" }).click();
+  const publicSearch = customerPage.getByTestId("public-header-search").first();
+  await publicSearch.fill(productName);
+  await publicSearch.press("Enter");
   const productCard = customerPage.getByTestId("product-card").filter({ hasText: productName });
   await expect(productCard).toHaveCount(1);
-  await productCard.getByRole("link", { name: "View" }).click();
+  await productCard.getByTestId(/product-view-/).click();
   await expect(customerPage.getByRole("heading", { name: productName })).toBeVisible();
   await customerPage.getByTestId("continue-to-checkout").click();
 
@@ -165,6 +166,6 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
 
   await page.goto("/seller/orders");
   await page.getByTestId("seller-order-tab-ALL").click();
-  await page.getByPlaceholder("Search by order, customer, phone, product").fill(orderCode);
+  await page.getByTestId("seller-order-search").fill(orderCode);
   await expect(page.getByTestId("seller-order-card").filter({ hasText: orderCode })).toBeVisible();
 });
