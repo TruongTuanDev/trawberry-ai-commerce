@@ -24,6 +24,7 @@ import {
   isSellerOnboardingComplete,
   resolveSellerNextStep,
 } from '../../common/utils/seller-next-step.util';
+import { TokenExpiredError } from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -68,12 +69,36 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshTokenDto) {
+    return this.refreshForRole(dto.refreshToken);
+  }
+
+  async refreshCustomer(refreshToken: string | null | undefined) {
+    return this.refreshForRole(refreshToken, USER_ROLES.CUSTOMER);
+  }
+
+  async refreshSeller(refreshToken: string | null | undefined) {
+    return this.refreshForRole(refreshToken, USER_ROLES.SELLER);
+  }
+
+  async refreshAdmin(refreshToken: string | null | undefined) {
+    return this.refreshForRole(refreshToken, USER_ROLES.ADMIN);
+  }
+
+  private async refreshForRole(
+    refreshToken: string | null | undefined,
+    expectedRole?: UserRole,
+  ) {
+    if (!refreshToken?.trim()) {
+      throw new UnauthorizedException('REFRESH_TOKEN_INVALID');
+    }
+
     try {
       const payload = await this.jwtService.verifyAsync<{
         sub: string;
         userId: string;
         email: string;
-      }>(dto.refreshToken, {
+        role: UserRole;
+      }>(refreshToken, {
         secret: this.getJwtSecret(
           this.configService.get<string>('JWT_SECRET') ||
             this.configService.get<string>(
@@ -82,6 +107,10 @@ export class AuthService {
             ),
         ),
       });
+
+      if (expectedRole && payload.role !== expectedRole) {
+        throw new UnauthorizedException('REFRESH_TOKEN_INVALID');
+      }
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.userId },
@@ -109,11 +138,26 @@ export class AuthService {
         },
       });
       if (!user) {
-        throw new UnauthorizedException('Invalid refresh token.');
+        throw new UnauthorizedException('REFRESH_TOKEN_INVALID');
+      }
+
+      if (expectedRole && user.role !== expectedRole) {
+        throw new UnauthorizedException('REFRESH_TOKEN_INVALID');
       }
       return this.buildAuthResponse(user);
-    } catch {
-      throw new UnauthorizedException('Invalid refresh token.');
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      if (
+        error instanceof TokenExpiredError ||
+        (error instanceof Error && error.name === 'TokenExpiredError')
+      ) {
+        throw new UnauthorizedException('REFRESH_TOKEN_EXPIRED');
+      }
+
+      throw new UnauthorizedException('REFRESH_TOKEN_INVALID');
     }
   }
 

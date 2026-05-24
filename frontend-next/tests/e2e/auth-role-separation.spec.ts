@@ -1,4 +1,30 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+
+async function login(page: Page, path: string, prefix: string, email: string, password: string) {
+  await page.goto(path);
+  await page.getByTestId(`${prefix}-email`).fill(email);
+  await page.getByTestId(`${prefix}-password`).fill(password);
+  await page.getByTestId(`${prefix}-submit`).click();
+}
+
+async function overwriteCookie(context: BrowserContext, name: string, value: string) {
+  const cookies = await context.cookies();
+  const target = cookies.find((cookie) => cookie.name === name);
+  expect(target).toBeTruthy();
+
+  await context.addCookies([
+    {
+      name,
+      value,
+      domain: target!.domain,
+      path: target!.path,
+      httpOnly: target!.httpOnly,
+      secure: target!.secure,
+      sameSite: target!.sameSite,
+      expires: target!.expires,
+    },
+  ]);
+}
 
 test("auth role separation keeps admin hidden from public marketplace", async ({ page }) => {
   await page.goto("/products");
@@ -83,6 +109,52 @@ test("seller registration and login stay separate from admin flow", async ({ pag
   await page.getByTestId("seller-login-password").fill(password);
   await page.getByTestId("seller-login-submit").click();
   await page.waitForURL("**/seller/onboarding");
+});
+
+test("customer auto refresh keeps the session active", async ({ page, context }) => {
+  await login(page, "/customer/login", "customer-login", "demo-customer@trawberry.local", "DemoCustomer123!");
+  await page.waitForURL("**/customer/orders");
+
+  await overwriteCookie(context, "customer_access_token", "invalid-customer-access-token");
+  await page.goto("/customer/account/profile");
+
+  await expect(page.getByTestId("customer-profile-name")).toBeVisible();
+  await expect(page.getByTestId("toast-error").filter({ hasText: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." })).toHaveCount(0);
+});
+
+test("seller auto refresh keeps the session active", async ({ page, context }) => {
+  await login(page, "/seller/login", "seller-login", "demo-seller@trawberry.local", "DemoSeller123!");
+  await page.waitForURL(/\/seller\/(dashboard|onboarding|pending)/);
+
+  await overwriteCookie(context, "seller_access_token", "invalid-seller-access-token");
+  await page.goto("/seller/dashboard");
+
+  await expect(page.getByTestId("seller-shell")).toBeVisible();
+  await expect(page.getByTestId("toast-error").filter({ hasText: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." })).toHaveCount(0);
+});
+
+test("admin auto refresh keeps the session active", async ({ page, context }) => {
+  await login(page, "/admin-login", "admin-login", "demo-admin@trawberry.local", "DemoAdmin123!");
+  await page.waitForURL("**/admin/dashboard");
+
+  await overwriteCookie(context, "admin_access_token", "invalid-admin-access-token");
+  await page.goto("/admin/dashboard");
+
+  await expect(page.getByTestId("admin-shell")).toBeVisible();
+  await expect(page.getByTestId("toast-error").filter({ hasText: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." })).toHaveCount(0);
+});
+
+test("refresh failure redirects to login and shows session expired toast", async ({ page, context }) => {
+  await login(page, "/customer/login", "customer-login", "demo-customer@trawberry.local", "DemoCustomer123!");
+  await page.waitForURL("**/customer/orders");
+
+  await overwriteCookie(context, "customer_access_token", "invalid-customer-access-token");
+  await overwriteCookie(context, "customer_refresh_token", "invalid-customer-refresh-token");
+
+  await page.goto("/customer/account/profile");
+
+  await page.waitForURL(/\/customer\/login\?next=/);
+  await expect(page.getByTestId("toast-error").filter({ hasText: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." })).toBeVisible();
 });
 
 test("admin login route works, has no register link, and customer or seller cannot access admin dashboard", async ({ browser, page }) => {

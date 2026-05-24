@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getRoleHome } from "@/lib/auth-redirect";
+import { toast } from "@/components/ui/use-toast";
 import { type AuthRoleKey, useAuthStore } from "@/stores/auth-store";
 
 type ProtectedShellProps = {
@@ -34,6 +35,7 @@ export function ProtectedShell({
   const sessionError = useAuthStore((state) => state.sessionError[role]);
   const refreshRole = useAuthStore((state) => state.refreshRole);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const lastToastErrorRef = useRef<string | null>(null);
   const roleLabel =
     role === "customer" ? "customer" : role === "admin" ? "admin" : "seller";
 
@@ -49,6 +51,18 @@ export function ProtectedShell({
       }
     });
   }, [hydrated, loginPath, pathname, refreshRole, role, router, sessionChecked]);
+
+  useEffect(() => {
+    if (!sessionError) {
+      lastToastErrorRef.current = null;
+      return;
+    }
+
+    if (sessionError !== lastToastErrorRef.current) {
+      toast.error(sessionError);
+      lastToastErrorRef.current = sessionError;
+    }
+  }, [sessionError]);
 
   useEffect(() => {
     if (!hydrated || sessionLoading || !sessionChecked) {

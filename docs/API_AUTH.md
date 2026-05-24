@@ -67,6 +67,18 @@ Base path:
 - successful register redirects the user to the matching login screen
 - login remains the only flow that is expected to establish role cookies for normal UI navigation
 
+### Session refresh policy
+- role-specific login now sets both role access and role refresh cookies
+- role-specific refresh endpoints are:
+  - `POST /api/auth/customer/refresh`
+  - `POST /api/auth/seller/refresh`
+  - `POST /api/auth/admin/refresh`
+- refresh uses the matching role refresh cookie only
+- refresh rotates the matching role access cookie and role refresh cookie
+- refresh must not create or overwrite cross-role cookies
+- frontend retries protected requests once after a successful refresh
+- frontend redirects to login only after refresh fails
+
 ### POST `/api/auth/register`
 Register a customer or seller.
 
@@ -145,6 +157,11 @@ Response:
 }
 ```
 
+Cookie behavior:
+- customer login sets `customer_access_token` and `customer_refresh_token`
+- seller login sets `seller_access_token` and `seller_refresh_token`
+- admin login sets `admin_access_token` and `admin_refresh_token`
+
 ### GET `/api/auth/me`
 Return current authenticated user.
 
@@ -179,6 +196,19 @@ Request body:
 ```
 
 Response shape matches `register` and `login`.
+
+### POST `/api/auth/customer/refresh`
+Refresh a customer session from `customer_refresh_token`.
+
+### POST `/api/auth/seller/refresh`
+Refresh a seller session from `seller_refresh_token`.
+
+### POST `/api/auth/admin/refresh`
+Refresh an admin session from `admin_refresh_token`.
+
+Refresh failure codes:
+- `REFRESH_TOKEN_EXPIRED`
+- `REFRESH_TOKEN_INVALID`
 
 ## JWT Notes
 

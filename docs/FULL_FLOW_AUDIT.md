@@ -1,5 +1,15 @@
 # Full Commerce Flow Audit
 
+## Session Auto Refresh Addendum
+
+- protected customer, seller, and admin routes now tolerate expired role access cookies when the matching role refresh cookie is still valid
+- the frontend retries a protected request once after silent refresh and only redirects to login after refresh failure
+- refresh is role-aware and role-isolated:
+  - customer refresh uses only customer refresh cookies
+  - seller refresh uses only seller refresh cookies
+  - admin refresh uses only admin refresh cookies
+- register flow remains separate from session establishment and still redirects to login without auto-login
+
 ## Register To Login Flow Addendum
 
 - customer register now creates the account, shows a success toast, and redirects to `/customer/login?registered=1`

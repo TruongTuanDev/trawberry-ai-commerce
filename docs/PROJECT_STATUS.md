@@ -1,5 +1,13 @@
 # Project Status
 
+## Role-Aware Session Auto Refresh - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Customer, seller, and admin sessions now auto-refresh silently when the role access cookie expires but the matching refresh cookie is still valid.
+- Frontend protected API requests retry once after refresh and avoid duplicate refresh requests through a shared per-role in-flight promise.
+- Refresh remains role-isolated: customer refresh does not affect seller/admin, seller refresh does not affect customer/admin, and admin refresh does not affect seller/customer.
+- Register redirect-to-login flow remains unchanged and no auto-login was reintroduced.
+
 ## Register Redirect-To-Login Auth Flow Fix - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

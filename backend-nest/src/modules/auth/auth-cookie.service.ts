@@ -15,6 +15,21 @@ export class AuthCookieService {
   constructor(private readonly configService: ConfigService) {}
 
   getAuthCookieOptions() {
+    return this.buildCookieOptions(
+      this.configService.get<number>('AUTH_COOKIE_MAX_AGE_SECONDS', 15 * 60),
+    );
+  }
+
+  getRefreshCookieOptions() {
+    return this.buildCookieOptions(
+      this.configService.get<number>(
+        'AUTH_REFRESH_COOKIE_MAX_AGE_SECONDS',
+        7 * 24 * 60 * 60,
+      ),
+    );
+  }
+
+  private buildCookieOptions(maxAgeSeconds: number) {
     const isSecure =
       this.configService.get<string>('AUTH_COOKIE_SECURE', 'false') === 'true';
     const sameSiteConfig = this.configService.get<string>(
@@ -27,11 +42,6 @@ export class AuthCookieService {
         ? sameSiteConfig
         : 'lax'
     ) as boolean | 'lax' | 'strict' | 'none';
-    const maxAgeSeconds = this.configService.get<number>(
-      'AUTH_COOKIE_MAX_AGE_SECONDS',
-      15 * 60,
-    );
-
     return {
       httpOnly: true,
       secure: isSecure,
@@ -49,6 +59,14 @@ export class AuthCookieService {
     );
   }
 
+  setRefreshTokenCookie(res: Response, role: UserRole, token: string) {
+    res.cookie(
+      ROLE_REFRESH_COOKIE_NAMES[role],
+      token,
+      this.getRefreshCookieOptions(),
+    );
+  }
+
   clearRoleCookies(res: Response, role: UserRole) {
     res.clearCookie(
       ROLE_ACCESS_COOKIE_NAMES[role],
@@ -56,7 +74,7 @@ export class AuthCookieService {
     );
     res.clearCookie(
       ROLE_REFRESH_COOKIE_NAMES[role],
-      this.getAuthCookieOptions(),
+      this.getRefreshCookieOptions(),
     );
   }
 
@@ -68,9 +86,12 @@ export class AuthCookieService {
     for (const cookieName of [
       LEGACY_AUTH_COOKIE_NAME,
       ...ALL_ROLE_ACCESS_COOKIE_NAMES,
-      ...ALL_ROLE_REFRESH_COOKIE_NAMES,
     ]) {
       res.clearCookie(cookieName, this.getAuthCookieOptions());
+    }
+
+    for (const cookieName of ALL_ROLE_REFRESH_COOKIE_NAMES) {
+      res.clearCookie(cookieName, this.getRefreshCookieOptions());
     }
   }
 }

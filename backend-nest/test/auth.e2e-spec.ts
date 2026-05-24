@@ -4,6 +4,7 @@ import type { NextFunction, Request, Response } from 'express';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
@@ -75,6 +76,15 @@ function parseCookies(rawCookieHeader: string | undefined) {
         return [name, decodeURIComponent(value)] as const;
       }),
   );
+}
+
+function findCookieValue(cookies: string[] | undefined, name: string) {
+  const match = cookies?.find((cookie) => cookie.startsWith(`${name}=`));
+  if (!match) {
+    return null;
+  }
+
+  return match.split(';')[0].slice(name.length + 1);
 }
 
 describe('AuthController (e2e)', () => {
@@ -463,6 +473,9 @@ describe('AuthController (e2e)', () => {
     expect(
       setCookies.some((cookie) => cookie.startsWith('access_token=')),
     ).toBe(false);
+    expect(
+      setCookies.some((cookie) => cookie.startsWith('customer_refresh_token=')),
+    ).toBe(true);
   });
 
   it('logs customer in by phone', async () => {
@@ -815,28 +828,196 @@ describe('AuthController (e2e)', () => {
       .expect(429);
   });
 
-  it('refreshes token pair', async () => {
-    const registerResponse = await request(app.getHttpServer())
-      .post('/api/auth/customer/register')
+  it('refreshes token pair from the generic endpoint', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
       .send({
-        email: 'customer@example.com',
+        identifier: 'demo-customer-refresh@example.com',
         password: 'password123',
-        fullName: 'Customer One',
+      });
+
+    if (loginResponse.status !== 200) {
+      await request(app.getHttpServer())
+        .post('/api/auth/customer/register')
+        .send({
+          email: 'demo-customer-refresh@example.com',
+          password: 'password123',
+          fullName: 'Customer One',
+        })
+        .expect(201);
+    }
+
+    const freshLoginResponse = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'demo-customer-refresh@example.com',
+        password: 'password123',
       })
-      .expect(201);
-    const registerBody = readBody<AuthResponseDto>(registerResponse);
+      .expect(200);
+    const refreshToken = findCookieValue(
+      freshLoginResponse.headers['set-cookie'] as string[],
+      'customer_refresh_token',
+    );
 
     const response = await request(app.getHttpServer())
       .post('/api/auth/refresh')
       .send({
-        refreshToken: registerBody.refreshToken,
+        refreshToken,
       })
       .expect(200);
     const body = readBody<AuthResponseDto>(response);
 
     expect(body.accessToken).toBeTruthy();
     expect(body.refreshToken).toBeTruthy();
-    expect(body.email).toBe('customer@example.com');
+    expect(body.email).toBe('demo-customer-refresh@example.com');
+  });
+
+  it('refreshes customer session with the customer refresh cookie only', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'customer-refresh-cookie@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'customer-refresh-cookie@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/customer/refresh')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(200);
+
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('customer_access_token='),
+        expect.stringContaining('customer_refresh_token='),
+      ]),
+    );
+    expect(
+      (response.headers['set-cookie'] as string[]).some((cookie) =>
+        cookie.startsWith('seller_access_token='),
+      ),
+    ).toBe(false);
+  });
+
+  it('refreshes seller session with the seller refresh cookie only', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/seller/register')
+      .send({
+        email: 'seller-refresh-cookie@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: 'seller-refresh-cookie@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/refresh')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(200);
+
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('seller_access_token='),
+        expect.stringContaining('seller_refresh_token='),
+      ]),
+    );
+  });
+
+  it('refreshes admin session with the admin refresh cookie only', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'demo-admin@trawberry.local',
+        password: 'DemoAdmin123!',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/admin/refresh')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(200);
+
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('admin_access_token='),
+        expect.stringContaining('admin_refresh_token='),
+      ]),
+    );
+  });
+
+  it('rejects wrong-role refresh cookies', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/customer/register')
+      .send({
+        email: 'wrong-role-refresh@example.com',
+        password: 'password123',
+      })
+      .expect(201);
+
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/customer/login')
+      .send({
+        identifier: 'wrong-role-refresh@example.com',
+        password: 'password123',
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/refresh')
+      .set('Cookie', loginResponse.headers['set-cookie'])
+      .expect(401);
+
+    expect(readBody<{ message: string }>(response).message).toBe(
+      'REFRESH_TOKEN_INVALID',
+    );
+  });
+
+  it('rejects invalid refresh cookies safely', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/customer/refresh')
+      .set('Cookie', ['customer_refresh_token=not-a-real-token'])
+      .expect(401);
+
+    expect(readBody<{ message: string }>(response).message).toBe(
+      'REFRESH_TOKEN_INVALID',
+    );
+  });
+
+  it('rejects expired refresh cookies safely', async () => {
+    const expiredRefreshToken = jwt.sign(
+      {
+        sub: 'expired@example.com',
+        userId: 'user-expired',
+        email: 'expired@example.com',
+        role: 'CUSTOMER',
+        fullName: 'Expired',
+      },
+      process.env.JWT_SECRET || process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
+      { expiresIn: '-1s' },
+    );
+
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/customer/refresh')
+      .set('Cookie', [`customer_refresh_token=${expiredRefreshToken}`])
+      .expect(401);
+
+    expect(readBody<{ message: string }>(response).message).toBe(
+      'REFRESH_TOKEN_EXPIRED',
+    );
   });
 
   it('clears the auth cookie on logout', async () => {

@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequest, type AuthRoleKey } from "@/lib/api";
 
 export type RegisterResponse = {
   success: true;
@@ -52,7 +52,6 @@ export type CurrentUserResponse = {
 
 export type PublicRole = "CUSTOMER" | "SELLER";
 export type StaffRole = "ADMIN" | "SELLER" | "CUSTOMER";
-export type AuthRoleKey = "admin" | "seller" | "customer";
 export type AuthMode = "register" | "login" | "session";
 
 export async function loginRequest(input: {
@@ -63,6 +62,7 @@ export async function loginRequest(input: {
   return apiRequest<AuthResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
+    retryOnAuthFailure: false,
   });
 }
 
@@ -84,6 +84,7 @@ export async function roleLoginRequest(
   return apiRequest<AuthResponse>(path, {
     method: "POST",
     body: JSON.stringify(input),
+    retryOnAuthFailure: false,
   });
 }
 
@@ -97,6 +98,7 @@ export async function registerRequest(input: {
   return apiRequest<RegisterResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(input),
+    retryOnAuthFailure: false,
   });
 }
 
@@ -112,6 +114,7 @@ export async function roleRegisterRequest(
   return apiRequest<RegisterResponse>(`/api/auth/${role.toLowerCase()}/register`, {
     method: "POST",
     body: JSON.stringify(input),
+    retryOnAuthFailure: false,
   });
 }
 
@@ -131,6 +134,13 @@ export function getAuthErrorMessage(error: unknown, mode: AuthMode): string {
 
     if (message === "PHONE_ALREADY_EXISTS") {
       return "Số điện thoại đã được sử dụng.";
+    }
+
+    if (
+      message === "REFRESH_TOKEN_EXPIRED" ||
+      message === "REFRESH_TOKEN_INVALID"
+    ) {
+      return fallbackByMode.session;
     }
 
     if (mode === "session") {
@@ -179,6 +189,26 @@ export function getAuthErrorMessage(error: unknown, mode: AuthMode): string {
   return fallbackByMode[mode];
 }
 
+export async function refreshSession(role: AuthRoleKey) {
+  return apiRequest<AuthResponse>(`/api/auth/${role}/refresh`, {
+    method: "POST",
+    authRole: role,
+    retryOnAuthFailure: false,
+  });
+}
+
+export async function refreshCustomerSession() {
+  return refreshSession("customer");
+}
+
+export async function refreshSellerSession() {
+  return refreshSession("seller");
+}
+
+export async function refreshAdminSession() {
+  return refreshSession("admin");
+}
+
 export async function currentUserRequest(token?: string) {
   return apiRequest<CurrentUserResponse>("/api/auth/me", {
     method: "GET",
@@ -189,6 +219,7 @@ export async function currentUserRequest(token?: string) {
 export async function logoutRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/logout", {
     method: "POST",
+    retryOnAuthFailure: false,
   });
 }
 
@@ -196,6 +227,7 @@ export async function getAdminMeRequest(token?: string) {
   return apiRequest<CurrentUserResponse>("/api/auth/admin/me", {
     method: "GET",
     token,
+    authRole: "admin",
   });
 }
 
@@ -203,6 +235,7 @@ export async function getSellerMeRequest(token?: string) {
   return apiRequest<CurrentUserResponse>("/api/auth/seller/me", {
     method: "GET",
     token,
+    authRole: "seller",
   });
 }
 
@@ -210,29 +243,37 @@ export async function getCustomerMeRequest(token?: string) {
   return apiRequest<CurrentUserResponse>("/api/auth/customer/me", {
     method: "GET",
     token,
+    authRole: "customer",
   });
 }
 
 export async function logoutAdminRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/admin/logout", {
     method: "POST",
+    authRole: "admin",
+    retryOnAuthFailure: false,
   });
 }
 
 export async function logoutSellerRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/seller/logout", {
     method: "POST",
+    authRole: "seller",
+    retryOnAuthFailure: false,
   });
 }
 
 export async function logoutCustomerRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/customer/logout", {
     method: "POST",
+    authRole: "customer",
+    retryOnAuthFailure: false,
   });
 }
 
 export async function logoutAllRequest() {
   return apiRequest<{ success: boolean }>("/api/auth/logout-all", {
     method: "POST",
+    retryOnAuthFailure: false,
   });
 }

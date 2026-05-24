@@ -5,11 +5,12 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   UseGuards,
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -32,6 +33,7 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ROLE_REFRESH_COOKIE_NAMES } from './auth-session.constants';
 
 @ApiTags('auth')
 @Controller('api/auth')
@@ -41,6 +43,11 @@ export class AuthController {
     private readonly configService: ConfigService,
     private readonly authCookieService: AuthCookieService,
   ) {}
+
+  private getRefreshCookie(req: Request, role: keyof typeof USER_ROLES) {
+    const cookies = req.cookies as Record<string, string> | undefined;
+    return cookies?.[ROLE_REFRESH_COOKIE_NAMES[USER_ROLES[role]]];
+  }
 
   @Post('register')
   @AuthRateLimit({
@@ -106,6 +113,11 @@ export class AuthController {
       response.role as (typeof USER_ROLES)[keyof typeof USER_ROLES],
       response.accessToken,
     );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      response.role as (typeof USER_ROLES)[keyof typeof USER_ROLES],
+      response.refreshToken,
+    );
     return response;
   }
 
@@ -128,6 +140,11 @@ export class AuthController {
       res,
       USER_ROLES.CUSTOMER,
       response.accessToken,
+    );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      USER_ROLES.CUSTOMER,
+      response.refreshToken,
     );
     return response;
   }
@@ -152,6 +169,11 @@ export class AuthController {
       USER_ROLES.SELLER,
       response.accessToken,
     );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      USER_ROLES.SELLER,
+      response.refreshToken,
+    );
     return response;
   }
 
@@ -174,6 +196,11 @@ export class AuthController {
       res,
       USER_ROLES.ADMIN,
       response.accessToken,
+    );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      USER_ROLES.ADMIN,
+      response.refreshToken,
     );
     return response;
   }
@@ -198,6 +225,89 @@ export class AuthController {
       res,
       response.role as (typeof USER_ROLES)[keyof typeof USER_ROLES],
       response.accessToken,
+    );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      response.role as (typeof USER_ROLES)[keyof typeof USER_ROLES],
+      response.refreshToken,
+    );
+    return response;
+  }
+
+  @Post('customer/refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh a customer session using the customer refresh cookie.',
+  })
+  @ApiOkResponse({ type: AuthResponseDto })
+  async refreshCustomer(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.refreshCustomer(
+      this.getRefreshCookie(req, 'CUSTOMER'),
+    );
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      USER_ROLES.CUSTOMER,
+      response.accessToken,
+    );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      USER_ROLES.CUSTOMER,
+      response.refreshToken,
+    );
+    return response;
+  }
+
+  @Post('seller/refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh a seller session using the seller refresh cookie.',
+  })
+  @ApiOkResponse({ type: AuthResponseDto })
+  async refreshSeller(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.refreshSeller(
+      this.getRefreshCookie(req, 'SELLER'),
+    );
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      USER_ROLES.SELLER,
+      response.accessToken,
+    );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      USER_ROLES.SELLER,
+      response.refreshToken,
+    );
+    return response;
+  }
+
+  @Post('admin/refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Refresh an admin session using the admin refresh cookie.',
+  })
+  @ApiOkResponse({ type: AuthResponseDto })
+  async refreshAdmin(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.refreshAdmin(
+      this.getRefreshCookie(req, 'ADMIN'),
+    );
+    this.authCookieService.setAccessTokenCookie(
+      res,
+      USER_ROLES.ADMIN,
+      response.accessToken,
+    );
+    this.authCookieService.setRefreshTokenCookie(
+      res,
+      USER_ROLES.ADMIN,
+      response.refreshToken,
     );
     return response;
   }

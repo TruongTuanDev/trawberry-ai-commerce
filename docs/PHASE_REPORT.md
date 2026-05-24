@@ -1,5 +1,17 @@
 # Phase Report
 
+## 2026-05-24 Role-Aware Session Auto Refresh
+
+- Added role-specific refresh cookies for customer, seller, and admin login flows.
+- Added role-specific refresh endpoints that rotate only the matching role cookies:
+  - `/api/auth/customer/refresh`
+  - `/api/auth/seller/refresh`
+  - `/api/auth/admin/refresh`
+- Frontend protected requests now retry once after a successful silent refresh instead of forcing an immediate logout on the first `401`.
+- Added per-role in-flight refresh coordination to prevent refresh storms and duplicate refresh requests.
+- Protected route shells now redirect to login only when refresh truly fails and show the session-expired toast only in that failure case.
+- Preserved the recent register redirect-to-login behavior; register still does not auto-login or call `/me`.
+
 ## 2026-05-24 Register Redirect-To-Login Auth Flow Fix
 
 - Fixed customer and seller registration UX so a successful register no longer auto-logs in or fetches `/me`.
