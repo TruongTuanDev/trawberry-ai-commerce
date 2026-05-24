@@ -2,6 +2,7 @@
 
 import React, { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Check, Archive, ExternalLink } from "lucide-react";
 import { type NotificationItemData, markNotificationRead, archiveNotification } from "@/lib/notifications-api";
 import { type AuthRoleKey } from "@/lib/api";
@@ -200,14 +201,16 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
 
             {/* Direct Action Button */}
             {actionLabel && (
-              <button
+              <Button
+                variant="link"
+                size="xs"
                 onClick={handleActionClick}
-                className="inline-flex items-center gap-1 ml-auto text-2xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold"
                 data-testid="notification-action-btn"
               >
                 {actionLabel}
                 <ExternalLink className="h-3 w-3" />
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -217,26 +220,30 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
       {!hideActions && (
         <div className="absolute right-3 top-4 flex items-center gap-1 opacity-0 group-hover/list:opacity-100 focus-within:opacity-100 md:opacity-100 transition duration-150">
           {isUnread && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleMarkRead}
               disabled={isPending}
-              className="p-1 rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="h-7 w-7 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               title="Đánh dấu đã đọc"
               data-testid="mark-read-btn"
             >
               <Check className="h-4 w-4" />
-            </button>
+            </Button>
           )}
           {notification.status !== "ARCHIVED" && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleArchive}
               disabled={isPending}
-              className="p-1 rounded-md text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="h-7 w-7 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               title="Lưu trữ"
               data-testid="archive-btn"
             >
               <Archive className="h-4 w-4" />
-            </button>
+            </Button>
           )}
         </div>
       )}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   approveAdminSeller,
   approveAdminSellerDocument,
@@ -18,6 +19,7 @@ import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboa
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 export function AdminSellerDetailClient({ userId }: { userId: string }) {
+  const router = useRouter();
   const [seller, setSeller] = useState<AdminSellerDetail | null>(null);
   const [profile, setProfile] = useState<SellerOnboardingProfile | null>(null);
   const [documents, setDocuments] = useState<SellerDocument[]>([]);
@@ -143,9 +145,13 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
   return (
     <div className="space-y-6" data-testid="admin-seller-detail-page">
       <div>
-        <Link href="/admin/sellers" className="text-sm font-semibold text-[var(--accent-strong)]">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/admin/sellers")}
+        >
           Back to sellers
-        </Link>
+        </Button>
       </div>
 
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
@@ -255,24 +261,26 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
                       data-testid={`document-reject-reason-${document.id}`}
                     />
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => void approveDocument(document.id)}
                         disabled={isRunning || document.status === "APPROVED"}
-                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        loading={saving === document.id && isRunning}
                         data-testid={`admin-approve-document-${document.id}`}
                       >
-                        {saving === document.id && isRunning ? "Đang xác nhận..." : "Approve document"}
-                      </button>
-                      <button
-                        type="button"
+                        Approve document
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
                         onClick={() => void rejectDocument(document.id)}
                         disabled={isRunning || document.status === "REJECTED"}
-                        className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
+                        loading={saving === document.id && isRunning}
                         data-testid={`admin-reject-document-${document.id}`}
                       >
-                        {saving === document.id && isRunning ? "Đang từ chối..." : "Reject document"}
-                      </button>
+                        Reject document
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -296,24 +304,24 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
               data-testid="admin-reject-seller-reason"
             />
           </label>
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={() => void approveSeller()}
             disabled={isRunning || seller?.sellerApprovalStatus === "APPROVED"}
-            className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            loading={saving === "seller" && isRunning}
             data-testid="admin-approve-seller"
           >
-            {saving === "seller" && isRunning ? "Đang xác nhận..." : "Approve seller"}
-          </button>
-          <button
-            type="button"
+            Approve seller
+          </Button>
+          <Button
+            variant="danger"
             onClick={() => void rejectSeller()}
             disabled={isRunning || seller?.sellerApprovalStatus === "REJECTED"}
-            className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
+            loading={saving === "seller" && isRunning}
             data-testid="admin-reject-seller"
           >
-            {saving === "seller" && isRunning ? "Đang từ chối..." : "Reject seller"}
-          </button>
+            Reject seller
+          </Button>
         </div>
       </section>
 

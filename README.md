@@ -13,11 +13,9 @@ Marketplace/e-commerce stack đang được migrate sang kiến trúc mới:
 - `backend-nest`: NestJS API
 - `ai-service`: FastAPI AI image service
 - `infra`: Docker Compose cho Postgres, Redis, MinIO, app services
-
-Legacy apps vẫn nằm trong repo nhưng không phải luồng chính của phase hiện tại:
-
-- `strawberry-frontend`
-- `strawberry-backend`
+Database:
+cd backend-nest
+npm run prisma:studio
 
 ## 1. URLs mặc định
 

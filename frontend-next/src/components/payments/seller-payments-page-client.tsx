@@ -13,6 +13,7 @@ import {
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { Button } from "@/components/ui/button";
 
 const proofTabs = [
   { value: "BUYER_MARKED_PAID", label: "Chờ duyệt" },
@@ -94,6 +95,10 @@ export function SellerPaymentsPageClient({
     action: "confirm" | "reject",
   ) => {
     if (!currentShopId) return;
+    if (action === "reject") {
+      const confirmed = window.confirm("Bạn có chắc chắn muốn từ chối minh chứng thanh toán này?");
+      if (!confirmed) return;
+    }
     await runAction({
       action: async () => {
         if (action === "confirm") {
@@ -161,13 +166,12 @@ export function SellerPaymentsPageClient({
             placeholder="Search by order, customer, payment method"
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           />
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => void load()}
-            className="rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
           >
             Tải lại queue
-          </button>
+          </Button>
         </div>
       </SectionCard>
 
@@ -255,23 +259,25 @@ export function SellerPaymentsPageClient({
                       <span className="text-sm text-[var(--muted)]">Không có</span>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="success"
+                      size="sm"
                       onClick={() => void handleDecision(payment, "confirm")}
                       disabled={isRunning || payment.paymentProofStatus !== "BUYER_MARKED_PAID"}
-                      className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      loading={isRunning}
                     >
-                      {isRunning ? "Đang lưu..." : "Xác nhận"}
-                    </button>
-                    <button
-                      type="button"
+                      Xác nhận
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
                       onClick={() => void handleDecision(payment, "reject")}
                       disabled={isRunning || payment.paymentProofStatus !== "BUYER_MARKED_PAID"}
-                      className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      loading={isRunning}
                     >
-                      {isRunning ? "Đang lưu..." : "Từ chối"}
-                    </button>
+                      Từ chối
+                    </Button>
                   </div>
                 </article>
               ))
@@ -286,22 +292,22 @@ export function SellerPaymentsPageClient({
             Page {page} of {totalPages}
           </p>
           <div className="flex gap-3">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page <= 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page >= totalPages}
               onClick={() => setPage((current) => current + 1)}
-              className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       </SectionCard>
@@ -314,13 +320,13 @@ export function SellerPaymentsPageClient({
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Proof preview</p>
                 <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">{preview.orderNumber}</h3>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPreview(null)}
-                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold"
               >
                 Đóng
-              </button>
+              </Button>
             </div>
             <div className="mt-6">
               {isImageProof(preview) ? (

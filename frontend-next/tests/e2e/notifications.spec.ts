@@ -219,11 +219,23 @@ test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
   await customerPage.getByTestId("customer-login-submit").click();
   await customerPage.waitForURL("**/customer/orders");
 
+  // Create a saved address first to satisfy checkout requirements for logged-in CUSTOMERs
+  await customerPage.goto("/customer/account/addresses");
+  await customerPage.getByTestId("customer-address-fullName").fill("Notification Customer");
+  await customerPage.getByTestId("customer-address-phone").fill(buyerPhone);
+  await customerPage.getByTestId("customer-address-city").fill("Moscow");
+  await customerPage.getByTestId("customer-address-street").fill("Sync Street");
+  await customerPage.getByTestId("customer-address-building").fill("5");
+  await customerPage.getByTestId("customer-address-entrance").fill("1");
+  await customerPage.getByTestId("customer-address-floor").fill("2");
+  await customerPage.getByTestId("customer-address-apartment").fill("3");
+  await customerPage.getByTestId("customer-address-save").click();
+  await expect(customerPage.getByText("Sync Street")).toBeVisible();
+
   // Buy the product (Checkout)
   await customerPage.goto(`/products/${product.id}`);
   await customerPage.getByTestId("continue-to-checkout").click();
   await customerPage.waitForURL(/\/checkout/);
-  await customerPage.getByTestId("checkout-address").fill("Moscow, Sync Street 5");
   await customerPage.getByTestId("checkout-submit").click();
   await expect(customerPage.getByTestId("checkout-confirmation")).toBeVisible();
   const confirmationText = await customerPage.getByTestId("checkout-confirmation").innerText();

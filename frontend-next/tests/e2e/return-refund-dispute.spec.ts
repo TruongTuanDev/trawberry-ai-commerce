@@ -219,6 +219,33 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
     data: { email: customerEmail, password: customerPassword },
   });
 
+  const address = await backendJson<{ id: string }>(
+    request,
+    "/api/customer/addresses",
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${customerLogin.accessToken}` },
+      data: {
+        fullName: "Return UI Customer",
+        phone: buyerPhone,
+        country: "Russia",
+        city: "Moscow",
+        region: "Moscow Region",
+        street: "Return UI Street",
+        building: "1",
+        entrance: "1",
+        floor: "1",
+        apartment: "1",
+        noEntrance: false,
+        noFloor: false,
+        noApartment: false,
+        latitude: 55.7558,
+        longitude: 37.6173,
+        geoPrecision: "MANUAL_PIN",
+      },
+    },
+  );
+
   const checkout = await backendJson<{ orderId: string; checkoutCode: string }>(
     request,
     "/api/checkout/orders",
@@ -228,6 +255,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
       data: {
         shopId: shop.id,
         items: [{ productId: product.id, quantity: 1 }],
+        addressId: address.id,
         customer: {
           fullName: "Return UI Customer",
           phone: buyerPhone,

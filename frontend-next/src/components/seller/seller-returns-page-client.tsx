@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   addShopReturnRefundMessage,
   getShopReturnRefundCase,
@@ -341,9 +342,15 @@ export function SellerReturnsPageClient({
                       ))}
                     </select>
                     <textarea value={sellerComment} onChange={(event) => setSellerComment(event.target.value)} rows={4} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="seller-return-comment" />
-                    <button type="button" onClick={() => void handleRespond()} disabled={saving} className="mt-3 rounded-full bg-[#2f2025] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="seller-return-respond">
-                      {saving ? "Đang gửi..." : "Save response"}
-                    </button>
+                    <Button
+                      onClick={() => void handleRespond()}
+                      disabled={saving}
+                      loading={saving}
+                      className="mt-3"
+                      data-testid="seller-return-respond"
+                    >
+                      Save response
+                    </Button>
                   </div>
 
                   <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
@@ -361,12 +368,23 @@ export function SellerReturnsPageClient({
                     <textarea value={refundNote} onChange={(event) => setRefundNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Refund note" />
                     <input type="file" accept="image/*,.pdf" onChange={(event) => setRefundProofFile(event.target.files?.[0] ?? null)} className="mt-3 block w-full text-sm" data-testid="seller-refund-proof-file" />
                     <div className="mt-3 flex flex-wrap gap-3">
-                      <button type="button" onClick={() => void handleMarkReturnReceived()} disabled={saving} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                        {saving ? "Đang cập nhật..." : "Mark return received"}
-                      </button>
-                      <button type="button" onClick={() => void handleMarkRefundSent()} disabled={saving || !refundAmount.trim()} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="seller-refund-mark-sent">
-                        {saving ? "Đang xác nhận..." : "Mark refund sent"}
-                      </button>
+                      <Button
+                        variant="outline"
+                        onClick={() => void handleMarkReturnReceived()}
+                        disabled={saving}
+                        loading={saving}
+                      >
+                        Mark return received
+                      </Button>
+                      <Button
+                        variant="success"
+                        onClick={() => void handleMarkRefundSent()}
+                        disabled={saving || !refundAmount.trim()}
+                        loading={saving}
+                        data-testid="seller-refund-mark-sent"
+                      >
+                        Mark refund sent
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -387,9 +405,15 @@ export function SellerReturnsPageClient({
                   {!isReturnCaseClosed(selected.status) ? (
                     <div className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4">
                       <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={4} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="seller-return-reply-message" />
-                      <button type="button" onClick={() => void handleSendReply()} disabled={saving || !reply.trim()} className="mt-3 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                        {saving ? "Đang gửi..." : "Send reply"}
-                      </button>
+                      <Button
+                        variant="outline"
+                        onClick={() => void handleSendReply()}
+                        disabled={saving || !reply.trim()}
+                        loading={saving}
+                        className="mt-3"
+                      >
+                        Send reply
+                      </Button>
                     </div>
                   ) : null}
                 </div>

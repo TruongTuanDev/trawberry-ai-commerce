@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { ProductListItem } from "@/lib/seller-api";
 import { FallbackImage } from "@/components/ui/fallback-image";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { Button } from "@/components/ui/button";
 
 function getProductStatusInfo(product: ProductListItem) {
   if (product.visibility === "DELETED") {
@@ -178,78 +179,31 @@ function ActionsDropdown({
   onEdit: (productId: string) => void;
   onDelete: (productId: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const items = [
+    {
+      label: "Chỉnh sửa sản phẩm",
+      onClick: () => onEdit(productId),
+      "data-testid": `seller-product-edit-${productId}`,
+    },
+    {
+      label: "Tạo ảnh AI",
+      href: `/seller/ai-images?productId=${productId}`,
+    },
+    {
+      label: "Xem trang công khai",
+      href: `/products/${productId}`,
+      target: "_blank",
+    },
+    {
+      label: "Xóa sản phẩm",
+      variant: "danger" as const,
+      confirm: "Bạn có chắc chắn muốn xóa sản phẩm này?",
+      onClick: () => onDelete(productId),
+      "data-testid": `seller-product-delete-${productId}`,
+    },
+  ];
 
-  return (
-    <div className="relative inline-block text-left">
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(!open);
-        }}
-        className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-[var(--panel-strong)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
-        aria-label="Actions menu"
-      >
-        ⋯
-      </button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen(false);
-            }}
-          />
-          <div className="absolute right-0 mt-1 w-48 rounded-xl border border-[var(--border)] bg-white py-1 shadow-lg z-20">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpen(false);
-                onEdit(productId);
-              }}
-              className="flex w-full px-4 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
-            >
-              Chỉnh sửa sản phẩm
-            </button>
-            <Link
-              href={`/seller/ai-images?productId=${productId}`}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              className="flex w-full px-4 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
-            >
-              Tạo ảnh AI
-            </Link>
-            <a
-              href={`/products/${productId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-              className="flex w-full px-4 py-2 text-left text-sm text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
-            >
-              Xem trang công khai
-            </a>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpen(false);
-                onDelete(productId);
-              }}
-              className="flex w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
-            >
-              Xóa sản phẩm
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
+  return <ActionMenu items={items} />;
 }
 
 function CompactProductEditor({
@@ -315,14 +269,16 @@ function CompactProductEditor({
         />
       </div>
       {isDirty && (
-        <button
-          type="button"
+        <Button
+          variant="success"
+          size="xs"
+          className="mt-4"
           onClick={handleSave}
           disabled={saving}
-          className="mt-4 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition"
+          loading={saving}
         >
-          {saving ? "..." : "Lưu"}
-        </button>
+          Lưu
+        </Button>
       )}
     </div>
   );

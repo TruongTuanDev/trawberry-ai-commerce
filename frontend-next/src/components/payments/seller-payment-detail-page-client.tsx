@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { SectionCard } from "@/components/seller/section-card";
+import { Button } from "@/components/ui/button";
 import {
   addPaymentNote,
   confirmPayment,
@@ -21,6 +22,7 @@ export function SellerPaymentDetailPageClient({
 }: {
   orderId: string;
 }) {
+  const router = useRouter();
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [payment, setPayment] = useState<SellerPaymentItem | null>(null);
@@ -153,18 +155,18 @@ export function SellerPaymentDetailPageClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/seller/payments"
-          className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+        <Button
+          variant="outline"
+          onClick={() => router.push("/seller/payments")}
         >
           Back to payments
-        </Link>
-        <Link
-          href={`/seller/orders/${payment.id}`}
-          className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => router.push(`/seller/orders/${payment.id}`)}
         >
           Open order
-        </Link>
+        </Button>
       </div>
 
       <div
@@ -275,31 +277,31 @@ export function SellerPaymentDetailPageClient({
               className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
             />
             <div className="grid gap-3 sm:grid-cols-3">
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 onClick={() => void performAction("note")}
                 disabled={saving || !note.trim()}
-                className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                loading={saving}
               >
                 Add note
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="success"
                 onClick={() => void performAction("markPaid")}
                 disabled={saving}
-                className="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                loading={saving}
                 data-testid="seller-mark-paid-button"
               >
-                {saving ? "Saving..." : "Confirm payment received"}
-              </button>
-              <button
-                type="button"
+                Confirm payment received
+              </Button>
+              <Button
+                variant="danger"
                 onClick={() => void performAction("reject")}
                 disabled={saving}
-                className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                loading={saving}
               >
-                {saving ? "Saving..." : "Reject proof"}
-              </button>
+                Reject proof
+              </Button>
             </div>
             {error ? (
               <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">

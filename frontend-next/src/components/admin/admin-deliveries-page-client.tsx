@@ -11,6 +11,7 @@ import {
   type AdminFulfillmentRow,
 } from "@/lib/admin-api";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { Button } from "@/components/ui/button";
 
 const fulfillmentTabs: Array<{
   value: AdminFulfillmentBucket;
@@ -253,9 +254,12 @@ export function AdminDeliveriesPageClient() {
           />
           <input value={sellerId} onChange={(event) => setSellerId(event.target.value)} placeholder="Filter sellerId" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
           <input value={shopId} onChange={(event) => setShopId(event.target.value)} placeholder="Filter shopId" className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
-          <button type="button" onClick={() => void load()} className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold">
+          <Button
+            variant="outline"
+            onClick={() => void load()}
+          >
             Refresh
-          </button>
+          </Button>
         </div>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_170px_170px_170px]">
@@ -409,24 +413,25 @@ export function AdminDeliveriesPageClient() {
                   <p className="mt-2 text-sm text-[var(--muted)]">
                     Admin can view, filter, inspect payment and Yandex details, and remind the seller to continue operations.
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <button
-                      type="button"
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setSelected(selected)}
-                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
                     >
                       {actionLabel("VIEW")}
-                    </button>
+                    </Button>
                     {selected.nextAdminActions.includes("REMIND_SELLER") ? (
-                      <button
-                        type="button"
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => void performAction("REMIND_SELLER")}
                         disabled={isRunning}
-                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        loading={isRunning}
                         data-testid="admin-remind-seller-yandex"
                       >
-                        {isRunning ? "Processing..." : actionLabel("REMIND_SELLER")}
-                      </button>
+                        {actionLabel("REMIND_SELLER")}
+                      </Button>
                     ) : null}
                   </div>
                 </div>

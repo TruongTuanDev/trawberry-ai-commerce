@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   addAdminReturnRefundInternalNote,
   addAdminReturnRefundMessage,
@@ -32,6 +33,7 @@ export function AdminReturnsPageClient({
 }: {
   caseId?: string | null;
 }) {
+  const router = useRouter();
   const [items, setItems] = useState<AdminReturnRefundCase[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(caseId ?? null);
   const [selected, setSelected] = useState<AdminReturnRefundCase | null>(null);
@@ -263,19 +265,16 @@ export function AdminReturnsPageClient({
                       </select>
                       <input value={approvedAmount} onChange={(event) => setApprovedAmount(event.target.value)} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Approved amount" data-testid="admin-return-approved-amount" />
                       <textarea value={adminNote} onChange={(event) => setAdminNote(event.target.value)} rows={4} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Admin note" data-testid="admin-return-note" />
-                      <button
-                        type="button"
+                      <Button
+                        variant="primary"
                         onClick={() => void handleDecision()}
                         disabled={saving}
-                        className="mt-3 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        loading={saving}
+                        className="mt-3"
                         data-testid="admin-return-save-decision"
                       >
-                        {saving ? (
-                          decision === "APPROVE" ? "Đang xác nhận..." :
-                          decision === "REJECT" ? "Đang từ chối..." :
-                          "Đang cập nhật..."
-                        ) : "Save decision"}
-                      </button>
+                        Save decision
+                      </Button>
                     </>
                   ) : (
                     <p className="mt-3 text-sm text-[var(--muted)]">This case is already closed.</p>
@@ -285,10 +284,14 @@ export function AdminReturnsPageClient({
                   ) : (
                     <p className="mt-3 text-sm text-[var(--muted)]">No fee adjustment created yet.</p>
                   )}
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <Link href={`/admin/finance/seller-fees`} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/admin/finance/seller-fees`)}
+                    >
                       Open finance
-                    </Link>
+                    </Button>
                   </div>
                 </div>
 
@@ -306,15 +309,28 @@ export function AdminReturnsPageClient({
                     ))}
                   </div>
                   <textarea value={publicMessage} onChange={(event) => setPublicMessage(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Public admin message" data-testid="admin-return-public-message" />
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => void handlePublicMessage()} disabled={saving || !publicMessage.trim()} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                      {saving ? "Đang gửi..." : "Send public message"}
-                    </button>
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handlePublicMessage()}
+                      disabled={saving || !publicMessage.trim()}
+                      loading={saving}
+                    >
+                      Send public message
+                    </Button>
                   </div>
                   <textarea value={internalNote} onChange={(event) => setInternalNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Internal admin note" data-testid="admin-return-internal-note" />
-                  <button type="button" onClick={() => void handleInternalNote()} disabled={saving || !internalNote.trim()} className="mt-3 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                    {saving ? "Đang gửi..." : "Add internal note"}
-                  </button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleInternalNote()}
+                    disabled={saving || !internalNote.trim()}
+                    loading={saving}
+                    className="mt-3"
+                  >
+                    Add internal note
+                  </Button>
                 </div>
               </div>
 

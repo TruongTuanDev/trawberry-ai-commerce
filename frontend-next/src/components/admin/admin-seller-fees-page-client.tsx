@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   generateAdminSellerFeeInvoice,
   listAdminSellerFeeInvoices,
@@ -254,38 +255,37 @@ export function AdminSellerFeesPageClient() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
+                      <Button
+                        variant="primary"
+                        size="xs"
                         onClick={() => void handleSaveCommission(row)}
                         disabled={isRunning}
+                        loading={savingShopId === row.shopId && isRunning}
                         data-testid={`admin-save-commission-${row.shopId}`}
-                        className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-60"
                       >
-                        {savingShopId === row.shopId && isRunning ? "Đang lưu..." : "Save commission"}
-                      </button>
-                      <button
-                        type="button"
+                        Save commission
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="xs"
                         onClick={() => void handleGenerateInvoice(row)}
                         disabled={isRunning}
+                        loading={generatingShopId === row.shopId && isRunning}
                         data-testid={`admin-generate-invoice-${row.shopId}`}
-                        className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--foreground)] disabled:opacity-60"
                       >
-                        {generatingShopId === row.shopId && isRunning ? "Đang tạo..." : "Generate invoice"}
-                      </button>
+                        Generate invoice
+                      </Button>
                       {invoice ? (
-                        <button
-                          type="button"
+                        <Button
+                          variant={invoice.status === "PAID" ? "outline" : "success"}
+                          size="xs"
                           onClick={() => void handleMarkPaid(invoice.id)}
                           disabled={invoice.status === "PAID" || isRunning}
+                          loading={payingInvoiceId === invoice.id && isRunning}
                           data-testid={`admin-mark-invoice-paid-${invoice.id}`}
-                          className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 disabled:opacity-60"
                         >
-                          {invoice.status === "PAID"
-                            ? "Already paid"
-                            : payingInvoiceId === invoice.id && isRunning
-                              ? "Đang xác nhận..."
-                              : "Mark paid"}
-                        </button>
+                          {invoice.status === "PAID" ? "Already paid" : "Mark paid"}
+                        </Button>
                       ) : null}
                     </div>
                   </td>

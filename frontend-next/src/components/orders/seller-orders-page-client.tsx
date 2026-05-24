@@ -18,6 +18,8 @@ import {
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { Button } from "@/components/ui/button";
+import { ActionMenu } from "@/components/ui/action-menu";
 
 const sellerTabs: Array<{ value: SellerFulfillmentBucket; label: string }> = [
   { value: "ALL", label: "Tất cả" },
@@ -277,13 +279,12 @@ export function SellerOrdersPageClient() {
             }}
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           />
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => void load()}
-            className="rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
           >
             Tải lại
-          </button>
+          </Button>
         </div>
       </SectionCard>
 
@@ -340,16 +341,11 @@ export function SellerOrdersPageClient() {
                       </a>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={`/seller/orders/${order.id}`}
-                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
-                    >
-                      Chi tiết
-                    </Link>
-                    {order.sellerStatusBucket === "NEW" ? (
-                      <button
-                        type="button"
+                  <div className="flex items-center gap-2">
+                    {order.sellerStatusBucket === "NEW" && (
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() =>
                           setShipmentPanel({
                             order,
@@ -358,51 +354,63 @@ export function SellerOrdersPageClient() {
                             note: order.delivery?.deliveryNote ?? "",
                           })
                         }
-                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
                       >
                         Tạo đơn vận chuyển
-                      </button>
-                    ) : null}
-                    {order.sellerStatusBucket === "ASSEMBLING" ? (
-                      <button
-                        type="button"
+                      </Button>
+                    )}
+                    {order.sellerStatusBucket === "ASSEMBLING" && (
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => void handleHandoff(order)}
                         disabled={isRunning}
-                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        loading={isRunning}
                       >
-                        {isRunning ? "Đang lưu..." : "Bàn giao vận chuyển"}
-                      </button>
-                    ) : null}
-                    {order.sellerStatusBucket === "IN_TRANSIT" ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void handleComplete(order)}
-                          disabled={isRunning}
-                          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                        >
-                          {isRunning ? "Đang lưu..." : "Hoàn thành"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleCancel(order)}
-                          disabled={isRunning}
-                          className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-60"
-                        >
-                          {isRunning ? "Đang lưu..." : "Hủy"}
-                        </button>
-                      </>
-                    ) : null}
-                    {order.sellerStatusBucket === "COMPLETED" || order.sellerStatusBucket === "CANCELLED" ? (
-                      <button
-                        type="button"
+                        Bàn giao vận chuyển
+                      </Button>
+                    )}
+                    {order.sellerStatusBucket === "IN_TRANSIT" && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => void handleComplete(order)}
+                        disabled={isRunning}
+                        loading={isRunning}
+                      >
+                        Hoàn thành
+                      </Button>
+                    )}
+                    {(order.sellerStatusBucket === "COMPLETED" || order.sellerStatusBucket === "CANCELLED") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => void handleArchive(order)}
                         disabled={isRunning}
-                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:opacity-60"
+                        loading={isRunning}
                       >
-                        {isRunning ? "Đang lưu..." : "Lưu trữ"}
-                      </button>
-                    ) : null}
+                        Lưu trữ
+                      </Button>
+                    )}
+                    <ActionMenu
+                      items={[
+                        {
+                          label: "Chi tiết",
+                          href: `/seller/orders/${order.id}`,
+                        },
+                        ...(order.sellerStatusBucket === "IN_TRANSIT"
+                          ? [
+                              {
+                                label: "Hủy đơn",
+                                variant: "danger" as const,
+                                confirm: "Bạn có chắc chắn muốn hủy đơn hàng này?",
+                                onClick: () => void handleCancel(order),
+                                disabled: isRunning,
+                                loading: isRunning,
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
                   </div>
                 </article>
               ))
@@ -415,22 +423,22 @@ export function SellerOrdersPageClient() {
         <div className="mt-5 flex items-center justify-between">
           <p className="text-sm text-[var(--muted)]">Page {response?.meta.page ?? 1} of {response?.meta.totalPages ?? 1}</p>
           <div className="flex gap-3">
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page <= 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               disabled={page >= (response?.meta.totalPages ?? 1)}
               onClick={() => setPage((current) => current + 1)}
-              className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       </SectionCard>
@@ -443,13 +451,13 @@ export function SellerOrdersPageClient() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Tạo đơn vận chuyển</p>
                 <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">{shipmentPanel.order.orderNumber}</h3>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShipmentPanel(null)}
-                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold"
               >
                 Đóng
-              </button>
+              </Button>
             </div>
 
             <div className="mt-6 grid gap-4">
@@ -487,14 +495,14 @@ export function SellerOrdersPageClient() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 onClick={() => void submitShipmentPanel()}
                 disabled={isRunning}
-                className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                loading={isRunning}
               >
-                {isRunning ? "Đang lưu..." : "Lưu và chuyển sang Lắp ráp"}
-              </button>
+                Lưu và chuyển sang Lắp ráp
+              </Button>
             </div>
           </div>
         </div>
