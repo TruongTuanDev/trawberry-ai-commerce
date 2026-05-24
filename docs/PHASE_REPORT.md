@@ -1,5 +1,23 @@
 # Phase Report
 
+## 2026-05-24 Public Product / Cart / Checkout UX + Yandex Address Enforcement
+
+- made public header `Address` clickable and routed it into customer address management
+- changed public cart badge to count line items instead of summed quantity
+- upgraded product detail quantity control to allow direct numeric input while preserving `+ / -`
+- added stock clamp warning toast when entered quantity exceeds current available stock
+- tightened checkout so authenticated customers must use a saved `yandexManualReady` address
+- kept existing guest/manual checkout flow for anonymous users
+- backend now returns structured checkout errors:
+  - `CUSTOMER_ADDRESS_REQUIRED`
+  - `CUSTOMER_ADDRESS_NOT_YANDEX_READY`
+- updated backend checkout E2E coverage and public/customer Playwright coverage for:
+  - guest address click redirect
+  - logged-in customer address navigation
+  - checkout blocked without ready saved address
+  - line-item cart badge contract
+  - direct quantity input contract
+
 ## 2026-05-24 Admin Supervision Read-Only + Shop Commission Rules
 
 - made admin fulfillment UI supervision-only on `/admin/deliveries`

@@ -125,6 +125,15 @@ export class CheckoutService {
       this.toValidatedCheckoutItem(item),
     );
 
+    if (user?.role === USER_ROLES.CUSTOMER && !dto.addressId) {
+      throw new BadRequestException({
+        code: 'CUSTOMER_ADDRESS_REQUIRED',
+        message:
+          'You must configure a delivery-ready saved customer address before placing the order.',
+        missingFields: ['addressId'],
+      });
+    }
+
     const checkoutCustomer = await this.resolveCheckoutCustomer(dto, user);
     const addressGeoReadiness = computeAddressGeoReadiness({
       country: checkoutCustomer.country,
@@ -166,9 +175,11 @@ export class CheckoutService {
       phone: checkoutCustomer.phone,
     });
     if (dto.addressId && !manualAddressValidation.valid) {
-      throw new BadRequestException(
-        `Saved address is not ready for Yandex manual delivery: ${manualAddressValidation.missingFields.join(', ')}.`,
-      );
+      throw new BadRequestException({
+        code: 'CUSTOMER_ADDRESS_NOT_YANDEX_READY',
+        message: 'Saved address is not ready for Yandex manual delivery.',
+        missingFields: manualAddressValidation.missingFields,
+      });
     }
     const addressWarnings = [
       ...(!manualAddressValidation.valid

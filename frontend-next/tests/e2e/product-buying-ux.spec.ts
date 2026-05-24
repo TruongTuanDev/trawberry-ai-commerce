@@ -185,6 +185,13 @@ test("public marketplace product buying UX supports size selection, in-cart stat
 
   await page.goto("/products");
   await expect(page.getByTestId("products-grid")).toBeVisible();
+  await expect(page.getByTestId("public-address-link")).toHaveAttribute(
+    "href",
+    "/customer/login?next=%2Fcustomer%2Faccount%2Faddresses",
+  );
+  await page.getByTestId("public-address-link").click({ force: true });
+  await expect(page).toHaveURL(/\/customer\/login\?next=%2Fcustomer%2Faccount%2Faddresses$/);
+  await page.goto("/products");
   const productCard = page.getByTestId("product-card").filter({
     hasText: `Product Buying UX Jacket ${stamp}`,
   });
@@ -199,13 +206,16 @@ test("public marketplace product buying UX supports size selection, in-cart stat
   await expect(page.getByTestId(`product-size-${created.product.variants[1].id}`)).toBeDisabled();
 
   await expect(page.getByTestId("product-selected-size")).toBeVisible();
-  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
-  await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
-  await expect(page.getByTestId("product-quantity-stepper-value")).toHaveText("3");
+  await page.getByTestId("product-quantity-stepper-value").fill("7");
+  await page.getByTestId("product-detail-title").click();
+  await expect(page.getByTestId("product-quantity-stepper-value")).toHaveValue("3");
+  await expect(page.getByTestId("toast-warning").first()).toContainText(
+    "Số lượng vượt quá tồn kho hiện có.",
+  );
 
   await page.getByTestId("add-to-cart").click();
   await expect(page.getByTestId("add-to-cart")).toHaveText("В корзине");
-  await expect(page.getByTestId("public-cart-link")).toContainText("3");
+  await expect(page.getByTestId("public-cart-count")).toHaveText("1");
 
   await page.getByTestId("continue-to-checkout").click();
   await expect(page).toHaveURL(/\/checkout$/);

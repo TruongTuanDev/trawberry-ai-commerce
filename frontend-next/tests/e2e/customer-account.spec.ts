@@ -53,7 +53,11 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.getByTestId("customer-address-phone").fill(phone);
   await page.getByTestId("customer-address-city").fill("Saint Petersburg");
   await page.getByTestId("customer-address-region").fill("Leningrad");
-  await page.getByTestId("customer-address-street").fill("Nevsky 20");
+  await page.getByTestId("customer-address-street").fill("Nevsky");
+  await page.getByTestId("customer-address-building").fill("20");
+  await page.getByTestId("customer-address-no-entrance").check();
+  await page.getByTestId("customer-address-no-floor").check();
+  await page.getByTestId("customer-address-no-apartment").check();
   await page.getByTestId("customer-address-save").click();
   await expect(page.getByTestId("customer-address-card")).toHaveCount(2);
 

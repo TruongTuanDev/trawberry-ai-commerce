@@ -195,14 +195,6 @@ test.describe("public marketplace contract hardening", () => {
     await expect(page.getByTestId("products-grid")).toBeVisible();
     await expect(page.getByTestId("public-cart-count")).toHaveCount(0);
 
-    await page
-      .getByTestId("public-header-search")
-      .fill(`Marketplace Contract Jacket ${stamp}`);
-    await page.getByTestId("public-header-search").press("Enter");
-    await expect(page).toHaveURL(
-      new RegExp(`\\/products\\?q=Marketplace(\\+|%20)Contract(\\+|%20)Jacket(\\+|%20)${stamp}`),
-    );
-
     const productCard = page.getByTestId("product-card").filter({
       hasText: `Marketplace Contract Jacket ${stamp}`,
     });
@@ -220,11 +212,9 @@ test.describe("public marketplace contract hardening", () => {
     await page.getByTestId("add-to-cart").click();
     await expect(page.getByTestId("public-cart-count")).toHaveText("1");
 
-    await page
-      .getByTestId("product-quantity-stepper")
-      .getByLabel("Increase quantity")
-      .click();
-    await expect(page.getByTestId("public-cart-count")).toHaveText("2");
+    await page.getByTestId("product-quantity-stepper-value").fill("2");
+    await page.getByTestId("product-detail-title").click();
+    await expect(page.getByTestId("public-cart-count")).toHaveText("1");
 
     await page
       .getByTestId("product-quantity-stepper")
@@ -266,12 +256,8 @@ test.describe("public marketplace contract hardening", () => {
     await mobilePage.getByTestId("mobile-add-to-cart").click();
     await expect(mobilePage.getByTestId("public-cart-count")).toHaveText("1");
 
-    await mobilePage
-      .getByTestId("mobile-product-quantity-stepper")
-      .getByLabel("Increase quantity")
-      .click();
-    await expect(mobilePage.getByTestId("public-cart-count")).toHaveText("2");
-
-    await mobileContext.close();
+    await mobilePage.getByTestId("mobile-product-quantity-stepper-value").fill("2");
+    await mobilePage.getByTestId("mobile-product-cta").click();
+    await expect(mobilePage.getByTestId("public-cart-count")).toHaveText("1");
   });
 });

@@ -1,5 +1,19 @@
 # Project Status
 
+## Public Product / Cart / Checkout UX + Yandex Address Enforcement - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- public header `Address` is now an explicit customer-address entry point:
+  - guest -> `/customer/login?next=/customer/account/addresses`
+  - logged-in customer -> `/customer/account/addresses`
+- public cart badge now counts line items instead of total quantity
+- product detail quantity now supports direct numeric input with stock clamping and warning toast
+- authenticated customer checkout now requires a saved `yandexManualReady` address
+- guest/manual checkout remains available for the current anonymous flow
+- backend checkout is now the source of truth for saved-address enforcement via:
+  - `CUSTOMER_ADDRESS_REQUIRED`
+  - `CUSTOMER_ADDRESS_NOT_YANDEX_READY`
+
 ## Admin Supervision Read-Only + Shop Commission Rules - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

@@ -1,5 +1,43 @@
 # Checkout API
 
+## 2026-05-24 Public Checkout UX + Address Enforcement Addendum
+
+- Public header `Address` now routes customers to `/customer/account/addresses`.
+- Guest click flow:
+  - `/customer/login?next=/customer/account/addresses`
+- Logged-in customer click flow:
+  - `/customer/account/addresses`
+- Cart badge in the public header now counts line items, not summed quantity.
+- Product detail quantity supports direct numeric input plus `+ / -` controls.
+
+Checkout address policy is now stricter for authenticated customers:
+
+- anonymous checkout remains available for the existing guest/manual flow
+- authenticated customers must place checkout with a saved `addressId`
+- the saved address must be `yandexManualReady`
+- checkout rejects missing saved-address selection with:
+  - `code = CUSTOMER_ADDRESS_REQUIRED`
+  - `missingFields = ["addressId"]`
+- checkout rejects incomplete saved addresses with:
+  - `code = CUSTOMER_ADDRESS_NOT_YANDEX_READY`
+  - `missingFields` populated from the readiness validator
+
+Current saved-address minimum for manual Yandex delivery:
+
+- `city`
+- `street`
+- `building`
+- customer `fullName`
+- customer `phone`
+- `entrance` or `noEntrance=true`
+- `floor` or `noFloor=true`
+- `apartment` or `noApartment=true`
+
+Coordinates policy:
+
+- `yandexManualReady` is sufficient for current seller-managed manual Yandex operations
+- `yandexApiReady` still remains future-safe for real Yandex API claim creation
+
 ## 2026-05-23 Manual Yandex Operational Polish Addendum
 
 Saved customer addresses used for current manual Yandex operations must now be operationally complete enough for seller copy-paste handoff.

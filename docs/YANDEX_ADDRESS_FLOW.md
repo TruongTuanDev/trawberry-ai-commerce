@@ -1,5 +1,19 @@
 # Yandex-Compatible Address Flow
 
+## 2026-05-24 Public Header + Checkout Addendum
+
+Customer navigation now makes address setup explicit:
+
+- public header `Address` sends guests to customer login with `next=/customer/account/addresses`
+- public header `Address` sends logged-in customers directly to `/customer/account/addresses`
+
+Checkout flow now follows this contract:
+
+- logged-in customers must configure a saved delivery-ready address before placing an order
+- checkout page shows a dedicated address configuration CTA when no ready saved address exists
+- seller remains the downstream operator of manual Yandex delivery
+- checkout stores the saved-address snapshot used at confirmation time into order dropoff fields
+
 ## Why this phase exists
 
 Yandex delivery workflows need a more structured dropoff address than the legacy single-line customer address.

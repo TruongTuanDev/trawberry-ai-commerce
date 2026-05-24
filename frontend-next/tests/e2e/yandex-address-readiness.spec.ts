@@ -12,6 +12,10 @@ test("customer can promote address from manual-ready to api-ready with manual co
   await page.getByTestId("customer-register-password").fill(password);
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
+  await page.waitForURL("**/customer/login?registered=1");
+  await page.getByTestId("customer-login-email").fill(email);
+  await page.getByTestId("customer-login-password").fill(password);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
   await page.goto("/customer/account/addresses");

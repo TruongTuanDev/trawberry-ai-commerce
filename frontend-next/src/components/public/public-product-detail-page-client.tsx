@@ -14,6 +14,7 @@ import {
 import { PublicShell } from "@/components/public/public-shell";
 import { QuantityStepper } from "@/components/public/quantity-stepper";
 import { StockBadge } from "@/components/public/stock-badge";
+import { toast } from "@/components/ui/use-toast";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import { getPublicProduct, type PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
@@ -150,6 +151,10 @@ export function PublicProductDetailPageClient({
     }
 
     setQuantity(nextValue);
+  };
+
+  const handleQuantityMaxExceeded = () => {
+    toast.warning("Số lượng vượt quá tồn kho hiện có.");
   };
 
   const handleAddToCart = () => {
@@ -400,6 +405,7 @@ export function PublicProductDetailPageClient({
                               max={maxQuantity}
                               disabled={!selectedVariant?.inStock}
                               onChange={handleQuantityChange}
+                              onMaxExceeded={handleQuantityMaxExceeded}
                               testId="product-quantity-stepper"
                             />
                           </div>
@@ -472,6 +478,7 @@ export function PublicProductDetailPageClient({
                           max={maxQuantity}
                           disabled={!selectedVariant?.inStock}
                           onChange={handleQuantityChange}
+                          onMaxExceeded={handleQuantityMaxExceeded}
                           testId="mobile-product-quantity-stepper"
                         />
                       </div>

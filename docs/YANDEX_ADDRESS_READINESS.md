@@ -1,5 +1,20 @@
 # Yandex Address Readiness
 
+## 2026-05-24 Checkout Enforcement Addendum
+
+Operational rule for the current marketplace:
+
+- guest/manual checkout can still use the existing anonymous delivery form
+- authenticated customer checkout must use a saved customer address
+- that saved address must be `yandexManualReady`
+
+Meaning:
+
+- customer account addresses are now the source of truth for Yandex delivery readiness at checkout
+- frontend may warn early, but backend enforcement is authoritative
+- if a saved address is incomplete, checkout returns `CUSTOMER_ADDRESS_NOT_YANDEX_READY`
+- if an authenticated customer does not provide `addressId`, checkout returns `CUSTOMER_ADDRESS_REQUIRED`
+
 ## Readiness levels
 
 The marketplace now distinguishes three address states for Yandex-compatible delivery:

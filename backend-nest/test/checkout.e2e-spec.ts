@@ -177,10 +177,17 @@ describe('CheckoutController (e2e)', () => {
     fullName: string;
     phone: string;
     country: string;
+    countryCode?: string;
     city: string;
     region: string;
     street: string;
+    building?: string;
+    entrance?: string | null;
+    noEntrance?: boolean;
+    floor?: string | null;
+    noFloor?: boolean;
     apartment: string | null;
+    noApartment?: boolean;
     postalCode: string | null;
     comment: string | null;
     isDefault: boolean;
@@ -1125,11 +1132,12 @@ describe('CheckoutController (e2e)', () => {
           { productId: 'product-2', variantId: 'variant-2', quantity: 3 },
         ],
         customer: {
-          fullName: 'Customer One',
-          phone: '0123456789',
+          fullName: '',
+          phone: '',
           email: 'customer@example.com',
-          address: '123 Main St',
+          address: '',
         },
+        addressId: 'address-1',
         paymentMethod: 'PREPAID_SELLER_QR',
       })
       .expect(201);
@@ -1161,7 +1169,7 @@ describe('CheckoutController (e2e)', () => {
 
     const publicResponse = await request(app.getHttpServer())
       .get(
-        `/api/public/checkouts/${createBody.checkoutCode}?phone=%2B0123456789`,
+        `/api/public/checkouts/${createBody.checkoutCode}?phone=%2B79990000055`,
       )
       .expect(200);
     expect(readBody<{ orders: unknown[] }>(publicResponse).orders).toHaveLength(
@@ -1203,6 +1211,71 @@ describe('CheckoutController (e2e)', () => {
     expect(orders[0].customerName).toBe('Address Book Customer');
     expect(orders[0].customerPhone).toBe('+79990000055');
     expect(orders[0].customerNote).toBe('Use intercom 55');
+  });
+
+  it('rejects authenticated customer checkout without a saved address id', async () => {
+    const customerToken = await loginAndGetToken(app, 'customer@example.com');
+
+    const response = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 1 },
+        ],
+        customer: {
+          fullName: 'Customer One',
+          phone: '0123456789',
+          email: 'customer@example.com',
+          address: '123 Main St',
+        },
+        paymentMethod: 'PREPAID_SELLER_QR',
+      })
+      .expect(400);
+
+    expect(
+      readBody<{ code: string; missingFields: string[] }>(response),
+    ).toEqual(
+      expect.objectContaining({
+        code: 'CUSTOMER_ADDRESS_REQUIRED',
+        missingFields: ['addressId'],
+      }),
+    );
+  });
+
+  it('rejects a saved customer address that is not yandex manual ready', async () => {
+    const customerToken = await loginAndGetToken(app, 'customer@example.com');
+    customerAddresses[0] = {
+      ...customerAddresses[0],
+      noEntrance: false,
+      apartment: null,
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 1 },
+        ],
+        customer: {
+          fullName: '',
+          phone: '',
+          email: 'customer@example.com',
+          address: '',
+        },
+        addressId: 'address-1',
+        paymentMethod: 'PREPAID_SELLER_QR',
+      })
+      .expect(400);
+
+    const body = readBody<{ code: string; missingFields: string[] }>(response);
+    expect(body.code).toBe('CUSTOMER_ADDRESS_NOT_YANDEX_READY');
+    expect(body.missingFields).toEqual(
+      expect.arrayContaining(['entranceDecision', 'apartmentDecision']),
+    );
   });
 
   it('fails entire checkout when one variant has insufficient stock', async () => {

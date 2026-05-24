@@ -46,6 +46,7 @@ type CartState = {
   clearCart: () => void;
   getSubtotal: () => number;
   getItemCount: () => number;
+  getTotalQuantity: () => number;
 };
 
 type PersistedCart = {
@@ -260,5 +261,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       (sum, item) => sum + Number(item.unitPrice || 0) * item.quantity,
       0,
     ),
-  getItemCount: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
+  getItemCount: () => get().items.length,
+  getTotalQuantity: () =>
+    get().items.reduce((sum, item) => sum + item.quantity, 0),
 }));

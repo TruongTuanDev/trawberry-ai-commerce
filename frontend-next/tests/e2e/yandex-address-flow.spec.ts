@@ -153,7 +153,27 @@ test("structured Moscow address flows into checkout and seller Yandex workbench"
   await page.getByTestId("customer-register-password").fill(password);
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
+  await page.waitForURL("**/customer/login?registered=1");
+  await page.getByTestId("customer-login-email").fill(customerEmail);
+  await page.getByTestId("customer-login-password").fill(password);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
+
+  await page.goto(`/products/${catalog.productId}`);
+  await expect(page.getByTestId("public-address-link")).toHaveAttribute(
+    "href",
+    "/customer/account/addresses",
+  );
+  await expect(page.getByTestId("public-customer-link")).toHaveAttribute(
+    "href",
+    "/customer/account",
+  );
+  await page.goto("/customer/account/addresses");
+
+  await page.goto(`/checkout?productId=${catalog.productId}`);
+  await expect(page.getByTestId("checkout-address-required-banner")).toBeVisible();
+  await expect(page.getByTestId("checkout-configure-addresses")).toBeVisible();
+  await expect(page.getByTestId("checkout-submit")).toBeDisabled();
 
   await page.goto("/customer/account/addresses");
   await page.getByTestId("customer-address-fullName").fill("Yandex Address Customer");
@@ -176,6 +196,7 @@ test("structured Moscow address flows into checkout and seller Yandex workbench"
   await page.goto(`/checkout?productId=${catalog.productId}`);
   await expect(page.getByTestId("checkout-saved-address-select")).toBeVisible();
   await expect(page.getByTestId("checkout-address-geo-status")).toContainText("Yandex-ready");
+  await expect(page.getByTestId("checkout-submit")).toBeEnabled();
   await page.getByTestId("checkout-submit").click();
   await expect(page.getByTestId("checkout-confirmation")).toBeVisible();
 
@@ -189,7 +210,7 @@ test("structured Moscow address flows into checkout and seller Yandex workbench"
 
   await page.goto("/customer/account");
   await page.getByTestId("customer-account-logout").click();
-  await page.waitForURL("**/customer/login");
+  await page.waitForURL(/\/customer\/login/);
 
   await page.goto("/login");
   await page.getByTestId("login-email").fill(seller.email);

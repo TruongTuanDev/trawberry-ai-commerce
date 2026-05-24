@@ -105,7 +105,7 @@ export function CheckoutPageClient({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [validationRequestKey, setValidationRequestKey] = useState(0);
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState("manual");
+  const [selectedAddressId, setSelectedAddressId] = useState("");
 
   useEffect(() => {
     hydrateCart();
@@ -123,7 +123,7 @@ export function CheckoutPageClient({
       if (authUser?.role !== "CUSTOMER") {
         if (mounted) {
           setSavedAddresses([]);
-          setSelectedAddressId("manual");
+          setSelectedAddressId("");
         }
         return;
       }
@@ -135,13 +135,16 @@ export function CheckoutPageClient({
         }
 
         setSavedAddresses(response.items);
-        const defaultAddress =
-          response.items.find((item) => item.isDefault) ?? response.items[0];
-        setSelectedAddressId(defaultAddress ? defaultAddress.id : "manual");
+        const preferredAddress =
+          response.items.find((item) => item.isDefault && item.yandexManualReady) ??
+          response.items.find((item) => item.yandexManualReady) ??
+          response.items.find((item) => item.isDefault) ??
+          response.items[0];
+        setSelectedAddressId(preferredAddress?.id ?? "");
       } catch {
         if (mounted) {
           setSavedAddresses([]);
-          setSelectedAddressId("manual");
+          setSelectedAddressId("");
         }
       }
     };
@@ -165,13 +168,18 @@ export function CheckoutPageClient({
     address: customer.address,
     note: customer.note,
   };
+  const customerRequiresSavedAddress = authUser?.role === "CUSTOMER";
   const selectedSavedAddress =
-    selectedAddressId !== "manual"
-      ? savedAddresses.find((address) => address.id === selectedAddressId) ?? null
-      : null;
+    savedAddresses.find((address) => address.id === selectedAddressId) ?? null;
   const selectedAddressBadge = selectedSavedAddress
     ? getCustomerAddressReadinessBadge(selectedSavedAddress)
     : null;
+  const hasReadySavedAddress = savedAddresses.some(
+    (address) => address.yandexManualReady,
+  );
+  const requiresDeliveryReadyAddress =
+    customerRequiresSavedAddress &&
+    (!selectedSavedAddress || !selectedSavedAddress.yandexManualReady);
 
   useEffect(() => {
     let mounted = true;
@@ -302,15 +310,31 @@ export function CheckoutPageClient({
     activeValidationLoading ||
     Boolean(activeValidationError) ||
     hasBlockingIssues ||
-    Boolean(selectedSavedAddress && !selectedSavedAddress.yandexManualReady);
+    requiresDeliveryReadyAddress;
 
   const handleSubmit = async () => {
     if (!items.length) {
       setError("Cart is empty.");
       return;
     }
+    if (customerRequiresSavedAddress && !selectedSavedAddress) {
+      setError(
+        "Bạn cần cấu hình địa chỉ giao hàng đủ thông tin trước khi đặt hàng.",
+      );
+      return;
+    }
     if (
-      !selectedSavedAddress &&
+      customerRequiresSavedAddress &&
+      selectedSavedAddress &&
+      !selectedSavedAddress.yandexManualReady
+    ) {
+      setError(
+        "Địa chỉ đã lưu chưa đủ điều kiện cho Yandex delivery. Hãy cập nhật địa chỉ trước khi đặt hàng.",
+      );
+      return;
+    }
+    if (
+      !customerRequiresSavedAddress &&
       (!customerForm.fullName.trim() ||
         !customerForm.phone.trim() ||
         !customerForm.address.trim())
@@ -390,10 +414,13 @@ export function CheckoutPageClient({
             quantity: item.quantity,
           })),
           customer: {
-            fullName: selectedSavedAddress ? "" : customerForm.fullName.trim(),
-            phone: selectedSavedAddress ? "" : customerForm.phone.trim(),
+            fullName:
+              customerRequiresSavedAddress ? "" : customerForm.fullName.trim(),
+            phone:
+              customerRequiresSavedAddress ? "" : customerForm.phone.trim(),
             email: customerForm.email.trim() || undefined,
-            address: selectedSavedAddress ? "" : customerForm.address.trim(),
+            address:
+              customerRequiresSavedAddress ? "" : customerForm.address.trim(),
             note: customerForm.note.trim() || undefined,
             latitude: selectedSavedAddress?.latitude
               ? Number(selectedSavedAddress.latitude)
@@ -605,7 +632,30 @@ export function CheckoutPageClient({
                     Delivery details
                   </h1>
                   <div className="mt-6 grid gap-4">
-                    {authUser?.role === "CUSTOMER" && savedAddresses.length ? (
+                    {customerRequiresSavedAddress && requiresDeliveryReadyAddress ? (
+                      <div
+                        className={`rounded-[1.5rem] border px-4 py-4 ${hasReadySavedAddress ? "border-sky-200 bg-sky-50" : "border-rose-200 bg-rose-50"}`}
+                        data-testid="checkout-address-required-banner"
+                      >
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          Bạn cần cấu hình địa chỉ giao hàng đủ thông tin trước khi đặt hàng.
+                        </p>
+                        <p className="mt-2 text-sm text-[var(--muted)]">
+                          Checkout của customer dùng địa chỉ đã lưu trong tài khoản để seller xử lý Yandex delivery thủ công đúng nghiệp vụ.
+                        </p>
+                        <div className="mt-3">
+                          <Link
+                            href="/customer/account/addresses"
+                            className="public-button-secondary inline-flex px-4 py-2 text-sm"
+                            data-testid="checkout-configure-addresses"
+                          >
+                            Cấu hình địa chỉ
+                          </Link>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {customerRequiresSavedAddress && savedAddresses.length ? (
                       <Field label="Saved addresses">
                         <select
                           value={selectedAddressId}
@@ -619,7 +669,6 @@ export function CheckoutPageClient({
                               {address.isDefault ? " (default)" : ""}
                             </option>
                           ))}
-                          <option value="manual">Enter a new address</option>
                         </select>
                       </Field>
                     ) : null}
@@ -687,7 +736,7 @@ export function CheckoutPageClient({
                           />
                         </Field>
                       </>
-                    ) : (
+                    ) : customerRequiresSavedAddress ? null : (
                       <>
                         <Field label="Full name">
                           <input
@@ -877,8 +926,8 @@ export function CheckoutPageClient({
                   >
                     {submitting
                       ? "Đang tạo đơn..."
-                      : selectedSavedAddress && !selectedSavedAddress.yandexManualReady
-                        ? "Complete saved address details first"
+                      : requiresDeliveryReadyAddress
+                        ? "Configure a delivery-ready address first"
                       : hasBlockingIssues
                         ? "Resolve cart issues first"
                         : "Create order"}

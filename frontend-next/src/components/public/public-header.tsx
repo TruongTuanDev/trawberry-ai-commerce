@@ -95,9 +95,7 @@ export function PublicHeader() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const hydrateCart = useCartStore((state) => state.hydrate);
-  const cartCount = useCartStore((state) =>
-    state.items.reduce((sum, item) => sum + item.quantity, 0),
-  );
+  const cartCount = useCartStore((state) => state.getItemCount());
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const user = useAuthStore((state) => state.customerUser);
   const authHydrated = useAuthStore((state) => state.hydrated);
@@ -147,6 +145,10 @@ export function PublicHeader() {
 
   const customerHref =
     user?.role === "CUSTOMER" ? "/customer/account" : "/customer/login";
+  const customerAddressHref =
+    user?.role === "CUSTOMER"
+      ? "/customer/account/addresses"
+      : "/customer/login?next=%2Fcustomer%2Faccount%2Faddresses";
   const accountLabel = user?.role === "CUSTOMER" ? (user.fullName || "Account") : "Login";
 
   return (
@@ -265,12 +267,18 @@ export function PublicHeader() {
           {/* Action items */}
           <div className="flex items-center gap-3 sm:gap-5 md:gap-6 shrink-0">
             {/* Address */}
-            <div className="hidden md:flex flex-col items-center justify-center text-center cursor-pointer text-white/90 hover:text-white transition">
+            <Link
+              href={customerAddressHref}
+              className="hidden cursor-pointer flex-col items-center justify-center text-center text-white/90 transition hover:text-white md:flex"
+              title="Manage delivery address"
+              aria-label="Open customer address settings"
+              data-testid="public-address-link"
+            >
               <span className="w-5 h-5 flex items-center justify-center">
                 <PinIcon />
               </span>
               <span className="text-[10px] font-semibold mt-0.5 tracking-tight">Address</span>
-            </div>
+            </Link>
 
             {/* Notifications */}
             {user?.role === "CUSTOMER" && (
