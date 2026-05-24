@@ -56,8 +56,6 @@ export function NotificationBell({ role }: NotificationBellProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  console.log("NotificationBell render:", { role, mounted, user: user ? { email: user.email, role: user.role } : null });
-
   if (!mounted || !user) {
     return null;
   }

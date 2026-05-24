@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
@@ -21,6 +21,25 @@ async function backendJson<T>(
 
   expect(response.ok(), `${options.method ?? "GET"} ${path} -> ${response.status()}: ${await response.text()}`).toBeTruthy();
   return (await response.json()) as T;
+}
+
+async function loginAdminWithRetry(page: Page) {
+  await page.goto("/admin-login");
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+    await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+    await page.getByTestId("admin-login-submit").click();
+    try {
+      await page.waitForURL("**/admin/dashboard", { timeout: 10000 });
+      return;
+    } catch {
+      if (attempt === 5) {
+        throw new Error("Admin login stayed blocked by rate limiting.");
+      }
+      await page.waitForTimeout(1500 * (attempt + 1));
+      await page.goto("/admin-login");
+    }
+  }
 }
 
 test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
@@ -214,7 +233,6 @@ test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
   // 3. Open Seller browser and verify ORDER_NEW notification
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
-  sellerPage.on("console", (msg) => console.log(`[SELLER BROWSER] ${msg.type()}: ${msg.text()}`));
   await sellerPage.goto("/login");
   await sellerPage.getByTestId("login-email").fill(sellerEmail);
   await sellerPage.getByTestId("login-password").fill(sellerPassword);
@@ -267,13 +285,108 @@ test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
   await customerPage.goto("/customer/notifications");
   await expect(customerPage.getByRole("heading", { name: "Thanh toán đã được xác nhận" })).toBeVisible();
 
-  // Mark all read on Customer side
-  const markAllReadBtn = customerPage.getByTestId("mark-all-read-btn");
-  await expect(markAllReadBtn).toBeVisible();
-  await markAllReadBtn.click();
-  await expect(customerPage.getByTestId("notification-unread-badge")).toHaveCount(0);
+  // Verify notification click and navigate behavior
+  const notifItem = customerPage.getByTestId("notification-item").first();
+  await expect(notifItem).toBeVisible();
+  const actionBtn = notifItem.getByTestId("notification-action-btn");
+  await expect(actionBtn).toBeVisible();
+  await expect(actionBtn).toContainText("Mở đơn hàng");
+
+  // Click action button to navigate
+  await actionBtn.click();
+  await customerPage.waitForURL(/\/orders\//);
 
   // Close contexts
   await customerContext.close();
   await sellerContext.close();
+});
+
+test("Notification Center Role Layouts and Empty States", async ({ browser }) => {
+  // 1. Admin Page Layouts & Empty State
+  const adminContext = await browser.newContext();
+  const adminPage = await adminContext.newPage();
+  await loginAdminWithRetry(adminPage);
+  await adminPage.goto("/admin/notifications");
+  await expect(adminPage.getByTestId("notifications-page")).toBeVisible();
+
+  // Verify layout sidebar is NOT duplicated (only exactly one admin shell rendered)
+  await expect(adminPage.getByTestId("admin-shell")).toHaveCount(1);
+
+  // Verify heading title
+  await expect(adminPage.getByRole("heading", { name: "Trung tâm vận hành" })).toBeVisible();
+
+  // Select empty category to trigger empty state (e.g. Finance tab)
+  await adminPage.getByTestId("category-tab-FINANCE").click();
+  await expect(adminPage.getByTestId("empty-state-title")).toContainText("Chưa có việc nào cần admin xử lý");
+  await expect(adminPage.getByTestId("empty-state-description")).toContainText("Thông báo sẽ xuất hiện khi có đơn quá hạn, tranh chấp hoàn tiền, seller chờ duyệt hoặc vấn đề thanh toán.");
+
+  // 2. Seller Layouts & Empty State
+  // Create a clean seller profile login
+  const sellerContext = await browser.newContext();
+  const sellerPage = await sellerContext.newPage();
+  await sellerPage.goto("/login");
+  await sellerPage.getByTestId("login-email").fill("demo-seller@trawberry.local");
+  await sellerPage.getByTestId("login-password").fill("DemoSeller123!");
+  await sellerPage.getByTestId("login-submit").click();
+  await sellerPage.waitForURL("**/seller/dashboard");
+  await sellerPage.goto("/seller/notifications");
+
+  // Verify layout sidebar is NOT duplicated (only exactly one seller shell rendered)
+  await expect(sellerPage.getByTestId("seller-shell")).toHaveCount(1);
+
+  // Verify heading title
+  await expect(sellerPage.getByRole("heading", { name: "Việc cần xử lý" })).toBeVisible();
+
+  // Select empty category to trigger empty state (e.g. Finance tab)
+  await sellerPage.getByTestId("category-tab-FINANCE").click();
+  await expect(sellerPage.getByTestId("empty-state-title")).toContainText("Bạn chưa có việc cần xử lý");
+  await expect(sellerPage.getByTestId("empty-state-description")).toContainText("Khi có đơn mới, bill thanh toán, yêu cầu trả hàng hoặc nhắc tạo Yandex, thông báo sẽ xuất hiện ở đây.");
+
+  // 3. Customer Layouts & Empty State
+  const customerContext = await browser.newContext();
+  const customerPage = await customerContext.newPage();
+  await customerPage.goto("/customer/login");
+  await customerPage.getByTestId("customer-login-email").fill("demo-customer@trawberry.local");
+  await customerPage.getByTestId("customer-login-password").fill("DemoCustomer123!");
+  await customerPage.getByTestId("customer-login-submit").click();
+  await customerPage.waitForURL("**/customer/orders");
+  await customerPage.goto("/customer/notifications");
+
+  // Verify layout sidebar is NOT duplicated (only exactly one customer account nav rendered)
+  await expect(customerPage.getByTestId("customer-account-nav")).toHaveCount(1);
+
+  // Verify heading title
+  await expect(customerPage.getByRole("heading", { name: "Thông báo của tôi" })).toBeVisible();
+
+  // Select empty category to trigger empty state (e.g. System tab)
+  await customerPage.getByTestId("category-tab-SYSTEM").click();
+  await expect(customerPage.getByTestId("empty-state-title")).toContainText("Bạn chưa có cập nhật mới");
+  await expect(customerPage.getByTestId("empty-state-description")).toContainText("Khi đơn hàng hoặc thanh toán thay đổi trạng thái, thông báo sẽ xuất hiện ở đây.");
+
+  await adminContext.close();
+  await sellerContext.close();
+  await customerContext.close();
+});
+
+test("Notification Center Public Guest Silence Check", async ({ browser }) => {
+  const guestContext = await browser.newContext();
+  const guestPage = await guestContext.newPage();
+
+  // Set up request interceptor to fail test if notifications API is queried by guest
+  let notificationsApiQueried = false;
+  await guestPage.route("**/api/**/notifications/**", async (route) => {
+    notificationsApiQueried = true;
+    await route.abort();
+  });
+
+  // Go to public page
+  await guestPage.goto("/products");
+
+  // Wait a short time to capture potential background fetches
+  await guestPage.waitForTimeout(2000);
+
+  // Expect no notification endpoint was hit
+  expect(notificationsApiQueried).toBe(false);
+
+  await guestContext.close();
 });

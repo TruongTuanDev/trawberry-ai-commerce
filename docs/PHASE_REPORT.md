@@ -2276,3 +2276,33 @@ Retained non-goals:
 
 - No changes to checkout business logic.
 - No changes to admin/seller dashboards.
+
+# Phase Report: Notification Center UX & Layout Polish
+
+Implemented:
+
+- Removed outer shell wrappers (`AdminShell`/`SellerShell`) from respective notification pages to resolve duplicated sidebar layouts.
+- Rewrote `NotificationsPageClient` with role-aware headers, subtitles, empty states, and summary cards.
+- Integrated sleek, interactive horizontal category filters matching specific backend event types and severities.
+- Handled client-side category filtering for customer order status changes cleanly.
+- Enhanced notification items to display rich entity metadata (order codes, shop names, return case IDs) and direct role-relevant action buttons with propagation stoppage.
+- Hardened unread notifications query complexity using `Promise.all` with a strict fetch limit.
+- Prevented unauthenticated public guest page visits from calling notification endpoints, verified via E2E route interception.
+- Handled UI robustly on event click-navigate to guarantee redirection even if status marking APIs temporarily fail.
+- Removed debug logs in production code.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/notifications.spec.ts --workers=1`: pass
+- E2E regressions (auth-role-separation, multi-role-sessions, admin-fulfillment-supervision, public-payment-review, return-refund-dispute): pass (14 tests passed)
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass (222 tests passed)
+- `backend-nest npm run build`: pass
+
+Retained non-goals:
+
+- No backend changes to the notification engine or database models.
+- No push notification or SMS/email integrations.
+- No legacy app changes.

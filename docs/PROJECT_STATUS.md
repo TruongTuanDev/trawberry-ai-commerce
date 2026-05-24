@@ -1385,3 +1385,28 @@ Verification:
 - `npm run test:e2e:auth-role-separation`: pass
 - `npm run test:e2e:public-smoke`: pass
 - `npm run test:e2e:product-buying-ux`: pass
+
+# Notification Center UX & Layout Polish Status
+
+Implemented:
+
+- resolved duplicate layout sidebar issues by cleaning up AdminShell and SellerShell wrappers from notification content pages
+- designed and built role-specific headers, subtitles, empty states, and summary count dashboards
+- added interactive horizontal category tabs for Admin, Seller, and Customer notifications
+- handled client-side keyword and metadata filters for customer notification category grouping
+- enriched item details with direct entity metadata and custom action buttons
+- optimized database query count using Promise.all with a strict fetch limit
+- secured guest header loading by verifying zero notification API requests are made during public unauthenticated visits
+- ensured safe navigation even if read-mutation API calls experience failures
+
+Verification:
+
+- `npm run lint` (frontend/backend): pass
+- `npm run build` (frontend/backend): pass
+- `npx playwright test tests/e2e/notifications.spec.ts`: pass
+- All E2E regressions (14 tests): pass
+- `backend-nest` unit/E2E tests (222 tests): pass
+
+Current gap:
+
+- A future backend endpoint (e.g. `GET /api/notifications/summary`) could be implemented to fetch all counts in a single query rather than orchestrating parallel API queries on the client.
