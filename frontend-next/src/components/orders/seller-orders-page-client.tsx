@@ -1,95 +1,237 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/seller/section-card";
-import { OrderStatusBadge } from "@/components/orders/order-status-badge";
-import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
-import { getShopOrders, type SellerOrderListItem } from "@/lib/seller-api";
+import { useActionFeedback } from "@/hooks/use-action-feedback";
+import {
+  archiveShopOrder,
+  createManualDelivery,
+  getOrderDelivery,
+  getShopOrders,
+  markManualDeliveryFailed,
+  markManualDeliveryInTransit,
+  markManualDeliveryDelivered,
+  type SellerFulfillmentBucket,
+  type SellerOrderListItem,
+  type SellerOrdersResponse,
+} from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
-const sellerTabs = [
-  { value: "", label: "All" },
-  { value: "NEW", label: "New" },
-  { value: "AWAITING_PAYMENT", label: "Awaiting payment" },
-  { value: "PAYMENT_PROOF", label: "Payment proof" },
-  { value: "TO_PACK", label: "To pack" },
-  { value: "READY_FOR_YANDEX", label: "Ready for Yandex" },
-  { value: "IN_DELIVERY", label: "In delivery" },
-  { value: "DELIVERED", label: "Delivered" },
-  { value: "PAYMENT_ISSUES", label: "Payment issues" },
-] as const;
+const sellerTabs: Array<{ value: SellerFulfillmentBucket; label: string }> = [
+  { value: "ALL", label: "Tất cả" },
+  { value: "NEW", label: "Mới" },
+  { value: "ASSEMBLING", label: "Lắp ráp" },
+  { value: "IN_TRANSIT", label: "Trong quá trình giao hàng" },
+  { value: "COMPLETED", label: "Hoàn thành" },
+  { value: "CANCELLED", label: "Đã hủy" },
+  { value: "ARCHIVED", label: "Lưu trữ" },
+];
+
+type ShipmentPanelState = {
+  order: SellerOrderListItem;
+  manualYandexOrderId: string;
+  trackingUrl: string;
+  note: string;
+};
 
 export function SellerOrdersPageClient() {
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
-  const [orders, setOrders] = useState<SellerOrderListItem[]>([]);
+  const [response, setResponse] = useState<SellerOrdersResponse | null>(null);
   const [page, setPage] = useState(1);
   const [size] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<SellerFulfillmentBucket>("NEW");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shipmentPanel, setShipmentPanel] = useState<ShipmentPanelState | null>(null);
+  const { run: runAction, isRunning } = useActionFeedback();
+
+  const orders = response?.items ?? [];
+  const summary = response?.summary ?? {
+    ALL: 0,
+    NEW: 0,
+    ASSEMBLING: 0,
+    IN_TRANSIT: 0,
+    COMPLETED: 0,
+    CANCELLED: 0,
+    ARCHIVED: 0,
+  };
+
+  const title = useMemo(
+    () => sellerTabs.find((tab) => tab.value === status)?.label ?? "Orders",
+    [status],
+  );
+
+  const load = async () => {
+    if (!user || !currentShopId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const next = await getShopOrders(
+        currentShopId,
+        {
+          page,
+          size,
+          search: search || undefined,
+          status: status === "ALL" ? undefined : status,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        },
+        "",
+      );
+      setResponse(next);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load orders.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentShopId, dateFrom, dateTo, page, search, size, status, user]);
 
-    const run = async () => {
-      if (!user || !currentShopId) {
-        setLoading(false);
-        return;
-      }
+  const handleArchive = async (order: SellerOrderListItem) => {
+    if (!currentShopId) return;
+    await runAction({
+      action: async () => {
+        await archiveShopOrder(currentShopId, order.id, "");
+      },
+      successMessage: "Đã lưu trữ đơn hàng.",
+      errorMessage: "Không thể lưu trữ đơn hàng.",
+      onSuccess: async () => {
+        await load();
+      },
+    }).catch(() => {});
+  };
 
-      setLoading(true);
-      try {
-        const response = await getShopOrders(
+  const handleHandoff = async (order: SellerOrderListItem) => {
+    if (!currentShopId) return;
+    await runAction({
+      action: async () => {
+        const detail = await getOrderDelivery(currentShopId, order.id, "");
+        if (!detail.activeShipment) {
+          throw new Error("Đơn chưa có vận đơn để bàn giao.");
+        }
+        await markManualDeliveryInTransit(
           currentShopId,
+          order.id,
+          detail.activeShipment.id,
+          { note: "Seller handed over the package to delivery." },
+          "",
+        );
+      },
+      successMessage: "Đã bàn giao cho vận chuyển.",
+      errorMessage: "Không thể bàn giao đơn cho vận chuyển.",
+      onSuccess: async () => {
+        await load();
+      },
+    }).catch(() => {});
+  };
+
+  const handleComplete = async (order: SellerOrderListItem) => {
+    if (!currentShopId) return;
+    await runAction({
+      action: async () => {
+        const detail = await getOrderDelivery(currentShopId, order.id, "");
+        if (!detail.activeShipment) {
+          throw new Error("Đơn chưa có vận đơn hoạt động.");
+        }
+        await markManualDeliveryDelivered(
+          currentShopId,
+          order.id,
+          detail.activeShipment.id,
+          { note: "Seller marked delivery completed from the orders queue." },
+          "",
+        );
+      },
+      successMessage: "Đã chuyển đơn sang Hoàn thành.",
+      errorMessage: "Không thể hoàn thành đơn.",
+      onSuccess: async () => {
+        await load();
+      },
+    }).catch(() => {});
+  };
+
+  const handleCancel = async (order: SellerOrderListItem) => {
+    if (!currentShopId) return;
+    await runAction({
+      action: async () => {
+        const detail = await getOrderDelivery(currentShopId, order.id, "");
+        if (!detail.activeShipment) {
+          throw new Error("Đơn chưa có vận đơn hoạt động.");
+        }
+        await markManualDeliveryFailed(
+          currentShopId,
+          order.id,
+          detail.activeShipment.id,
           {
-            page,
-            size,
-            search: search || undefined,
-            status: status || undefined,
-            dateFrom: dateFrom || undefined,
-            dateTo: dateTo || undefined,
+            reasonCode: "SELLER_CANCELLED",
+            reasonText: "Seller cancelled the order from fulfillment queue.",
+            customerVisibleMessage: "Đơn hàng đã được người bán hủy trong quá trình giao.",
           },
           "",
         );
-        if (!mounted) return;
-        setOrders(response.items);
-        setTotalPages(response.meta.totalPages);
-        setError(null);
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load orders.");
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
+      },
+      successMessage: "Đã chuyển đơn sang Đã hủy.",
+      errorMessage: "Không thể hủy đơn đang giao.",
+      onSuccess: async () => {
+        await load();
+      },
+    }).catch(() => {});
+  };
 
-    void run();
-    return () => {
-      mounted = false;
-    };
-  }, [currentShopId, dateFrom, dateTo, page, search, size, status, user]);
+  const submitShipmentPanel = async () => {
+    if (!currentShopId || !shipmentPanel) return;
+    await runAction({
+      action: async () => {
+        await createManualDelivery(
+          currentShopId,
+          shipmentPanel.order.id,
+          {
+            provider: "YANDEX",
+            manualYandexOrderId: shipmentPanel.manualYandexOrderId.trim() || null,
+            trackingUrl: shipmentPanel.trackingUrl.trim() || null,
+            yandexTrackingLink: shipmentPanel.trackingUrl.trim() || null,
+            deliveryNote: shipmentPanel.note.trim() || null,
+            note: "Seller created shipment from fulfillment queue.",
+          },
+          "",
+        );
+      },
+      successMessage: "Đã tạo đơn vận chuyển và chuyển sang Lắp ráp.",
+      errorMessage: "Không thể tạo đơn vận chuyển.",
+      onSuccess: async () => {
+        setShipmentPanel(null);
+        await load();
+      },
+    }).catch(() => {});
+  };
 
   return (
     <div className="space-y-6">
       <SectionCard
         eyebrow="Fulfillment"
-        title="Orders"
-        description="Seller order queue synced with payment, delivery, and finance states for the active shop."
+        title="Seller orders"
+        description="Luồng xử lý đơn hàng tách riêng khỏi payment review. Chỉ các đơn đã xác nhận thanh toán mới xuất hiện trong các bucket vận hành."
       >
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seller order filters">
           {sellerTabs.map((tab) => (
             <button
-              key={tab.value || "ALL"}
+              key={tab.value}
               type="button"
               onClick={() => {
                 setStatus(tab.value);
@@ -100,9 +242,9 @@ export function SellerOrdersPageClient() {
                   ? "bg-[var(--accent)] text-white"
                   : "border border-[var(--border)] bg-white text-[var(--foreground)] hover:bg-[var(--panel)]"
               }`}
-              data-testid={`seller-order-tab-${tab.value || "ALL"}`}
+              data-testid={`seller-order-tab-${tab.value}`}
             >
-              {tab.label}
+              {tab.label} ({summary[tab.value]})
             </button>
           ))}
         </div>
@@ -117,20 +259,6 @@ export function SellerOrdersPageClient() {
             placeholder="Search by order, customer, phone, product"
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           />
-          <select
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
-              setPage(1);
-            }}
-            className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-          >
-            {sellerTabs.map((tab) => (
-              <option key={tab.value || "ALL"} value={tab.value}>
-                {tab.label}
-              </option>
-            ))}
-          </select>
           <input
             type="date"
             value={dateFrom}
@@ -149,28 +277,33 @@ export function SellerOrdersPageClient() {
             }}
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           />
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
+          >
+            Tải lại
+          </button>
         </div>
       </SectionCard>
 
       <SectionCard
-        eyebrow="Orders list"
-        title="Shop orders"
-        description="Each order shows the seller-facing sync status and the next operational action."
+        eyebrow="Orders"
+        title={title}
+        description="Hành động thay đổi theo bucket để seller biết rõ bước tiếp theo của từng đơn."
       >
         {error ? (
           <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div>
         ) : null}
 
         <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
-          <div className="hidden grid-cols-[150px_1.2fr_1.3fr_150px_170px_170px_180px_130px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
-            <div>Order</div>
-            <div>Customer</div>
-            <div>Products</div>
-            <div>Total</div>
-            <div>Seller sync</div>
-            <div>Payment</div>
-            <div>Next action</div>
-            <div>Date</div>
+          <div className="hidden grid-cols-[140px_1.2fr_1.2fr_140px_170px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
+            <div>Đơn</div>
+            <div>Buyer</div>
+            <div>Sản phẩm</div>
+            <div>Số tiền</div>
+            <div>Vận chuyển</div>
+            <div>Hành động</div>
           </div>
 
           <div className="divide-y divide-[var(--border)]">
@@ -178,12 +311,12 @@ export function SellerOrdersPageClient() {
               <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading orders...</div>
             ) : orders.length ? (
               orders.map((order) => (
-                <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[150px_1.2fr_1.3fr_150px_170px_170px_180px_130px] lg:px-5" data-testid="seller-order-card">
+                <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[140px_1.2fr_1.2fr_140px_170px_220px] lg:px-5" data-testid="seller-order-card">
                   <div>
                     <Link href={`/seller/orders/${order.id}`} className="text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)]">
                       {order.orderNumber}
                     </Link>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{order.paymentMethodLabel ?? order.paymentMethod ?? "Direct seller payment"}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{order.sellerDisplayLabel}</p>
                   </div>
                   <div className="text-sm text-[var(--muted)]">
                     <p className="font-semibold text-[var(--foreground)]">{order.customer.name}</p>
@@ -196,33 +329,91 @@ export function SellerOrdersPageClient() {
                         {item.productTitleSnapshot} x {item.quantity}
                       </p>
                     ))}
-                    {order.items.length > 2 ? <p>+{order.items.length - 2} more items</p> : null}
+                    {order.items.length > 2 ? <p>+{order.items.length - 2} sản phẩm</p> : null}
                   </div>
                   <div className="text-sm font-semibold text-[var(--foreground)]">{order.totalAmount}</div>
-                  <div className="space-y-2">
-                    <OrderStatusBadge status={order.sellerDisplayStatus} />
-                    <p className="text-xs text-[var(--muted)]">{order.sellerDisplayLabel}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <PaymentStatusBadge status={order.paymentStatus} />
-                    {order.finance?.ledgerStatus ? (
-                      <p className="text-xs text-[var(--muted)]">Ledger {order.finance.ledgerStatus}</p>
+                  <div className="text-sm text-[var(--muted)]">
+                    <p>{order.delivery?.manualYandexOrderId ?? "Chưa có mã Yandex"}</p>
+                    {order.delivery?.trackingUrl ? (
+                      <a href={order.delivery.trackingUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex text-[var(--accent)] underline">
+                        Theo dõi Yandex
+                      </a>
                     ) : null}
                   </div>
-                  <div className="text-sm text-[var(--muted)]">
-                    {formatNextAction(order.nextAction)}
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/seller/orders/${order.id}`}
+                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                    >
+                      Chi tiết
+                    </Link>
+                    {order.sellerStatusBucket === "NEW" ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShipmentPanel({
+                            order,
+                            manualYandexOrderId: order.delivery?.manualYandexOrderId ?? "",
+                            trackingUrl: order.delivery?.trackingUrl ?? "",
+                            note: order.delivery?.deliveryNote ?? "",
+                          })
+                        }
+                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        Tạo đơn vận chuyển
+                      </button>
+                    ) : null}
+                    {order.sellerStatusBucket === "ASSEMBLING" ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleHandoff(order)}
+                        disabled={isRunning}
+                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                      >
+                        {isRunning ? "Đang lưu..." : "Bàn giao vận chuyển"}
+                      </button>
+                    ) : null}
+                    {order.sellerStatusBucket === "IN_TRANSIT" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void handleComplete(order)}
+                          disabled={isRunning}
+                          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          {isRunning ? "Đang lưu..." : "Hoàn thành"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleCancel(order)}
+                          disabled={isRunning}
+                          className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-60"
+                        >
+                          {isRunning ? "Đang lưu..." : "Hủy"}
+                        </button>
+                      </>
+                    ) : null}
+                    {order.sellerStatusBucket === "COMPLETED" || order.sellerStatusBucket === "CANCELLED" ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleArchive(order)}
+                        disabled={isRunning}
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:opacity-60"
+                      >
+                        {isRunning ? "Đang lưu..." : "Lưu trữ"}
+                      </button>
+                    ) : null}
                   </div>
-                  <div className="text-sm text-[var(--muted)]">{new Date(order.createdAt).toLocaleDateString()}</div>
                 </article>
               ))
             ) : (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">No orders match the current filters.</div>
+              <div className="px-5 py-8 text-sm text-[var(--muted)]">Không có đơn nào trong bucket này.</div>
             )}
           </div>
         </div>
 
         <div className="mt-5 flex items-center justify-between">
-          <p className="text-sm text-[var(--muted)]">Page {page} of {totalPages}</p>
+          <p className="text-sm text-[var(--muted)]">Page {response?.meta.page ?? 1} of {response?.meta.totalPages ?? 1}</p>
           <div className="flex gap-3">
             <button
               type="button"
@@ -234,7 +425,7 @@ export function SellerOrdersPageClient() {
             </button>
             <button
               type="button"
-              disabled={page >= totalPages}
+              disabled={page >= (response?.meta.totalPages ?? 1)}
               onClick={() => setPage((current) => current + 1)}
               className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -243,28 +434,71 @@ export function SellerOrdersPageClient() {
           </div>
         </div>
       </SectionCard>
+
+      {shipmentPanel ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Tạo đơn vận chuyển</p>
+                <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">{shipmentPanel.order.orderNumber}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShipmentPanel(null)}
+                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4">
+              <input
+                value={shipmentPanel.manualYandexOrderId}
+                onChange={(event) =>
+                  setShipmentPanel((current) =>
+                    current ? { ...current, manualYandexOrderId: event.target.value } : current,
+                  )
+                }
+                placeholder="manualYandexOrderId"
+                className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+              />
+              <input
+                value={shipmentPanel.trackingUrl}
+                onChange={(event) =>
+                  setShipmentPanel((current) =>
+                    current ? { ...current, trackingUrl: event.target.value } : current,
+                  )
+                }
+                placeholder="trackingUrl (nếu có)"
+                className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+              />
+              <textarea
+                value={shipmentPanel.note}
+                onChange={(event) =>
+                  setShipmentPanel((current) =>
+                    current ? { ...current, note: event.target.value } : current,
+                  )
+                }
+                rows={4}
+                placeholder="Ghi chú cho vận đơn"
+                className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+              />
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void submitShipmentPanel()}
+                disabled={isRunning}
+                className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {isRunning ? "Đang lưu..." : "Lưu và chuyển sang Lắp ráp"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
-}
-
-function formatNextAction(nextAction: string | null) {
-  const labels: Record<string, string> = {
-    review_payment_proof: "Confirm or reject proof",
-    accept_pay_on_delivery_order: "Accept COD and create Yandex",
-    create_yandex_delivery: "Create Yandex manually",
-    prepare_order: "Start preparing order",
-    continue_preparing: "Continue packing",
-    mark_picked_up: "Mark picked up",
-    mark_on_the_way: "Mark on the way",
-    mark_delivered: "Mark delivered",
-    confirm_delivery_payment: "Confirm delivery payment",
-    wait_for_delivery_payment: "Wait for buyer payment",
-    resolve_delivery_payment_issue: "Resolve payment dispute",
-    review_payment_issue: "Resolve payment issue",
-    wait_for_payment: "Wait for buyer payment",
-    monitor_delivery: "Monitor delivery",
-    review_order: "Open order detail",
-  };
-
-  return nextAction ? labels[nextAction] ?? nextAction : "No action";
 }

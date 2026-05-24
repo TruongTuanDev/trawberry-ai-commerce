@@ -179,6 +179,12 @@ export class OrderResponseDto {
   @ApiProperty({ nullable: true })
   nextAction!: string | null;
 
+  @ApiProperty({ nullable: true })
+  sellerArchivedAt!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sellerArchiveSourceStatus!: string | null;
+
   @ApiProperty({ type: OrderItemResponseDto, isArray: true })
   items!: OrderItemResponseDto[];
 

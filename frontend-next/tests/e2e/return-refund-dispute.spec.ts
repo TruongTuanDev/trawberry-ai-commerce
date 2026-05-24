@@ -176,6 +176,10 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await page.getByTestId("customer-register-password").fill(customerPassword);
   await page.getByTestId("customer-register-confirm-password").fill(customerPassword);
   await page.getByTestId("customer-register-submit").click();
+  await page.waitForURL("**/customer/login?registered=1");
+  await page.getByTestId("customer-login-email").fill(customerEmail);
+  await page.getByTestId("customer-login-password").fill(customerPassword);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
   const customerLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/login", {

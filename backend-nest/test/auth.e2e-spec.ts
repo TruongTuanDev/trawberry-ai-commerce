@@ -1006,7 +1006,9 @@ describe('AuthController (e2e)', () => {
         role: 'CUSTOMER',
         fullName: 'Expired',
       },
-      process.env.JWT_SECRET || process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
+      process.env.JWT_SECRET ||
+        process.env.JWT_REFRESH_SECRET ||
+        'dev-refresh-secret',
       { expiresIn: '-1s' },
     );
 

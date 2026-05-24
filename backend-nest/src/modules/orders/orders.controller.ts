@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -56,5 +57,12 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(shopId, orderId, dto);
+  }
+
+  @Post(':orderId/archive')
+  @ApiOperation({ summary: 'Archive a completed or cancelled order.' })
+  @ApiOkResponse({ type: OrderResponseDto })
+  archive(@Param('shopId') shopId: string, @Param('orderId') orderId: string) {
+    return this.ordersService.archive(shopId, orderId);
   }
 }

@@ -7,7 +7,10 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
 import { computeAddressGeoReadiness } from '../../common/utils/customer-address.util';
-import { computeSellerOrderDisplayStatus } from '../../common/utils/order-role-status.util';
+import {
+  computeSellerFulfillmentState,
+  type SellerFulfillmentBucket,
+} from '../../common/utils/order-role-status.util';
 import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { SellerFinanceService } from '../seller-finance/seller-finance.service';
@@ -29,7 +32,7 @@ export class OrdersService {
         ? { createdAt: 'asc' as const }
         : { createdAt: 'desc' as const };
 
-    const [items, total] = await Promise.all([
+    const [items, total, summaryRows] = await Promise.all([
       this.prisma.order.findMany({
         where,
         include: this.orderInclude,
@@ -38,7 +41,46 @@ export class OrdersService {
         take: size,
       }),
       this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        select: {
+          status: true,
+          paymentStatus: true,
+          paymentMethod: true,
+          shippingMethodName: true,
+          sellerArchivedAt: true,
+          deliveryShipments: {
+            take: 1,
+            orderBy: { createdAt: 'desc' as const },
+            select: {
+              internalStatus: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    const summary = {
+      ALL: total,
+      NEW: 0,
+      ASSEMBLING: 0,
+      IN_TRANSIT: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      ARCHIVED: 0,
+    } satisfies Record<'ALL' | SellerFulfillmentBucket, number>;
+
+    for (const row of summaryRows) {
+      const bucket = computeSellerFulfillmentState({
+        status: row.status,
+        paymentStatus: row.paymentStatus,
+        paymentMethod: row.paymentMethod,
+        shippingMethodName: row.shippingMethodName,
+        deliveryStatus: row.deliveryShipments?.[0]?.internalStatus ?? null,
+        sellerArchivedAt: row.sellerArchivedAt,
+      }).bucket;
+      summary[bucket] += 1;
+    }
 
     return {
       items: items.map((order) => this.toOrderResponse(order)),
@@ -48,6 +90,7 @@ export class OrdersService {
         total,
         totalPages: Math.max(1, Math.ceil(total / size)),
       },
+      summary,
     };
   }
 
@@ -187,6 +230,56 @@ export class OrdersService {
     return this.toOrderResponse(updated);
   }
 
+  async archive(shopId: string, orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        shopId,
+      },
+      include: this.orderInclude,
+    });
+
+    if (!order) {
+      throw new NotFoundException(
+        `Order ${orderId} was not found in shop ${shopId}.`,
+      );
+    }
+
+    const fulfillment = computeSellerFulfillmentState({
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      shippingMethodName: order.shippingMethodName,
+      paymentProofStatus: order.paymentProofStatus,
+      deliveryStatus: order.deliveryShipments?.[0]?.internalStatus ?? null,
+      sellerArchivedAt: order.sellerArchivedAt,
+    });
+
+    if (fulfillment.bucket === 'ARCHIVED') {
+      return this.toOrderResponse(order);
+    }
+
+    if (
+      fulfillment.bucket !== 'COMPLETED' &&
+      fulfillment.bucket !== 'CANCELLED'
+    ) {
+      throw new BadRequestException(
+        'Only completed or cancelled orders can be archived.',
+      );
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        sellerArchivedAt: new Date(),
+        sellerArchiveSourceStatus: order.status,
+      },
+      include: this.orderInclude,
+    });
+
+    return this.toOrderResponse(updated);
+  }
+
   private buildWhere(
     shopId: string,
     query: ListShopOrdersQueryDto,
@@ -254,40 +347,22 @@ export class OrdersService {
     switch (status) {
       case 'NEW':
         return {
-          status: { in: ['PENDING', 'NEW'] },
-          paymentStatus: { in: ['PENDING', 'UNPAID'] },
-          paymentProofStatus: 'NOT_SUBMITTED',
-        };
-      case 'AWAITING_PAYMENT':
-        return {
-          paymentStatus: {
-            in: [
-              'PAY_ON_DELIVERY_SELECTED',
-              'SELLER_ACCEPTED_PAY_ON_DELIVERY',
-              'DELIVERED_AWAITING_PAYMENT',
-            ],
-          },
-        };
-      case 'PAYMENT_PROOF':
-        return {
-          paymentProofStatus: 'BUYER_MARKED_PAID',
-          paymentStatus: {
-            notIn: ['BUYER_MARKED_DELIVERY_PAID', 'PAID', 'APPROVED'],
-          },
-        };
-      case 'TO_PACK':
-        return {
-          status: { in: ['NEW', 'PENDING', 'ASSEMBLING'] },
+          sellerArchivedAt: null,
           paymentStatus: {
             in: ['PAID', 'APPROVED', 'SELLER_CONFIRMED_DELIVERY_PAYMENT'],
           },
+          status: { in: ['NEW', 'PENDING'] },
+          deliveryShipments: {
+            none: {
+              internalStatus: { notIn: ['FAILED', 'CANCELLED', 'DELIVERED'] },
+            },
+          },
         };
-      case 'READY_FOR_YANDEX':
-        return { status: 'READY_TO_CREATE_YANDEX' };
-      case 'IN_DELIVERY':
+      case 'ASSEMBLING':
         return {
+          sellerArchivedAt: null,
           OR: [
-            { status: { in: ['YANDEX_MANUAL_CREATED', 'SHIPPING'] } },
+            { status: { in: ['READY_TO_CREATE_YANDEX', 'ASSEMBLING'] } },
             {
               deliveryShipments: {
                 some: {
@@ -296,6 +371,23 @@ export class OrdersService {
                       'YANDEX_MANUAL_CREATED',
                       'CREATED_MANUALLY',
                       'CREATED',
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        };
+      case 'IN_TRANSIT':
+        return {
+          sellerArchivedAt: null,
+          OR: [
+            { status: 'SHIPPING' },
+            {
+              deliveryShipments: {
+                some: {
+                  internalStatus: {
+                    in: [
                       'COURIER_ASSIGNED',
                       'PICKED_UP',
                       'ON_THE_WAY',
@@ -307,8 +399,9 @@ export class OrdersService {
             },
           ],
         };
-      case 'DELIVERED':
+      case 'COMPLETED':
         return {
+          sellerArchivedAt: null,
           OR: [
             { status: 'DELIVERED' },
             {
@@ -320,25 +413,24 @@ export class OrdersService {
             },
           ],
         };
-      case 'PAYMENT_ISSUES':
+      case 'CANCELLED':
         return {
+          sellerArchivedAt: null,
           OR: [
-            {
-              paymentStatus: {
-                in: ['REJECTED', 'FAILED', 'DELIVERY_PAYMENT_REJECTED'],
-              },
-            },
+            { status: 'CANCELLED' },
             {
               deliveryShipments: {
                 some: {
-                  internalStatus: 'FAILED',
+                  internalStatus: { in: ['FAILED', 'CANCELLED'] },
                 },
               },
             },
           ],
         };
-      case 'CANCELLED':
-        return { status: 'CANCELLED' };
+      case 'ARCHIVED':
+        return {
+          sellerArchivedAt: { not: null },
+        };
       default:
         return { status };
     }
@@ -431,6 +523,8 @@ export class OrdersService {
     createdAt: Date;
     updatedAt: Date;
     customerCompletedAt: Date | null;
+    sellerArchivedAt: Date | null;
+    sellerArchiveSourceStatus: string | null;
     shop: {
       id: string;
       name: string;
@@ -529,13 +623,14 @@ export class OrdersService {
       country: 'Russia',
       phone: order.customerPhone,
     });
-    const sellerDisplay = computeSellerOrderDisplayStatus({
+    const sellerDisplay = computeSellerFulfillmentState({
       status: order.status,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod,
       shippingMethodName: order.shippingMethodName,
       paymentProofStatus: order.paymentProofStatus,
       deliveryStatus: latestShipment?.internalStatus ?? null,
+      sellerArchivedAt: order.sellerArchivedAt,
     });
     const latestLedger = order.sellerFeeLedgerEntries?.[0] ?? null;
 
@@ -585,6 +680,8 @@ export class OrdersService {
       sellerDisplayLabel: sellerDisplay.label,
       sellerStatusBucket: sellerDisplay.bucket,
       nextAction: sellerDisplay.nextAction,
+      sellerArchivedAt: order.sellerArchivedAt?.toISOString() ?? null,
+      sellerArchiveSourceStatus: order.sellerArchiveSourceStatus ?? null,
       delivery: latestShipment
         ? {
             provider: latestShipment.provider,

@@ -28,6 +28,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isPayOnDeliverySellerQr =
     order?.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
+  const fulfillmentStatus = order ? getBuyerFulfillmentStatus(order) : null;
 
   useEffect(() => {
     let mounted = true;
@@ -108,7 +109,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
         setBuyerNote("");
         const msg = isPayOnDeliverySellerQr
           ? "Marked as paid after delivery. Seller can review it now."
-          : "Payment proof uploaded. Seller can review it now.";
+          : "Marked as paid. Seller can review the proof now.";
         setSuccessMessage(msg);
         router.refresh();
         return updated;
@@ -204,14 +205,26 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
                     <Metric label="Order status">
                       <div data-testid="tracked-order-status">
-                        <OrderStatusBadge status={order.status} />
+                        <OrderStatusBadge
+                          status={fulfillmentStatus?.code ?? order.status}
+                        />
                       </div>
+                      {fulfillmentStatus ? (
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          {fulfillmentStatus.label}
+                        </p>
+                      ) : null}
                     </Metric>
                     <Metric label="Payment status">
                       <PaymentStatusBadge
                         status={order.paymentStatus}
                         testId="tracked-payment-status"
                       />
+                    </Metric>
+                    <Metric label="Payment confirmed">
+                      {isPaymentConfirmed(order.paymentStatus)
+                        ? "Yes"
+                        : "Pending review"}
                     </Metric>
                     <Metric label="Payment method">
                       {order.paymentMethodLabel ??
@@ -687,4 +700,37 @@ function TextMetric({ label, value }: { label: string; value: string }) {
       </p>
     </div>
   );
+}
+
+function isPaymentConfirmed(paymentStatus: string) {
+  return [
+    "PAID",
+    "APPROVED",
+    "SELLER_CONFIRMED_DELIVERY_PAYMENT",
+    "YANDEX_PAYMENT_ON_DELIVERY_PAID",
+  ].includes(paymentStatus);
+}
+
+function getBuyerFulfillmentStatus(order: PublicTrackedOrder) {
+  if (order.delivery?.status === "FAILED" || order.status === "CANCELLED") {
+    return { code: "CANCELLED", label: "Đã hủy" };
+  }
+  if (order.delivery?.status === "DELIVERED" || order.status === "DELIVERED") {
+    return { code: "DELIVERED", label: "Hoàn thành" };
+  }
+  if (
+    ["COURIER_ASSIGNED", "PICKED_UP", "ON_THE_WAY", "IN_TRANSIT", "SHIPPING"].includes(
+      order.delivery?.status ?? order.status,
+    )
+  ) {
+    return { code: "SHIPPING", label: "Đang giao hàng" };
+  }
+  if (
+    ["READY_TO_CREATE_YANDEX", "YANDEX_MANUAL_CREATED", "CREATED_MANUALLY", "CREATED", "ASSEMBLING"].includes(
+      order.delivery?.status ?? order.status,
+    )
+  ) {
+    return { code: "ASSEMBLING", label: "Lắp ráp" };
+  }
+  return { code: "NEW", label: "Mới" };
 }

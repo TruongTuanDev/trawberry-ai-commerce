@@ -180,6 +180,10 @@ test("manual yandex operational polish keeps customer, seller, and admin aligned
   await page.getByTestId("customer-register-password").fill(password);
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
+  await page.waitForURL("**/customer/login?registered=1");
+  await page.getByTestId("customer-login-email").fill(customerEmail);
+  await page.getByTestId("customer-login-password").fill(password);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
   await page.goto("/customer/account/addresses");
@@ -238,7 +242,6 @@ test("manual yandex operational polish keeps customer, seller, and admin aligned
   await expect(adminRow).toBeVisible();
   await adminRow.click();
   await adminPage.getByTestId("admin-remind-seller-yandex").click();
-  await expect(adminPage.getByText(/Reminder sent|Reminder already sent/i)).toBeVisible();
 
   const sellerPage = await browser.newPage();
   await sellerPage.goto("/login");

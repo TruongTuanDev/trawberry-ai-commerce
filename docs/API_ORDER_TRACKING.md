@@ -1,5 +1,19 @@
 # API Order Tracking
 
+## 2026-05-24 Buyer Fulfillment Label Addendum
+
+Public order tracking now derives a simpler buyer-facing fulfillment label from raw order and delivery states.
+
+Buyer-facing progress buckets:
+
+- `Mới`
+- `Lắp ráp`
+- `Đang giao hàng`
+- `Hoàn thành`
+- `Đã hủy`
+
+Existing raw fields remain unchanged; the UI now projects these states more clearly for customers.
+
 ## Scope
 This document describes the customer order tracking and payment proof upload MVP implemented in `backend-nest`.
 

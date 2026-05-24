@@ -9,6 +9,15 @@ export type SellerOrderStatus =
   | "SHIPPING"
   | "DELIVERED"
   | "CANCELLED";
+
+export type SellerFulfillmentBucket =
+  | "ALL"
+  | "NEW"
+  | "ASSEMBLING"
+  | "IN_TRANSIT"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "ARCHIVED";
 export type PaymentReviewAction =
   | "MARK_PAID"
   | "SELLER_CONFIRMED"
@@ -341,18 +350,10 @@ export type SellerOrderListItem = {
   itemsCount: number;
   sellerDisplayStatus: string;
   sellerDisplayLabel: string;
-  sellerStatusBucket:
-    | "ALL"
-    | "NEW"
-    | "AWAITING_PAYMENT"
-    | "PAYMENT_PROOF"
-    | "TO_PACK"
-    | "READY_FOR_YANDEX"
-    | "IN_DELIVERY"
-    | "DELIVERED"
-    | "PAYMENT_ISSUES"
-    | "CANCELLED";
+  sellerStatusBucket: SellerFulfillmentBucket;
   nextAction: string | null;
+  sellerArchivedAt: string | null;
+  sellerArchiveSourceStatus: string | null;
   delivery: SellerOrderDeliverySummary | null;
   paymentDetails: PaymentDetails | null;
   finance: {
@@ -527,6 +528,7 @@ export type SellerOrdersResponse = {
     total: number;
     totalPages: number;
   };
+  summary: Record<SellerFulfillmentBucket, number>;
 };
 
 export type PaymentReviewLog = {
@@ -2061,6 +2063,21 @@ export async function updateShopOrderStatus(
       method: "PATCH",
       token,
       body: JSON.stringify({ status }),
+    },
+  );
+}
+
+export async function archiveShopOrder(
+  shopId: string,
+  orderId: string,
+  token?: string,
+) {
+  return apiRequest<SellerOrderListItem>(
+    `/api/shops/${shopId}/orders/${orderId}/archive`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify({}),
     },
   );
 }

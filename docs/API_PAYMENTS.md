@@ -1,5 +1,16 @@
 # Payments API
 
+## 2026-05-24 Seller Payment Review Queue Addendum
+
+The seller payments list is now treated as a dedicated payment proof review queue instead of a mixed operational list.
+
+Operational meaning:
+
+- queue focuses on buyer-submitted proof waiting for seller review
+- seller confirmation keeps existing payment transition logic
+- after confirmation, the order leaves payment review and becomes eligible for seller fulfillment buckets in Orders
+- seller rejection keeps the order out of fulfillment and leaves it in payment-resolution flow
+
 ## 2026-05-22 Return / Refund / Dispute Foundation
 
 Direct-to-seller payments now support manual refund tracking after payment confirmation.

@@ -7,7 +7,16 @@ type OrderRoleStatusInput = {
   shippingMethodName?: string | null;
   paymentProofStatus?: string | null;
   deliveryStatus?: string | null;
+  sellerArchivedAt?: Date | string | null;
 };
+
+export type SellerFulfillmentBucket =
+  | 'NEW'
+  | 'ASSEMBLING'
+  | 'IN_TRANSIT'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'ARCHIVED';
 
 export type SellerOrderBucket =
   | 'ALL'
@@ -25,6 +34,13 @@ export type OrderDisplayState = {
   code: string;
   label: string;
   bucket: SellerOrderBucket;
+  nextAction: string | null;
+};
+
+export type SellerFulfillmentState = {
+  code: string;
+  label: string;
+  bucket: SellerFulfillmentBucket;
   nextAction: string | null;
 };
 
@@ -53,8 +69,94 @@ const DELIVERY_ACTIVE_STATUSES = new Set([
   'SHIPPING',
 ]);
 
+const DELIVERY_ASSEMBLING_STATUSES = new Set([
+  'READY_TO_CREATE_YANDEX',
+  'YANDEX_MANUAL_CREATED',
+  'CREATED_MANUALLY',
+  'CREATED',
+  'ASSEMBLING',
+]);
+
+const DELIVERY_IN_TRANSIT_STATUSES = new Set([
+  'COURIER_ASSIGNED',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'IN_TRANSIT',
+  'SHIPPING',
+]);
+
 function resolvePaymentMethod(input: OrderRoleStatusInput) {
   return input.paymentMethod ?? input.shippingMethodName ?? null;
+}
+
+export function computeSellerFulfillmentState(
+  input: OrderRoleStatusInput,
+): SellerFulfillmentState {
+  const deliveryStatus = input.deliveryStatus ?? null;
+  const archived = Boolean(input.sellerArchivedAt);
+
+  if (archived) {
+    return {
+      code: 'ARCHIVED',
+      label: 'Archived',
+      bucket: 'ARCHIVED',
+      nextAction: null,
+    };
+  }
+
+  if (
+    input.status === 'CANCELLED' ||
+    deliveryStatus === 'CANCELLED' ||
+    deliveryStatus === 'FAILED'
+  ) {
+    return {
+      code: deliveryStatus === 'FAILED' ? 'DELIVERY_FAILED' : 'CANCELLED',
+      label: deliveryStatus === 'FAILED' ? 'Delivery cancelled' : 'Cancelled',
+      bucket: 'CANCELLED',
+      nextAction: null,
+    };
+  }
+
+  if (input.status === 'DELIVERED' || deliveryStatus === 'DELIVERED') {
+    return {
+      code: 'COMPLETED',
+      label: 'Completed',
+      bucket: 'COMPLETED',
+      nextAction: 'archive_order',
+    };
+  }
+
+  if (
+    DELIVERY_IN_TRANSIT_STATUSES.has(input.status) ||
+    DELIVERY_IN_TRANSIT_STATUSES.has(deliveryStatus ?? '')
+  ) {
+    return {
+      code: 'IN_TRANSIT',
+      label: 'In delivery',
+      bucket: 'IN_TRANSIT',
+      nextAction: 'complete_or_cancel_delivery',
+    };
+  }
+
+  if (
+    input.status === 'READY_TO_CREATE_YANDEX' ||
+    DELIVERY_ASSEMBLING_STATUSES.has(input.status) ||
+    DELIVERY_ASSEMBLING_STATUSES.has(deliveryStatus ?? '')
+  ) {
+    return {
+      code: 'ASSEMBLING',
+      label: 'Assembling',
+      bucket: 'ASSEMBLING',
+      nextAction: 'handoff_to_delivery',
+    };
+  }
+
+  return {
+    code: 'NEW',
+    label: 'New',
+    bucket: 'NEW',
+    nextAction: 'create_delivery_order',
+  };
 }
 
 export function computeSellerOrderDisplayStatus(

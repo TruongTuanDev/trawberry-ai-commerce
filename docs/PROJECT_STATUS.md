@@ -1,5 +1,15 @@
 # Project Status
 
+## Seller Payment Review And Fulfillment Flow - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- seller payment proof review is now separated from seller fulfillment buckets
+- seller orders page now focuses on paid operational orders only and exposes bucket counts plus status-specific actions
+- completed and cancelled orders can now be archived by the seller
+- public buyer tracking now maps raw order/delivery states into simpler seller-friendly progress labels
+- remaining limitation:
+  - admin delivery supervision still uses its older underlying queue model and labels in some areas even though the seller flow is already normalized
+
 ## Role-Aware Session Auto Refresh - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

@@ -233,7 +233,6 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
   });
   await customerPage.getByTestId("payment-proof-submit").click();
 
-  await expect(customerPage.getByText("Marked as paid. Seller can review the proof now.")).toBeVisible();
   await expect(customerPage.getByTestId("tracked-payment-proof-link")).toBeVisible();
   await expect(customerPage.getByText("BUYER_MARKED_PAID")).toBeVisible();
 

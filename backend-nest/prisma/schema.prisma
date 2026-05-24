@@ -555,6 +555,8 @@ model Order {
   buyerMarkedPaidAt        DateTime?          @map("buyer_marked_paid_at") @db.Timestamptz(6)
   sellerConfirmedPaidAt    DateTime?          @map("seller_confirmed_paid_at") @db.Timestamptz(6)
   sellerRejectedPaidAt     DateTime?          @map("seller_rejected_paid_at") @db.Timestamptz(6)
+  sellerArchivedAt         DateTime?          @map("seller_archived_at") @db.Timestamptz(6)
+  sellerArchiveSourceStatus String?           @map("seller_archive_source_status") @db.VarChar(50)
   createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt                DateTime           @updatedAt @map("updated_at") @db.Timestamp(6)
   customerCompletedAt      DateTime?          @map("customer_completed_at") @db.Timestamp(6)

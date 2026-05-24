@@ -306,6 +306,9 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   await sellerPage.getByTestId("manual-yandex-order-id").fill(`YANDEX-${stamp}`);
   await sellerPage.getByTestId("manual-delivery-save").click();
   await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/saved|updated/i);
+  await sellerPage.getByTestId("manual-delivery-mark-in-transit").click();
+  await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/on the way|transit/i);
+  sellerPage.once("dialog", (dialog) => dialog.accept());
   await sellerPage.getByTestId("manual-delivery-mark-delivered").click();
   await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/delivered/i);
 

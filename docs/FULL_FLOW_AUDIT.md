@@ -1,5 +1,19 @@
 # Full Commerce Flow Audit
 
+## Seller Payment Review And Fulfillment Addendum
+
+- seller proof review is now an explicit queue instead of an incidental state mixed into the fulfillment board
+- seller confirmation of payment proof still drives the same backend payment transition, but the UI now immediately removes the item from the review queue and treats the order as fulfillment-ready
+- seller fulfillment buckets now map raw order + delivery states into operational buckets:
+  - `NEW`
+  - `ASSEMBLING`
+  - `IN_TRANSIT`
+  - `COMPLETED`
+  - `CANCELLED`
+  - `ARCHIVED`
+- buyer public order tracking now shows a friendlier fulfillment label instead of only raw internal status values
+- archived seller orders are kept in the same order domain instead of creating a separate storage flow
+
 ## Session Auto Refresh Addendum
 
 - protected customer, seller, and admin routes now tolerate expired role access cookies when the matching role refresh cookie is still valid

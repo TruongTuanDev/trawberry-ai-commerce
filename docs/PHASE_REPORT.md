@@ -1,5 +1,30 @@
 # Phase Report
 
+## 2026-05-24 Seller Payment Review And Fulfillment Flow
+
+- split seller operations into two clearer worklists:
+  - `seller/payments` now behaves as a payment proof review queue
+  - `seller/orders` now behaves as a fulfillment board
+- seller payment review queue now shows:
+  - order id
+  - buyer
+  - products
+  - amount
+  - proof submit time
+  - proof thumbnail / preview modal
+  - inline confirm / reject actions
+- payment confirmation now keeps the existing payment logic but removes the row from the review queue and lets the order appear in the seller fulfillment `Mới` bucket
+- seller fulfillment buckets are now normalized to:
+  - `Mới`
+  - `Lắp ráp`
+  - `Trong quá trình giao hàng`
+  - `Hoàn thành`
+  - `Đã hủy`
+  - `Lưu trữ`
+- added seller-side order archive support for completed/cancelled orders
+- public buyer tracking now surfaces seller-friendly fulfillment labels and payment-confirmed visibility
+- updated Playwright specs to respect the newer auth register redirect and the extra fulfillment handoff step before delivery completion
+
 ## 2026-05-24 Role-Aware Session Auto Refresh
 
 - Added role-specific refresh cookies for customer, seller, and admin login flows.

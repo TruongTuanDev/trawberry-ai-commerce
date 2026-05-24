@@ -1,5 +1,39 @@
 # Orders API
 
+## 2026-05-24 Seller Fulfillment Buckets Addendum
+
+Seller orders now expose a normalized fulfillment board contract.
+
+Additional list response field:
+
+- `summary`
+  - `ALL`
+  - `NEW`
+  - `ASSEMBLING`
+  - `IN_TRANSIT`
+  - `COMPLETED`
+  - `CANCELLED`
+  - `ARCHIVED`
+
+Updated seller order projection fields:
+
+- `sellerStatusBucket`
+  - now normalized to seller-friendly fulfillment buckets
+- `sellerArchivedAt`
+- `sellerArchiveSourceStatus`
+
+Additional seller endpoint:
+
+- `POST /api/shops/:shopId/orders/:orderId/archive`
+  - archives only `COMPLETED` or `CANCELLED` seller orders
+
+Operational meaning:
+
+- seller fulfillment board is now separate from payment proof review
+- payment-confirmed orders first appear in `NEW`
+- shipment-created but not handed-off orders appear in `ASSEMBLING`
+- delivered / cancelled orders can be moved into `ARCHIVED`
+
 ## 2026-05-22 Return / Refund / Dispute Addendum
 
 Seller and customer order projections now include linked return/refund case summaries when present.

@@ -175,6 +175,10 @@ test("customer sees parent receipt and order history for multi-shop checkout", a
   await page.getByTestId("customer-register-password").fill(password);
   await page.getByTestId("customer-register-confirm-password").fill(password);
   await page.getByTestId("customer-register-submit").click();
+  await page.waitForURL("**/customer/login?registered=1");
+  await page.getByTestId("customer-login-email").fill(customerEmail);
+  await page.getByTestId("customer-login-password").fill(password);
+  await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
   await page.goto(`/products/${productA.product.id}`);
