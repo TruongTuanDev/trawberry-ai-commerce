@@ -1,5 +1,70 @@
 # Orders API
 
+## 2026-05-24 Admin Fulfillment Supervision Tabs Addendum
+
+Admin order supervision now has a dedicated seller-friendly fulfillment projection.
+
+New admin endpoint:
+
+- `GET /api/admin/orders/fulfillment`
+
+Query params:
+
+- `page`
+- `size`
+- `bucket=NEW|ASSEMBLING|IN_TRANSIT|COMPLETED|CANCELLED|ARCHIVED`
+- `search`
+- `shopId`
+- `sellerId`
+- `paymentStatus`
+- `deliveryStatus`
+- `provider`
+- `overdueOnly=true`
+- `dateFrom`
+- `dateTo`
+
+Per-row fields include:
+
+- `orderId`
+- `orderCode`
+- `sellerId`
+- `sellerName`
+- `sellerEmail`
+- `sellerPhone`
+- `shopId`
+- `shopName`
+- `customerName`
+- `customerPhone`
+- `paymentMethod`
+- `paymentStatus`
+- `fulfillmentBucket`
+- `fulfillmentLabel`
+- `deliveryStatus`
+- `deliveryShipmentId`
+- `manualYandexOrderId`
+- `yandexTrackingUrl`
+- `createdAt`
+- `updatedAt`
+- `sellerArchivedAt`
+- `isOverdue`
+- `ageMinutes`
+- `nextAdminActions`
+
+Summary counts are returned as:
+
+- `ALL`
+- `NEW`
+- `ASSEMBLING`
+- `IN_TRANSIT`
+- `COMPLETED`
+- `CANCELLED`
+- `ARCHIVED`
+
+New admin mutation endpoints:
+
+- `POST /api/admin/orders/:orderId/move-to-assembling`
+- `POST /api/admin/orders/:orderId/archive`
+
 ## 2026-05-24 Seller Fulfillment Buckets Addendum
 
 Seller orders now expose a normalized fulfillment board contract.

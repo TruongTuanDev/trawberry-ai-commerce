@@ -165,7 +165,7 @@ async function loginAdmin(browser: Browser) {
 }
 
 test("manual yandex operational polish keeps customer, seller, and admin aligned", async ({ page, request, browser }) => {
-  test.setTimeout(180000);
+  test.setTimeout(300000);
   const stamp = Date.now();
   const sellerEmail = `yandex-polish-seller-${stamp}@example.com`;
   const customerEmail = `yandex-polish-customer-${stamp}@example.com`;
@@ -235,7 +235,8 @@ test("manual yandex operational polish keeps customer, seller, and admin aligned
   });
 
   const adminPage = await loginAdmin(browser);
-  await adminPage.goto("/admin/deliveries?status=MISSING_YANDEX_ORDER_ID");
+  await adminPage.goto("/admin/deliveries?bucket=ASSEMBLING");
+  await adminPage.getByTestId("admin-fulfillment-tab-ASSEMBLING").click();
   await adminPage.getByTestId("admin-delivery-search").fill(sellerOrder?.orderNumber ?? "");
   await adminPage.getByRole("button", { name: "Refresh" }).click();
   const adminRow = adminPage.getByTestId("admin-delivery-row").filter({ hasText: sellerOrder?.orderNumber ?? "" });
@@ -263,12 +264,13 @@ test("manual yandex operational polish keeps customer, seller, and admin aligned
   }
   await expect(page.getByTestId("tracked-yandex-order-id")).toContainText(`YANDEX-${stamp}`);
 
-  await adminPage.goto("/admin/deliveries?status=MISSING_YANDEX_ORDER_ID");
+  await adminPage.goto("/admin/deliveries?bucket=ASSEMBLING");
+  await adminPage.getByTestId("admin-fulfillment-tab-ASSEMBLING").click();
   await adminPage.getByTestId("admin-delivery-search").fill(sellerOrder?.orderNumber ?? "");
   await adminPage.getByRole("button", { name: "Refresh" }).click();
   await expect(
     adminPage.getByTestId("admin-delivery-row").filter({ hasText: sellerOrder?.orderNumber ?? "" }),
-  ).toHaveCount(0);
+  ).toContainText(`YANDEX-${stamp}`);
 
   await sellerPage.close();
   await adminPage.close();

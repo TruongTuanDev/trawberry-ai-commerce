@@ -1,5 +1,27 @@
 # Phase Report
 
+## 2026-05-24 Admin Fulfillment Supervision Tabs
+
+- aligned `/admin/deliveries` with the seller-friendly fulfillment buckets instead of the older raw delivery queue model
+- added admin fulfillment tabs and counts for:
+  - `Mới`
+  - `Lắp ráp`
+  - `Trong quá trình giao hàng`
+  - `Hoàn thành`
+  - `Đã hủy`
+  - `Lưu trữ`
+- added new backend projection `GET /api/admin/orders/fulfillment`
+- admin rows now show seller, shop, buyer, payment status, fulfillment bucket, Yandex id, tracking URL, last update, and overdue state
+- admin page now supports:
+  - internal remind seller action
+  - move to assembling
+  - mark in delivery
+  - mark completed
+  - mark cancelled
+  - archive
+- kept legacy admin delivery mutation endpoints for shipment-level overrides so seller/manual Yandex behavior is unchanged
+- added a focused Playwright flow for admin fulfillment supervision and updated the manual Yandex operational regression to use the new admin buckets
+
 ## 2026-05-24 Seller Payment Review And Fulfillment Flow
 
 - split seller operations into two clearer worklists:

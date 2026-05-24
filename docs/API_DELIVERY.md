@@ -1,5 +1,23 @@
 # Delivery API
 
+## 2026-05-24 Admin Fulfillment Supervision Addendum
+
+Admin fulfillment UI at `/admin/deliveries` no longer treats the older raw delivery queue as the primary marketplace supervision model.
+
+Current split:
+
+- order-level bucket listing comes from `GET /api/admin/orders/fulfillment`
+- shipment-level override actions still reuse `api/admin/deliveries/*`
+
+This keeps one seller-friendly supervision board while reusing the existing delivery mutation endpoints:
+
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-in-transit`
+- `POST /api/admin/deliveries/:deliveryShipmentId/mark-delivered`
+- `POST /api/admin/deliveries/:deliveryShipmentId/cancel`
+- `POST /api/admin/deliveries/:orderId/remind-yandex`
+
+No real Yandex API calls are added by this admin fulfillment phase.
+
 ## 2026-05-22 Payment On Delivery Strategy Addendum
 
 Manual Yandex delivery remains delivery-only in the current stack.

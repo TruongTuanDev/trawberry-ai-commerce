@@ -1,5 +1,13 @@
 # Full Commerce Flow Audit
 
+## Admin Fulfillment Supervision Addendum
+
+- admin supervision now follows the same normalized fulfillment buckets already released on the seller side
+- `/admin/deliveries` is now an order-level fulfillment board instead of primarily a raw delivery queue
+- admin can search by seller, shop, order, and buyer while also filtering by payment status, delivery status, provider, date range, and overdue state
+- admin still reuses shipment-level override endpoints for in-delivery, delivered, and cancelled transitions, so seller and admin act on the same delivery state
+- internal seller reminders for missing manual Yandex creation remain available and are still non-external audit events only
+
 ## Seller Payment Review And Fulfillment Addendum
 
 - seller proof review is now an explicit queue instead of an incidental state mixed into the fulfillment board

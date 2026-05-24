@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveOrderPaymentPanel } from '../../common/utils/shop-payment.util';
@@ -11,6 +12,7 @@ import {
   computeSellerFulfillmentState,
   type SellerFulfillmentBucket,
 } from '../../common/utils/order-role-status.util';
+import { ListAdminFulfillmentOrdersQueryDto } from './dto/list-admin-fulfillment-orders-query.dto';
 import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { SellerFinanceService } from '../seller-finance/seller-finance.service';
@@ -20,6 +22,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sellerFinanceService: SellerFinanceService,
+    private readonly configService: ConfigService,
   ) {}
 
   async listByShop(shopId: string, query: ListShopOrdersQueryDto) {
@@ -280,6 +283,101 @@ export class OrdersService {
     return this.toOrderResponse(updated);
   }
 
+  async adminArchive(orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+      include: this.orderInclude,
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+
+    return this.archive(order.shopId, orderId);
+  }
+
+  async adminMoveToAssembling(orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+      include: this.orderInclude,
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} was not found.`);
+    }
+
+    if (order.status === 'ASSEMBLING') {
+      return this.toOrderResponse(order);
+    }
+
+    if (order.status !== 'NEW' && order.status !== 'PENDING') {
+      throw new BadRequestException(
+        'Only new orders can be moved into assembling.',
+      );
+    }
+
+    if (
+      !['PAID', 'APPROVED', 'SELLER_CONFIRMED_DELIVERY_PAYMENT'].includes(
+        order.paymentStatus,
+      )
+    ) {
+      throw new BadRequestException(
+        'Payment must be confirmed before moving into assembling.',
+      );
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'ASSEMBLING' },
+      include: this.orderInclude,
+    });
+
+    return this.toOrderResponse(updated);
+  }
+
+  async listAdminFulfillment(query: ListAdminFulfillmentOrdersQueryDto) {
+    const page = query.page ?? 1;
+    const size = query.size ?? 20;
+    const skip = (page - 1) * size;
+    const baseWhere = this.buildAdminFulfillmentWhere(query);
+    const orders = await this.prisma.order.findMany({
+      where: baseWhere,
+      include: this.adminFulfillmentInclude,
+      orderBy: { updatedAt: 'desc' },
+      take: 500,
+    });
+
+    const rows = orders.map((order) => this.toAdminFulfillmentRow(order));
+    const filteredRows = query.bucket
+      ? rows.filter((row) => row.fulfillmentBucket === query.bucket)
+      : rows;
+
+    const summary = {
+      ALL: rows.length,
+      NEW: 0,
+      ASSEMBLING: 0,
+      IN_TRANSIT: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      ARCHIVED: 0,
+    } satisfies Record<'ALL' | SellerFulfillmentBucket, number>;
+
+    for (const row of rows) {
+      summary[row.fulfillmentBucket] += 1;
+    }
+
+    return {
+      items: filteredRows.slice(skip, skip + size),
+      meta: {
+        page,
+        size,
+        total: filteredRows.length,
+        totalPages: Math.max(1, Math.ceil(filteredRows.length / size)),
+      },
+      summary,
+    };
+  }
+
   private buildWhere(
     shopId: string,
     query: ListShopOrdersQueryDto,
@@ -434,6 +532,138 @@ export class OrdersService {
       default:
         return { status };
     }
+  }
+
+  private buildAdminFulfillmentWhere(
+    query: ListAdminFulfillmentOrdersQueryDto,
+  ): Prisma.OrderWhereInput {
+    const where: Prisma.OrderWhereInput = {};
+
+    if (query.shopId) {
+      where.shopId = query.shopId;
+    }
+
+    if (query.sellerId) {
+      where.shop = {
+        sellerProfile: {
+          userId: query.sellerId,
+        },
+      };
+    }
+
+    if (query.paymentStatus) {
+      where.paymentStatus = query.paymentStatus;
+    }
+
+    if (query.deliveryStatus) {
+      where.deliveryShipments = {
+        some: {
+          internalStatus: query.deliveryStatus,
+        },
+      };
+    }
+
+    if (query.provider) {
+      where.deliveryShipments = {
+        ...(where.deliveryShipments ?? {}),
+        some: {
+          ...(typeof where.deliveryShipments === 'object' &&
+          'some' in where.deliveryShipments
+            ? where.deliveryShipments.some
+            : {}),
+          provider: query.provider,
+        },
+      };
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+        { customerName: { contains: search, mode: 'insensitive' } },
+        { customerPhone: { contains: search, mode: 'insensitive' } },
+        { customerEmail: { contains: search, mode: 'insensitive' } },
+        {
+          shop: {
+            name: { contains: search, mode: 'insensitive' },
+          },
+        },
+        {
+          shop: {
+            sellerProfile: {
+              user: {
+                fullName: { contains: search, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        {
+          shop: {
+            sellerProfile: {
+              user: {
+                email: { contains: search, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        {
+          shop: {
+            sellerProfile: {
+              user: {
+                phone: { contains: search, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        {
+          items: {
+            some: {
+              productTitleSnapshot: { contains: search, mode: 'insensitive' },
+            },
+          },
+        },
+      ];
+    }
+
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {};
+      if (query.dateFrom) {
+        where.createdAt.gte = new Date(query.dateFrom);
+      }
+      if (query.dateTo) {
+        const inclusiveEnd = new Date(query.dateTo);
+        inclusiveEnd.setDate(inclusiveEnd.getDate() + 1);
+        where.createdAt.lt = inclusiveEnd;
+      }
+    }
+
+    if (query.overdueOnly) {
+      where.OR = [
+        {
+          status: {
+            in: ['NEW', 'PENDING', 'READY_TO_CREATE_YANDEX', 'ASSEMBLING'],
+          },
+          updatedAt: { lt: this.getNewOrAssemblyOverdueCutoff() },
+        },
+        {
+          deliveryShipments: {
+            some: {
+              internalStatus: {
+                in: [
+                  'COURIER_ASSIGNED',
+                  'PICKED_UP',
+                  'ON_THE_WAY',
+                  'IN_TRANSIT',
+                ],
+              },
+              updatedAt: { lt: this.getInTransitOverdueCutoff() },
+            },
+          },
+        },
+      ];
+    }
+
+    return where;
   }
 
   private assertStatusTransition(
@@ -750,6 +980,190 @@ export class OrdersService {
     };
   }
 
+  private toAdminFulfillmentRow(order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string | null;
+    shippingMethodName: string | null;
+    customerName: string;
+    customerPhone: string;
+    createdAt: Date;
+    updatedAt: Date;
+    sellerArchivedAt: Date | null;
+    paymentProofStatus: string;
+    shop: {
+      id: string;
+      name: string;
+      sellerProfile: {
+        userId: string;
+        user: {
+          email: string;
+          fullName: string | null;
+          phone: string | null;
+        };
+      };
+    };
+    deliveryShipments: Array<{
+      id: string;
+      provider: string;
+      internalStatus: string;
+      updatedAt: Date;
+      estimatedDeliveryAt: Date | null;
+      manualYandexOrderId: string | null;
+      trackingUrl: string | null;
+      yandexTrackingLink: string | null;
+    }>;
+    items: Array<{
+      id: string;
+      productTitleSnapshot: string;
+      quantity: number;
+    }>;
+  }) {
+    const latestShipment = order.deliveryShipments[0] ?? null;
+    const fulfillment = computeSellerFulfillmentState({
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      shippingMethodName: order.shippingMethodName,
+      paymentProofStatus: order.paymentProofStatus,
+      deliveryStatus: latestShipment?.internalStatus ?? null,
+      sellerArchivedAt: order.sellerArchivedAt,
+    });
+    const ageSource = latestShipment?.updatedAt ?? order.updatedAt;
+    const ageMinutes = Math.max(
+      0,
+      Math.round((Date.now() - ageSource.getTime()) / 60000),
+    );
+    const isOverdue = this.isFulfillmentOverdue(order, latestShipment);
+
+    return {
+      orderId: order.id,
+      orderCode: order.orderNumber,
+      sellerId: order.shop.sellerProfile.userId,
+      sellerName: order.shop.sellerProfile.user.fullName,
+      sellerEmail: order.shop.sellerProfile.user.email,
+      sellerPhone: order.shop.sellerProfile.user.phone,
+      shopId: order.shop.id,
+      shopName: order.shop.name,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      customer: {
+        name: order.customerName,
+        phone: order.customerPhone,
+      },
+      paymentMethod: order.paymentMethod ?? order.shippingMethodName,
+      paymentStatus: order.paymentStatus,
+      fulfillmentBucket: fulfillment.bucket,
+      fulfillmentLabel: fulfillment.label,
+      deliveryStatus: latestShipment?.internalStatus ?? null,
+      deliveryShipmentId: latestShipment?.id ?? null,
+      manualYandexOrderId: latestShipment?.manualYandexOrderId ?? null,
+      yandexTrackingUrl:
+        latestShipment?.trackingUrl ??
+        latestShipment?.yandexTrackingLink ??
+        null,
+      provider: latestShipment?.provider ?? null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: ageSource.toISOString(),
+      sellerArchivedAt: order.sellerArchivedAt?.toISOString() ?? null,
+      isOverdue,
+      ageMinutes,
+      nextAdminActions: this.resolveAdminActions(
+        fulfillment.bucket,
+        latestShipment,
+      ),
+      items: order.items.map((item) => ({
+        id: item.id,
+        productTitleSnapshot: item.productTitleSnapshot,
+        quantity: item.quantity,
+      })),
+    };
+  }
+
+  private resolveAdminActions(
+    bucket: SellerFulfillmentBucket,
+    latestShipment: { id: string; manualYandexOrderId: string | null } | null,
+  ) {
+    switch (bucket) {
+      case 'NEW':
+        return ['move_to_assembling'];
+      case 'ASSEMBLING':
+        return latestShipment
+          ? ['remind_seller', 'mark_in_delivery', 'mark_cancelled']
+          : ['remind_seller'];
+      case 'IN_TRANSIT':
+        return ['mark_completed', 'mark_cancelled'];
+      case 'COMPLETED':
+      case 'CANCELLED':
+        return ['archive'];
+      default:
+        return [];
+    }
+  }
+
+  private isFulfillmentOverdue(
+    order: {
+      status: string;
+      paymentStatus: string;
+      paymentMethod: string | null;
+      shippingMethodName: string | null;
+      paymentProofStatus: string;
+      sellerArchivedAt: Date | null;
+      updatedAt: Date;
+    },
+    latestShipment: {
+      internalStatus: string;
+      updatedAt: Date;
+      estimatedDeliveryAt: Date | null;
+    } | null,
+  ) {
+    const fulfillment = computeSellerFulfillmentState({
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod,
+      shippingMethodName: order.shippingMethodName,
+      paymentProofStatus: order.paymentProofStatus,
+      deliveryStatus: latestShipment?.internalStatus ?? null,
+      sellerArchivedAt: order.sellerArchivedAt,
+    });
+
+    if (fulfillment.bucket === 'NEW' || fulfillment.bucket === 'ASSEMBLING') {
+      const source = latestShipment?.updatedAt ?? order.updatedAt;
+      return source < this.getNewOrAssemblyOverdueCutoff();
+    }
+
+    if (fulfillment.bucket === 'IN_TRANSIT') {
+      if (latestShipment?.estimatedDeliveryAt) {
+        return latestShipment.estimatedDeliveryAt < new Date();
+      }
+      return (
+        (latestShipment?.updatedAt ?? order.updatedAt) <
+        this.getInTransitOverdueCutoff()
+      );
+    }
+
+    return false;
+  }
+
+  private getNewOrAssemblyOverdueCutoff() {
+    const minutes = Number(
+      this.configService.get<string>('MANUAL_YANDEX_OVERDUE_MINUTES', '120'),
+    );
+    return new Date(Date.now() - minutes * 60 * 1000);
+  }
+
+  private getInTransitOverdueCutoff() {
+    const minutes = Number(
+      this.configService.get<string>(
+        'ADMIN_IN_TRANSIT_OVERDUE_MINUTES',
+        '2880',
+      ),
+    );
+    return new Date(Date.now() - minutes * 60 * 1000);
+  }
+
   private get orderInclude() {
     return {
       shop: {
@@ -835,6 +1249,52 @@ export class OrdersService {
           requestedAmount: true,
           approvedAmount: true,
           createdAt: true,
+        },
+      },
+    };
+  }
+
+  private get adminFulfillmentInclude() {
+    return {
+      shop: {
+        select: {
+          id: true,
+          name: true,
+          sellerProfile: {
+            select: {
+              userId: true,
+              user: {
+                select: {
+                  email: true,
+                  fullName: true,
+                  phone: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      deliveryShipments: {
+        take: 1,
+        orderBy: { createdAt: 'desc' as const },
+        select: {
+          id: true,
+          provider: true,
+          internalStatus: true,
+          updatedAt: true,
+          estimatedDeliveryAt: true,
+          manualYandexOrderId: true,
+          trackingUrl: true,
+          yandexTrackingLink: true,
+        },
+      },
+      items: {
+        take: 3,
+        orderBy: { productTitleSnapshot: 'asc' as const },
+        select: {
+          id: true,
+          productTitleSnapshot: true,
+          quantity: true,
         },
       },
     };

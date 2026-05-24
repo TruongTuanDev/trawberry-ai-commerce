@@ -195,6 +195,63 @@ export type AdminDeliveryRow = {
   }>;
 };
 
+export type AdminFulfillmentBucket =
+  | "ALL"
+  | "NEW"
+  | "ASSEMBLING"
+  | "IN_TRANSIT"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "ARCHIVED";
+
+export type AdminFulfillmentRow = {
+  orderId: string;
+  orderCode: string;
+  sellerId: string;
+  sellerName: string | null;
+  sellerEmail: string;
+  sellerPhone: string | null;
+  shopId: string;
+  shopName: string;
+  customerName: string;
+  customerPhone: string;
+  customer: {
+    name: string;
+    phone: string;
+  };
+  paymentMethod: string | null;
+  paymentStatus: string;
+  fulfillmentBucket: Exclude<AdminFulfillmentBucket, "ALL">;
+  fulfillmentLabel: string;
+  deliveryStatus: string | null;
+  deliveryShipmentId: string | null;
+  manualYandexOrderId: string | null;
+  yandexTrackingUrl: string | null;
+  provider: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sellerArchivedAt: string | null;
+  isOverdue: boolean;
+  ageMinutes: number;
+  nextAdminActions: string[];
+  items: Array<{
+    id: string;
+    productTitleSnapshot: string;
+    quantity: number;
+  }>;
+};
+
+export type AdminFulfillmentResponse = {
+  items: AdminFulfillmentRow[];
+  meta: {
+    page: number;
+    size: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: Record<AdminFulfillmentBucket, number>;
+};
+
 export type AdminDashboardSummary = {
   filters: {
     dateFrom: string | null;
@@ -1029,6 +1086,46 @@ export async function listAdminDeliveries(query?: {
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<{ items: AdminDeliveryRow[] }>(`/api/admin/deliveries${suffix}`, {
     method: "GET",
+  });
+}
+
+export async function listAdminFulfillmentOrders(query?: {
+  page?: number;
+  size?: number;
+  bucket?: Exclude<AdminFulfillmentBucket, "ALL">;
+  search?: string;
+  shopId?: string;
+  sellerId?: string;
+  paymentStatus?: string;
+  deliveryStatus?: string;
+  provider?: string;
+  overdueOnly?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const params = new URLSearchParams();
+  Object.entries(query ?? {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<AdminFulfillmentResponse>(`/api/admin/orders/fulfillment${suffix}`, {
+    method: "GET",
+  });
+}
+
+export async function adminMoveOrderToAssembling(orderId: string) {
+  return apiRequest(`/api/admin/orders/${encodeURIComponent(orderId)}/move-to-assembling`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function adminArchiveOrder(orderId: string) {
+  return apiRequest(`/api/admin/orders/${encodeURIComponent(orderId)}/archive`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 

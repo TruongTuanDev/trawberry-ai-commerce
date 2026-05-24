@@ -33,7 +33,31 @@ type StoredShop = {
   name: string;
   slug: string;
   status: string;
-  sellerProfile: { userId: string };
+  paymentInstructions?: string | null;
+  bankName?: string | null;
+  accountHolderName?: string | null;
+  accountNumber?: string | null;
+  recipientPhone?: string | null;
+  sbpPhone?: string | null;
+  staticQrImageUrl?: string | null;
+  paymentMode?: string | null;
+  paymentConfigStatus?: string;
+  allowPrepaidQr?: boolean;
+  allowPayOnDeliverySellerQr?: boolean;
+  allowDepositPayment?: boolean;
+  depositPercent?: number | null;
+  depositRequiredAboveAmount?: { toString(): string } | null;
+  codMaxOrderAmount?: { toString(): string } | null;
+  yandexCardOnDeliveryStatus?: string;
+  cashCourierCollectionStatus?: string;
+  sellerProfile: {
+    userId: string;
+    user?: {
+      email: string;
+      fullName: string | null;
+      phone: string | null;
+    };
+  };
 };
 
 type StoredVariant = {
@@ -49,6 +73,9 @@ type StoredOrder = {
   orderNumber: string;
   status: string;
   paymentStatus: string;
+  paymentMethod?: string | null;
+  paymentMethodLabel?: string | null;
+  paymentProofStatus?: string;
   totalAmount: { toString(): string };
   shippingCost: { toString(): string };
   shippingMethodName: string | null;
@@ -60,7 +87,36 @@ type StoredOrder = {
   createdAt: Date;
   updatedAt: Date;
   customerCompletedAt: Date | null;
-  shop: { id: string; name: string };
+  sellerArchivedAt?: Date | null;
+  sellerArchiveSourceStatus?: string | null;
+  shop: StoredShop;
+  deliveryShipments?: Array<{
+    id: string;
+    provider: string;
+    internalStatus: string;
+    updatedAt: Date;
+    estimatedDeliveryAt?: Date | null;
+    manualYandexOrderId?: string | null;
+    trackingUrl?: string | null;
+    yandexTrackingLink?: string | null;
+    providerShipmentId?: string | null;
+    providerOrderNumber?: string | null;
+    trackingNumber?: string | null;
+    courierName?: string | null;
+    courierPhone?: string | null;
+    packagePreset?: string | null;
+    packageWeightGram?: number | null;
+    packageLengthCm?: number | null;
+    packageWidthCm?: number | null;
+    packageHeightCm?: number | null;
+    yandexClaimId?: string | null;
+    deliveryNote?: string | null;
+  }>;
+  sellerFeeLedgerEntries?: Array<{
+    status: string;
+    commissionAmount: { toString(): string };
+    invoice: { status: string } | null;
+  }>;
   items: Array<{
     id: string;
     variantId: string | null;
@@ -69,6 +125,25 @@ type StoredOrder = {
     productTitleSnapshot: string;
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
+    unitPrice?: { toString(): string } | null;
+    lineTotal?: { toString(): string } | null;
+    variantNameSnapshot?: string | null;
+  }>;
+  supportCases?: Array<{
+    id: string;
+    issueType: string;
+    status: string;
+    subject: string;
+    createdAt: Date;
+  }>;
+  returnRefundCases?: Array<{
+    id: string;
+    type: string;
+    reason: string;
+    status: string;
+    requestedAmount: { toString(): string };
+    approvedAmount: { toString(): string } | null;
+    createdAt: Date;
   }>;
 };
 
@@ -130,6 +205,8 @@ type OrderUpdateArgs = {
       | 'customerEmail'
       | 'customerNote'
       | 'customerCompletedAt'
+      | 'sellerArchivedAt'
+      | 'sellerArchiveSourceStatus'
     >
   >;
 };
@@ -201,6 +278,17 @@ describe('OrdersController (e2e)', () => {
           currentShopId: 'shop-2',
         },
       },
+      {
+        id: 'admin-1',
+        email: 'demo-admin@trawberry.local',
+        passwordHash: bcrypt.hashSync('DemoAdmin123!', 10),
+        fullName: 'Demo Admin',
+        phone: null,
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: null,
+      },
     ];
 
     shops = [
@@ -210,7 +298,21 @@ describe('OrdersController (e2e)', () => {
         name: 'Shop One',
         slug: 'shop-one',
         status: 'ACTIVE',
-        sellerProfile: { userId: 'user-s1' },
+        paymentInstructions: 'Pay shop one.',
+        paymentConfigStatus: 'READY',
+        allowPrepaidQr: true,
+        allowPayOnDeliverySellerQr: true,
+        allowDepositPayment: false,
+        yandexCardOnDeliveryStatus: 'DISABLED',
+        cashCourierCollectionStatus: 'DISABLED',
+        sellerProfile: {
+          userId: 'user-s1',
+          user: {
+            email: 'seller1@example.com',
+            fullName: 'Seller One',
+            phone: null,
+          },
+        },
       },
       {
         id: 'shop-2',
@@ -218,7 +320,21 @@ describe('OrdersController (e2e)', () => {
         name: 'Shop Two',
         slug: 'shop-two',
         status: 'ACTIVE',
-        sellerProfile: { userId: 'user-s2' },
+        paymentInstructions: 'Pay shop two.',
+        paymentConfigStatus: 'READY',
+        allowPrepaidQr: true,
+        allowPayOnDeliverySellerQr: true,
+        allowDepositPayment: false,
+        yandexCardOnDeliveryStatus: 'DISABLED',
+        cashCourierCollectionStatus: 'DISABLED',
+        sellerProfile: {
+          userId: 'user-s2',
+          user: {
+            email: 'seller2@example.com',
+            fullName: 'Seller Two',
+            phone: null,
+          },
+        },
       },
     ];
 
@@ -235,6 +351,8 @@ describe('OrdersController (e2e)', () => {
         orderNumber: 'ORD-1001',
         status: 'NEW',
         paymentStatus: 'APPROVED',
+        paymentMethod: 'PREPAID_SELLER_QR',
+        paymentProofStatus: 'SELLER_CONFIRMED',
         totalAmount: decimal('120.00'),
         shippingCost: decimal('10.00'),
         shippingMethodName: 'Courier',
@@ -246,7 +364,11 @@ describe('OrdersController (e2e)', () => {
         createdAt: new Date('2025-01-10T10:00:00Z'),
         updatedAt: new Date('2025-01-10T10:00:00Z'),
         customerCompletedAt: null,
-        shop: { id: 'shop-1', name: 'Shop One' },
+        sellerArchivedAt: null,
+        sellerArchiveSourceStatus: null,
+        shop: shops[0],
+        deliveryShipments: [],
+        sellerFeeLedgerEntries: [],
         items: [
           {
             id: 'item-1',
@@ -256,8 +378,13 @@ describe('OrdersController (e2e)', () => {
             productTitleSnapshot: 'Alpha Shoe',
             productSlugSnapshot: 'alpha-shoe',
             productImageSnapshot: 'https://example.com/a.jpg',
+            unitPrice: decimal('55.00'),
+            lineTotal: decimal('110.00'),
+            variantNameSnapshot: 'Default',
           },
         ],
+        supportCases: [],
+        returnRefundCases: [],
       },
       {
         id: 'order-2',
@@ -266,6 +393,8 @@ describe('OrdersController (e2e)', () => {
         orderNumber: 'ORD-1002',
         status: 'ASSEMBLING',
         paymentStatus: 'APPROVED',
+        paymentMethod: 'PREPAID_SELLER_QR',
+        paymentProofStatus: 'SELLER_CONFIRMED',
         totalAmount: decimal('80.00'),
         shippingCost: decimal('5.00'),
         shippingMethodName: 'Pickup',
@@ -277,7 +406,22 @@ describe('OrdersController (e2e)', () => {
         createdAt: new Date('2025-01-12T10:00:00Z'),
         updatedAt: new Date('2025-01-12T10:00:00Z'),
         customerCompletedAt: null,
-        shop: { id: 'shop-1', name: 'Shop One' },
+        sellerArchivedAt: null,
+        sellerArchiveSourceStatus: null,
+        shop: shops[0],
+        deliveryShipments: [
+          {
+            id: 'shipment-2',
+            provider: 'YANDEX',
+            internalStatus: 'YANDEX_MANUAL_CREATED',
+            updatedAt: new Date('2025-01-12T11:00:00Z'),
+            manualYandexOrderId: 'YANDEX-1002',
+            trackingUrl: 'https://track.example/1002',
+            yandexTrackingLink: 'https://track.example/1002',
+            estimatedDeliveryAt: null,
+          },
+        ],
+        sellerFeeLedgerEntries: [],
         items: [
           {
             id: 'item-2',
@@ -287,16 +431,23 @@ describe('OrdersController (e2e)', () => {
             productTitleSnapshot: 'Beta Bag',
             productSlugSnapshot: 'beta-bag',
             productImageSnapshot: 'https://example.com/b.jpg',
+            unitPrice: decimal('75.00'),
+            lineTotal: decimal('75.00'),
+            variantNameSnapshot: 'Default',
           },
         ],
+        supportCases: [],
+        returnRefundCases: [],
       },
       {
         id: 'order-3',
         customerId: 'cust-3',
         shopId: 'shop-2',
         orderNumber: 'ORD-2001',
-        status: 'NEW',
+        status: 'DELIVERED',
         paymentStatus: 'APPROVED',
+        paymentMethod: 'PREPAID_SELLER_QR',
+        paymentProofStatus: 'SELLER_CONFIRMED',
         totalAmount: decimal('40.00'),
         shippingCost: decimal('3.00'),
         shippingMethodName: 'Courier',
@@ -308,8 +459,25 @@ describe('OrdersController (e2e)', () => {
         createdAt: new Date('2025-01-11T10:00:00Z'),
         updatedAt: new Date('2025-01-11T10:00:00Z'),
         customerCompletedAt: null,
-        shop: { id: 'shop-2', name: 'Shop Two' },
+        sellerArchivedAt: null,
+        sellerArchiveSourceStatus: null,
+        shop: shops[1],
+        deliveryShipments: [
+          {
+            id: 'shipment-3',
+            provider: 'YANDEX',
+            internalStatus: 'DELIVERED',
+            updatedAt: new Date('2025-01-11T12:00:00Z'),
+            manualYandexOrderId: 'YANDEX-2001',
+            trackingUrl: 'https://track.example/2001',
+            yandexTrackingLink: 'https://track.example/2001',
+            estimatedDeliveryAt: new Date('2025-01-11T12:00:00Z'),
+          },
+        ],
+        sellerFeeLedgerEntries: [],
         items: [],
+        supportCases: [],
+        returnRefundCases: [],
       },
     ];
 
@@ -457,6 +625,57 @@ describe('OrdersController (e2e)', () => {
     expect(readBody<OrderResponseDto>(shipping).status).toBe('SHIPPING');
   });
 
+  it('allows admin to list fulfillment orders using seller-friendly buckets', async () => {
+    const token = await loginAndGetToken(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/admin/orders/fulfillment?bucket=NEW')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        orderCode: string;
+        fulfillmentBucket: string;
+        customerName: string;
+        sellerEmail: string;
+      }>;
+      summary: Record<string, number>;
+    }>(response);
+
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]).toMatchObject({
+      orderCode: 'ORD-1001',
+      fulfillmentBucket: 'NEW',
+      customerName: 'Alice',
+      sellerEmail: 'seller1@example.com',
+    });
+    expect(body.summary.NEW).toBe(1);
+    expect(body.summary.ASSEMBLING).toBe(1);
+    expect(body.summary.COMPLETED).toBe(1);
+  });
+
+  it('allows admin to archive completed orders', async () => {
+    const token = await loginAndGetToken(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+
+    const response = await request(app.getHttpServer())
+      .post('/api/admin/orders/order-3/archive')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = readBody<OrderResponseDto>(response);
+    expect(body.sellerStatusBucket).toBe('ARCHIVED');
+    expect(body.sellerArchivedAt).toBeTruthy();
+  });
+
   it('forbids access to another seller shop', async () => {
     const token = await loginAndGetToken(app, 'seller1@example.com');
     await request(app.getHttpServer())
@@ -466,10 +685,14 @@ describe('OrdersController (e2e)', () => {
   });
 });
 
-async function loginAndGetToken(app: INestApplication<App>, email: string) {
+async function loginAndGetToken(
+  app: INestApplication<App>,
+  email: string,
+  password = 'password123',
+) {
   const response = await request(app.getHttpServer())
     .post('/api/auth/login')
-    .send({ email, password: 'password123' })
+    .send({ email, password })
     .expect(200);
 
   return readBody<AuthResponseDto>(response).accessToken;

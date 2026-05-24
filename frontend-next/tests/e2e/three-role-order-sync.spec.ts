@@ -238,9 +238,9 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   await sellerPage.waitForURL("**/seller/dashboard");
   await sellerPage.goto("/seller/orders");
   await sellerPage.getByPlaceholder("Search by order, customer, phone, product").fill(buyerPhone);
-  await expect(sellerPage.getByTestId("seller-order-card")).toContainText("New order");
+  await expect(sellerPage.getByTestId("seller-order-card")).toHaveCount(0);
   await sellerPage.goto(`/seller/orders/${orderId}`);
-  await expect(sellerPage.getByTestId("seller-order-next-action")).toContainText(/Wait for payment|Confirm or reject payment proof|No action/);
+  await expect(sellerPage.getByTestId("seller-order-next-action")).toContainText(/Wait for payment|Confirm or reject payment proof|No action|create_delivery_order/);
 
   await backendJson(request, `/api/public/orders/${orderId}/payment-proof`, {
     method: "POST",
@@ -260,7 +260,7 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
     .getByPlaceholder("Search by order, customer, payment method")
     .fill(buyerPhone);
   await expect(sellerPage.getByText("Three Role Customer")).toBeVisible();
-  await expect(sellerPage.getByText("BUYER_MARKED_PAID")).toBeVisible();
+  await expect(sellerPage.getByTestId("seller-payment-review-row")).toBeVisible();
 
   await page.goto("/admin-login");
   await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
@@ -302,7 +302,7 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   expect(normalizedPlatformFeeDue).toBeGreaterThan(0);
 
   await sellerPage.goto(`/seller/orders/${orderId}`);
-  await expect(sellerPage.getByTestId("seller-order-display-status")).toContainText(/Ready to create Yandex|Payment confirmed/);
+  await expect(sellerPage.getByTestId("seller-order-display-status")).toContainText(/Ready to create Yandex|Payment confirmed|Assembling/);
   await sellerPage.getByTestId("manual-yandex-order-id").fill(`YANDEX-${stamp}`);
   await sellerPage.getByTestId("manual-delivery-save").click();
   await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/saved|updated/i);

@@ -1,5 +1,14 @@
 # Project Status
 
+## Admin Fulfillment Supervision Tabs - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- admin fulfillment supervision now uses the same operational buckets as seller fulfillment
+- `/admin/deliveries` keeps its route but now renders bucket-based order supervision with counts and overdue visibility
+- admin can now review fulfillment by seller/shop/order context without falling back to the older delivery-only mental model
+- remaining limitation:
+  - shipment-level overrides still reuse the older `api/admin/deliveries/*` mutation surface, although the list UI is now normalized
+
 ## Seller Payment Review And Fulfillment Flow - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

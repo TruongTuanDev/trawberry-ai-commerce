@@ -1,5 +1,31 @@
 # Order Lifecycle
 
+## Admin fulfillment supervision addendum
+
+Admin now supervises the same normalized fulfillment lifecycle as the seller board:
+
+1. `NEW`
+   - payment is confirmed
+   - shipment has not started
+2. `ASSEMBLING`
+   - seller created manual Yandex shipment or started packing
+3. `IN_TRANSIT`
+   - package has been handed off to delivery
+4. `COMPLETED`
+   - delivered successfully
+5. `CANCELLED`
+   - seller cancelled or delivery failed / customer refused during delivery
+6. `ARCHIVED`
+   - completed or cancelled order moved out of the active supervision board
+
+Admin override stays inside the same lifecycle:
+
+- move to assembling
+- mark in delivery
+- mark completed
+- mark cancelled
+- archive
+
 ## Manual Yandex operational addendum
 
 For seller-operated Yandex fulfillment, the expected operational sequence is now:
