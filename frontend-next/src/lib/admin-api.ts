@@ -204,6 +204,8 @@ export type AdminFulfillmentBucket =
   | "CANCELLED"
   | "ARCHIVED";
 
+export type AdminFulfillmentAction = "VIEW" | "REMIND_SELLER";
+
 export type AdminFulfillmentRow = {
   orderId: string;
   orderCode: string;
@@ -233,7 +235,8 @@ export type AdminFulfillmentRow = {
   sellerArchivedAt: string | null;
   isOverdue: boolean;
   ageMinutes: number;
-  nextAdminActions: string[];
+  lastReminderAt: string | null;
+  nextAdminActions: AdminFulfillmentAction[];
   items: Array<{
     id: string;
     productTitleSnapshot: string;

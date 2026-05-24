@@ -1,5 +1,21 @@
 # Phase Report
 
+## 2026-05-24 Admin Supervision Read-Only + Shop Commission Rules
+
+- made admin fulfillment UI supervision-only on `/admin/deliveries`
+- `GET /api/admin/orders/fulfillment` now returns supervision-safe `nextAdminActions` only:
+  - `VIEW`
+  - `REMIND_SELLER`
+- admin UI no longer exposes seller fulfillment transition buttons or archive controls
+- seller remains the only role that changes fulfillment state and seller archive state
+- admin reminder flow keeps loading/success feedback and refreshes `lastReminderAt`
+- made admin, seller, and customer sidebars stay fixed while content scrolls
+- clarified finance UX that commission is configured per shop and ledger rows snapshot commission percent at payment confirmation time
+- strengthened coverage:
+  - backend seller-finance snapshot invoice assertion
+  - admin fulfillment supervision E2E for read-only behavior
+  - seller fee dashboard E2E labels for shop-level commission and snapshot ledger rules
+
 ## 2026-05-24 Internal Notification Center
 
 - implemented a role-isolated internal Notification Center across all three roles (Customer, Seller, Admin)

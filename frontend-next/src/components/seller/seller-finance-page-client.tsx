@@ -97,7 +97,7 @@ export function SellerFinancePageClient() {
       <SectionCard
         eyebrow="Finance"
         title="Seller Finance"
-        description="Platform commission is calculated from confirmed paid product revenue only."
+        description="Platform commission is calculated from confirmed paid product revenue only, using the shop commission active at confirmation time."
       >
         {loading ? (
           <p className="text-sm text-[var(--muted)]">Loading finance data...</p>
@@ -144,7 +144,7 @@ export function SellerFinancePageClient() {
       <SectionCard
         eyebrow="Ledger"
         title="Fee Ledger"
-        description="Each final confirmed order snapshots commission percent at confirmation time."
+        description="Each final confirmed order stores a read-only commission snapshot at confirmation time."
       >
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">

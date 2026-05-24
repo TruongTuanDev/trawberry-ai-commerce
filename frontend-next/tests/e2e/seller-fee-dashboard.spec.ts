@@ -225,6 +225,8 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
 
   await page.goto("/admin/finance/seller-fees");
   await expect(page.getByTestId("admin-seller-fees-page")).toBeVisible();
+  await expect(page.getByText("Phí sàn cấu hình theo shop.")).toBeVisible();
+  await expect(page.getByText("commission snapshot")).toBeVisible();
   await page.getByTestId(`admin-commission-input-${shop.id}`).fill("3");
   await page.getByTestId(`admin-save-commission-${shop.id}`).click();
   await expect(page.getByText(`Commission saved for ${shop.name}.`)).toBeVisible();
@@ -288,6 +290,7 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
 
   await sellerPage.goto("/seller/finance");
   await expect(sellerPage.getByTestId("seller-finance-page")).toBeVisible();
+  await expect(sellerPage.getByText("read-only commission snapshot")).toBeVisible();
   await expect(
     sellerPage.getByTestId("seller-finance-confirmed-revenue-this-month"),
   ).toContainText("300");

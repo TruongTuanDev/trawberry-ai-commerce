@@ -48,8 +48,8 @@ export function CustomerAccountShell({
     >
       <PublicShell>
         <main className="px-4 py-8 sm:px-6 sm:py-10">
-          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <aside className="card-panel h-fit overflow-hidden rounded-[2rem] border-white/70 bg-white/90 shadow-[0_24px_60px_rgba(82,27,94,0.08)] backdrop-blur">
+          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
+            <aside className="card-panel h-fit overflow-hidden rounded-[2rem] border-white/70 bg-white/90 shadow-[0_24px_60px_rgba(82,27,94,0.08)] backdrop-blur lg:sticky lg:top-6 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
               <div className="bg-[radial-gradient(circle_at_top_left,rgba(203,17,171,0.18),transparent_48%),linear-gradient(135deg,#fff8fd_0%,#ffffff_64%,#f7f1fb_100%)] px-5 py-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
                   My account
@@ -103,7 +103,7 @@ export function CustomerAccountShell({
               </nav>
             </aside>
 
-            <section className="space-y-6">
+            <section className="space-y-6 min-w-0">
               <header className="overflow-hidden rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),rgba(255,255,255,0.72)),linear-gradient(135deg,rgba(255,240,249,0.95),rgba(245,248,255,0.92))] px-6 py-6 shadow-[0_22px_50px_rgba(45,20,60,0.08)] sm:px-7">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>

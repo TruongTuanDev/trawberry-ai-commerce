@@ -43,8 +43,15 @@ Admin can:
 - see current billing period and days left in month
 - generate a monthly invoice manually
 - mark an invoice paid manually
+- do not edit commission percent per order row
 
 If a shop has no shop-specific commission setting, the platform default commission setting is used.
+
+Commission rule:
+
+- shop commission is the source of truth for new confirmed orders
+- each confirmed order snapshots the then-active shop commission into the ledger
+- invoices read ledger snapshots instead of recalculating with a later percent
 
 ## Seller Capabilities
 

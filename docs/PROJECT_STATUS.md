@@ -1,5 +1,18 @@
 # Project Status
 
+## Admin Supervision Read-Only + Shop Commission Rules - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- admin fulfillment page is now supervision-only:
+  - admin can view, filter, inspect overdue/payment/Yandex detail, and remind seller
+  - admin UI no longer exposes seller fulfillment transition buttons
+- seller remains the owner of fulfillment state transitions and seller archive flow
+- internal dashboards now keep sidebars fixed while main content scrolls for admin/seller, with customer account sidebar remaining sticky
+- finance rule is now explicit end-to-end:
+  - commission is configured per shop
+  - confirmed orders snapshot shop commission into ledger rows
+  - invoices use ledger snapshots and are not recomputed from a newer commission percent
+
 ## Internal Notification Center - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

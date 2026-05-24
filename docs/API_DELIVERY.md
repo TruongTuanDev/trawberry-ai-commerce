@@ -9,12 +9,11 @@ Current split:
 - order-level bucket listing comes from `GET /api/admin/orders/fulfillment`
 - shipment-level override actions still reuse `api/admin/deliveries/*`
 
-This keeps one seller-friendly supervision board while reusing the existing delivery mutation endpoints:
+This keeps one seller-friendly supervision board while exposing only reminder behavior in the admin UI:
 
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-in-transit`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-delivered`
-- `POST /api/admin/deliveries/:deliveryShipmentId/cancel`
 - `POST /api/admin/deliveries/:orderId/remind-yandex`
+
+Compatibility or emergency mutation endpoints may still exist under `api/admin/deliveries/*`, but the admin operations UI must not expose seller fulfillment transitions.
 
 No real Yandex API calls are added by this admin fulfillment phase.
 
@@ -265,14 +264,18 @@ Query filters:
 - `dateFrom`
 - `dateTo`
 
-Admin actions:
+Admin read and supervision actions:
 - `GET /api/admin/deliveries/:deliveryShipmentId`
 - `PATCH /api/admin/deliveries/:deliveryShipmentId`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-courier-assigned`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-picked-up`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-in-transit`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-delivered`
-- `POST /api/admin/deliveries/:deliveryShipmentId/cancel`
+- `POST /api/admin/deliveries/:orderId/remind-yandex`
+
+Seller-owned fulfillment actions remain:
+
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-courier-assigned`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-picked-up`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-in-transit`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/mark-delivered`
+- `POST /api/shops/:shopId/orders/:orderId/delivery/shipments/:shipmentId/cancel`
 
 `paidWithoutDelivery=true` returns paid orders with no active delivery shipment and non-terminal order status.
 
@@ -349,7 +352,7 @@ The Next.js seller UI exposes the delivery MVP at:
 - `/seller/settings` for pickup address, pickup city, pickup contact, enabled carriers, carrier priorities, and default package dimensions
 - `/seller/orders/[id]` for offer calculation, recommended offer selection, shipment creation, shipment refresh, and tracking link visibility
 - `/seller/orders/[id]` for seller-managed manual delivery entry and status updates
-- `/admin/deliveries` for paid-without-delivery monitoring and admin status override
+- `/admin/deliveries` for paid-without-delivery monitoring and admin supervision-only review
 - `/orders/[id]` for customer-facing delivery provider, delivery status, and tracking link
 
 `npm run test:e2e:seller-delivery-settings` verifies these paths in mock mode. The test uses API setup for seller approval, shop/product creation, and paid order creation, then performs delivery settings and shipment operations through browser UI.

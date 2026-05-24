@@ -197,6 +197,7 @@ cd frontend-next
 npm run test:e2e:cart-checkout
 npm run test:e2e:multi-shop-checkout
 npm run test:e2e:customer-order-history
+npm run test:e2e:notifications
 npm run test:e2e:support-cases
 ```
 

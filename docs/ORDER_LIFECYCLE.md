@@ -18,13 +18,10 @@ Admin now supervises the same normalized fulfillment lifecycle as the seller boa
 6. `ARCHIVED`
    - completed or cancelled order moved out of the active supervision board
 
-Admin override stays inside the same lifecycle:
+Admin supervision is read-only for fulfillment transitions:
 
-- move to assembling
-- mark in delivery
-- mark completed
-- mark cancelled
-- archive
+- admin can view, filter, search, inspect overdue, inspect payment state, inspect Yandex tracking, and remind seller
+- seller owns the actual fulfillment transitions and archive flow
 
 ## Manual Yandex operational addendum
 
@@ -34,7 +31,7 @@ For seller-operated Yandex fulfillment, the expected operational sequence is now
 2. order enters `READY_TO_CREATE_YANDEX`
 3. seller enters `manualYandexOrderId` and saves manual Yandex data
 4. shipment moves to `YANDEX_MANUAL_CREATED`
-5. seller/admin can move courier states:
+5. seller moves courier states:
    - `COURIER_ASSIGNED`
    - `PICKED_UP`
    - `ON_THE_WAY`
@@ -114,6 +111,13 @@ Backend helper:
 ## Finance hook
 
 Finance ledger entries must be created only on final confirmed seller payment. They are idempotent and keep commission snapshot history.
+
+Commission model:
+
+- commission is configured per shop
+- each confirmed order snapshots `commissionPercent` at confirmation time
+- later shop commission changes do not rewrite old ledger rows
+- monthly invoices use stored ledger entries and their snapshots, not a recomputed live percent
 
 ## Known limits
 

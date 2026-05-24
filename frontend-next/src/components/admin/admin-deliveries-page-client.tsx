@@ -3,13 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  adminArchiveOrder,
-  adminCancelDelivery,
-  adminMarkDeliveryDelivered,
-  adminMarkDeliveryInTransit,
-  adminMoveOrderToAssembling,
   adminRemindYandex,
   listAdminFulfillmentOrders,
+  type AdminFulfillmentAction,
   type AdminFulfillmentBucket,
   type AdminFulfillmentResponse,
   type AdminFulfillmentRow,
@@ -20,13 +16,13 @@ const fulfillmentTabs: Array<{
   value: AdminFulfillmentBucket;
   label: string;
 }> = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "NEW", label: "Mới" },
-  { value: "ASSEMBLING", label: "Lắp ráp" },
-  { value: "IN_TRANSIT", label: "Trong quá trình giao hàng" },
-  { value: "COMPLETED", label: "Hoàn thành" },
-  { value: "CANCELLED", label: "Đã hủy" },
-  { value: "ARCHIVED", label: "Lưu trữ" },
+  { value: "ALL", label: "All" },
+  { value: "NEW", label: "New" },
+  { value: "ASSEMBLING", label: "Assembling" },
+  { value: "IN_TRANSIT", label: "In transit" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
+  { value: "ARCHIVED", label: "Archived" },
 ];
 
 const paymentStatusOptions = [
@@ -91,20 +87,12 @@ function formatDateTime(value: string) {
   return new Date(value).toLocaleString();
 }
 
-function actionLabel(action: string) {
+function actionLabel(action: AdminFulfillmentAction) {
   switch (action) {
-    case "move_to_assembling":
-      return "Chuyển sang Lắp ráp";
-    case "remind_seller":
-      return "Nhắc seller";
-    case "mark_in_delivery":
-      return "Đánh dấu đang giao";
-    case "mark_completed":
-      return "Đánh dấu hoàn thành";
-    case "mark_cancelled":
-      return "Đánh dấu đã hủy";
-    case "archive":
-      return "Lưu trữ";
+    case "VIEW":
+      return "Open detail";
+    case "REMIND_SELLER":
+      return "Remind seller";
     default:
       return action;
   }
@@ -177,7 +165,7 @@ export function AdminDeliveriesPageClient() {
       setSelected((current) => next.items.find((item) => item.orderId === current?.orderId) ?? next.items[0] ?? null);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tải danh sách fulfillment.");
+      setError(err instanceof Error ? err.message : "Unable to load fulfillment supervision.");
     } finally {
       setLoading(false);
     }
@@ -191,49 +179,20 @@ export function AdminDeliveriesPageClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  const performAction = async (action: string) => {
-    if (!selected) return;
+  const performAction = async (action: AdminFulfillmentAction) => {
+    if (!selected || action !== "REMIND_SELLER") return;
 
     await runAction({
-      action: async () => {
-        if (action === "move_to_assembling") {
-          return adminMoveOrderToAssembling(selected.orderId);
-        }
-        if (action === "remind_seller") {
-          return adminRemindYandex(selected.orderId);
-        }
-        if (action === "mark_in_delivery") {
-          if (!selected.deliveryShipmentId) {
-            throw new Error("Đơn này chưa có delivery shipment để chuyển sang đang giao.");
-          }
-          return adminMarkDeliveryInTransit(selected.deliveryShipmentId, "Admin fulfillment supervision override.");
-        }
-        if (action === "mark_completed") {
-          if (!selected.deliveryShipmentId) {
-            throw new Error("Đơn này chưa có delivery shipment hoạt động.");
-          }
-          return adminMarkDeliveryDelivered(selected.deliveryShipmentId, "Admin fulfillment supervision override.");
-        }
-        if (action === "mark_cancelled") {
-          if (!selected.deliveryShipmentId) {
-            throw new Error("Đơn này chưa có delivery shipment hoạt động.");
-          }
-          return adminCancelDelivery(selected.deliveryShipmentId, "Admin fulfillment supervision override.");
-        }
-        if (action === "archive") {
-          return adminArchiveOrder(selected.orderId);
-        }
-        throw new Error("Unsupported admin action.");
-      },
-      successMessage: `Đã xử lý: ${actionLabel(action)}.`,
-      errorMessage: "Không thể cập nhật trạng thái fulfillment.",
+      action: async () => adminRemindYandex(selected.orderId),
+      successMessage: `Processed: ${actionLabel(action)}.`,
+      errorMessage: "Unable to process admin supervision action.",
       onSuccess: async (result) => {
-        if (action === "remind_seller" && isReminderResult(result) && !result.reminderCreated) {
+        if (isReminderResult(result) && !result.reminderCreated) {
           setMessage(
-            `Đã có nhắc seller gần đây. Có thể gửi lại sau ${result.nextAllowedAt ? formatDateTime(String(result.nextAllowedAt)) : "ít phút nữa"}.`,
+            `A reminder already exists. Next reminder is available ${result.nextAllowedAt ? formatDateTime(String(result.nextAllowedAt)) : "soon"}.`,
           );
         } else {
-          setMessage(`Đã xử lý thành công: ${actionLabel(action)}.`);
+          setMessage("Seller reminder sent.");
         }
         await load();
       },
@@ -251,7 +210,13 @@ export function AdminDeliveriesPageClient() {
           <div>
             <h2 className="font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">Admin order fulfillment</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-              Theo dõi cùng bucket vận hành với seller để admin nhìn rõ đơn nào mới xác nhận thanh toán, đang lắp ráp, đang giao, hoàn thành, hủy hoặc đã lưu trữ.
+              Admin supervises seller operations across the same lifecycle buckets sellers use, without taking over operational state changes.
+            </p>
+            <p
+              className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900"
+              data-testid="admin-supervision-readonly-note"
+            >
+              Admin only supervises, reminds, and escalates. Seller owns fulfillment status transitions.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -282,7 +247,7 @@ export function AdminDeliveriesPageClient() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm order, seller, shop, buyer"
+            placeholder="Search order, seller, shop, buyer"
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
             data-testid="admin-delivery-search"
           />
@@ -318,7 +283,7 @@ export function AdminDeliveriesPageClient() {
           <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
           <label className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]">
             <input type="checkbox" checked={overdueOnly} onChange={(event) => setOverdueOnly(event.target.checked)} />
-            Chỉ xem đơn trễ
+            Overdue only
           </label>
         </div>
       </section>
@@ -390,7 +355,7 @@ export function AdminDeliveriesPageClient() {
                 </button>
               ))
             ) : (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">Không có order nào trong bucket hiện tại.</div>
+              <div className="px-5 py-8 text-sm text-[var(--muted)]">No orders match the current supervision filter.</div>
             )}
           </div>
         </section>
@@ -413,10 +378,12 @@ export function AdminDeliveriesPageClient() {
                 <Metric label="Payment status" value={selected.paymentStatus} />
                 <Metric label="Seller" value={selected.sellerName ?? selected.sellerEmail} />
                 <Metric label="Shop" value={selected.shopName} />
-                <Metric label="Buyer" value={`${selected.customerName} • ${selected.customerPhone}`} />
+                <Metric label="Buyer" value={`${selected.customerName} - ${selected.customerPhone}`} />
                 <Metric label="Yandex ID" value={selected.manualYandexOrderId ?? "Missing"} />
                 <Metric label="Delivery status" value={selected.deliveryStatus ?? "Not created"} />
                 <Metric label="Last update" value={formatDateTime(selected.updatedAt)} />
+                <Metric label="Last reminder" value={selected.lastReminderAt ? formatDateTime(selected.lastReminderAt) : "Not reminded"} />
+                <Metric label="Provider" value={selected.provider ?? "Not assigned"} />
               </div>
 
               <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
@@ -432,47 +399,46 @@ export function AdminDeliveriesPageClient() {
 
               {selected.yandexTrackingUrl ? (
                 <a href={selected.yandexTrackingUrl} target="_blank" rel="noreferrer" className="inline-flex text-sm font-semibold text-[var(--accent)] underline">
-                  Mở tracking URL
+                  Open tracking URL
                 </a>
               ) : null}
 
               <div className="space-y-3 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] p-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Next admin actions</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Admin supervision actions</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Admin can view, filter, inspect payment and Yandex details, and remind the seller to continue operations.
+                  </p>
                   <div className="mt-3 flex flex-wrap gap-3">
-                    {selected.nextAdminActions.length ? (
-                      selected.nextAdminActions.map((action) => (
-                        <button
-                          key={action}
-                          type="button"
-                          onClick={() => void performAction(action)}
-                          disabled={isRunning}
-                          className={`rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
-                            action === "archive"
-                              ? "border border-[var(--border)] text-[var(--foreground)]"
-                              : action === "mark_cancelled"
-                                ? "bg-rose-600 text-white"
-                                : "bg-[var(--accent)] text-white"
-                          }`}
-                          data-testid={action === "remind_seller" ? "admin-remind-seller-yandex" : action === "mark_in_delivery" ? "admin-delivery-mark-in-transit" : undefined}
-                        >
-                          {isRunning ? "Đang xử lý..." : actionLabel(action)}
-                        </button>
-                      ))
-                    ) : (
-                      <p className="text-sm text-[var(--muted)]">Không có action override cho bucket này.</p>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSelected(selected)}
+                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                    >
+                      {actionLabel("VIEW")}
+                    </button>
+                    {selected.nextAdminActions.includes("REMIND_SELLER") ? (
+                      <button
+                        type="button"
+                        onClick={() => void performAction("REMIND_SELLER")}
+                        disabled={isRunning}
+                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        data-testid="admin-remind-seller-yandex"
+                      >
+                        {isRunning ? "Processing..." : actionLabel("REMIND_SELLER")}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <Metric label="Provider" value={selected.provider ?? "Not assigned"} />
                   <Metric label="Age in bucket" value={formatAge(selected.ageMinutes)} />
+                  <Metric label="Order action ownership" value="Seller-operated" />
                 </div>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-[var(--muted)]">Chọn một order để xem chi tiết supervision.</p>
+            <p className="text-sm text-[var(--muted)]">Select an order to inspect supervision detail.</p>
           )}
         </section>
       </div>

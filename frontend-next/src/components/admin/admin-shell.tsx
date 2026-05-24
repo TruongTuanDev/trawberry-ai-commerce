@@ -28,9 +28,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6" data-testid="admin-shell">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1400px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)]">
-        <aside className="hidden w-72 border-r border-slate-800 bg-slate-900 p-6 text-slate-100 lg:block">
+    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:h-screen lg:overflow-hidden" data-testid="admin-shell">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1400px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)] lg:h-[calc(100vh-3rem)] lg:min-h-0">
+        <aside className="hidden w-72 border-r border-slate-800 bg-slate-900 p-6 text-slate-100 lg:sticky lg:top-0 lg:block lg:h-full lg:overflow-y-auto">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
           <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
           <nav className="mt-8 space-y-2">
@@ -116,8 +116,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Link>
           </nav>
         </aside>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-b border-slate-200 bg-white px-4 py-4 flex items-center justify-between shadow-sm sm:px-6">
+        <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
+          <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                 Marketplace Ops
@@ -139,7 +139,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </header>
-          <main className="min-w-0 flex-1 overflow-auto p-4 sm:p-6">{children}</main>
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </div>

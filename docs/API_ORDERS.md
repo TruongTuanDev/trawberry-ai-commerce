@@ -48,6 +48,7 @@ Per-row fields include:
 - `sellerArchivedAt`
 - `isOverdue`
 - `ageMinutes`
+- `lastReminderAt`
 - `nextAdminActions`
 
 Summary counts are returned as:
@@ -60,10 +61,12 @@ Summary counts are returned as:
 - `CANCELLED`
 - `ARCHIVED`
 
-New admin mutation endpoints:
+`nextAdminActions` is now supervision-only:
 
-- `POST /api/admin/orders/:orderId/move-to-assembling`
-- `POST /api/admin/orders/:orderId/archive`
+- `VIEW`
+- `REMIND_SELLER`
+
+The admin fulfillment page must not expose seller fulfillment transition mutations.
 
 ## 2026-05-24 Seller Fulfillment Buckets Addendum
 

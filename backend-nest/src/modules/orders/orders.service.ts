@@ -17,6 +17,8 @@ import { ListShopOrdersQueryDto } from './dto/list-shop-orders-query.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { SellerFinanceService } from '../seller-finance/seller-finance.service';
 
+type AdminFulfillmentAction = 'VIEW' | 'REMIND_SELLER';
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -347,7 +349,12 @@ export class OrdersService {
       take: 500,
     });
 
-    const rows = orders.map((order) => this.toAdminFulfillmentRow(order));
+    const reminderMap = await this.loadLatestReminderMap(
+      orders.map((order) => order.id),
+    );
+    const rows = orders.map((order) =>
+      this.toAdminFulfillmentRow(order, reminderMap.get(order.id) ?? null),
+    );
     const filteredRows = query.bucket
       ? rows.filter((row) => row.fulfillmentBucket === query.bucket)
       : rows;
@@ -980,47 +987,50 @@ export class OrdersService {
     };
   }
 
-  private toAdminFulfillmentRow(order: {
-    id: string;
-    orderNumber: string;
-    status: string;
-    paymentStatus: string;
-    paymentMethod: string | null;
-    shippingMethodName: string | null;
-    customerName: string;
-    customerPhone: string;
-    createdAt: Date;
-    updatedAt: Date;
-    sellerArchivedAt: Date | null;
-    paymentProofStatus: string;
-    shop: {
+  private toAdminFulfillmentRow(
+    order: {
       id: string;
-      name: string;
-      sellerProfile: {
-        userId: string;
-        user: {
-          email: string;
-          fullName: string | null;
-          phone: string | null;
+      orderNumber: string;
+      status: string;
+      paymentStatus: string;
+      paymentMethod: string | null;
+      shippingMethodName: string | null;
+      customerName: string;
+      customerPhone: string;
+      createdAt: Date;
+      updatedAt: Date;
+      sellerArchivedAt: Date | null;
+      paymentProofStatus: string;
+      shop: {
+        id: string;
+        name: string;
+        sellerProfile: {
+          userId: string;
+          user: {
+            email: string;
+            fullName: string | null;
+            phone: string | null;
+          };
         };
       };
-    };
-    deliveryShipments: Array<{
-      id: string;
-      provider: string;
-      internalStatus: string;
-      updatedAt: Date;
-      estimatedDeliveryAt: Date | null;
-      manualYandexOrderId: string | null;
-      trackingUrl: string | null;
-      yandexTrackingLink: string | null;
-    }>;
-    items: Array<{
-      id: string;
-      productTitleSnapshot: string;
-      quantity: number;
-    }>;
-  }) {
+      deliveryShipments: Array<{
+        id: string;
+        provider: string;
+        internalStatus: string;
+        updatedAt: Date;
+        estimatedDeliveryAt: Date | null;
+        manualYandexOrderId: string | null;
+        trackingUrl: string | null;
+        yandexTrackingLink: string | null;
+      }>;
+      items: Array<{
+        id: string;
+        productTitleSnapshot: string;
+        quantity: number;
+      }>;
+    },
+    latestReminder: { createdAt: Date } | null,
+  ) {
     const latestShipment = order.deliveryShipments[0] ?? null;
     const fulfillment = computeSellerFulfillmentState({
       status: order.status,
@@ -1070,10 +1080,8 @@ export class OrdersService {
       sellerArchivedAt: order.sellerArchivedAt?.toISOString() ?? null,
       isOverdue,
       ageMinutes,
-      nextAdminActions: this.resolveAdminActions(
-        fulfillment.bucket,
-        latestShipment,
-      ),
+      lastReminderAt: latestReminder?.createdAt.toISOString() ?? null,
+      nextAdminActions: this.resolveAdminActions(fulfillment.bucket),
       items: order.items.map((item) => ({
         id: item.id,
         productTitleSnapshot: item.productTitleSnapshot,
@@ -1084,23 +1092,54 @@ export class OrdersService {
 
   private resolveAdminActions(
     bucket: SellerFulfillmentBucket,
-    latestShipment: { id: string; manualYandexOrderId: string | null } | null,
-  ) {
-    switch (bucket) {
-      case 'NEW':
-        return ['move_to_assembling'];
-      case 'ASSEMBLING':
-        return latestShipment
-          ? ['remind_seller', 'mark_in_delivery', 'mark_cancelled']
-          : ['remind_seller'];
-      case 'IN_TRANSIT':
-        return ['mark_completed', 'mark_cancelled'];
-      case 'COMPLETED':
-      case 'CANCELLED':
-        return ['archive'];
-      default:
-        return [];
+  ): AdminFulfillmentAction[] {
+    if (bucket === 'ARCHIVED') {
+      return ['VIEW'];
     }
+
+    if (
+      bucket === 'NEW' ||
+      bucket === 'ASSEMBLING' ||
+      bucket === 'IN_TRANSIT'
+    ) {
+      return ['VIEW', 'REMIND_SELLER'];
+    }
+
+    return ['VIEW'];
+  }
+
+  private async loadLatestReminderMap(orderIds: string[]) {
+    const uniqueOrderIds = [...new Set(orderIds.filter(Boolean))];
+    if (!uniqueOrderIds.length) {
+      return new Map<string, { createdAt: Date }>();
+    }
+
+    if (typeof this.prisma.adminAuditLog?.findMany !== 'function') {
+      return new Map<string, { createdAt: Date }>();
+    }
+
+    const logs = await this.prisma.adminAuditLog.findMany({
+      where: {
+        entityType: 'DELIVERY_REMINDER',
+        action: 'REMIND_CREATE_YANDEX_MANUAL',
+        entityId: { in: uniqueOrderIds },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        entityId: true,
+        createdAt: true,
+      },
+    });
+
+    const map = new Map<string, { createdAt: Date }>();
+    for (const log of logs) {
+      if (log.entityId && !map.has(log.entityId)) {
+        map.set(log.entityId, {
+          createdAt: log.createdAt,
+        });
+      }
+    }
+    return map;
   }
 
   private isFulfillmentOverdue(

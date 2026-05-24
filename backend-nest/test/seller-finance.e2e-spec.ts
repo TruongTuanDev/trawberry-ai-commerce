@@ -971,6 +971,12 @@ describe('SellerFinance (e2e)', () => {
     expect(first?.commissionPercent.toString()).toBe('3');
     expect(second?.commissionPercent.toString()).toBe('6');
     expect(second?.commissionAmount.toString()).toBe('21.6');
+
+    const invoice = await sellerFinanceService.generateInvoice(
+      'shop-1',
+      '2026-05',
+    );
+    expect(invoice.totalCommission).toBe('26.7');
   });
 
   it('lists admin seller fee rows and seller dashboard metrics with confirmed revenue only', async () => {

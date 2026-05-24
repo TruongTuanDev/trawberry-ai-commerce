@@ -155,8 +155,16 @@ export function AdminSellerFeesPageClient() {
           Seller fee settings
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-          Direct-to-seller payments mean the platform fee is ledger-based. Only confirmed paid orders count toward the marketplace fee due.
+          Platform commission is configured per shop. Confirmed orders snapshot that shop commission at payment confirmation time, and invoices use ledger snapshots instead of recalculating with a new percent later.
         </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]">
+            Phí sàn cấu hình theo shop.
+          </div>
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]">
+            Đơn hàng dùng commission snapshot tại thời điểm xác nhận thanh toán.
+          </div>
+        </div>
         {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
         {success ? <p className="mt-4 text-sm text-emerald-600">{success}</p> : null}
       </section>
@@ -170,7 +178,7 @@ export function AdminSellerFeesPageClient() {
               <th className="px-4 py-3 font-medium">Orders today / month</th>
               <th className="px-4 py-3 font-medium">Revenue month</th>
               <th className="px-4 py-3 font-medium">Confirmed revenue</th>
-              <th className="px-4 py-3 font-medium">Commission %</th>
+              <th className="px-4 py-3 font-medium">Shop commission %</th>
               <th className="px-4 py-3 font-medium">Platform fee due</th>
               <th className="px-4 py-3 font-medium">Period</th>
               <th className="px-4 py-3 font-medium">Invoice</th>
@@ -229,7 +237,7 @@ export function AdminSellerFeesPageClient() {
                   </td>
                   <td className="px-4 py-4">
                     <p className="font-medium text-[var(--foreground)]">{row.billingPeriod}</p>
-                    <p className="text-xs text-[var(--muted)]">Confirmed orders only</p>
+                    <p className="text-xs text-[var(--muted)]">Ledger snapshot billing only</p>
                   </td>
                   <td className="px-4 py-4">
                     <p

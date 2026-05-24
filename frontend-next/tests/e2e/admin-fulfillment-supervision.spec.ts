@@ -69,7 +69,6 @@ async function createApprovedSeller(request: APIRequestContext, email: string, p
     data: {},
   });
   return {
-    sellerUserId: seller.userId,
     sellerToken: (await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
       method: "POST",
       data: { email, password },
@@ -110,7 +109,7 @@ async function createShopProduct(request: APIRequestContext, sellerToken: string
       localDescription: "Admin fulfillment flow product",
       categoryName: "Admin Fulfillment Category",
       visibility: "ACTIVE",
-      variants: [{ chrtId: 9800000 + (stamp % 100000), basePrice: 219, discountPrice: 219, stockQuantity: 5 }],
+      variants: [{ chrtId: 9800000 + (stamp % 100000), basePrice: 1000, discountPrice: 1000, stockQuantity: 5 }],
       images: [{ wbUrl: "https://example.com/admin-fulfillment.jpg", localUrl: "https://example.com/admin-fulfillment.jpg", isMain: true, sortOrder: 0 }],
     },
   });
@@ -132,7 +131,7 @@ async function loginAdmin(browser: Browser) {
   return page;
 }
 
-test("admin fulfillment supervision follows seller-friendly buckets", async ({ request, browser }) => {
+test("admin fulfillment page is supervision-only while seller keeps status ownership", async ({ request, browser }) => {
   test.setTimeout(300000);
 
   const stamp = Date.now();
@@ -157,21 +156,11 @@ test("admin fulfillment supervision follows seller-friendly buckets", async ({ r
     },
   });
 
-  await backendJson(request, `/api/shops/${shop.id}/payments/${checkout.orderId}/mark-paid`, {
+  await backendJson(request, `/api/shops/${shop.id}/payments/${checkout.orderId}/confirm`, {
     method: "POST",
     token: sellerToken,
     data: { note: "Paid for admin fulfillment supervision flow." },
   });
-
-  const adminPage = await loginAdmin(browser);
-  await adminPage.goto("/admin/deliveries?bucket=NEW");
-  await adminPage.getByTestId("admin-fulfillment-tab-NEW").click();
-  await adminPage.getByTestId("admin-delivery-search").fill(checkout.orderCode);
-  await adminPage.getByRole("button", { name: "Refresh" }).click();
-  const newRow = adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode });
-  await expect(newRow).toBeVisible();
-  await newRow.click();
-  await expect(adminPage.getByTestId("admin-delivery-detail-status")).toContainText("New");
 
   await backendJson(request, `/api/shops/${shop.id}/delivery/settings`, {
     method: "PATCH",
@@ -196,6 +185,23 @@ test("admin fulfillment supervision follows seller-friendly buckets", async ({ r
     },
   });
 
+  const adminPage = await loginAdmin(browser);
+  await adminPage.goto("/admin/deliveries?bucket=NEW");
+  await expect(adminPage.getByTestId("admin-supervision-readonly-note")).toContainText("Seller owns fulfillment status transitions");
+  await adminPage.getByTestId("admin-fulfillment-tab-NEW").click();
+  await adminPage.getByTestId("admin-delivery-search").fill(checkout.orderCode);
+  await adminPage.getByRole("button", { name: "Refresh" }).click();
+  const newRow = adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode });
+  await expect(newRow).toBeVisible();
+  await newRow.click();
+  await expect(adminPage.getByTestId("admin-delivery-detail-status")).toContainText("New");
+  await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText(shop.name);
+  await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText("PAID");
+  await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText("Missing");
+  await expect(adminPage.getByRole("button", { name: "Remind seller" })).toBeVisible();
+  await expect(adminPage.getByTestId("admin-delivery-mark-in-transit")).toHaveCount(0);
+  await expect(adminPage.getByTestId("admin-delivery-detail").getByRole("button", { name: /archive/i })).toHaveCount(0);
+
   const shipment = await backendJson<{ id: string }>(request, `/api/shops/${shop.id}/orders/${checkout.orderId}/delivery/manual`, {
     method: "POST",
     token: sellerToken,
@@ -214,9 +220,9 @@ test("admin fulfillment supervision follows seller-friendly buckets", async ({ r
   const assemblingRow = adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode });
   await expect(assemblingRow).toBeVisible();
   await assemblingRow.click();
-  await expect(assemblingRow).toContainText(`YANDEX-${stamp}`);
+  await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText(`YANDEX-${stamp}`);
   await adminPage.getByTestId("admin-remind-seller-yandex").click();
-  await expect(adminPage.getByTestId("admin-delivery-message")).toContainText(/Nhắc seller|nhắc seller|Đã xử lý thành công/);
+  await expect(adminPage.getByTestId("admin-delivery-message")).toContainText(/Seller reminder sent|A reminder already exists/i);
 
   await backendJson(request, `/api/shops/${shop.id}/orders/${checkout.orderId}/delivery/shipments/${shipment.id}/mark-in-transit`, {
     method: "POST",
@@ -229,6 +235,10 @@ test("admin fulfillment supervision follows seller-friendly buckets", async ({ r
   await adminPage.getByRole("button", { name: "Refresh" }).click();
   const transitRow = adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode });
   await expect(transitRow).toBeVisible();
+  await transitRow.click();
+  await expect(adminPage.getByRole("button", { name: "Remind seller" })).toBeVisible();
+  await expect(adminPage.getByTestId("admin-delivery-mark-in-transit")).toHaveCount(0);
+  await expect(adminPage.getByTestId("admin-delivery-detail").getByRole("button", { name: /archive/i })).toHaveCount(0);
 
   await backendJson(request, `/api/shops/${shop.id}/orders/${checkout.orderId}/delivery/shipments/${shipment.id}/mark-delivered`, {
     method: "POST",
@@ -242,13 +252,8 @@ test("admin fulfillment supervision follows seller-friendly buckets", async ({ r
   const completedRow = adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode });
   await expect(completedRow).toBeVisible();
   await completedRow.click();
-  await adminPage.getByTestId("admin-delivery-detail").getByRole("button", { name: "Lưu trữ" }).click();
-  await expect(adminPage.getByTestId("admin-delivery-message")).toContainText("Lưu trữ");
-
-  await adminPage.getByTestId("admin-fulfillment-tab-ARCHIVED").click();
-  await adminPage.getByTestId("admin-delivery-search").fill(checkout.orderCode);
-  await adminPage.getByRole("button", { name: "Refresh" }).click();
-  await expect(adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode })).toBeVisible();
+  await expect(adminPage.getByRole("button", { name: "Remind seller" })).toHaveCount(0);
+  await expect(adminPage.getByTestId("admin-delivery-detail").getByRole("button", { name: /archive/i })).toHaveCount(0);
 
   await adminPage.close();
 });

@@ -42,6 +42,8 @@ Important constraints:
 - ledger entries are idempotent per order + confirmation source
 - changing commission later does not rewrite old ledger snapshots
 - monthly period history is retained permanently
+- admin configures commission per shop, not per order
+- order-level `commissionPercent` is a read-only ledger snapshot once created
 
 ## Admin Endpoints
 
@@ -86,6 +88,7 @@ Behavior:
 - closes the previous active commission setting for the shop
 - creates a new active commission setting from now forward
 - does not rewrite historical ledger rows
+- affects only orders confirmed after the new setting becomes active
 
 ### `POST /api/admin/finance/shops/:shopId/invoices/generate`
 
@@ -160,6 +163,8 @@ Returns finance ledger rows:
   "invoiceId": null
 }
 ```
+
+Invoice totals must be derived from these stored ledger rows and their snapshotted `commissionPercent` values.
 
 ### `GET /api/seller/shops/:shopId/invoices`
 

@@ -34,22 +34,31 @@ Each row shows:
 
 ## Actions
 
-Admin actions are derived from the fulfillment bucket:
+Admin delivery supervision is now read-only for fulfillment state ownership.
 
-- `NEW`
-  - remind seller
-  - move to assembling
-- `ASSEMBLING`
-  - remind seller
-  - mark in delivery when a shipment exists
-  - mark cancelled when a shipment exists
-- `IN_TRANSIT`
-  - mark completed
-  - mark cancelled
-- `COMPLETED`
-  - archive
-- `CANCELLED`
-  - archive
+Admin can:
+
+- view the queue
+- filter and search
+- inspect overdue orders
+- inspect payment status
+- inspect Yandex id and tracking URL
+- remind the seller to continue operations
+
+Admin must not change seller fulfillment status from `/admin/deliveries`.
+
+`nextAdminActions` from `GET /api/admin/orders/fulfillment` is restricted to supervision-safe values:
+
+- `VIEW`
+- `REMIND_SELLER`
+
+Seller remains the only role that performs the operational transitions below:
+
+- `NEW -> ASSEMBLING`
+- `ASSEMBLING -> IN_TRANSIT`
+- `IN_TRANSIT -> COMPLETED`
+- `IN_TRANSIT -> CANCELLED`
+- `COMPLETED|CANCELLED -> ARCHIVED`
 
 Reminder is still internal only in this MVP. It creates an audit/reminder event and does not call SMS, email, or a real carrier API.
 
@@ -59,14 +68,11 @@ Primary admin listing endpoint:
 
 - `GET /api/admin/orders/fulfillment`
 
-Admin override endpoints used by the page:
+Admin page endpoint used by the page:
 
-- `POST /api/admin/orders/:orderId/move-to-assembling`
-- `POST /api/admin/orders/:orderId/archive`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-in-transit`
-- `POST /api/admin/deliveries/:deliveryShipmentId/mark-delivered`
-- `POST /api/admin/deliveries/:deliveryShipmentId/cancel`
 - `POST /api/admin/deliveries/:orderId/remind-yandex`
+
+Emergency or compatibility override endpoints may still exist in the backend, but they are intentionally not exposed in the admin UI.
 
 ## Overdue Logic
 
@@ -78,4 +84,4 @@ Admin override endpoints used by the page:
 
 - no real Yandex API calls are introduced
 - seller fulfillment flow remains the source of operational truth
-- admin override does not create a separate lifecycle outside the shared order + delivery state
+- admin supervision does not create a separate lifecycle outside the shared order + delivery state

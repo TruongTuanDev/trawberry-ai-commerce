@@ -62,9 +62,9 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6" data-testid="seller-shell">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1600px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)]">
-        <aside className="hidden w-72 flex-col justify-between border-r border-[var(--border)] bg-white p-6 text-[var(--foreground)] lg:flex">
+    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:h-screen lg:overflow-hidden" data-testid="seller-shell">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1600px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)] lg:h-[calc(100vh-3rem)] lg:min-h-0">
+        <aside className="hidden w-72 flex-col justify-between border-r border-[var(--border)] bg-white p-6 text-[var(--foreground)] lg:sticky lg:top-0 lg:flex lg:h-full lg:overflow-y-auto">
           <div>
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Strawberry</p>
@@ -108,7 +108,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </aside>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
           <header className="border-b border-[var(--border)] bg-[rgba(255,250,243,0.92)] px-4 py-4 backdrop-blur sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -138,7 +138,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 sm:p-6">
+          <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {sellerBlocked ? (
               <div className="mb-6 rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-5 py-4" data-testid="seller-approval-banner">
                 <p className="text-sm font-semibold text-[var(--accent-strong)]">

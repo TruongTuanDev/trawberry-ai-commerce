@@ -132,6 +132,9 @@ export class AdminFulfillmentOrderResponseDto {
   @ApiProperty()
   ageMinutes!: number;
 
+  @ApiProperty({ nullable: true })
+  lastReminderAt!: string | null;
+
   @ApiProperty({ type: String, isArray: true })
   nextAdminActions!: string[];
 
