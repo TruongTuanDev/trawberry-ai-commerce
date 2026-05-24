@@ -24,6 +24,7 @@ import {
   RETURN_REFUND_CUSTOMER_WINDOW_DAYS,
   RETURN_REFUND_SELLER_RESPONSE_SLA_DAYS,
 } from './return-refunds.constants';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReturnRefundsService {
@@ -31,6 +32,7 @@ export class ReturnRefundsService {
     private readonly prisma: PrismaService,
     private readonly filesService: FilesService,
     private readonly sellerFinanceService: SellerFinanceService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createCustomerCase(
@@ -113,6 +115,26 @@ export class ReturnRefundsService {
       include: this.caseInclude,
     });
 
+    try {
+      if (created.sellerId) {
+        await this.notificationsService.createOrUpdateByDedupeKey({
+          recipientUserId: created.sellerId,
+          recipientRole: 'SELLER',
+          shopId: created.shopId,
+          orderId: created.orderId,
+          returnRefundCaseId: created.id,
+          type: 'RETURN_CASE_OPENED',
+          title: 'Yêu cầu trả hàng/hoàn tiền mới',
+          message: `Khách hàng đã mở yêu cầu trả hàng/hoàn tiền cho đơn hàng ${created.order.orderNumber}.`,
+          actionUrl: `/seller/returns/${created.id}`,
+          severity: 'WARNING',
+          dedupeKey: `return-case:${created.id}`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to create return case notification', err);
+    }
+
     return this.toCaseResponse(created, 'CUSTOMER');
   }
 
@@ -175,6 +197,27 @@ export class ReturnRefundsService {
       },
       include: this.caseInclude,
     });
+
+    try {
+      if (updated.sellerId) {
+        await this.notificationsService.createOrUpdateByDedupeKey({
+          recipientUserId: updated.sellerId,
+          recipientRole: 'SELLER',
+          shopId: updated.shopId,
+          orderId: updated.orderId,
+          returnRefundCaseId: updated.id,
+          type: 'RETURN_SELLER_RESPONSE_REQUIRED',
+          title: 'Yêu cầu bổ sung thông tin khiếu nại',
+          message: `Khách hàng đã gửi tin nhắn hoặc bằng chứng mới cho yêu cầu khiếu nại của đơn hàng ${updated.order.orderNumber}.`,
+          actionUrl: `/seller/returns/${updated.id}`,
+          severity: 'INFO',
+          dedupeKey: `return-case:${updated.id}`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to create customer activity notification', err);
+    }
+
     return this.toCaseResponse(updated, 'CUSTOMER');
   }
 
@@ -225,6 +268,26 @@ export class ReturnRefundsService {
       },
       include: this.caseInclude,
     });
+
+    try {
+      if (updated.sellerId) {
+        await this.notificationsService.createOrUpdateByDedupeKey({
+          recipientUserId: updated.sellerId,
+          recipientRole: 'SELLER',
+          shopId: updated.shopId,
+          orderId: updated.orderId,
+          returnRefundCaseId: updated.id,
+          type: 'RETURN_SELLER_RESPONSE_REQUIRED',
+          title: 'Yêu cầu bổ sung thông tin khiếu nại',
+          message: `Khách hàng đã gửi tin nhắn hoặc bằng chứng mới cho yêu cầu khiếu nại của đơn hàng ${updated.order.orderNumber}.`,
+          actionUrl: `/seller/returns/${updated.id}`,
+          severity: 'INFO',
+          dedupeKey: `return-case:${updated.id}`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to create customer activity notification', err);
+    }
 
     return this.toCaseResponse(updated, 'CUSTOMER');
   }
@@ -386,6 +449,25 @@ export class ReturnRefundsService {
       },
       include: this.caseInclude,
     });
+
+    if (nextStatus === 'ADMIN_REVIEW') {
+      try {
+        await this.notificationsService.broadcastToAdmins({
+          shopId: updated.shopId,
+          orderId: updated.orderId,
+          returnRefundCaseId: updated.id,
+          type: 'RETURN_ADMIN_REVIEW_REQUIRED',
+          title: 'Khiếu nại cần admin can thiệp',
+          message: `Khiếu nại của đơn hàng ${updated.order.orderNumber} đã được chuyển cho admin xử lý.`,
+          actionUrl: `/admin/returns/${updated.id}`,
+          severity: 'WARNING',
+          dedupeKey: `return-case:${updated.id}`,
+        });
+      } catch (err) {
+        console.error('Failed to notify admins about review escalation', err);
+      }
+    }
+
     return this.toCaseResponse(updated, 'SELLER');
   }
 

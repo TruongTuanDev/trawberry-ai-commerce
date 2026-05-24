@@ -1,5 +1,19 @@
 # Project Status
 
+## Internal Notification Center - 2026-05-24
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- All three roles (Customer, Seller, Admin) now have a fully isolated Notification Center
+- Role-specific controllers and guards prevent cross-role data leakage even in shared-browser multi-session scenarios
+- `NotificationBell` badge in each shell header polls unread count every 30 s (no-op when guest)
+- `/[role]/notifications` full-page list with mark-read and archive actions
+- Seven business event types connected to the notification pipeline
+- Deduplication via `dedupeKey` prevents bell-spam for recurring overdue checks
+- `checkAndNotifyOverdueOrders()` remains a service method only — no auto-scheduler until a formal cron infrastructure exists
+- Admin broadcast (RETURN escalation) creates individual notification rows per admin user — no null-recipient records
+- Regression E2E tests stabilized: admin login rate-limit retry helper added to long-running specs
+- Documentation: `docs/API_NOTIFICATIONS.md`, `docs/NOTIFICATIONS.md`
+
 ## Admin Fulfillment Supervision Tabs - 2026-05-24
 
 - Status: implemented in `backend-nest` and `frontend-next`

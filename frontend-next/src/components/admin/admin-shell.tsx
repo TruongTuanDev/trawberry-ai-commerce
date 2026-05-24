@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -40,6 +41,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               Dashboard
+            </Link>
+            <Link
+              href="/admin/notifications"
+              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                pathname.startsWith("/admin/notifications") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}
+            >
+              Notifications
             </Link>
             <Link
               href="/admin/sellers"
@@ -105,12 +114,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             >
               Reports
             </Link>
-            <Link href="/seller/dashboard" className="flex rounded-2xl px-4 py-3 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white mt-4 border border-slate-800">
-              Seller center
-            </Link>
           </nav>
         </aside>
-        <main className="min-w-0 flex-1 overflow-auto p-4 sm:p-6">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="border-b border-slate-200 bg-white px-4 py-4 flex items-center justify-between shadow-sm sm:px-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                Marketplace Ops
+              </p>
+              <h2 className="text-sm font-semibold text-slate-800">
+                Logged in as {user.email}
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <NotificationBell role="admin" />
+              <button
+                onClick={async () => {
+                  await useAuthStore.getState().logoutRole("admin");
+                  router.push("/admin/login");
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Log out
+              </button>
+            </div>
+          </header>
+          <main className="min-w-0 flex-1 overflow-auto p-4 sm:p-6">{children}</main>
+        </div>
       </div>
     </div>
   );

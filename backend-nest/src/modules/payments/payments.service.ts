@@ -135,11 +135,14 @@ type PaymentOrderRecord = {
   }>;
 };
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sellerFinanceService: SellerFinanceService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listByShop(shopId: string, query: ListShopPaymentsQueryDto) {
@@ -303,6 +306,25 @@ export class PaymentsService {
     if (!updated) {
       throw new NotFoundException(
         `Order ${orderId} was not found in shop ${shopId}.`,
+      );
+    }
+
+    try {
+      await this.notificationsService.createNotification({
+        recipientUserId: updated.customerId,
+        recipientRole: 'CUSTOMER',
+        shopId: updated.shopId,
+        orderId: updated.id,
+        type: 'DELIVERY_STATUS_CHANGED',
+        title: 'Thanh toán đã được xác nhận',
+        message: `Shop đã xác nhận thanh toán cho đơn hàng ${updated.orderNumber} của bạn.`,
+        actionUrl: `/orders/${updated.id}`,
+        severity: 'SUCCESS',
+      });
+    } catch (err) {
+      console.error(
+        'Failed to notify customer about payment confirmation',
+        err,
       );
     }
 
@@ -618,6 +640,30 @@ export class PaymentsService {
 
     if (!updated) {
       throw new NotFoundException(`Order ${order.id} was not found.`);
+    }
+
+    if (
+      paymentStatus === 'PAID' ||
+      paymentStatus === 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
+    ) {
+      try {
+        await this.notificationsService.createNotification({
+          recipientUserId: updated.customerId,
+          recipientRole: 'CUSTOMER',
+          shopId: updated.shopId,
+          orderId: updated.id,
+          type: 'DELIVERY_STATUS_CHANGED',
+          title: 'Thanh toán đã được xác nhận',
+          message: `Shop đã xác nhận thanh toán cho đơn hàng ${updated.orderNumber} của bạn.`,
+          actionUrl: `/orders/${updated.id}`,
+          severity: 'SUCCESS',
+        });
+      } catch (err) {
+        console.error(
+          'Failed to notify customer about payment confirmation',
+          err,
+        );
+      }
     }
 
     return this.toPaymentResponse(updated);

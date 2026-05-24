@@ -1,5 +1,40 @@
 # Phase Report
 
+## 2026-05-24 Internal Notification Center
+
+- implemented a role-isolated internal Notification Center across all three roles (Customer, Seller, Admin)
+- added `Notification` Prisma model with `dedupeKey` index and cascade-delete on user removal
+- added three NestJS controllers with role-specific guards:
+  - `GET/PATCH /api/customer/notifications`
+  - `GET/PATCH /api/seller/notifications`
+  - `GET/PATCH /api/admin/notifications`
+- connected `NotificationsService` to seven business event sources:
+  - `ORDER_NEW` → seller on checkout
+  - `PAYMENT_CONFIRMATION_REQUIRED` → seller on QR proof upload
+  - `DELIVERY_STATUS_CHANGED` → customer on payment confirmation
+  - `YANDEX_CREATION_REMINDER` → seller on admin Yandex reminder
+  - `RETURN_CASE_OPENED` / `RETURN_SELLER_RESPONSE_REQUIRED` → seller on return events
+  - `RETURN_ADMIN_REVIEW_REQUIRED` → broadcasted to each admin user individually
+  - `SELLER_FEE_INVOICE_ISSUED` → seller on commission invoice
+  - `ORDER_FULFILLMENT_OVERDUE` → seller via `checkAndNotifyOverdueOrders()` service method (no auto-scheduler)
+- implemented `dedupeKey` logic to prevent notification spam for idempotent events
+- frontend: created global Zustand store `useNotificationStore` as single source of truth for unread counts
+- frontend: `NotificationBell` polls `/unread-count` every 30 s; skips API call if user is not logged in; silently ignores 401 to avoid false "session expired" toasts
+- frontend: `NotificationDropdown`, `NotificationsPageClient` subscribed to store; mark-read and archive actions trigger store refresh
+- frontend: added `/customer/notifications`, `/seller/notifications`, `/admin/notifications` pages
+- fixed flaky regression E2E tests (`three-role-order-sync`, `return-refund-dispute`) that failed due to admin login rate-limiter when multiple test workers used the demo-admin account simultaneously; added `loginAdminWithRetry()` helper with exponential back-off and bumped timeouts to 300 s
+- added `docs/API_NOTIFICATIONS.md` and `docs/NOTIFICATIONS.md`
+- verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass (28 suites, 222 tests)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/notifications.spec.ts`: pass
+  - full regression E2E suite (18 specs): pass
+
 ## 2026-05-24 Admin Fulfillment Supervision Tabs
 
 - aligned `/admin/deliveries` with the seller-friendly fulfillment buckets instead of the older raw delivery queue model

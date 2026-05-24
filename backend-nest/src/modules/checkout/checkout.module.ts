@@ -4,9 +4,10 @@ import { PublicCartController } from './public-cart.controller';
 import { CartValidationService } from './cart-validation.service';
 import { CheckoutService } from './checkout.service';
 import { ProductsModule } from '../products/products.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ProductsModule],
+  imports: [ProductsModule, NotificationsModule],
   controllers: [CheckoutController, PublicCartController],
   providers: [CheckoutService, CartValidationService],
   exports: [CartValidationService],

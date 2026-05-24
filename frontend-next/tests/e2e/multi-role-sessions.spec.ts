@@ -22,6 +22,33 @@ async function login(page: Page, path: string, testIdPrefix: string, email: stri
   await page.getByTestId(`${testIdPrefix}-submit`).click();
 }
 
+/**
+ * Retries admin login if the rate-limiter fires (5-min window, shared demo-admin account).
+ */
+async function loginAdminWithRetry(page: Page, maxAttempts = 5): Promise<void> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await page.goto("/admin-login");
+    await page.getByTestId("admin-login-email").fill(accounts.admin.email);
+    await page.getByTestId("admin-login-password").fill(accounts.admin.password);
+    await page.getByTestId("admin-login-submit").click();
+
+    const rateLimitMsg = page.locator("text=/quá nhanh|thử lại/i");
+    const redirected = page.waitForURL("**/admin/dashboard", { timeout: 8000 }).then(() => "ok").catch(() => "timeout");
+    const rateLimited = rateLimitMsg.waitFor({ timeout: 3000 }).then(() => "rate").catch(() => "none");
+
+    const result = await Promise.race([redirected, rateLimited]);
+    if (result === "ok") return;
+
+    const backoffMs = 6000 * (attempt + 1);
+    await page.waitForTimeout(backoffMs);
+  }
+  await page.goto("/admin-login");
+  await page.getByTestId("admin-login-email").fill(accounts.admin.email);
+  await page.getByTestId("admin-login-password").fill(accounts.admin.password);
+  await page.getByTestId("admin-login-submit").click();
+  await page.waitForURL("**/admin/dashboard");
+}
+
 async function overwriteCookie(context: BrowserContext, name: string, value: string) {
   const cookies = await context.cookies();
   const target = cookies.find((cookie) => cookie.name === name);
@@ -44,14 +71,7 @@ async function overwriteCookie(context: BrowserContext, name: string, value: str
 test("same browser keeps isolated admin, seller, and customer sessions", async ({ page, context }) => {
   test.setTimeout(120000);
 
-  await login(
-    page,
-    "/admin-login",
-    "admin-login",
-    accounts.admin.email,
-    accounts.admin.password,
-  );
-  await page.waitForURL("**/admin/dashboard");
+  await loginAdminWithRetry(page);
   await expect(page.getByTestId("admin-shell")).toBeVisible();
 
   await login(

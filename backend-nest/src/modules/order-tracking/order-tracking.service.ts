@@ -164,12 +164,15 @@ type TrackableOrderRecord = {
   }>;
 };
 
+import { NotificationsService } from '../notifications/notifications.service';
+
 @Injectable()
 export class OrderTrackingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly filesService: FilesService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async trackByQuery(query: TrackPublicOrderQueryDto) {
@@ -306,6 +309,31 @@ export class OrderTrackingService {
         },
       },
     });
+
+    try {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: trackableOrder.shop.id },
+        include: {
+          sellerProfile: true,
+        },
+      });
+      if (shop?.sellerProfile?.userId) {
+        await this.notificationsService.createOrUpdateByDedupeKey({
+          recipientUserId: shop.sellerProfile.userId,
+          recipientRole: 'SELLER',
+          shopId: trackableOrder.shop.id,
+          orderId: trackableOrder.id,
+          type: 'PAYMENT_CONFIRMATION_REQUIRED',
+          title: 'Có minh chứng thanh toán mới',
+          message: `Khách hàng đã gửi minh chứng thanh toán cho đơn hàng ${trackableOrder.orderNumber}. Vui lòng kiểm tra.`,
+          actionUrl: `/seller/payments`,
+          severity: 'INFO',
+          dedupeKey: `payment-proof:${trackableOrder.id}`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to notify seller about payment proof', err);
+    }
 
     const refreshed = await this.prisma.order.findFirst({
       where: { id: orderId },

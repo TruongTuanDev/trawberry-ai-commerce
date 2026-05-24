@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -18,6 +18,38 @@ async function backendJson<T>(
     `${options?.method ?? "GET"} ${url} -> ${response.status()}: ${await response.text()}`,
   ).toBeTruthy();
   return (await response.json()) as T;
+}
+
+/**
+ * Logs in as admin via the browser UI, retrying if the rate-limiter fires.
+ * The backend throttles rapid login attempts — this waits for the warning
+ * to disappear and retries up to 5 times with increasing back-off.
+ */
+async function loginAdminWithRetry(page: Page, maxAttempts = 5): Promise<void> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await page.goto("/admin-login");
+    await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+    await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+    await page.getByTestId("admin-login-submit").click();
+
+    // Check whether we hit the rate-limit warning within 3 s
+    const rateLimitMsg = page.locator("text=/quá nhanh|thử lại/i");
+    const redirected = page.waitForURL("**/admin/dashboard", { timeout: 8000 }).then(() => "ok").catch(() => "timeout");
+    const rateLimited = rateLimitMsg.waitFor({ timeout: 3000 }).then(() => "rate").catch(() => "none");
+
+    const result = await Promise.race([redirected, rateLimited]);
+    if (result === "ok") return;
+
+    // Rate-limited or redirect timed out — wait with back-off and retry
+    const backoffMs = 6000 * (attempt + 1);
+    await page.waitForTimeout(backoffMs);
+  }
+  // Final attempt — let the normal waitForURL surface the error
+  await page.goto("/admin-login");
+  await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+  await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+  await page.getByTestId("admin-login-submit").click();
+  await page.waitForURL("**/admin/dashboard");
 }
 
 async function approveSeller(request: APIRequestContext, email: string, fullName: string) {
@@ -82,7 +114,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   page,
   request,
 }) => {
-  test.setTimeout(240000);
+  test.setTimeout(300000);
 
   const stamp = Date.now();
   const sellerEmail = `return-ui-seller-${stamp}@example.com`;
@@ -259,11 +291,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
 
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
-  await adminPage.goto("/admin-login");
-  await adminPage.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
-  await adminPage.getByTestId("admin-login-password").fill("DemoAdmin123!");
-  await adminPage.getByTestId("admin-login-submit").click();
-  await adminPage.waitForURL("**/admin/dashboard");
+  await loginAdminWithRetry(adminPage);
   await adminPage.goto("/admin/returns");
   await adminPage.getByRole("combobox").first().selectOption("ALL");
   const adminCaseRow = adminPage.getByTestId("admin-return-row").filter({ hasText: shop.name }).first();

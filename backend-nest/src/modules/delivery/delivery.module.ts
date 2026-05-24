@@ -13,8 +13,10 @@ import { CdekDeliveryProvider } from './providers/cdek-delivery.provider';
 import { YandexDeliveryProvider } from './providers/yandex-delivery.provider';
 import { YandexDeliveryClient } from './yandex-delivery.client';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule],
   controllers: [DeliveryController, AdminDeliveriesController],
   providers: [
     DeliveryService,

@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type PrismaExecutor = PrismaService | Prisma.TransactionClient;
 type FinancePrismaExecutor = PrismaExecutor & {
@@ -42,7 +43,10 @@ const PENDING_PAYMENT_STATUSES = new Set([
 export class SellerFinanceService {
   private readonly platformDefaultCommissionPercent = new Prisma.Decimal(5);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   private asFinanceExecutor(prisma: PrismaExecutor): FinancePrismaExecutor {
     return prisma;
@@ -550,7 +554,7 @@ export class SellerFinanceService {
     }
 
     const now = new Date(Date.now());
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const financeTx = this.asFinanceExecutor(tx);
       const pendingEntries = await financeTx.sellerFeeLedgerEntry.findMany({
         where: {
@@ -636,6 +640,27 @@ export class SellerFinanceService {
 
       return this.mapInvoiceResponse(invoice);
     });
+
+    try {
+      if (shop.sellerProfile?.userId) {
+        await this.notificationsService.createOrUpdateByDedupeKey({
+          recipientUserId: shop.sellerProfile.userId,
+          recipientRole: 'SELLER',
+          shopId: shop.id,
+          invoiceId: result.id,
+          type: 'SELLER_FEE_INVOICE_ISSUED',
+          title: 'Hóa đơn phí nền tảng mới',
+          message: `Hóa đơn phí nền tảng kỳ ${billingPeriod} đã được phát hành với tổng phí là ${result.totalCommission} RUB.`,
+          actionUrl: `/seller/finance`,
+          severity: 'INFO',
+          dedupeKey: `invoice:${result.id}`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to notify seller about fee invoice', err);
+    }
+
+    return result;
   }
 
   async markInvoicePaid(invoiceId: string) {

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { isPayOnDeliverySellerQrMethod } from '../../common/constants/payment-methods.constant';
 import {
@@ -196,6 +197,7 @@ export class DeliveryService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     @Inject(DELIVERY_PROVIDER) private readonly provider: DeliveryProvider,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getSettings(shopId: string) {
@@ -1073,6 +1075,28 @@ export class DeliveryService {
       },
       select: { createdAt: true },
     });
+
+    if (created && order.shop?.sellerProfile?.userId) {
+      try {
+        await this.notificationsService.createOrUpdateByDedupeKey({
+          recipientUserId: order.shop.sellerProfile.userId,
+          recipientRole: 'SELLER',
+          shopId: order.shopId,
+          orderId: order.id,
+          type: 'YANDEX_CREATION_REMINDER',
+          title: 'Cần tạo đơn Yandex',
+          message: 'Admin nhắc bạn tạo đơn Yandex cho đơn hàng này.',
+          actionUrl: `/seller/orders/${order.id}`,
+          severity: 'WARNING',
+          dedupeKey: `yandex-reminder:${order.id}`,
+        });
+      } catch (err) {
+        console.error(
+          'Failed to notify seller about Yandex creation reminder',
+          err,
+        );
+      }
+    }
 
     return {
       reminderCreated: true,

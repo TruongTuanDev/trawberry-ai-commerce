@@ -7,6 +7,33 @@ async function login(page: Page, path: string, prefix: string, email: string, pa
   await page.getByTestId(`${prefix}-submit`).click();
 }
 
+/**
+ * Retries admin login if the rate-limiter fires (5-min window, shared demo-admin account).
+ */
+async function loginAdminWithRetry(page: Page, maxAttempts = 5): Promise<void> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await page.goto("/admin-login");
+    await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+    await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+    await page.getByTestId("admin-login-submit").click();
+
+    const rateLimitMsg = page.locator("text=/quá nhanh|thử lại/i");
+    const redirected = page.waitForURL("**/admin/dashboard", { timeout: 8000 }).then(() => "ok").catch(() => "timeout");
+    const rateLimited = rateLimitMsg.waitFor({ timeout: 3000 }).then(() => "rate").catch(() => "none");
+
+    const result = await Promise.race([redirected, rateLimited]);
+    if (result === "ok") return;
+
+    const backoffMs = 6000 * (attempt + 1);
+    await page.waitForTimeout(backoffMs);
+  }
+  await page.goto("/admin-login");
+  await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+  await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+  await page.getByTestId("admin-login-submit").click();
+  await page.waitForURL("**/admin/dashboard");
+}
+
 async function overwriteCookie(context: BrowserContext, name: string, value: string) {
   const cookies = await context.cookies();
   const target = cookies.find((cookie) => cookie.name === name);
@@ -134,8 +161,7 @@ test("seller auto refresh keeps the session active", async ({ page, context }) =
 });
 
 test("admin auto refresh keeps the session active", async ({ page, context }) => {
-  await login(page, "/admin-login", "admin-login", "demo-admin@trawberry.local", "DemoAdmin123!");
-  await page.waitForURL("**/admin/dashboard");
+  await loginAdminWithRetry(page);
 
   await overwriteCookie(context, "admin_access_token", "invalid-admin-access-token");
   await page.goto("/admin/dashboard");
@@ -158,12 +184,10 @@ test("refresh failure redirects to login and shows session expired toast", async
 });
 
 test("admin login route works, has no register link, and customer or seller cannot access admin dashboard", async ({ browser, page }) => {
+  test.setTimeout(90000);
   await page.goto("/admin-login");
   await expect(page.getByRole("link", { name: /register/i })).toHaveCount(0);
-  await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
-  await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
-  await page.getByTestId("admin-login-submit").click();
-  await page.waitForURL("**/admin/dashboard");
+  await loginAdminWithRetry(page);
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();

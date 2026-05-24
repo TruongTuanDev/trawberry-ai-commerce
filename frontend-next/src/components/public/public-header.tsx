@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const primaryLinks = [
   { href: "/", label: "Home" },
@@ -270,6 +271,11 @@ export function PublicHeader() {
               </span>
               <span className="text-[10px] font-semibold mt-0.5 tracking-tight">Address</span>
             </div>
+
+            {/* Notifications */}
+            {user?.role === "CUSTOMER" && (
+              <NotificationBell role="customer" />
+            )}
 
             {/* Account */}
             <Link

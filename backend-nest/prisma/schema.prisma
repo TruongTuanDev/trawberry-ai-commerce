@@ -42,6 +42,7 @@ model User {
   returnRefundEvidence      ReturnRefundEvidence[] @relation("ReturnRefundEvidenceUploader")
   sentRefundTransfers       RefundManualTransfer[] @relation("RefundTransferSeller")
   receivedRefundTransfers   RefundManualTransfer[] @relation("RefundTransferCustomer")
+  notifications             Notification[]         @relation("RecipientNotifications")
 
   @@map("users")
 }
@@ -1180,4 +1181,30 @@ model AiUsageLog {
 
   @@index([shopId, createdAt])
   @@map("ai_usage_logs")
+}
+
+model Notification {
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  recipientUserId     String    @map("recipient_user_id") @db.Uuid
+  recipientRole       String    @map("recipient_role") @db.VarChar(50)
+  shopId              String?   @map("shop_id") @db.Uuid
+  orderId             String?   @map("order_id") @db.Uuid
+  checkoutId          String?   @map("checkout_id") @db.Uuid
+  returnRefundCaseId  String?   @map("return_refund_case_id") @db.Uuid
+  invoiceId           String?   @map("invoice_id") @db.Uuid
+  type                String    @db.VarChar(100)
+  title               String    @db.VarChar(255)
+  message             String    @db.VarChar(1000)
+  actionUrl           String?   @map("action_url") @db.VarChar(1000)
+  severity            String    @db.VarChar(50)
+  status              String    @default("UNREAD") @db.VarChar(50)
+  dedupeKey           String?   @unique @map("dedupe_key") @db.VarChar(255)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  readAt              DateTime? @map("read_at") @db.Timestamptz(6)
+  archivedAt          DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  recipient           User      @relation("RecipientNotifications", fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientUserId, recipientRole, status, createdAt])
+  @@map("notifications")
 }

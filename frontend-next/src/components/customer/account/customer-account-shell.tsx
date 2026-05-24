@@ -10,6 +10,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 const navItems = [
   { href: "/customer/account", label: "Overview" },
+  { href: "/customer/notifications", label: "Notifications" },
   { href: "/customer/account/profile", label: "Profile" },
   { href: "/customer/account/addresses", label: "Addresses" },
   { href: "/customer/orders", label: "Orders" },

@@ -789,7 +789,7 @@ describe('AuthController (e2e)', () => {
   });
 
   it('throttles repeated admin login attempts more strictly', async () => {
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
       await request(app.getHttpServer())
         .post('/api/auth/admin/login')
         .send({

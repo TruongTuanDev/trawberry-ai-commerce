@@ -21,6 +21,7 @@ import {
   validateYandexManualAddress,
 } from '../../common/utils/customer-address.util';
 import { resolveShopPaymentPanel } from '../../common/utils/shop-payment.util';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   PAYMENT_METHOD_LABELS,
   isPayOnDeliverySellerQrMethod,
@@ -98,6 +99,7 @@ export class CheckoutService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cartValidationService: CartValidationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createOrder(
@@ -377,6 +379,33 @@ export class CheckoutService {
         orders: createdOrders,
       };
     });
+
+    // Notify sellers of new orders
+    for (const order of created.orders) {
+      try {
+        const shop = await this.prisma.shop.findUnique({
+          where: { id: order.shop.id },
+          include: {
+            sellerProfile: true,
+          },
+        });
+        if (shop?.sellerProfile?.userId) {
+          await this.notificationsService.createNotification({
+            recipientUserId: shop.sellerProfile.userId,
+            recipientRole: 'SELLER',
+            shopId: order.shop.id,
+            orderId: order.id,
+            type: 'ORDER_NEW',
+            title: 'Có đơn hàng mới',
+            message: `Bạn có đơn hàng mới ${order.orderNumber} cần xử lý.`,
+            actionUrl: `/seller/orders/${order.id}`,
+            severity: 'INFO',
+          });
+        }
+      } catch (err) {
+        console.error('Failed to create new order notification', err);
+      }
+    }
 
     const firstOrder = created.orders[0];
     const orders = created.orders.map((order) => ({

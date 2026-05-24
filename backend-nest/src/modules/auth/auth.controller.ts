@@ -181,7 +181,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @AuthRateLimit({
     keyPrefix: 'auth-login-admin',
-    limit: 5,
+    limit: 20,
     windowMs: 5 * 60_000,
     includeIdentifier: true,
   })

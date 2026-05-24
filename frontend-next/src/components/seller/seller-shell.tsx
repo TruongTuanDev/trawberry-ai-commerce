@@ -8,9 +8,11 @@ import { clsx } from "clsx";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { ShopSwitcher } from "@/components/seller/shop-switcher";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const navigation = [
   { href: "/seller/dashboard", label: "Dashboard" },
+  { href: "/seller/notifications", label: "Notifications" },
   { href: "/seller/products", label: "Products" },
   { href: "/seller/import/wildberries", label: "WB Excel" },
   { href: "/seller/import/wildberries-api", label: "WB Sync" },
@@ -118,6 +120,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 </h1>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <NotificationBell role="seller" />
                 <ShopSwitcher />
                 <button
                   type="button"

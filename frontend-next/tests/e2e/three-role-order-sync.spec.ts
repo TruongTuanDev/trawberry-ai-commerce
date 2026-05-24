@@ -31,12 +31,46 @@ async function safeClose(context: BrowserContext) {
   }
 }
 
+import type { Page } from "@playwright/test";
+
+/**
+ * Logs in as admin via the browser UI, retrying if the rate-limiter fires.
+ * The backend throttles rapid login attempts — this waits for the warning
+ * to disappear and retries up to 5 times with increasing back-off.
+ */
+async function loginAdminWithRetry(page: Page, maxAttempts = 5): Promise<void> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await page.goto("/admin-login");
+    await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+    await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+    await page.getByTestId("admin-login-submit").click();
+
+    // Check whether we hit the rate-limit warning within 3 s
+    const rateLimitMsg = page.locator("text=/quá nhanh|thử lại/i");
+    const redirected = page.waitForURL("**/admin/dashboard", { timeout: 8000 }).then(() => "ok").catch(() => "timeout");
+    const rateLimited = rateLimitMsg.waitFor({ timeout: 3000 }).then(() => "rate").catch(() => "none");
+
+    const result = await Promise.race([redirected, rateLimited]);
+    if (result === "ok") return;
+
+    // Rate-limited or redirect timed out — wait with back-off and retry
+    const backoffMs = 6000 * (attempt + 1);
+    await page.waitForTimeout(backoffMs);
+  }
+  // Final attempt — let the normal waitForURL surface the error
+  await page.goto("/admin-login");
+  await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
+  await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
+  await page.getByTestId("admin-login-submit").click();
+  await page.waitForURL("**/admin/dashboard");
+}
+
 test("customer, seller, and admin stay synchronized through payment, delivery, and finance", async ({
   browser,
   page,
   request,
 }) => {
-  test.setTimeout(180000);
+  test.setTimeout(300000);
 
   const stamp = Date.now();
   const sellerEmail = `three-role-seller-${stamp}@example.com`;
@@ -262,11 +296,7 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   await expect(sellerPage.getByText("Three Role Customer")).toBeVisible();
   await expect(sellerPage.getByTestId("seller-payment-review-row")).toBeVisible();
 
-  await page.goto("/admin-login");
-  await page.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
-  await page.getByTestId("admin-login-password").fill("DemoAdmin123!");
-  await page.getByTestId("admin-login-submit").click();
-  await page.waitForURL("**/admin/dashboard");
+  await loginAdminWithRetry(page);
   await page.goto("/admin/payments-supervision");
   await page.getByLabel("Payment status").selectOption("PENDING");
   await expect(page.getByTestId("admin-payments-supervision-page")).toContainText("Three Role Customer");
