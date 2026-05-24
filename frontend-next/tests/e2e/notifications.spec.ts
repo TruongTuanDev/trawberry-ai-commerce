@@ -347,7 +347,7 @@ test("Notification Center Role Layouts and Empty States", async ({ browser }) =>
   await expect(sellerPage.getByTestId("seller-shell")).toHaveCount(1);
 
   // Verify heading title
-  await expect(sellerPage.getByRole("heading", { name: "Việc cần xử lý" })).toBeVisible();
+  await expect(sellerPage.getByRole("heading", { name: "Việc cần xử lý", exact: true })).toBeVisible();
 
   // Select empty category to trigger empty state (e.g. Finance tab)
   await sellerPage.getByTestId("category-tab-FINANCE").click();

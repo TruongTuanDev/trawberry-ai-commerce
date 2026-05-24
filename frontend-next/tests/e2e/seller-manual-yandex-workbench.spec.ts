@@ -225,9 +225,15 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await adminPage.getByRole("button", { name: "Refresh" }).click();
   await expect(adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode })).toBeVisible();
   await adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode }).click();
-  await expect(adminPage.getByTestId("admin-delivery-detail-status")).toHaveText("ON_THE_WAY");
-  await adminPage.getByTestId("admin-delivery-mark-delivered").click();
-  await expect(adminPage.getByTestId("admin-delivery-message")).toHaveText("Delivery marked delivered.");
+  await expect(adminPage.getByTestId("admin-delivery-detail-status")).toHaveText("In delivery");
+
+  // Since Admin supervision is read-only, Seller completes the delivery transition
+  await page.bringToFront();
+  page.once("dialog", (dialog) => {
+    void dialog.accept();
+  });
+  await page.getByTestId("manual-delivery-mark-delivered").click();
+  await expect(page.getByTestId("seller-delivery-status")).toHaveText("DELIVERED");
 
   await page.goto(`${checkout.trackingPath}?phone=${encodeURIComponent(phone)}`);
   await expect(page.getByTestId("tracked-delivery-provider")).toHaveText("YANDEX");

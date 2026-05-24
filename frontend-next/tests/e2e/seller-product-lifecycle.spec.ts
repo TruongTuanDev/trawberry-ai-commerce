@@ -164,6 +164,7 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   await customerContext.close();
 
   await page.goto("/seller/orders");
+  await page.getByTestId("seller-order-tab-ALL").click();
   await page.getByPlaceholder("Search by order, customer, phone, product").fill(orderCode);
   await expect(page.getByTestId("seller-order-card").filter({ hasText: orderCode })).toBeVisible();
 });

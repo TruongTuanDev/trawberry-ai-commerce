@@ -663,7 +663,10 @@ export class OrdersService {
                   'IN_TRANSIT',
                 ],
               },
-              updatedAt: { lt: this.getInTransitOverdueCutoff() },
+              OR: [
+                { updatedAt: { lt: this.getInTransitOverdueCutoff() } },
+                { estimatedDeliveryAt: { lt: new Date() } },
+              ],
             },
           },
         },

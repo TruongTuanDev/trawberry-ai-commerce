@@ -57,6 +57,9 @@ function resolveInitialTab(searchParams: URLSearchParams): AdminFulfillmentBucke
   }
 
   const legacyStatus = searchParams.get("status");
+  if (legacyStatus === "OVERDUE") {
+    return "ALL";
+  }
   if (legacyStatus === "MISSING_YANDEX_ORDER_ID" || legacyStatus === "PAID_WITHOUT_DELIVERY") {
     return "NEW";
   }
