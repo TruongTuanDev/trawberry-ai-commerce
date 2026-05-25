@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 import { changeCustomerPassword } from "@/lib/customer-api";
 
 export function CustomerAccountSecurityPageClient() {
@@ -12,6 +13,7 @@ export function CustomerAccountSecurityPageClient() {
   const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { t } = useI18n("customer");
 
   const handleSubmit = async () => {
     setError(null);
@@ -20,7 +22,7 @@ export function CustomerAccountSecurityPageClient() {
     await run({
       action: async () => {
         if (newPassword !== confirmPassword) {
-          throw new Error("Mật khẩu xác nhận không khớp.");
+          throw new Error(t("customer.security.passwordMismatch"));
         }
 
         return changeCustomerPassword({
@@ -28,23 +30,23 @@ export function CustomerAccountSecurityPageClient() {
           newPassword,
         });
       },
-      successMessage: "Mật khẩu customer đã được cập nhật.",
+      successMessage: t("customer.security.success"),
       onSuccess: () => {
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        setSuccess("Mật khẩu customer đã được cập nhật.");
+        setSuccess(t("customer.security.success"));
       },
-      errorMessage: "Đổi mật khẩu thất bại.",
+      errorMessage: t("customer.security.failed"),
     }).catch((issue) => {
-      setError(issue instanceof Error ? issue.message : "Unable to change password.");
+      setError(issue instanceof Error ? issue.message : t("customer.security.failed"));
     });
   };
 
   return (
     <CustomerAccountShell
-      title="Bảo mật"
-      description="Đổi mật khẩu customer hiện tại. Việc đổi mật khẩu không đăng xuất seller/admin session nếu bạn đang dùng multi-role sessions song song."
+      title={t("customer.security.title")}
+      description={t("customer.security.description")}
     >
       <section className="card-panel max-w-3xl rounded-[1.8rem] px-6 py-6 sm:px-7">
         {error ? (
@@ -59,13 +61,13 @@ export function CustomerAccountSecurityPageClient() {
         ) : null}
 
         <div className="grid gap-4">
-          <Field label="Mật khẩu hiện tại">
+          <Field label={t("customer.security.currentPassword")}>
             <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="public-input" data-testid="customer-security-current-password" />
           </Field>
-          <Field label="Mật khẩu mới">
+          <Field label={t("customer.security.newPassword")}>
             <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="public-input" data-testid="customer-security-new-password" />
           </Field>
-          <Field label="Xác nhận mật khẩu mới">
+          <Field label={t("customer.security.confirmNewPassword")}>
             <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="public-input" data-testid="customer-security-confirm-password" />
           </Field>
         </div>
@@ -77,7 +79,7 @@ export function CustomerAccountSecurityPageClient() {
           className="public-button-primary mt-6 px-5 py-3 text-sm disabled:opacity-60"
           data-testid="customer-security-submit"
         >
-          {isRunning ? "Đang lưu..." : "Đổi mật khẩu"}
+          {isRunning ? t("customer.security.saving") : t("customer.security.submit")}
         </button>
       </section>
     </CustomerAccountShell>

@@ -1,5 +1,45 @@
 # Phase Report
 
+## 2026-05-25 Customer Account i18n Completion
+
+- localized customer auth pages to `ru` and `en`:
+  - login title, form labels, CTA buttons, register success banner, and auth error handling
+  - register title, form labels, password mismatch validation, and redirect-to-login contract copy
+- localized customer account shell and core account surfaces:
+  - overview/dashboard
+  - profile
+  - addresses
+  - security
+  - support
+  - orders and order detail
+  - returns / refund case surfaces
+- kept buyer locale policy strict:
+  - supported locales: `ru`, `en`
+  - default locale: `ru`
+  - no Vietnamese option in customer auth or account UI
+- hardened customer E2E contracts away from localized business text:
+  - return / refund status assertions now use stable `data-status`
+  - default-address assertion now uses `customer-address-default-badge`
+  - notification regression avoids role-copy coupling
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-customer-account.spec.ts --workers=1`: pass
+- `frontend-next npm run test:e2e:customer-account`: pass
+- `frontend-next npm run test:e2e:customer-order-history`: pass
+- `frontend-next npm run test:e2e:return-refund-dispute`: pass
+- `frontend-next npm run test:e2e:notifications`: pass
+- `frontend-next npm run test:e2e:action-feedback`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+
+Remaining gaps:
+
+- seller-facing notification copy and seller i18n follow-up remain outside this customer-only phase
+- some shared customer notification item copy is still driven by backend event payload text where appropriate, rather than fully dictionary-generated copy
+- no customer-specific API contract changed in this phase
 ## 2026-05-25 Seller Center i18n Remaining Screens Polish
 
 - Fully localized all remaining Seller Center pages and components to RU, EN, and VI:

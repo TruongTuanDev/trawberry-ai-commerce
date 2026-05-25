@@ -351,7 +351,7 @@ export function CustomerAccountReturnsPageClient({
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-[var(--foreground)]">{item.order.orderCode}</p>
-                  <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{labelForReturnStatus(item.status)}</span>
+                  <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)]" data-testid="customer-return-row-status" data-status={item.status}>{labelForReturnStatus(item.status)}</span>
                 </div>
                 <p className="mt-2 text-sm text-[var(--muted)]">{labelForReturnType(item.type)} - {labelForReturnReason(item.reason)}</p>
                 <p className="mt-2 text-sm text-[var(--foreground)]">{formatRub(item.requestedAmount)}</p>
@@ -371,7 +371,7 @@ export function CustomerAccountReturnsPageClient({
                   <h2 className="mt-2 text-2xl font-bold text-[var(--foreground)]">{labelForReturnType(selected.type)}</h2>
                   <p className="mt-2 text-sm text-[var(--muted)]">{selected.shop.name} - {labelForReturnReason(selected.reason)}</p>
                 </div>
-                <span className="rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">{labelForReturnStatus(selected.status)}</span>
+                <span className="rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]" data-testid="customer-return-detail-status" data-status={selected.status}>{labelForReturnStatus(selected.status)}</span>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

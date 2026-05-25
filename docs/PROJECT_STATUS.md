@@ -1,5 +1,28 @@
 # Project Status
 
+## Customer Account i18n Completion - 2026-05-25
+
+- Status: implemented in `frontend-next`
+- Customer-facing account surfaces now support Russian (`ru`) and English (`en`) only.
+- Default customer locale remains Russian (`ru`).
+- Vietnamese (`vi`) is not exposed anywhere in the buyer auth/account flow.
+- Fully localized customer account surfaces:
+  - customer login and register pages
+  - customer account shell navigation and overview
+  - profile page
+  - addresses page including Yandex/manual-readiness labels and field copy
+  - security page
+  - support page
+  - customer orders list and order detail
+  - customer returns / refund pages
+- Regression tests were hardened to avoid locale-coupled business assertions:
+  - default address badge uses a stable test id
+  - return status checks use raw `data-status`
+  - notifications flow no longer depends on a specific translated notification body
+- E2E Test Coverage:
+  - Added `frontend-next/tests/e2e/i18n-customer-account.spec.ts` for RU/EN auth/account switching and persistence.
+  - Verified customer account, customer order history, return/refund dispute, notifications, and action-feedback regressions after the i18n migration.
+
 ## Seller Center i18n Remaining Screens Polish - 2026-05-25
 
 - Status: implemented in `frontend-next`

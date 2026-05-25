@@ -181,6 +181,22 @@ test("customer sees parent receipt and order history for multi-shop checkout", a
   await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
+  const phone = `+7998${String(stamp).slice(-7)}`;
+  await page.goto("/customer/account/addresses");
+  await page.getByTestId("customer-address-fullName").fill("History Customer");
+  await page.getByTestId("customer-address-phone").fill(phone);
+  await page.getByTestId("customer-address-city").fill("Moscow");
+  await page.getByTestId("customer-address-region").fill("Moscow");
+  await page.getByTestId("customer-address-street").fill("History Street");
+  await page.getByTestId("customer-address-building").fill("10");
+  await page.getByTestId("customer-address-entrance").fill("2");
+  await page.getByTestId("customer-address-floor").fill("3");
+  await page.getByTestId("customer-address-apartment").fill("12");
+  await page.getByTestId("customer-address-latitude").fill("55.7558");
+  await page.getByTestId("customer-address-longitude").fill("37.6173");
+  await page.getByTestId("customer-address-save").click();
+  await expect(page.getByTestId("customer-address-card")).toHaveCount(1);
+
   await page.goto(`/products/${productA.product.id}`);
   await page.getByTestId("product-quantity-stepper").getByLabel("Increase quantity").click();
   await page.getByTestId("add-to-cart").click();
@@ -192,11 +208,6 @@ test("customer sees parent receipt and order history for multi-shop checkout", a
   await page.goto("/cart");
   await expect(page.getByTestId("cart-shop-group")).toHaveCount(2);
   await page.getByTestId("cart-checkout").click();
-
-  const phone = `+7998${String(stamp).slice(-7)}`;
-  await expect(page.getByTestId("checkout-email")).toHaveValue(customerEmail);
-  await page.getByTestId("checkout-phone").fill(phone);
-  await page.getByTestId("checkout-address").fill("Customer History Address");
   await page.getByTestId("checkout-submit").click();
 
   await expect(page.getByTestId("checkout-confirmation")).toBeVisible();

@@ -1,5 +1,31 @@
 # Full Commerce Flow Audit
 
+## Customer Account i18n Addendum
+
+- customer auth and account surfaces now follow the buyer locale policy:
+  - supported locales: `ru`, `en`
+  - default locale: `ru`
+  - no Vietnamese option in buyer UI
+- verified customer-localized surfaces:
+  - `/customer/login`
+  - `/customer/register`
+  - `/customer/account`
+  - `/customer/account/addresses`
+  - `/customer/account/security`
+  - `/customer/account/support`
+  - `/customer/orders`
+  - `/customer/orders/[checkoutCode]`
+  - `/customer/returns`
+- customer business flows remain locale-agnostic in regression coverage:
+  - account management uses stable field and badge test ids
+  - return / refund status assertions use raw `data-status`
+  - notification regression checks role-level visibility and actions instead of localized copy bodies
+- no customer backend contract or business rule changed:
+  - register still redirects to `/customer/login?registered=1`
+  - session refresh behavior is unchanged
+  - checkout address readiness rules remain backend-authoritative
+  - order, return, refund, and support flows preserve existing business logic
+
 ## Seller Workspace Hydration Addendum
 
 - seller operational pages now tolerate direct deep links and page refreshes without assuming `currentShopId` is already present in the client workspace store

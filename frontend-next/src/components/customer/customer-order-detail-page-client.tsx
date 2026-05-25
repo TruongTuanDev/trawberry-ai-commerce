@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
 import { CheckoutReceiptView } from "@/components/customer/checkout-receipt-view";
 import { CustomerSupportSection } from "@/components/customer/customer-support-section";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   getCustomerOrderReceipt,
   type CustomerCheckoutReceipt,
@@ -25,6 +26,7 @@ export function CustomerOrderDetailPageClient({
   const [receipt, setReceipt] = useState<CustomerCheckoutReceipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n("customer");
 
   useEffect(() => {
     hydrate();
@@ -47,7 +49,7 @@ export function CustomerOrderDetailPageClient({
         setError(null);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load receipt.");
+          setError(err instanceof Error ? err.message : t("customer.orders.loadFailed"));
         }
       } finally {
         if (mounted) {
@@ -59,18 +61,18 @@ export function CustomerOrderDetailPageClient({
     return () => {
       mounted = false;
     };
-  }, [checkoutCode, hydrated, refreshRole, router, user]);
+  }, [checkoutCode, hydrated, refreshRole, router, t, user]);
 
   return (
     <CustomerAccountShell
       title={checkoutCode}
-      description="Receipt customer chi tiết cho parent checkout, kèm support section đang dùng trong flow order history hiện tại."
+      description={t("customer.orders.detailDescription")}
       actions={
         <Link
           href="/customer/orders"
           className="public-button-secondary inline-flex px-4 py-2 text-sm"
         >
-          Back to my orders
+          {t("customer.orders.backToOrders")}
         </Link>
       }
     >
@@ -81,7 +83,7 @@ export function CustomerOrderDetailPageClient({
       ) : null}
       {loading ? (
         <section className="card-panel rounded-[2rem] px-6 py-8 text-sm text-[var(--muted)]">
-          Loading receipt...
+          {t("customer.orders.loading")}
         </section>
       ) : null}
       {receipt ? <CheckoutReceiptView receipt={receipt} phone={receipt.customer.phone} /> : null}

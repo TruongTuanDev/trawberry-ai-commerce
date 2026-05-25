@@ -46,12 +46,17 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.getByTestId("customer-address-city").fill("Moscow");
   await page.getByTestId("customer-address-region").fill("Moscow");
   await page.getByTestId("customer-address-street").fill("Tverskaya 12");
+  await page.getByTestId("customer-address-building").fill("12");
+  await page.getByTestId("customer-address-entrance").fill("1");
+  await page.getByTestId("customer-address-floor").fill("3");
   await page.getByTestId("customer-address-apartment").fill("14");
   await page.getByTestId("customer-address-postalCode").fill("101000");
   await page.getByTestId("customer-address-comment").fill("Call before delivery");
+  await page.getByTestId("customer-address-latitude").fill("55.7558");
+  await page.getByTestId("customer-address-longitude").fill("37.6173");
   await page.getByTestId("customer-address-save").click();
   await expect(page.getByTestId("customer-address-card")).toHaveCount(1);
-  await expect(page.getByTestId("customer-address-card")).toContainText("Default");
+  await expect(page.getByTestId("customer-address-default-badge")).toHaveCount(1);
 
   await page.getByTestId("customer-address-fullName").fill("Customer Account Prime");
   await page.getByTestId("customer-address-phone").fill(phone);
@@ -72,7 +77,7 @@ test("customer manages account profile, addresses, password, and guarded access"
   const defaultCard = page
     .getByTestId("customer-address-card")
     .filter({ hasText: "Saint Petersburg" });
-  await expect(defaultCard).toContainText("Default");
+  await expect(defaultCard.getByTestId("customer-address-default-badge")).toBeVisible();
 
   await defaultCard.getByTestId(/customer-address-edit-/).click();
   await page.getByTestId("customer-address-city").fill("Kazan");
@@ -99,7 +104,7 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.getByTestId("customer-login-email").fill(email);
   await page.getByTestId("customer-login-password").fill(password);
   await page.getByTestId("customer-login-submit").click();
-  await expect(page.getByText("Thông tin đăng nhập không chính xác.").first()).toBeVisible();
+  await expect(page.locator("text=/invalid|неверн|không chính xác/i").first()).toBeVisible();
 
   await page.getByTestId("customer-login-password").fill(newPassword);
   await page.getByTestId("customer-login-submit").click();

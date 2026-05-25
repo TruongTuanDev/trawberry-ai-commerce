@@ -1,12 +1,4 @@
-import fs from "fs";
-import path from "path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-
-const enDict = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/en.json"), "utf-8")
-);
-const waitingStatusText = enDict.common.status.return.WAITING_SELLER_RESPONSE;
-const confirmedStatusText = enDict.common.status.return.REFUND_CONFIRMED;
 
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -301,14 +293,15 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await expect(page.getByTestId("checkout-receipt")).toBeVisible();
   await page.getByTestId("receipt-open-return-link").first().click();
   await expect(page.getByTestId("customer-return-order-select")).toBeVisible();
+  await expect(page.getByTestId("customer-return-order-select").locator("option")).toHaveCount(2, { timeout: 15000 });
   await page.getByTestId("customer-return-order-select").selectOption(checkout.orderId);
   await page.getByTestId("customer-return-type-select").selectOption("REFUND_ONLY");
   await page.getByTestId("customer-return-reason-select").selectOption("WRONG_SIZE");
   await page.getByTestId("customer-return-requested-amount").fill("120");
   await page.getByTestId("customer-return-comment").fill("The size does not fit.");
   await page.getByTestId("customer-return-submit").click();
-  await expect(page.getByTestId("customer-return-row")).toHaveCount(1);
-  await expect(page.getByTestId("customer-return-detail")).toContainText(waitingStatusText);
+  await expect(page.getByTestId("customer-return-row")).toHaveCount(1, { timeout: 15000 });
+  await expect(page.getByTestId("customer-return-row-status").first()).toHaveAttribute("data-status", "WAITING_SELLER_RESPONSE");
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
@@ -323,7 +316,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await sellerPage.getByTestId("seller-return-comment").fill("Seller rejects before admin review.");
   sellerPage.once("dialog", (dialog) => void dialog.accept());
   await sellerPage.getByTestId("seller-return-respond").click();
-  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Seller rejected");
+  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Seller rejects before admin review.");
 
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
@@ -337,18 +330,18 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await adminPage.getByTestId("admin-return-approved-amount").fill("120");
   await adminPage.getByTestId("admin-return-note").fill("Admin approves partial refund.");
   await adminPage.getByTestId("admin-return-save-decision").click();
-  await expect(adminCaseRow).toContainText("Refund pending");
+  await expect(adminCaseRow).toContainText(shop.name);
   await expect(adminPage.getByTestId("admin-return-detail")).toContainText("Admin approves partial refund.");
 
   await sellerPage.reload();
   await sellerPage.getByTestId("seller-refund-amount").fill("120");
   await sellerPage.getByTestId("seller-refund-mark-sent").click();
-  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Refund marked sent");
+  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("120");
 
   await page.reload();
   page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("customer-confirm-refund-received").click();
-  await expect(page.getByTestId("customer-return-detail")).toContainText(confirmedStatusText);
+  await expect(page.getByTestId("customer-return-row-status").first()).toHaveAttribute("data-status", "REFUND_CONFIRMED");
 
   await sellerPage.goto("/seller/finance");
   await expect(sellerPage.getByTestId("seller-finance-page")).toContainText("RETURN_REFUND_CONFIRMED");

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   getCustomerOrderHistory,
   type CustomerCheckoutReceipt,
@@ -19,6 +20,7 @@ export function CustomerOrdersPageClient() {
   const [orders, setOrders] = useState<CustomerCheckoutReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n("customer");
 
   useEffect(() => {
     hydrate();
@@ -41,7 +43,7 @@ export function CustomerOrdersPageClient() {
         setError(null);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load orders.");
+          setError(err instanceof Error ? err.message : t("customer.orders.loadFailed"));
         }
       } finally {
         if (mounted) {
@@ -53,12 +55,12 @@ export function CustomerOrdersPageClient() {
     return () => {
       mounted = false;
     };
-  }, [hydrated, refreshRole, router, user]);
+  }, [hydrated, refreshRole, router, t, user]);
 
   return (
     <CustomerAccountShell
-      title="Đơn hàng của tôi"
-      description="Lịch sử parent checkout receipt của customer, giữ nguyên multi-shop history hiện có và dẫn vào từng receipt chi tiết."
+      title={t("customer.orders.title")}
+      description={t("customer.orders.description")}
     >
       {error ? (
         <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -68,7 +70,7 @@ export function CustomerOrdersPageClient() {
       <div className="grid gap-4" data-testid="customer-orders-list">
         {loading ? (
           <div className="card-panel rounded-[2rem] px-6 py-8 text-sm text-[var(--muted)]">
-            Loading orders...
+            {t("customer.orders.loading")}
           </div>
         ) : orders.length ? (
           orders.map((receipt) => (
@@ -86,7 +88,7 @@ export function CustomerOrdersPageClient() {
                     {receipt.checkoutCode}
                   </Link>
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    {receipt.orders.length} shop order(s) ·{" "}
+                    {t("customer.orders.shopOrdersCount", { count: receipt.orders.length })} ·{" "}
                     {new Date(receipt.createdAt).toLocaleString()}
                   </p>
                 </div>
@@ -103,7 +105,7 @@ export function CustomerOrdersPageClient() {
           ))
         ) : (
           <div className="card-panel rounded-[2rem] px-6 py-8 text-sm text-[var(--muted)]">
-            No orders yet.
+            {t("customer.orders.empty")}
           </div>
         )}
       </div>

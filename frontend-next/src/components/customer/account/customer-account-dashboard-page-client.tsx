@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   getCustomerAddresses,
   getCustomerOrderHistory,
@@ -17,6 +18,7 @@ export function CustomerAccountDashboardPageClient() {
   const [ordersCount, setOrdersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n("customer");
 
   useEffect(() => {
     let mounted = true;
@@ -42,7 +44,7 @@ export function CustomerAccountDashboardPageClient() {
         if (!mounted) {
           return;
         }
-        setError(issue instanceof Error ? issue.message : "Unable to load account dashboard.");
+        setError(issue instanceof Error ? issue.message : t("customer.dashboard.loadFailed"));
       } finally {
         if (mounted) {
           setLoading(false);
@@ -55,12 +57,12 @@ export function CustomerAccountDashboardPageClient() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
   return (
     <CustomerAccountShell
-      title="Tài khoản của tôi"
-      description="Khu vực riêng cho customer để kiểm soát hồ sơ cá nhân, sổ địa chỉ, lịch sử mua hàng và bảo mật phiên đăng nhập."
+      title={t("customer.dashboard.title")}
+      description={t("customer.dashboard.description")}
     >
       {error ? (
         <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -69,9 +71,9 @@ export function CustomerAccountDashboardPageClient() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Tên hiển thị" value={profile?.name || "Chưa cập nhật"} />
-        <MetricCard label="Địa chỉ đã lưu" value={loading ? "..." : String(addresses.length)} />
-        <MetricCard label="Đơn checkout" value={loading ? "..." : String(ordersCount)} />
+        <MetricCard label={t("customer.dashboard.displayName")} value={profile?.name || t("common.notProvided")} />
+        <MetricCard label={t("customer.dashboard.savedAddresses")} value={loading ? "..." : String(addresses.length)} />
+        <MetricCard label={t("customer.dashboard.checkouts")} value={loading ? "..." : String(ordersCount)} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
@@ -79,26 +81,26 @@ export function CustomerAccountDashboardPageClient() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Hồ sơ nhanh
+                {t("customer.dashboard.quickProfileEyebrow")}
               </p>
               <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-                Thông tin customer hiện tại
+                {t("customer.dashboard.quickProfileTitle")}
               </h2>
             </div>
             <Link href="/customer/account/profile" className="public-button-secondary inline-flex px-4 py-2 text-sm">
-              Chỉnh sửa hồ sơ
+              {t("customer.dashboard.editProfile")}
             </Link>
           </div>
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-            <InfoRow label="Họ tên" value={profile?.name || "Chưa cập nhật"} />
-            <InfoRow label="Email" value={profile?.email || "Chưa cập nhật"} />
-            <InfoRow label="Số điện thoại" value={profile?.phone || "Chưa cập nhật"} />
+            <InfoRow label={t("customer.profile.fullName")} value={profile?.name || t("common.notProvided")} />
+            <InfoRow label={t("customer.profile.email")} value={profile?.email || t("common.notProvided")} />
+            <InfoRow label={t("customer.profile.phone")} value={profile?.phone || t("common.notProvided")} />
             <InfoRow
-              label="Ngày tạo"
+              label={t("customer.dashboard.createdAt")}
               value={
                 profile?.createdAt
                   ? new Date(profile.createdAt).toLocaleString()
-                  : "Chưa có dữ liệu"
+                  : t("common.notProvided")
               }
             />
           </dl>
@@ -108,22 +110,22 @@ export function CustomerAccountDashboardPageClient() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Hành động nhanh
+                {t("customer.dashboard.quickActionsEyebrow")}
               </p>
               <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-                Tác vụ thường dùng
+                {t("customer.dashboard.quickActionsTitle")}
               </h2>
             </div>
           </div>
           <div className="mt-5 grid gap-3">
-            <QuickAction href="/customer/account/addresses" title="Quản lý địa chỉ">
-              Thêm hoặc chỉnh sửa điểm giao hàng mặc định cho checkout.
+            <QuickAction href="/customer/account/addresses" title={t("customer.dashboard.addressesTitle")}>
+              {t("customer.dashboard.addressesDescription")}
             </QuickAction>
-            <QuickAction href="/customer/orders" title="Xem đơn hàng">
-              Theo dõi parent receipt đa shop và đi vào từng receipt chi tiết.
+            <QuickAction href="/customer/orders" title={t("customer.dashboard.ordersTitle")}>
+              {t("customer.dashboard.ordersDescription")}
             </QuickAction>
-            <QuickAction href="/customer/account/security" title="Đổi mật khẩu">
-              Cập nhật mật khẩu mà không tác động đến seller/admin session.
+            <QuickAction href="/customer/account/security" title={t("customer.dashboard.securityTitle")}>
+              {t("customer.dashboard.securityDescription")}
             </QuickAction>
           </div>
         </section>
