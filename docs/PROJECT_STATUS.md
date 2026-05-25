@@ -1,5 +1,23 @@
 # Project Status
 
+## Seller Payment Settings + Products i18n Polish - 2026-05-25
+
+- Status: implemented in `frontend-next`
+- Fixed remaining seller live-switch gaps on:
+  - `/seller/payment-settings`
+  - `/seller/products`
+- Seller locale behavior now verified on these surfaces:
+  - default `ru`
+  - live `ru -> vi -> en` switching without reload
+  - no stale English payment-settings chrome in Vietnamese mode
+  - no stale English search/filter labels in Vietnamese mode
+- Regression safety:
+  - seller product lifecycle still passes
+  - payment review still passes
+  - action feedback still passes
+- Shared safe improvement:
+  - locale switcher now updates the role session locale optimistically so the active role does not snap back to a stale preferred locale during live switching
+
 ## Customer Account i18n Final Audit & Cleanup - 2026-05-25
 
 - Status: in verification

@@ -27,6 +27,11 @@ export function LanguageSwitcher({ role }: { role: LocaleRole }) {
       return;
     }
 
+    setRoleSession(role, {
+      ...user,
+      preferredLocale: nextLocale,
+    });
+
     try {
       const updated = await updateMyPreferredLocale(nextLocale, role);
       setRoleSession(role, {

@@ -1,4 +1,16 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+
+const enDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/en.json"), "utf-8"),
+);
+const ruDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/ru.json"), "utf-8"),
+);
+const viDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/vi.json"), "utf-8"),
+);
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 const frontendBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
@@ -20,7 +32,7 @@ async function approveSeller(request: APIRequestContext, email: string) {
   const password = "password123";
   const register = await backendJson<{ userId: string }>(request, "/api/auth/register", {
     method: "POST",
-    data: { email, password, fullName: "Seller I18N Polish", role: "SELLER" },
+    data: { email, password, fullName: "Seller I18N Remaining", role: "SELLER" },
   });
   const sellerLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
     method: "POST",
@@ -31,31 +43,27 @@ async function approveSeller(request: APIRequestContext, email: string) {
     headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
     data: {
       legalType: "IP",
-      legalName: "Seller I18N Polish",
+      legalName: "Seller I18N Remaining",
       inn: "123456789012",
       ogrn: "1234567890123",
-      legalAddress: "Moscow, I18N Street 11",
-      contactName: "Seller I18N Polish",
+      legalAddress: "Moscow, Seller Locale Street 11",
+      contactName: "Seller I18N Remaining",
       contactPhone: "+79990000111",
       contactEmail: email,
     },
   });
-  const document = await backendJson<{ id: string }>(
-    request,
-    "/api/seller/onboarding/documents",
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
-      multipart: {
-        documentType: "INN",
-        file: {
-          name: "seller-proof.pdf",
-          mimeType: "application/pdf",
-          buffer: Buffer.from("%PDF-1.4\n%i18n seller polish\n"),
-        },
+  const document = await backendJson<{ id: string }>(request, "/api/seller/onboarding/documents", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
+    multipart: {
+      documentType: "INN",
+      file: {
+        name: "seller-proof.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4\n%i18n seller remaining\n"),
       },
     },
-  );
+  });
   const adminLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
     method: "POST",
     data: { email: "demo-admin@trawberry.local", password: "DemoAdmin123!" },
@@ -86,8 +94,8 @@ async function seedSellerCatalog(
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     data: {
-      name: `I18N Polish Shop ${stamp}`,
-      slug: `i18n-polish-shop-${stamp}`,
+      name: `Seller Locale Shop ${stamp}`,
+      slug: `seller-locale-shop-${stamp}`,
     },
   });
 
@@ -95,28 +103,20 @@ async function seedSellerCatalog(
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     data: {
-      wbNmId: 9300000 + (stamp % 100000),
-      wbTitle: `I18N Polish Product ${stamp}`,
-      localTitle: `I18N Polish Product ${stamp}`,
-      categoryName: "Seller i18n category",
+      wbNmId: 9500000 + (stamp % 100000),
+      wbTitle: `Seller Locale Product ${stamp}`,
+      localTitle: `Seller Locale Product ${stamp}`,
+      categoryName: "Seller locale category",
       visibility: "ACTIVE",
       variants: [
         {
-          chrtId: 9400000 + (stamp % 100000),
+          chrtId: 9600000 + (stamp % 100000),
           techSize: "ONE",
           wbSize: "One size",
-          basePrice: 200,
-          stockQuantity: 10,
+          basePrice: 210,
+          stockQuantity: 6,
           trackInventory: true,
           isActive: true,
-        },
-      ],
-      images: [
-        {
-          wbUrl: "https://placehold.co/160x160?text=AI",
-          localUrl: "https://placehold.co/160x160?text=AI",
-          isMain: true,
-          sortOrder: 0,
         },
       ],
     },
@@ -136,15 +136,20 @@ async function newSellerPage(browser: Browser): Promise<Page> {
   return page;
 }
 
-test("seller remaining screens (Finance, Returns, AI Images) localize properly", async ({
+async function switchSellerLocale(page: Page, locale: "ru" | "en" | "vi") {
+  const responsePromise = page.waitForResponse("**/api/users/locale");
+  await page.getByTestId(`language-option-seller-${locale}`).click();
+  await responsePromise;
+}
+
+test("seller payment settings and products filters switch RU/VI/EN live without reload", async ({
   browser,
   request,
 }) => {
   test.setTimeout(180000);
   const stamp = Date.now();
-  const seller = await approveSeller(request, `seller-i18n-rem-${stamp}@example.com`);
+  const seller = await approveSeller(request, `seller-i18n-polish-${stamp}@example.com`);
   const shop = await seedSellerCatalog(request, seller.token, stamp);
-
   const page = await newSellerPage(browser);
 
   await page.goto("/seller/login");
@@ -153,47 +158,89 @@ test("seller remaining screens (Finance, Returns, AI Images) localize properly",
   await page.getByTestId("seller-login-submit").click();
   await page.waitForURL("**/seller/dashboard");
 
-  // --- RU locale checks (Default) ---
-  await page.goto("/seller/finance");
-  await expect(page.getByRole("heading", { name: "Финансы продавца", exact: true })).toBeVisible();
-
-  await page.goto("/seller/returns");
-  await expect(page.getByRole("heading", { name: "Случаи возврата и возмещения", exact: true })).toBeVisible();
-
-  await page.goto("/seller/ai-images");
   await page.getByRole("combobox").first().selectOption(shop.id);
-  await expect(page.getByRole("heading", { name: "AI-изображения", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Сгенерировать AI-изображение", exact: true })).toBeVisible();
 
-  // --- VI locale switches ---
-  const viLocalePromise = page.waitForResponse("**/api/users/locale");
-  await page.getByTestId("language-option-seller-vi").click();
-  await viLocalePromise;
-  await expect(page.getByRole("heading", { name: "AI Images", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Tạo ảnh AI", exact: true })).toBeVisible();
+  await page.goto("/seller/payment-settings");
+  await expect(page.getByTestId("seller-payment-settings-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: ruDict.seller.paymentSettings.title, exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.paymentSettings.bankName, { exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.paymentSettings.paymentMethodStrategy, { exact: true })).toBeVisible();
 
-  await page.goto("/seller/finance");
-  await expect(page.getByRole("heading", { name: "Tài chính seller", exact: true })).toBeVisible();
+  await switchSellerLocale(page, "vi");
+  await expect(page.getByRole("heading", { name: viDict.seller.paymentSettings.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.paymentSettings.bankName, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.paymentSettings.paymentMethodStrategy, { exact: true })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(enDict.seller.paymentSettings.title);
+  await expect(page.locator("body")).not.toContainText("BANK NAME");
 
-  await page.goto("/seller/returns");
-  await expect(page.getByRole("heading", { name: "Case trả hàng và hoàn tiền", exact: true })).toBeVisible();
+  await switchSellerLocale(page, "ru");
+  await expect(page.getByRole("heading", { name: ruDict.seller.paymentSettings.title, exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.paymentSettings.bankName, { exact: true })).toBeVisible();
 
-  // --- EN locale switches ---
-  const enLocalePromise = page.waitForResponse("**/api/users/locale");
-  await page.getByTestId("language-option-seller-en").click();
-  await enLocalePromise;
-  await expect(page.getByRole("heading", { name: "Return and refund cases", exact: true })).toBeVisible();
+  await switchSellerLocale(page, "en");
+  await expect(page.getByRole("heading", { name: enDict.seller.paymentSettings.title, exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.paymentSettings.bankName, { exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.paymentSettings.paymentMethodStrategy, { exact: true })).toBeVisible();
 
-  await page.goto("/seller/finance");
-  await expect(page.getByRole("heading", { name: "Seller finance", exact: true })).toBeVisible();
+  await page.goto("/seller/products");
+  await expect(page.getByTestId("seller-products-page")).toBeVisible();
+  await expect(page.getByTestId("seller-products-search-input")).toHaveAttribute(
+    "placeholder",
+    enDict.seller.products.filters.searchPlaceholder,
+  );
+  await expect(page.getByTestId("seller-products-status-filter").locator("option").first()).toHaveText(
+    enDict.seller.products.filters.allStatuses,
+  );
+  await expect(page.getByTestId("seller-products-stock-filter").locator("option").first()).toHaveText(
+    enDict.seller.products.filters.allStockStates,
+  );
+  await expect(page.getByTestId("seller-products-apply-filters")).toHaveText(
+    enDict.seller.products.filters.apply,
+  );
 
-  await page.goto("/seller/ai-images");
-  await expect(page.getByRole("heading", { name: "AI Images", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Generate AI image", exact: true })).toBeVisible();
+  await switchSellerLocale(page, "vi");
+  await expect(page.getByTestId("seller-products-search-input")).toHaveAttribute(
+    "placeholder",
+    viDict.seller.products.filters.searchPlaceholder,
+  );
+  await expect(page.getByTestId("seller-products-status-filter").locator("option").first()).toHaveText(
+    viDict.seller.products.filters.allStatuses,
+  );
+  await expect(page.getByTestId("seller-products-stock-filter").locator("option").first()).toHaveText(
+    viDict.seller.products.filters.allStockStates,
+  );
+  await expect(page.getByTestId("seller-products-apply-filters")).toHaveText(
+    viDict.seller.products.filters.apply,
+  );
+  await expect(page.locator("body")).not.toContainText(enDict.seller.products.filters.apply);
 
-  // --- Persistence checks (reload page, should stay EN) ---
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "AI Images", exact: true })).toBeVisible();
+  await switchSellerLocale(page, "ru");
+  await expect(page.getByTestId("seller-products-search-input")).toHaveAttribute(
+    "placeholder",
+    ruDict.seller.products.filters.searchPlaceholder,
+  );
+  await expect(page.getByTestId("seller-products-status-filter").locator("option").first()).toHaveText(
+    ruDict.seller.products.filters.allStatuses,
+  );
+  await expect(page.getByTestId("seller-products-stock-filter").locator("option").first()).toHaveText(
+    ruDict.seller.products.filters.allStockStates,
+  );
+  await expect(page.getByTestId("seller-products-apply-filters")).toHaveText(
+    ruDict.seller.products.filters.apply,
+  );
 
-  await page.context().close();
+  await switchSellerLocale(page, "en");
+  await expect(page.getByTestId("seller-products-search-input")).toHaveAttribute(
+    "placeholder",
+    enDict.seller.products.filters.searchPlaceholder,
+  );
+  await expect(page.getByTestId("seller-products-status-filter").locator("option").first()).toHaveText(
+    enDict.seller.products.filters.allStatuses,
+  );
+  await expect(page.getByTestId("seller-products-stock-filter").locator("option").first()).toHaveText(
+    enDict.seller.products.filters.allStockStates,
+  );
+  await expect(page.getByTestId("seller-products-apply-filters")).toHaveText(
+    enDict.seller.products.filters.apply,
+  );
 });

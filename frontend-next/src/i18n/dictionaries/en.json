@@ -493,6 +493,11 @@
     "finance": "Finance",
     "onboarding": "Onboarding",
     "settings": "Settings",
+    "shopSwitcher": "Shop switcher",
+    "loadingShops": "Loading shops...",
+    "noShopsAvailable": "No shops available",
+    "chooseActiveShop": "Choose active shop",
+    "productsCount": "{{count}} products",
     "rejected": "Your seller account was rejected.",
     "pending": "Your seller account is awaiting approval.",
     "pendingDescription": "Your onboarding profile and verification documents were submitted. Admin review is still pending.",
@@ -963,6 +968,7 @@
       "price": "Price",
       "initialStock": "Initial stock",
       "description": "Description",
+      "catalog": "Catalog",
       "tabs": {
         "all": "All",
         "live": "Live",
@@ -1031,6 +1037,34 @@
         "price": "Price",
         "stock": "Stock"
       },
+      "filters": {
+        "searchPlaceholder": "Search by product name, WB ID, brand or vendor code...",
+        "allStatuses": "All statuses",
+        "allStockStates": "All stock states",
+        "apply": "Apply filters",
+        "statusOptions": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "draft": "Draft",
+          "archived": "Archived"
+        },
+        "stockOptions": {
+          "inStock": "In stock",
+          "lowStock": "Low stock",
+          "outOfStock": "Out of stock"
+        }
+      },
+      "form": {
+        "metadata": "Metadata",
+        "title": "Product editor",
+        "localTitle": "Local title",
+        "localDescription": "Local description",
+        "seoSlug": "SEO slug",
+        "visibility": "Visibility",
+        "saving": "Saving...",
+        "saveChanges": "Save changes",
+        "saveFailed": "Unable to save product."
+      },
       "results": {
         "showing": "Showing page {{page}} of {{totalPages}} | {{total}} total products",
         "noData": "No data loaded yet",
@@ -1046,6 +1080,7 @@
         "deleted": "Product deleted successfully.",
         "deleteFailed": "Unable to delete product.",
         "shopCreated": "Shop created successfully.",
+        "shopCreatedNamed": "{{name}} created.",
         "shopCreateFailed": "Unable to create shop.",
         "productCreated": "Product created successfully.",
         "productCreateFailed": "Unable to create product.",

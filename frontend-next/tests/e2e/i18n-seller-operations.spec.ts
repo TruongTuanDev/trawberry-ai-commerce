@@ -198,6 +198,4 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
   await expect(page.getByText("Out of stock").first()).toBeVisible();
   await page.reload();
   await expect(page.getByRole("link", { name: "Products" }).first()).toBeVisible();
-
-  await page.context().close();
 });

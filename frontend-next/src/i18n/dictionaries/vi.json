@@ -322,7 +322,12 @@
     "pendingDescription": "Hồ sơ onboarding và giấy tờ xác minh đã được gửi. Admin vẫn đang review.",
     "completeOnboarding": "Hoàn tất onboarding và tải giấy tờ xác minh để admin có thể review tài khoản.",
     "reviewStatus": "Xem trạng thái",
-    "openOnboarding": "Mở onboarding"
+    "openOnboarding": "Mở onboarding",
+    "shopSwitcher": "Chuyển shop",
+    "loadingShops": "Đang tải shop...",
+    "noShopsAvailable": "Chưa có shop nào",
+    "chooseActiveShop": "Chọn shop đang hoạt động",
+    "productsCount": "{{count}} sản phẩm"
   },
   "sellerOrders": {
     "fulfillment": "Fulfillment",
@@ -614,7 +619,37 @@
         "productCreated": "Đã tạo sản phẩm thành công.",
         "productCreateFailed": "Không thể tạo sản phẩm.",
         "bulkSaved": "Đã lưu cập nhật hàng loạt.",
-        "bulkFailed": "Cập nhật hàng loạt thất bại."
+        "bulkFailed": "Cập nhật hàng loạt thất bại.",
+        "shopCreatedNamed": "Đã tạo {{name}}."
+      },
+      "catalog": "Catalog",
+      "filters": {
+        "searchPlaceholder": "Tìm theo tên sản phẩm, WB ID, thương hiệu hoặc mã nhà bán...",
+        "allStatuses": "Tất cả trạng thái",
+        "allStockStates": "Tất cả tồn kho",
+        "apply": "Áp dụng bộ lọc",
+        "statusOptions": {
+          "active": "Đang hoạt động",
+          "inactive": "Tạm tắt",
+          "draft": "Nháp",
+          "archived": "Lưu trữ"
+        },
+        "stockOptions": {
+          "inStock": "Còn hàng",
+          "lowStock": "Sắp hết hàng",
+          "outOfStock": "Hết hàng"
+        }
+      },
+      "form": {
+        "metadata": "Thông tin",
+        "title": "Trình chỉnh sửa sản phẩm",
+        "localTitle": "Tiêu đề local",
+        "localDescription": "Mô tả local",
+        "seoSlug": "SEO slug",
+        "visibility": "Hiển thị",
+        "saving": "Đang lưu...",
+        "saveChanges": "Lưu thay đổi",
+        "saveFailed": "Không thể lưu sản phẩm."
       }
     },
     "productDetail": {
@@ -998,6 +1033,41 @@
       "rejectConfirm": "Bạn có chắc chắn muốn từ chối yêu cầu trả hàng hoặc hoàn tiền này?",
       "requestEvidence": "Yêu cầu bằng chứng",
       "escalateAdmin": "Chuyển lên admin"
+    },
+    "paymentSettings": {
+      "title": "Cài đặt thanh toán",
+      "subtitle": "Cấu hình SBP hoặc mã QR ngân hàng tĩnh mà khách sẽ thấy khi thanh toán cho shop này.",
+      "bankName": "Tên ngân hàng",
+      "recipientName": "Tên người nhận",
+      "recipientPhone": "Số điện thoại người nhận",
+      "sbpPhone": "Số điện thoại SBP",
+      "recipientAccount": "Tài khoản người nhận",
+      "status": "Trạng thái",
+      "pendingSetup": "Chưa cấu hình",
+      "paymentMethodStrategy": "Chiến lược phương thức thanh toán",
+      "allowPrepaidQr": "Cho phép thanh toán trước bằng QR",
+      "allowPayOnDeliverySellerQr": "Cho phép trả khi nhận bằng QR của seller",
+      "allowDepositPayment": "Cho phép thanh toán đặt cọc",
+      "depositPercent": "Phần trăm đặt cọc",
+      "depositRequiredAboveAmount": "Bắt buộc đặt cọc với đơn trên mức",
+      "codMaxAmount": "Giá trị tối đa cho thanh toán khi nhận",
+      "yandexCardOnDelivery": "Thẻ Yandex khi giao hàng",
+      "futureNotConfigured": "Tương lai / chưa cấu hình",
+      "providerPending": "Nhà cung cấp đang chờ duyệt",
+      "availableAfterVerification": "Khả dụng sau khi nhà cung cấp xác minh",
+      "cashCourierCollection": "Thu tiền mặt bởi shipper",
+      "availableBuyerMethods": "Phương thức khách đang dùng được: {{value}}",
+      "buyerInstruction": "Hướng dẫn thanh toán cho khách",
+      "staticQrImage": "Ảnh QR tĩnh",
+      "noQr": "Chưa tải QR lên.",
+      "uploadQr": "Tải QR lên",
+      "saveSettings": "Lưu cài đặt thanh toán",
+      "readyForCheckout": "Sẵn sàng checkout",
+      "notReadyForCheckout": "Chưa sẵn sàng checkout",
+      "settingsSaved": "Đã lưu cài đặt thanh toán.",
+      "qrUploaded": "Đã tải QR tĩnh lên.",
+      "saveFailed": "Không thể lưu cài đặt thanh toán.",
+      "uploadFailed": "Không thể tải QR thanh toán."
     }
   }
 }

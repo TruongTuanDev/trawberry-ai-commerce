@@ -497,7 +497,12 @@
     "pendingDescription": "Профиль онбординга и документы отправлены. Проверка администратором еще идет.",
     "completeOnboarding": "Завершите онбординг и загрузите документы, чтобы администратор мог проверить аккаунт.",
     "reviewStatus": "Статус проверки",
-    "openOnboarding": "Открыть онбординг"
+    "openOnboarding": "Открыть онбординг",
+    "shopSwitcher": "Переключение магазина",
+    "loadingShops": "Загрузка магазинов...",
+    "noShopsAvailable": "Магазины недоступны",
+    "chooseActiveShop": "Выберите активный магазин",
+    "productsCount": "{{count}} товаров"
   },
   "sellerOrders": {
     "fulfillment": "Фулфилмент",
@@ -1107,7 +1112,37 @@
         "productCreated": "Товар создан.",
         "productCreateFailed": "Не удалось создать товар.",
         "bulkSaved": "Массовое обновление сохранено.",
-        "bulkFailed": "Массовое обновление не удалось."
+        "bulkFailed": "Массовое обновление не удалось.",
+        "shopCreatedNamed": "{{name}} создан."
+      },
+      "catalog": "Каталог",
+      "filters": {
+        "searchPlaceholder": "Поиск по названию товара, WB ID, бренду или коду продавца...",
+        "allStatuses": "Все статусы",
+        "allStockStates": "Все состояния склада",
+        "apply": "Применить фильтры",
+        "statusOptions": {
+          "active": "Активен",
+          "inactive": "Неактивен",
+          "draft": "Черновик",
+          "archived": "Архив"
+        },
+        "stockOptions": {
+          "inStock": "В наличии",
+          "lowStock": "Мало на складе",
+          "outOfStock": "Нет в наличии"
+        }
+      },
+      "form": {
+        "metadata": "Метаданные",
+        "title": "Редактор товара",
+        "localTitle": "Локальное название",
+        "localDescription": "Локальное описание",
+        "seoSlug": "SEO slug",
+        "visibility": "Видимость",
+        "saving": "Сохранение...",
+        "saveChanges": "Сохранить изменения",
+        "saveFailed": "Не удалось сохранить товар."
       }
     },
     "productDetail": {

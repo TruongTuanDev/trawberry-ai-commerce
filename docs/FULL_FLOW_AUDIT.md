@@ -1,5 +1,20 @@
 # Full Commerce Flow Audit
 
+## Seller Payment Settings + Products i18n Addendum
+
+- seller payment settings now render role-based localized copy in `ru`, `en`, and `vi` on the active frontend runtime
+- seller product list filter toolbar is now a client-subscribed locale surface:
+  - search placeholder
+  - status filter
+  - stock-state filter
+  - apply-filters CTA
+- seller shop switcher helper text now follows seller locale state
+- seller product metadata form no longer exposes hard-coded English labels for local title/description, SEO slug, visibility, and save states
+- no seller business logic changed:
+  - product visibility/readiness rules remain unchanged
+  - product delete/update logic remains unchanged
+  - payment-settings save/upload behavior remains unchanged
+
 ## Customer Account i18n Cleanup Addendum
 
 - customer notifications route now uses customer-shell dictionary keys for the page frame instead of server-hard-coded Vietnamese text

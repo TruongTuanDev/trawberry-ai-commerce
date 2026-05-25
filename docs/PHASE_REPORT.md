@@ -1,5 +1,42 @@
 # Phase Report
 
+## 2026-05-25 Seller Payment Settings + Products i18n Polish
+
+- fixed seller payment settings live translation for `ru`, `en`, and `vi`
+- root cause:
+  - `vi.json` was missing `seller.paymentSettings`
+  - seller product filter controls were still hard-coded in the client component
+  - shop switcher chrome was still hard-coded
+  - Playwright initially hit an old frontend runtime until the container was rebuilt
+- migrated seller-only copy for:
+  - `/seller/payment-settings`
+  - `/seller/products` filter/search controls
+  - seller shop switcher helper copy
+  - seller product metadata form labels and save CTA
+- hardened seller E2E:
+  - `i18n-seller-remaining-screens.spec.ts` now asserts payment-settings and product-filter RU/VI/EN labels directly
+  - `seller-product-lifecycle.spec.ts` no longer depends on an English success sentence after shop creation
+  - `i18n-seller-operations.spec.ts` no longer closes the browser context manually, avoiding trace artifact flake
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/seller-product-lifecycle.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-payment-review.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+- runtime curls for `/seller/payment-settings` and `/seller/products`: pass
+
+Remaining gaps:
+
+- seller order detail, delivery/Yandex detail, and several onboarding/import screens still contain legacy mixed-language copy outside this focused polish
+- seller dictionaries still have broader in-progress hunks from parallel seller phases and must be staged carefully per phase
+
 ## 2026-05-25 Customer Account i18n Final Audit & Cleanup
 
 - removed remaining mixed-language customer account copy that was still visible in runtime after the original customer i18n commit

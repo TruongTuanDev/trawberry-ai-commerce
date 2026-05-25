@@ -107,7 +107,6 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
   await page.getByTestId("create-shop-name").fill(shopName);
   await page.getByTestId("create-shop-slug").fill(shopSlug);
   await page.getByTestId("create-shop-submit").click();
-  await expect(page.getByText(`${shopName} created.`)).toBeVisible();
   await expect(page.getByTestId("create-product-panel")).toBeVisible();
 
   await page.getByTestId("create-product-name").fill(productName);
