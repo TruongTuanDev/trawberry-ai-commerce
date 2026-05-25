@@ -21,6 +21,7 @@ import {
   labelForReturnStatus,
   labelForReturnType,
 } from "@/components/returns/return-refund-utils";
+import { useI18n } from "@/i18n/use-i18n";
 
 const sellerActions = [
   { value: "ACCEPT", label: "Accept" },
@@ -34,6 +35,7 @@ export function SellerReturnsPageClient({
 }: {
   caseId?: string | null;
 }) {
+  const { t } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
@@ -96,7 +98,7 @@ export function SellerReturnsPageClient({
         setError(null);
       } catch (issue) {
         if (active) {
-          setError(issue instanceof Error ? issue.message : "Unable to load return / refund cases.");
+          setError(issue instanceof Error ? issue.message : t("seller.returns.loadFailed"));
         }
       } finally {
         if (active) {
@@ -104,10 +106,11 @@ export function SellerReturnsPageClient({
         }
       }
     })();
+
     return () => {
       active = false;
     };
-  }, [caseId, filterStatus, hydrated, loadShops]);
+  }, [caseId, filterStatus, hydrated, loadShops, t]);
 
   useEffect(() => {
     if (!currentShopId || !selectedId) {
@@ -123,13 +126,13 @@ export function SellerReturnsPageClient({
       })
       .catch((issue) => {
         if (active) {
-          setError(issue instanceof Error ? issue.message : "Unable to load the selected case.");
+          setError(issue instanceof Error ? issue.message : t("seller.returns.selectedLoadFailed"));
         }
       });
     return () => {
       active = false;
     };
-  }, [currentShopId, selectedId]);
+  }, [currentShopId, selectedId, t]);
 
   const visibleCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -143,7 +146,7 @@ export function SellerReturnsPageClient({
     if (!currentShopId || !selected) return;
 
     if (action === "REJECT") {
-      const confirmed = window.confirm("Từ chối yêu cầu trả hàng/hoàn tiền này?");
+      const confirmed = window.confirm(t("seller.returns.rejectConfirm"));
       if (!confirmed) return;
     }
 
@@ -163,11 +166,11 @@ export function SellerReturnsPageClient({
         setSelected(updated);
         await refreshList(updated.id);
         setSellerComment("");
-        setMessage("Seller response saved.");
+        setMessage(t("seller.returns.responseSaved"));
         return updated;
       },
-      successMessage: "Phản hồi yêu cầu trả hàng/hoàn tiền thành công!",
-      errorMessage: "Không thể gửi phản hồi.",
+      successMessage: t("seller.returns.responseSaved"),
+      errorMessage: t("seller.returns.responseFailed"),
     }).catch((issue) => {
       setError(issue.message);
     });
@@ -183,11 +186,11 @@ export function SellerReturnsPageClient({
         setSelected(updated);
         await refreshList(updated.id);
         setReply("");
-        setMessage("Reply sent.");
+        setMessage(t("seller.returns.replySent"));
         return updated;
       },
-      successMessage: "Gửi tin nhắn phản hồi thành công!",
-      errorMessage: "Không thể gửi tin nhắn.",
+      successMessage: t("seller.returns.replySent"),
+      errorMessage: t("seller.returns.replyFailed"),
     }).catch((issue) => {
       setError(issue.message);
     });
@@ -202,11 +205,11 @@ export function SellerReturnsPageClient({
         const updated = await markShopReturnReceived(currentShopId, selected.id, "");
         setSelected(updated);
         await refreshList(updated.id);
-        setMessage("Return marked received.");
+        setMessage(t("seller.returns.returnReceived"));
         return updated;
       },
-      successMessage: "Đã đánh dấu nhận hàng trả lại thành công!",
-      errorMessage: "Không thể cập nhật trạng thái nhận hàng.",
+      successMessage: t("seller.returns.returnReceived"),
+      errorMessage: t("seller.returns.returnReceivedFailed"),
     }).catch((issue) => {
       setError(issue.message);
     });
@@ -235,11 +238,11 @@ export function SellerReturnsPageClient({
         setRefundProofFile(null);
         setRefundNote("");
         setBankReference("");
-        setMessage("Refund marked sent.");
+        setMessage(t("seller.returns.refundSent"));
         return updated;
       },
-      successMessage: "Xác nhận chuyển khoản hoàn tiền thành công!",
-      errorMessage: "Không thể xác nhận hoàn tiền.",
+      successMessage: t("seller.returns.refundSent"),
+      errorMessage: t("seller.returns.refundSentFailed"),
     }).catch((issue) => {
       setError(issue.message);
     });
@@ -248,21 +251,21 @@ export function SellerReturnsPageClient({
   return (
     <div className="space-y-6" data-testid="seller-returns-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Seller returns</p>
-        <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">Return / refund cases</h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Manual refund cases linked to the active shop. The seller returns money directly to the buyer outside the platform, then records proof here.</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">{t("seller.returns.sellerReturns")}</p>
+        <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">{t("seller.returns.title")}</h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t("seller.returns.subtitle")}</p>
         <div className="mt-5 flex flex-wrap gap-3">
           <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
-            <option value="ALL">All statuses</option>
-            <option value="WAITING_SELLER_RESPONSE">Waiting seller response</option>
-            <option value="WAITING_BUYER_EVIDENCE">Waiting buyer evidence</option>
-            <option value="ADMIN_REVIEW">Admin review</option>
-            <option value="REFUND_PENDING">Refund pending</option>
-            <option value="REFUND_MARKED_SENT">Refund marked sent</option>
-            <option value="REFUND_CONFIRMED">Refund confirmed</option>
+            <option value="ALL">{t("seller.returns.allStatuses")}</option>
+            <option value="WAITING_SELLER_RESPONSE">{labelForReturnStatus("WAITING_SELLER_RESPONSE")}</option>
+            <option value="WAITING_BUYER_EVIDENCE">{labelForReturnStatus("WAITING_BUYER_EVIDENCE")}</option>
+            <option value="ADMIN_REVIEW">{labelForReturnStatus("ADMIN_REVIEW")}</option>
+            <option value="REFUND_PENDING">{labelForReturnStatus("REFUND_PENDING")}</option>
+            <option value="REFUND_MARKED_SENT">{labelForReturnStatus("REFUND_MARKED_SENT")}</option>
+            <option value="REFUND_CONFIRMED">{labelForReturnStatus("REFUND_CONFIRMED")}</option>
           </select>
           <div className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]">
-            Active shop filters live. Current list: {items.length} case(s)
+            {t("seller.returns.statusSummary", { count: items.length })}
           </div>
         </div>
       </section>
@@ -273,18 +276,22 @@ export function SellerReturnsPageClient({
       <section className="grid gap-6 xl:grid-cols-[400px_minmax(0,1fr)]">
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white">
           <div className="border-b border-[var(--border)] px-5 py-4 text-sm text-[var(--muted)]">
-            Status counts: waiting seller {visibleCounts.get("WAITING_SELLER_RESPONSE") ?? 0}, admin review {visibleCounts.get("ADMIN_REVIEW") ?? 0}, refund pending {visibleCounts.get("REFUND_PENDING") ?? 0}
+            {t("seller.returns.counts", {
+              waitingSeller: visibleCounts.get("WAITING_SELLER_RESPONSE") ?? 0,
+              adminReview: visibleCounts.get("ADMIN_REVIEW") ?? 0,
+              refundPending: visibleCounts.get("REFUND_PENDING") ?? 0,
+            })}
           </div>
           <div className="divide-y divide-[var(--border)]" data-testid="seller-returns-list">
-            {loading ? <p className="px-5 py-5 text-sm text-[var(--muted)]">Loading return cases...</p> : null}
-            {!loading && !items.length ? <p className="px-5 py-5 text-sm text-[var(--muted)]">No return or refund cases for this filter.</p> : null}
+            {loading ? <p className="px-5 py-5 text-sm text-[var(--muted)]">{t("seller.returns.loading")}</p> : null}
+            {!loading && !items.length ? <p className="px-5 py-5 text-sm text-[var(--muted)]">{t("seller.returns.empty")}</p> : null}
             {items.map((item) => (
               <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`w-full px-5 py-4 text-left ${selectedId === item.id ? "bg-[var(--panel)]" : "bg-white"}`} data-testid="seller-return-row">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold text-[var(--foreground)]">{item.order.orderCode}</p>
                   <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{labelForReturnStatus(item.status)}</span>
                 </div>
-                <p className="mt-2 text-sm text-[var(--muted)]">{item.customer.name ?? "Customer"} - {labelForReturnReason(item.reason)}</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">{item.customer.name ?? t("seller.returns.customerFallback")} - {labelForReturnReason(item.reason)}</p>
                 <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{formatRub(item.requestedAmount)}</p>
               </button>
             ))}
@@ -293,39 +300,39 @@ export function SellerReturnsPageClient({
 
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
           {!selected ? (
-            <p className="text-sm text-[var(--muted)]">Select a return or refund case.</p>
+            <p className="text-sm text-[var(--muted)]">{t("seller.returns.selectCase")}</p>
           ) : (
             <div className="space-y-5" data-testid="seller-return-detail">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{labelForReturnType(selected.type)}</p>
                   <h3 className="mt-2 text-2xl font-bold text-[var(--foreground)]">{selected.order.orderCode}</h3>
-                  <p className="mt-2 text-sm text-[var(--muted)]">{selected.customer.name ?? "Customer"} - {selected.shop.name}</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">{selected.customer.name ?? t("seller.returns.customerFallback")} - {selected.shop.name}</p>
                 </div>
                 <div className="text-right">
                   <span className="rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">{labelForReturnStatus(selected.status)}</span>
-                  <p className="mt-2 text-sm text-[var(--muted)]">Requested {formatRub(selected.requestedAmount)}</p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.returns.requested")} {formatRub(selected.requestedAmount)}</p>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <Metric label="Requested" value={formatRub(selected.requestedAmount)} />
-                <Metric label="Approved" value={formatRub(selected.approvedAmount ?? "0")} />
-                <Metric label="Order total" value={formatRub(selected.order.totalAmount)} />
-                <Metric label="Fee adjustment" value={formatRub(selected.platformFeeAdjustmentAmount)} />
+                <Metric label={t("seller.returns.requested")} value={formatRub(selected.requestedAmount)} />
+                <Metric label={t("seller.returns.approved")} value={formatRub(selected.approvedAmount ?? "0")} />
+                <Metric label={t("seller.returns.orderTotal")} value={formatRub(selected.order.totalAmount)} />
+                <Metric label={t("seller.returns.feeAdjustment")} value={formatRub(selected.platformFeeAdjustmentAmount)} />
               </div>
 
               <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-                <p className="text-sm font-semibold text-[var(--foreground)]">Order context</p>
-                <p className="mt-2 text-sm text-[var(--muted)]">Payment status: {selected.order.paymentStatus}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Payment method: {selected.order.paymentMethod ?? "Unknown"}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Buyer comment: {selected.buyerComment}</p>
+                <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.returns.orderContext")}</p>
+                <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.returns.paymentStatus", { value: selected.order.paymentStatus })}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{t("seller.returns.paymentMethod", { value: selected.order.paymentMethod ?? t("common.unknown") })}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{t("seller.returns.buyerComment", { value: selected.buyerComment })}</p>
                 {selected.finance.latestAdjustmentId ? (
-                  <p className="mt-1 text-sm text-[var(--muted)]">Fee adjustment created: {selected.finance.latestAdjustmentId}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{t("seller.returns.feeAdjustmentCreated", { value: selected.finance.latestAdjustmentId })}</p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-3">
                   <Link href={`/seller/orders/${selected.order.id}`} className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">
-                    Open order detail
+                    {t("seller.returns.openOrderDetail")}
                   </Link>
                 </div>
               </div>
@@ -333,11 +340,11 @@ export function SellerReturnsPageClient({
               {!isReturnCaseClosed(selected.status) ? (
                 <div className="grid gap-4 xl:grid-cols-2">
                   <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">Seller decision</p>
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.returns.sellerDecision")}</p>
                     <select value={action} onChange={(event) => setAction(event.target.value as (typeof sellerActions)[number]["value"])} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="seller-return-action-select">
                       {sellerActions.map((option) => (
                         <option key={option.value} value={option.value}>
-                          {option.label}
+                          {option.value === "ACCEPT" ? t("common.actions.accept") : option.value === "REJECT" ? t("common.actions.reject") : option.value === "REQUEST_EVIDENCE" ? t("seller.returns.requestEvidence") : t("seller.returns.escalateAdmin")}
                         </option>
                       ))}
                     </select>
@@ -349,14 +356,14 @@ export function SellerReturnsPageClient({
                       className="mt-3"
                       data-testid="seller-return-respond"
                     >
-                      Save response
+                      {t("seller.returns.saveResponse")}
                     </Button>
                   </div>
 
                   <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">Refund transfer</p>
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.returns.refundTransfer")}</p>
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <input value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Amount" data-testid="seller-refund-amount" />
+                      <input value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder={t("seller.returns.amount")} data-testid="seller-refund-amount" />
                       <select value={refundMethod} onChange={(event) => setRefundMethod(event.target.value as "SBP" | "BANK_TRANSFER" | "CASH" | "OTHER")} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
                         <option value="SBP">SBP</option>
                         <option value="BANK_TRANSFER">Bank transfer</option>
@@ -364,8 +371,8 @@ export function SellerReturnsPageClient({
                         <option value="OTHER">Other</option>
                       </select>
                     </div>
-                    <input value={bankReference} onChange={(event) => setBankReference(event.target.value)} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Bank reference" />
-                    <textarea value={refundNote} onChange={(event) => setRefundNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Refund note" />
+                    <input value={bankReference} onChange={(event) => setBankReference(event.target.value)} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder={t("seller.returns.bankReference")} />
+                    <textarea value={refundNote} onChange={(event) => setRefundNote(event.target.value)} rows={3} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder={t("seller.returns.refundNote")} />
                     <input type="file" accept="image/*,.pdf" onChange={(event) => setRefundProofFile(event.target.files?.[0] ?? null)} className="mt-3 block w-full text-sm" data-testid="seller-refund-proof-file" />
                     <div className="mt-3 flex flex-wrap gap-3">
                       <Button
@@ -374,7 +381,7 @@ export function SellerReturnsPageClient({
                         disabled={saving}
                         loading={saving}
                       >
-                        Mark return received
+                        {t("seller.returns.markReturnReceived")}
                       </Button>
                       <Button
                         variant="success"
@@ -383,7 +390,7 @@ export function SellerReturnsPageClient({
                         loading={saving}
                         data-testid="seller-refund-mark-sent"
                       >
-                        Mark refund sent
+                        {t("seller.returns.markRefundSent")}
                       </Button>
                     </div>
                   </div>
@@ -392,7 +399,7 @@ export function SellerReturnsPageClient({
 
               <div className="grid gap-6 xl:grid-cols-2">
                 <div className="space-y-3" data-testid="seller-return-thread">
-                  <h4 className="text-lg font-bold text-[var(--foreground)]">Messages</h4>
+                  <h4 className="text-lg font-bold text-[var(--foreground)]">{t("seller.returns.messages")}</h4>
                   {selected.messages.map((entry) => (
                     <article key={entry.id} className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
@@ -412,28 +419,28 @@ export function SellerReturnsPageClient({
                         loading={saving}
                         className="mt-3"
                       >
-                        Send reply
+                        {t("seller.returns.sendReply")}
                       </Button>
                     </div>
                   ) : null}
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="text-lg font-bold text-[var(--foreground)]">Evidence and manual transfer</h4>
+                  <h4 className="text-lg font-bold text-[var(--foreground)]">{t("seller.returns.evidenceTitle")}</h4>
                   {selected.evidence.map((entry) => (
                     <a key={entry.id} href={entry.fileUrl} target="_blank" rel="noreferrer" className="block rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--foreground)]">
                       {entry.label || entry.originalName || entry.fileType}
                     </a>
                   ))}
-                  {!selected.evidence.length ? <p className="text-sm text-[var(--muted)]">No buyer evidence uploaded yet.</p> : null}
+                  {!selected.evidence.length ? <p className="text-sm text-[var(--muted)]">{t("seller.returns.noEvidence")}</p> : null}
                   {selected.manualTransfers.map((entry) => (
                     <article key={entry.id} className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-3">
                       <p className="text-sm font-semibold text-[var(--foreground)]">{entry.method} - {formatRub(entry.amount)}</p>
                       <p className="mt-1 text-sm text-[var(--muted)]">{entry.status}</p>
-                      {entry.bankReference ? <p className="mt-1 text-sm text-[var(--muted)]">Reference: {entry.bankReference}</p> : null}
+                      {entry.bankReference ? <p className="mt-1 text-sm text-[var(--muted)]">{t("seller.returns.reference", { value: entry.bankReference })}</p> : null}
                       {entry.proofImageUrl ? (
                         <a href={entry.proofImageUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">
-                          Open proof
+                          {t("seller.returns.openProof")}
                         </a>
                       ) : null}
                     </article>

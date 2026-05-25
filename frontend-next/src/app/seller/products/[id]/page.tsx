@@ -21,8 +21,10 @@ import {
   type UpdateProductPayload,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useI18n } from "@/i18n/use-i18n";
 
 export default function SellerProductDetailPage() {
+  const { t } = useI18n("seller");
   const params = useParams<{ id: string }>();
   const productId = params.id;
   const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
@@ -85,7 +87,7 @@ export default function SellerProductDetailPage() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load product.");
+          setError(err instanceof Error ? err.message : t("seller.productDetail.errorDescription"));
         }
       } finally {
         if (mounted) {
@@ -99,7 +101,7 @@ export default function SellerProductDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, hydrated, productId, selectShop]);
+  }, [currentShopId, hydrated, productId, selectShop, t]);
 
   const handleSave = async (payload: UpdateProductPayload) => {
     if (!currentShopId || !product) {
@@ -113,7 +115,7 @@ export default function SellerProductDetailPage() {
       setReadiness(await getShopProductReadiness(currentShopId, product.id));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update product.");
+      setError(err instanceof Error ? err.message : t("seller.products.messages.updateFailed"));
       throw err;
     } finally {
       setSaving(false);
@@ -157,7 +159,7 @@ export default function SellerProductDetailPage() {
       setReadiness(await getShopProductReadiness(currentShopId, product.id));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update variant.");
+      setError(err instanceof Error ? err.message : t("seller.products.messages.updateFailed"));
       throw err;
     } finally {
       setVariantSavingId(null);
@@ -166,17 +168,17 @@ export default function SellerProductDetailPage() {
 
   if (loading) {
     return (
-      <SectionCard eyebrow="Product detail" title="Loading product" description="Fetching seller product details from NestJS.">
-        <p className="text-sm text-[var(--muted)]">Loading...</p>
+      <SectionCard eyebrow={t("seller.productDetail.loadingTitle")} title={t("seller.productDetail.loadingTitle")} description={t("seller.productDetail.loadingDescription")}>
+        <p className="text-sm text-[var(--muted)]">{t("seller.results.loading")}</p>
       </SectionCard>
     );
   }
 
   if (error || !product) {
     return (
-      <SectionCard eyebrow="Product detail" title="Unable to load product" description="The product could not be loaded from the current seller shop.">
+      <SectionCard eyebrow={t("seller.productDetail.errorTitle")} title={t("seller.productDetail.errorTitle")} description={t("seller.productDetail.errorDescription")}>
         <p className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
-          {error ?? "Product not found."}
+          {error ?? t("seller.productDetail.notFound")}
         </p>
       </SectionCard>
     );
@@ -189,43 +191,55 @@ export default function SellerProductDetailPage() {
           href="/seller/products"
           className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)]"
         >
-          Back to products
+          {t("seller.productDetail.backToProducts")}
         </Link>
         <Link
           href={`/seller/products/${product.id}/images`}
           className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
         >
-          Manage images
+          {t("seller.productDetail.manageImages")}
         </Link>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
           <SectionCard
-            eyebrow="Catalog"
-            title="Trạng thái hiển thị"
-            description="Sản phẩm tự động hiển thị trên sàn công khai khi cấu hình đầy đủ thông tin (giá, tồn kho, ảnh, danh mục, biến thể) và shop đang hoạt động."
+            eyebrow={t("seller.products.catalog")}
+            title={t("seller.productDetail.visibilityTitle")}
+            description={t("seller.productDetail.visibilityDescription")}
           >
             <div className="grid gap-4 md:grid-cols-[180px_1fr]">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Catalog status</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("seller.productDetail.catalogStatus")}</p>
                 <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{product.catalogStatus}</p>
-                <p className="mt-2 text-xs text-[var(--muted)]">Source: {product.source}</p>
+                <p className="mt-2 text-xs text-[var(--muted)]">{t("seller.products.table.source")}: {product.source}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Hiển thị công khai</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("seller.productDetail.publicVisibility")}</p>
                 <p className={`mt-2 text-lg font-semibold ${readiness?.ready ? "text-emerald-700" : "text-amber-700"}`}>
-                  {readiness?.ready ? "Đang bán" : "Cần bổ sung"}
+                  {readiness?.ready ? t("seller.productDetail.ready") : t("seller.productDetail.needsInfo")}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(readiness?.blockingReasons ?? []).map((reason) => (
-                    <span key={reason} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                      {reason.replaceAll("_", " ")}
-                    </span>
-                  ))}
+                  {(readiness?.blockingReasons ?? []).map((reason) => {
+                    const keyMap: Record<string, string> = {
+                      MISSING_PRICE: "missingPrice",
+                      MISSING_STOCK: "missingStock",
+                      MISSING_CATEGORY: "missingCategory",
+                      MISSING_IMAGE: "missingImage",
+                      NO_ACTIVE_VARIANT: "missingVariant"
+                    };
+                    const key = keyMap[reason] || reason.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+                    const translated = t(`seller.products.statusBadges.${key}`);
+                    const display = translated.includes("statusBadges") ? reason.replaceAll("_", " ") : translated;
+                    return (
+                      <span key={reason} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                        {display}
+                      </span>
+                    );
+                  })}
                   {readiness && readiness.blockingReasons.length < 1 ? (
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      SẴN SÀNG
+                      {t("seller.productDetail.readyLabel")}
                     </span>
                   ) : null}
                 </div>
@@ -234,20 +248,20 @@ export default function SellerProductDetailPage() {
           </SectionCard>
           <ProductForm product={product} saving={saving} onSubmit={handleSave} />
           <SectionCard
-            eyebrow="Variants"
-            title="Variant overview"
-            description="Inventory is managed per variant in this MVP. Stock updates are absolute values and checkout deducts inventory immediately."
+            eyebrow={t("seller.products.variantMode")}
+            title={t("seller.productDetail.variantOverview")}
+            description={t("seller.productDetail.variantOverviewDescription")}
           >
             <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
               <div className="hidden grid-cols-[90px_90px_130px_110px_130px_110px_150px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] md:grid">
-                <div>Tech size</div>
-                <div>WB size</div>
-                <div>Base price</div>
-                <div>Discount</div>
-                <div>Final price</div>
-                <div>Stock</div>
-                <div>Status</div>
-                <div>Action</div>
+                <div>{t("seller.productDetail.techSize")}</div>
+                <div>{t("seller.productDetail.wbSize")}</div>
+                <div>{t("seller.productDetail.basePrice")}</div>
+                <div>{t("seller.productDetail.discount")}</div>
+                <div>{t("seller.productDetail.finalPrice")}</div>
+                <div>{t("seller.productDetail.stock")}</div>
+                <div>{t("seller.productDetail.status")}</div>
+                <div>{t("seller.productDetail.action")}</div>
               </div>
               <div className="divide-y divide-[var(--border)]">
                 {(inventory?.variants ?? product.variants.map((variant) => ({
@@ -278,10 +292,10 @@ export default function SellerProductDetailPage() {
             </div>
             {inventory ? (
               <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                <InventoryMetric label="Total stock" value={String(inventory.totalStockQuantity)} />
-                <InventoryMetric label="Reserved" value={String(inventory.totalReservedStock)} />
+                <InventoryMetric label={t("seller.productDetail.totalStock")} value={String(inventory.totalStockQuantity)} />
+                <InventoryMetric label={t("seller.productDetail.reserved")} value={String(inventory.totalReservedStock)} />
                 <InventoryMetric
-                  label="Available"
+                  label={t("seller.productDetail.available")}
                   value={inventory.inStock ? String(inventory.totalAvailableQuantity) : "0"}
                   tone={inventory.stockStatus === "OUT_OF_STOCK" || inventory.stockStatus === "LOW_STOCK" ? "warn" : "ok"}
                 />
@@ -293,15 +307,15 @@ export default function SellerProductDetailPage() {
         <div className="space-y-6">
           <SectionCard
             eyebrow="Wildberries"
-            title="Source identity"
-            description="Reference data from the synced product record remains visible next to editable local fields."
+            title={t("seller.productDetail.sourceIdentity")}
+            description={t("seller.productDetail.sourceIdentityDescription")}
           >
             <div className="space-y-3 text-sm text-[var(--muted)]">
-              <p><span className="font-semibold text-[var(--foreground)]">Brand:</span> {product.brand ?? "Unknown"}</p>
-              <p><span className="font-semibold text-[var(--foreground)]">Category:</span> {product.category?.name ?? product.categoryName ?? "Unknown"}</p>
+              <p><span className="font-semibold text-[var(--foreground)]">{t("seller.products.brand")}:</span> {product.brand ?? t("common.unknown")}</p>
+              <p><span className="font-semibold text-[var(--foreground)]">{t("seller.products.category")}:</span> {product.category?.name ?? product.categoryName ?? t("common.unknown")}</p>
               <p><span className="font-semibold text-[var(--foreground)]">WB ID:</span> {product.wbNmId}</p>
-              <p><span className="font-semibold text-[var(--foreground)]">Vendor code:</span> {product.wbVendorCode ?? "N/A"}</p>
-              <p><span className="font-semibold text-[var(--foreground)]">Original title:</span> {product.wbTitle}</p>
+              <p><span className="font-semibold text-[var(--foreground)]">{t("seller.productDetail.vendorCode")}:</span> {product.wbVendorCode ?? "N/A"}</p>
+              <p><span className="font-semibold text-[var(--foreground)]">{t("seller.productDetail.originalTitle")}:</span> {product.wbTitle}</p>
             </div>
           </SectionCard>
           <ProductImageGallery productId={product.id} images={product.images} />
@@ -340,6 +354,7 @@ function InventoryRow({
     stockQuantity: number,
   ) => Promise<void>;
 }) {
+  const { t } = useI18n("seller");
   const [value, setValue] = useState(String(variant.stockQuantity));
   const [priceValue, setPriceValue] = useState(variant.basePrice ?? "0");
   const [rowError, setRowError] = useState<string | null>(null);
@@ -365,15 +380,15 @@ function InventoryRow({
 
   const handleSaveClick = async () => {
     if (priceValue.trim() === "") {
-      setRowError("Base price is required.");
+      setRowError(t("seller.productDetail.priceRequired"));
       return;
     }
     if (discountValue.trim() === "") {
-      setRowError("Discount percentage is required.");
+      setRowError(t("seller.productDetail.discountRequired"));
       return;
     }
     if (value.trim() === "") {
-      setRowError("Stock quantity is required.");
+      setRowError(t("seller.productDetail.stockRequired"));
       return;
     }
 
@@ -428,9 +443,9 @@ function InventoryRow({
         />
       </div>
       <div className={variant.stockStatus === "OUT_OF_STOCK" ? "text-sm font-semibold text-rose-700" : variant.stockStatus === "LOW_STOCK" ? "text-sm font-semibold text-amber-700" : "text-sm text-emerald-700"}>
-        {variant.trackInventory ? `${variant.availableQuantity} available` : "Not tracked"}
+        {variant.trackInventory ? t("seller.productDetail.availableCount", { value: variant.availableQuantity }) : t("seller.productDetail.notTracked")}
         <div className="text-xs text-[var(--muted)]">
-          {variant.trackInventory ? `${variant.reservedStock} reserved - threshold ${variant.lowStockThreshold}` : "Inventory tracking disabled"}
+          {variant.trackInventory ? t("seller.productDetail.reservedLabel", { value: variant.reservedStock, threshold: variant.lowStockThreshold }) : t("seller.productDetail.notTrackedLabel")}
         </div>
       </div>
       <div className="flex flex-col items-start gap-2">
@@ -441,7 +456,7 @@ function InventoryRow({
           className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="product-variant-save"
         >
-          {saving ? "Saving..." : "Save variant"}
+          {saving ? t("seller.productDetail.saving") : t("seller.productDetail.saveVariant")}
         </button>
         {rowError ? <p className="text-xs font-medium text-rose-700">{rowError}</p> : null}
       </div>

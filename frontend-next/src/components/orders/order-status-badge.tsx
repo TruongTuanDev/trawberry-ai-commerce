@@ -17,9 +17,23 @@ const toneByStatus: Record<string, string> = {
   ARCHIVED: "bg-slate-100 text-slate-700",
 };
 
-export function OrderStatusBadge({ status }: { status: string }) {
-  const { cookieLocale, roleLocales } = useLocaleStore();
-  const locale = cookieLocale ?? roleLocales.seller ?? "ru";
+export function OrderStatusBadge({ status, role }: { status: string; role?: string }) {
+  const { roleLocales, cookieLocale } = useLocaleStore();
+
+  let locale = cookieLocale;
+  if (role === "seller") {
+    locale = roleLocales.seller;
+  } else if (role === "admin") {
+    locale = roleLocales.admin;
+  } else if (role === "customer") {
+    locale = roleLocales.customer;
+  } else if (typeof window !== "undefined" && window.location.pathname.startsWith("/seller")) {
+    locale = roleLocales.seller;
+  } else if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+    locale = roleLocales.admin;
+  }
+
+  locale = locale ?? "ru";
 
   return (
     <span

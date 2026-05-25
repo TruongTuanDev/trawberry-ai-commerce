@@ -116,11 +116,13 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
     URGENT: t("notifications.urgent"),
   };
 
+  const isSeller = role === "seller";
+
   const typeLabels: Record<string, string> = {
     ORDER_NEW: t("notifications.order"),
     PAYMENT_CONFIRMATION_REQUIRED: t("notifications.payment"),
     DELIVERY_STATUS_CHANGED: t("notifications.delivery"),
-    YANDEX_CREATION_REMINDER: "Yandex",
+    YANDEX_CREATION_REMINDER: isSeller ? t("notifications.delivery") : "Yandex",
     RETURN_CASE_OPENED: t("notifications.return"),
     RETURN_SELLER_RESPONSE_REQUIRED: t("notifications.return"),
     RETURN_ADMIN_REVIEW_REQUIRED: t("notifications.dispute"),
@@ -173,17 +175,17 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
             ) : null}
             {notification.shopId ? (
               <span className="inline-flex items-center rounded bg-blue-50 px-2 py-0.5 text-3xs font-semibold text-blue-600 dark:bg-blue-950/20 dark:text-blue-400">
-                Shop ID: #{notification.shopId.slice(0, 8)}
+                {isSeller ? `${t("notifications.shopId")}: ` : "Shop ID: "}#{notification.shopId.slice(0, 8)}
               </span>
             ) : null}
             {notification.returnRefundCaseId ? (
               <span className="inline-flex items-center rounded bg-amber-50 px-2 py-0.5 text-3xs font-semibold text-amber-600 dark:bg-amber-950/20 dark:text-amber-400">
-                {t("notifications.dispute")}: #{notification.returnRefundCaseId.slice(0, 8)}
+                {isSeller ? `${t("notifications.dispute")}: ` : "Dispute: "}#{notification.returnRefundCaseId.slice(0, 8)}
               </span>
             ) : null}
             {notification.invoiceId ? (
               <span className="inline-flex items-center rounded bg-emerald-50 px-2 py-0.5 text-3xs font-semibold text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
-                Invoice: #{notification.invoiceId.slice(0, 8)}
+                {isSeller ? `${t("notifications.invoice")}: ` : "Invoice: "}#{notification.invoiceId.slice(0, 8)}
               </span>
             ) : null}
             {actionLabel ? (

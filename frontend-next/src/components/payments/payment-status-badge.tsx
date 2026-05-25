@@ -16,12 +16,28 @@ const toneByPaymentStatus: Record<string, string> = {
 export function PaymentStatusBadge({
   status,
   testId,
+  role,
 }: {
   status: string;
   testId?: string;
+  role?: string;
 }) {
-  const { cookieLocale, roleLocales } = useLocaleStore();
-  const locale = cookieLocale ?? roleLocales.seller ?? "ru";
+  const { roleLocales, cookieLocale } = useLocaleStore();
+
+  let locale = cookieLocale;
+  if (role === "seller") {
+    locale = roleLocales.seller;
+  } else if (role === "admin") {
+    locale = roleLocales.admin;
+  } else if (role === "customer") {
+    locale = roleLocales.customer;
+  } else if (typeof window !== "undefined" && window.location.pathname.startsWith("/seller")) {
+    locale = roleLocales.seller;
+  } else if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+    locale = roleLocales.admin;
+  }
+
+  locale = locale ?? "ru";
 
   return (
     <span

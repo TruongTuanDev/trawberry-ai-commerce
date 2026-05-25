@@ -1,4 +1,10 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext } from "@playwright/test";
+
+const ruDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/ru.json"), "utf-8")
+);
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
@@ -117,9 +123,11 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
 
   await page.getByTestId("product-stock-input").first().fill("9");
   await page.getByTestId("product-variant-save").first().click();
-  await expect(page.getByText("9 available")).toBeVisible();
+  const availableText = ruDict.seller.productDetail.availableCount.replace("{{value}}", "9");
+  await expect(page.getByText(availableText)).toBeVisible();
 
-  await page.getByRole("link", { name: "Manage images" }).click();
+  const manageImagesText = ruDict.seller.productDetail.manageImages;
+  await page.getByRole("link", { name: manageImagesText }).click();
   await expect(page.getByTestId("seller-product-images-page")).toBeVisible();
   await page.getByTestId("product-image-input").setInputFiles({
     name: "product-image.png",
@@ -130,7 +138,8 @@ test("seller creates shop, product, image, stock, public checkout, and sees orde
     ),
   });
   await page.getByTestId("product-image-upload").click();
-  await expect(page.getByText("Uploaded 1 image.")).toBeVisible();
+  const uploadedText = ruDict.seller.productDetail.imagesUploaded.replace("{{count}}", "1");
+  await expect(page.getByText(uploadedText)).toBeVisible();
   await expect(page.getByTestId("product-image-card")).toHaveCount(1);
   await page.goto(new URL(page.url()).pathname.replace(/\/images$/, ""));
 

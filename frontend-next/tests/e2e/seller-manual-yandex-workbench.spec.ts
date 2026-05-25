@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -191,7 +193,7 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await expect(
     page.getByRole("heading", { name: "Yandex Delivery Handoff" }),
   ).toBeVisible();
-  await expect(page.getByTestId("seller-order-status")).toContainText("READY_TO_CREATE_YANDEX");
+  await expect(page.getByTestId("seller-order-status").locator("span")).toHaveAttribute("data-status", "READY_TO_CREATE_YANDEX");
 
   const adminPage = await loginAdmin(browser);
   await adminPage.goto("/admin/deliveries?status=READY_TO_CREATE_YANDEX");
@@ -246,7 +248,10 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await page.goto(`${checkout.trackingPath}?phone=${encodeURIComponent(phone)}`);
   await expect(page.getByTestId("tracked-delivery-provider")).toHaveText("YANDEX");
   await expect(page.getByTestId("tracked-delivery-status")).toHaveText("DELIVERED");
-  await expect(page.getByText("Timeline")).toBeVisible();
+  const ruDict = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/ru.json"), "utf-8")
+  );
+  await expect(page.getByText(ruDict.orderTrack.timelineLabel).or(page.getByText("Timeline"))).toBeVisible();
   await page.goto(`/seller/orders/${checkout.orderId}`);
   await expect(page.getByTestId("seller-delivery-status")).toHaveText("DELIVERED");
   await adminPage.close();

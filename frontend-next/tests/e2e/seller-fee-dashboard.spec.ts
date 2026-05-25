@@ -1,4 +1,10 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+
+const ruDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/ru.json"), "utf-8")
+);
 
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -290,7 +296,7 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
 
   await sellerPage.goto("/seller/finance");
   await expect(sellerPage.getByTestId("seller-finance-page")).toBeVisible();
-  await expect(sellerPage.getByText("read-only commission snapshot")).toBeVisible();
+  await expect(sellerPage.getByText(ruDict.seller.finance.ledgerDescription)).toBeVisible();
   await expect(
     sellerPage.getByTestId("seller-finance-confirmed-revenue-this-month"),
   ).toContainText("300");

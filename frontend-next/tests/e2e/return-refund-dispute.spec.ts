@@ -1,4 +1,12 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+
+const enDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/en.json"), "utf-8")
+);
+const waitingStatusText = enDict.common.status.return.WAITING_SELLER_RESPONSE;
+const confirmedStatusText = enDict.common.status.return.REFUND_CONFIRMED;
 
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -300,7 +308,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await page.getByTestId("customer-return-comment").fill("The size does not fit.");
   await page.getByTestId("customer-return-submit").click();
   await expect(page.getByTestId("customer-return-row")).toHaveCount(1);
-  await expect(page.getByTestId("customer-return-detail")).toContainText("Waiting seller response");
+  await expect(page.getByTestId("customer-return-detail")).toContainText(waitingStatusText);
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
@@ -340,7 +348,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await page.reload();
   page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("customer-confirm-refund-received").click();
-  await expect(page.getByTestId("customer-return-detail")).toContainText("Refund confirmed");
+  await expect(page.getByTestId("customer-return-detail")).toContainText(confirmedStatusText);
 
   await sellerPage.goto("/seller/finance");
   await expect(sellerPage.getByTestId("seller-finance-page")).toContainText("RETURN_REFUND_CONFIRMED");

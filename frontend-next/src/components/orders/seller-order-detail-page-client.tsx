@@ -7,6 +7,7 @@ import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
 import { SectionCard } from "@/components/seller/section-card";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   calculateDeliveryOffers,
   acceptDeliveryShipment,
@@ -67,6 +68,7 @@ const exceptionReasons: DeliveryExceptionReasonCode[] = [
 ];
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
   const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
   const hydrateWorkspace = useSellerWorkspaceStore((state) => state.hydrate);
@@ -629,11 +631,11 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   if (loading) {
     return (
       <SectionCard
-        eyebrow="Order detail"
-        title="Loading order"
-        description="Fetching order details from the NestJS seller API."
+        eyebrow={t("seller.orderDetail.eyebrow")}
+        title={t("seller.orderDetail.loadingTitle")}
+        description={t("seller.orderDetail.loadingDescription")}
       >
-        <p className="text-sm text-[var(--muted)]">Loading...</p>
+        <p className="text-sm text-[var(--muted)]">{t("seller.results.loading")}</p>
       </SectionCard>
     );
   }
@@ -641,12 +643,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   if (error || !order) {
     return (
       <SectionCard
-        eyebrow="Order detail"
-        title="Unable to load order"
-        description="The selected order could not be loaded for the current seller shop."
+        eyebrow={t("seller.orderDetail.eyebrow")}
+        title={t("seller.orderDetail.errorTitle")}
+        description={t("seller.orderDetail.errorDescription")}
       >
         <p className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
-          {error ?? "Order not found."}
+          {error ?? t("seller.orderDetail.notFound")}
         </p>
       </SectionCard>
     );
@@ -772,50 +774,50 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           href="/seller/orders"
           className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
         >
-          Back to orders
+          {t("seller.orderDetail.backToOrders")}
         </Link>
         <Link
           href={`/seller/payments/${orderId}`}
           className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
         >
-          Review payment
+          {t("seller.orderDetail.reviewPayment")}
         </Link>
         <Link
           href="/seller/settings"
           className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white"
         >
-          Delivery settings
+          {t("seller.orderDetail.deliverySettings")}
         </Link>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <SectionCard
-          eyebrow="Order"
+          eyebrow={t("seller.orderDetail.eyebrow")}
           title={order.orderNumber}
-          description="Order details migrated into the seller center."
+          description={t("seller.orderDetail.orderDescription")}
         >
           <div className="grid gap-4 md:grid-cols-2">
-            <Metric label="Customer" value={order.customer.name} />
-            <Metric label="Phone" value={order.customer.phone} />
-            <Metric label="Email" value={order.customer.email ?? "No email"} />
-            <Metric label="Total" value={order.totalAmount} />
+            <Metric label={t("seller.orderDetail.customer")} value={order.customer.name} />
+            <Metric label={t("seller.payments.columns.buyer")} value={order.customer.phone} />
+            <Metric label={t("seller.payments.columns.products")} value={order.customer.email ?? t("sellerOrders.noEmail")} />
+            <Metric label={t("seller.paymentDetail.total")} value={order.totalAmount} />
             <Metric
-              label="Seller sync"
+              label={t("seller.orderDetail.financeStatus")}
               value={order.sellerDisplayLabel}
               testId="seller-order-display-status"
             />
             <Metric
-              label="Next action"
+              label={t("seller.orderDetail.nextAction")}
               value={formatNextAction(order.nextAction)}
               testId="seller-order-next-action"
             />
             <Metric
-              label="Created"
+              label={t("seller.paymentDetail.created")}
               value={new Date(order.createdAt).toLocaleString()}
             />
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Status
+                {t("seller.orderDetail.status")}
               </p>
               <div className="mt-3" data-testid="seller-order-status">
                 <OrderStatusBadge status={order.status} />
@@ -823,7 +825,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             </div>
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                Payment
+                {t("seller.paymentDetail.payment")}
               </p>
               <div className="mt-3">
                 <PaymentStatusBadge status={order.paymentStatus} />
