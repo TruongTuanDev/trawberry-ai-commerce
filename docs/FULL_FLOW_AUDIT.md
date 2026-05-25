@@ -1,5 +1,36 @@
 # Full Commerce Flow Audit
 
+## Buyer-Seller Messaging MVP Addendum
+
+- buyers can now start a conversation with a shop from:
+  - public shop profile
+  - public product detail
+- guest behavior is verified:
+  - guest click redirects to customer login with `next` and `intent=message`
+- authenticated customer flow is verified:
+  - create thread
+  - read thread list and detail
+  - send follow-up messages
+  - report thread
+- seller flow is verified:
+  - seller can only access threads for owned shops
+  - seller sees unread customer thread state
+  - seller can reply
+  - seller can close a thread
+- admin moderation flow is verified:
+  - admin can list reported threads
+  - admin can open thread detail
+  - admin can close or reopen a thread
+- notification flow is verified:
+  - seller receives `MESSAGE_RECEIVED` after customer message
+  - customer receives `MESSAGE_RECEIVED` after seller reply
+  - admin receives `MESSAGE_REPORTED` after customer report
+- verified non-goals:
+  - no realtime websocket
+  - no file attachments UI
+  - no external messaging provider
+  - no private seller contact exposure through the public shop profile CTA
+
 ## Product Reviews & Ratings Addendum
 
 - customers can now create verified product reviews only after a delivered/completed purchase

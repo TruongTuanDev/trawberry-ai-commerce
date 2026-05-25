@@ -1,5 +1,69 @@
 # Phase Report
 
+## 2026-05-26 Buyer-Seller Messaging MVP
+
+- added buyer-seller messaging MVP across backend and frontend
+- customer entry points:
+  - public shop profile `Message shop`
+  - public product detail `Message shop`
+  - guest redirect to `/customer/login?next=...&intent=message`
+- added customer routes:
+  - `/customer/messages`
+  - `/customer/messages/[threadId]`
+  - `/customer/messages/new`
+- added seller routes:
+  - `/seller/messages`
+  - `/seller/messages/[threadId]`
+- added admin routes:
+  - `/admin/messages`
+  - `/admin/messages/[threadId]`
+- backend contract:
+  - `POST /api/customer/messages/threads`
+  - `GET /api/customer/messages/threads`
+  - `GET /api/customer/messages/threads/:threadId`
+  - `POST /api/customer/messages/threads/:threadId/messages`
+  - `PATCH /api/customer/messages/threads/:threadId/read`
+  - `PATCH /api/customer/messages/threads/:threadId/report`
+  - `GET /api/shops/:shopId/messages/threads`
+  - `GET /api/shops/:shopId/messages/threads/:threadId`
+  - `POST /api/shops/:shopId/messages/threads/:threadId/messages`
+  - `PATCH /api/shops/:shopId/messages/threads/:threadId/read`
+  - `PATCH /api/shops/:shopId/messages/threads/:threadId/close`
+  - `GET /api/admin/messages/threads`
+  - `GET /api/admin/messages/threads/:threadId`
+  - `PATCH /api/admin/messages/threads/:threadId/close`
+  - `PATCH /api/admin/messages/threads/:threadId/reopen`
+- notifications:
+  - seller gets `MESSAGE_RECEIVED` when customer writes
+  - customer gets `MESSAGE_RECEIVED` when seller replies
+  - admin gets `MESSAGE_REPORTED` when customer reports a thread
+- i18n:
+  - public/customer messaging UI supports `ru/en`
+  - seller messaging UI supports `ru/en/vi`
+  - admin remains English-only
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/buyer-seller-messaging.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-shop-profile.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/notifications.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/customer-account.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+
+Remaining gaps:
+
+- no realtime websocket or live push yet
+- no file attachments in MVP
+- no advanced anti-spam moderation beyond plain-text validation, report, and close flow
+
 ## 2026-05-26 Product Reviews & Ratings
 
 - added verified-purchase product reviews across backend and frontend

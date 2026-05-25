@@ -74,7 +74,13 @@ The public shop profile must not expose:
 - payment proof images
 - internal admin or seller notes
 
-Messaging is placeholder-only in this phase.
+Messaging is now available as a controlled marketplace MVP.
+
+- public shop profiles expose a `Message shop` CTA
+- guests are redirected to customer login before messaging
+- logged-in customers open the customer messaging flow for that shop
+- the messaging system is internal marketplace messaging only
+- no realtime websocket is used in this phase
 
 ## Ratings after reviews phase
 

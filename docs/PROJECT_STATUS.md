@@ -1,5 +1,46 @@
 # Project Status
 
+## Buyer-Seller Messaging MVP - 2026-05-26
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Added marketplace messaging between one customer and one shop:
+  - public shop profile can start messaging
+  - public product detail can start messaging
+  - guests are redirected to `/customer/login?next=...&intent=message`
+- Added customer messaging surfaces:
+  - `/customer/messages`
+  - `/customer/messages/[threadId]`
+  - `/customer/messages/new`
+- Added seller messaging surfaces:
+  - `/seller/messages`
+  - `/seller/messages/[threadId]`
+- Added admin moderation surfaces:
+  - `/admin/messages`
+  - `/admin/messages/[threadId]`
+- Added thread status and reporting flow:
+  - `OPEN`
+  - `CLOSED`
+  - `REPORTED`
+- Added stable message error codes:
+  - `MESSAGE_THREAD_NOT_FOUND`
+  - `MESSAGE_SHOP_NOT_AVAILABLE`
+  - `MESSAGE_FORBIDDEN`
+  - `MESSAGE_EMPTY`
+  - `MESSAGE_TOO_LONG`
+  - `MESSAGE_THREAD_CLOSED`
+- Added notification integration:
+  - seller is notified when a customer sends a message
+  - customer is notified when a seller replies
+  - admin is notified when a thread is reported
+- Locale policy remains unchanged:
+  - public/customer messages UI: `ru/en`
+  - seller messages UI: `ru/en/vi`
+  - admin messages UI: English only
+- MVP constraints:
+  - no realtime websocket
+  - no attachments UI
+  - no external contact workflow beyond safe plain-text handling
+
 ## Product Reviews & Ratings - 2026-05-26
 
 - Status: implemented in `backend-nest` and `frontend-next`

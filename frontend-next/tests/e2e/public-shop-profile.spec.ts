@@ -227,7 +227,10 @@ test("public shop profile exposes shop link, public-only products, and RU/EN lab
   await expect(page.getByTestId("public-shop-message-button")).toContainText("Написать магазину");
 
   await page.getByTestId("public-shop-message-button").click();
-  await expect(page.getByTestId("toast-info").first()).toContainText("Сообщения с магазином скоро появятся.");
+  await expect(page).toHaveURL(
+    new RegExp(`/customer/login\\?next=${encodeURIComponent(`/customer/messages/new?shopSlug=${shop.slug}`)}`),
+  );
+  await page.goBack();
 
   await expect(page.getByTestId("language-switcher-customer").first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/\bVI\b/);

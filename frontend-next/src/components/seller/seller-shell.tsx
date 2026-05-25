@@ -36,6 +36,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     { href: "/seller/import/wildberries-api", label: t("sellerShell.wbSync") },
     { href: "/seller/ai-images", label: t("sellerShell.aiImages") },
     { href: "/seller/orders", label: t("sellerShell.orders") },
+    { href: "/seller/messages", label: t("sellerShell.messages") },
     { href: "/seller/returns", label: t("sellerShell.returns") },
     { href: "/seller/reviews", label: t("sellerShell.reviews") },
     { href: "/seller/support-cases", label: t("sellerShell.support") },

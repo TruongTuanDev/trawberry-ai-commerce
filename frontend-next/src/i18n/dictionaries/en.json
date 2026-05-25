@@ -539,6 +539,7 @@
     "wbSync": "WB Sync",
     "aiImages": "AI Images",
     "orders": "Orders",
+    "messages": "Messages",
     "returns": "Returns",
     "support": "Support",
     "payments": "Payments",
@@ -699,6 +700,7 @@
     "delivery": "Delivery",
     "dispute": "Dispute",
     "finance": "Finance",
+    "messages": "Messages",
     "system": "System",
     "return": "Refund",
     "read": "Read"
@@ -745,10 +747,35 @@
         "profile": "Profile",
         "addresses": "Addresses",
         "orders": "Orders",
+        "messages": "Messages",
         "returns": "Returns / refunds",
         "security": "Security",
         "support": "Support"
       }
+    },
+    "messages": {
+      "title": "Messages",
+      "subtitle": "Manage your conversations with shops about products and orders.",
+      "newMessage": "New message",
+      "newSubtitle": "Start a conversation with the shop before you place or after you receive an order.",
+      "messageShop": "Message shop",
+      "sendMessage": "Send message",
+      "sending": "Sending...",
+      "typeMessage": "Type your message",
+      "empty": "No conversations yet.",
+      "unread": "Unread",
+      "reported": "Reported",
+      "closed": "Thread closed",
+      "productContext": "Product",
+      "orderContext": "Order",
+      "seller": "Seller",
+      "customer": "Customer",
+      "reportConversation": "Report conversation",
+      "reportedSuccess": "Conversation reported.",
+      "reportFailed": "Unable to report the conversation.",
+      "loadFailed": "Unable to load messages.",
+      "shopUnavailable": "This shop is not available for messaging.",
+      "backToShop": "Back to shop"
     },
     "dashboard": {
       "title": "My account",
@@ -1717,6 +1744,33 @@
       "invoice": "Invoice",
       "markRead": "Mark as read"
     },
+    "messages": {
+      "eyebrow": "Buyer conversations",
+      "title": "Messages",
+      "subtitle": "Manage buyer conversations for the active shop and reply without leaving Seller Center.",
+      "noShop": "Choose an active shop to load buyer conversations.",
+      "loading": "Loading conversations...",
+      "empty": "No conversations found for the current filters.",
+      "loadFailed": "Unable to load conversations.",
+      "filters": {
+        "all": "All",
+        "unread": "Unread",
+        "open": "Open",
+        "closed": "Closed",
+        "reported": "Reported"
+      },
+      "typeMessage": "Type your reply",
+      "sendMessage": "Send reply",
+      "sending": "Sending...",
+      "backToList": "Back to messages",
+      "closeConversation": "Close conversation",
+      "closedSuccess": "Conversation closed.",
+      "closeFailed": "Unable to close the conversation.",
+      "productContext": "Product",
+      "orderContext": "Order",
+      "customer": "Customer",
+      "seller": "Seller"
+    },
     "reviews": {
       "eyebrow": "Customer trust",
       "title": "Product reviews",
@@ -1768,6 +1822,12 @@
     "REVIEW_NOT_VERIFIED_PURCHASE": "Only verified purchases can be reviewed.",
     "REVIEW_ALREADY_EXISTS": "A review for this item already exists.",
     "REVIEW_PRODUCT_NOT_IN_ORDER": "This product is not part of the selected order item.",
-    "REVIEW_RATING_INVALID": "Please choose a rating from 1 to 5."
+    "REVIEW_RATING_INVALID": "Please choose a rating from 1 to 5.",
+    "MESSAGE_THREAD_NOT_FOUND": "Conversation was not found.",
+    "MESSAGE_SHOP_NOT_AVAILABLE": "This shop is not available for messaging.",
+    "MESSAGE_FORBIDDEN": "You do not have access to this conversation.",
+    "MESSAGE_EMPTY": "Message cannot be empty.",
+    "MESSAGE_TOO_LONG": "Message is too long.",
+    "MESSAGE_THREAD_CLOSED": "This conversation is closed."
   }
 }

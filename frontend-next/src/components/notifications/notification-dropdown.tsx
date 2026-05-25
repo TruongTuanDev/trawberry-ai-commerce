@@ -102,6 +102,21 @@ export function NotificationDropdown({
         ? "seller.notifications.emptyTitle"
         : "notifications.customerEmptyTitle";
 
+  const typeLabels: Record<string, string> = {
+    ORDER_NEW: t("notifications.order"),
+    PAYMENT_CONFIRMATION_REQUIRED: t("notifications.payment"),
+    DELIVERY_STATUS_CHANGED: t("notifications.delivery"),
+    YANDEX_CREATION_REMINDER: t("notifications.delivery"),
+    RETURN_CASE_OPENED: t("notifications.return"),
+    RETURN_SELLER_RESPONSE_REQUIRED: t("notifications.return"),
+    RETURN_ADMIN_REVIEW_REQUIRED: t("notifications.dispute"),
+    MESSAGE_RECEIVED: t("notifications.messages"),
+    MESSAGE_REPORTED: t("notifications.messages"),
+    SELLER_FEE_INVOICE_ISSUED: t("notifications.finance"),
+    ORDER_FULFILLMENT_OVERDUE: t("notifications.order"),
+    SYSTEM: t("notifications.system"),
+  };
+
   return (
     <div
       className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200/80 bg-white/95 text-slate-900 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 dark:border-slate-800 dark:bg-slate-900/95 dark:text-white sm:w-96"
@@ -154,7 +169,7 @@ export function NotificationDropdown({
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center justify-between gap-2">
                     <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      {item.type}
+                      {typeLabels[item.type] ?? item.type}
                     </span>
                     <span className="text-2xs flex-shrink-0 text-slate-400 dark:text-slate-500">
                       {new Date(item.createdAt).toLocaleString(

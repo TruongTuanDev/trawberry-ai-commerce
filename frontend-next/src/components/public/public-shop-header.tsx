@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FallbackImage } from "@/components/ui/fallback-image";
-import { toast } from "@/components/ui/use-toast";
+import { MessageShopButton } from "@/components/public/message-shop-button";
 import { useI18n } from "@/i18n/use-i18n";
 import type { PublicShopProfile } from "@/lib/public-api";
 
@@ -100,14 +100,11 @@ export function PublicShopHeader({ shop }: { shop: PublicShopProfile }) {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
+            <MessageShopButton
+              shopSlug={shop.slug}
               className="public-button-secondary px-5 py-3 text-sm"
-              data-testid="public-shop-message-button"
-              onClick={() => toast.info(t("public.shop.messagingComingSoon"))}
-            >
-              {t("public.shop.messageShop")}
-            </button>
+              testId="public-shop-message-button"
+            />
             <Link
               href="/products"
               className="public-button-primary inline-flex px-5 py-3 text-sm"

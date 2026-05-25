@@ -126,6 +126,8 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
     RETURN_CASE_OPENED: t("notifications.return"),
     RETURN_SELLER_RESPONSE_REQUIRED: t("notifications.return"),
     RETURN_ADMIN_REVIEW_REQUIRED: t("notifications.dispute"),
+    MESSAGE_RECEIVED: t("notifications.messages"),
+    MESSAGE_REPORTED: t("notifications.messages"),
     SELLER_FEE_INVOICE_ISSUED: t("notifications.finance"),
     ORDER_FULFILLMENT_OVERDUE: t("notifications.order"),
     SYSTEM: t("notifications.system"),

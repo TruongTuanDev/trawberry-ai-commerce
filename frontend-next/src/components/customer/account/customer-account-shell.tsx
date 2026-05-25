@@ -31,6 +31,7 @@ export function CustomerAccountShell({
   const navItems = [
     { href: "/customer/account", label: t("customer.account.nav.overview") },
     { href: "/customer/notifications", label: t("customer.account.nav.notifications") },
+    { href: "/customer/messages", label: t("customer.account.nav.messages") },
     { href: "/customer/account/profile", label: t("customer.account.nav.profile") },
     { href: "/customer/account/addresses", label: t("customer.account.nav.addresses") },
     { href: "/customer/orders", label: t("customer.account.nav.orders") },

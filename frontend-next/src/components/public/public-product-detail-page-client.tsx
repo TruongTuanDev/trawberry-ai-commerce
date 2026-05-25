@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProductGallery } from "@/components/public/product-gallery";
+import { MessageShopButton } from "@/components/public/message-shop-button";
 import { PublicProductReviewsSection } from "@/components/public/public-product-reviews-section";
 import {
   formatCount,
@@ -252,19 +253,29 @@ export function PublicProductDetailPageClient({
 
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      {product.shop.slug ? (
-                        <Link
-                          href={`/shops/${product.shop.slug}`}
-                          className="inline-flex text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
-                          data-testid="public-product-shop-link"
-                        >
-                          {product.shop.name}
-                        </Link>
-                      ) : (
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                          {product.shop.name}
-                        </p>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {product.shop.slug ? (
+                          <Link
+                            href={`/shops/${product.shop.slug}`}
+                            className="inline-flex text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
+                            data-testid="public-product-shop-link"
+                          >
+                            {product.shop.name}
+                          </Link>
+                        ) : (
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                            {product.shop.name}
+                          </p>
+                        )}
+                        {product.shop.slug ? (
+                          <MessageShopButton
+                            shopSlug={product.shop.slug}
+                            productId={product.id}
+                            className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                            testId="public-product-message-shop-button"
+                          />
+                        ) : null}
+                      </div>
                       <h1
                         className="text-3xl font-bold leading-tight text-[var(--foreground)] sm:text-4xl"
                         data-testid="product-detail-title"

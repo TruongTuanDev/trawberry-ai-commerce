@@ -15,6 +15,8 @@ import React from "react";
 export type SeverityType = "INFO" | "SUCCESS" | "WARNING" | "URGENT";
 
 export type NotificationType =
+  | "MESSAGE_RECEIVED"
+  | "MESSAGE_REPORTED"
   | "ORDER_NEW"
   | "PAYMENT_CONFIRMATION_REQUIRED"
   | "DELIVERY_STATUS_CHANGED"
