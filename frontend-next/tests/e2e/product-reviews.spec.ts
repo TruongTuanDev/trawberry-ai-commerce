@@ -15,6 +15,11 @@ const viDict = JSON.parse(
   fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/vi.json"), "utf-8"),
 );
 
+const tinyReviewImage = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=",
+  "base64",
+);
+
 async function backendJson<T>(
   request: APIRequestContext,
   url: string,
@@ -361,17 +366,52 @@ test("verified product reviews flow works across customer, public, seller, and a
   await expect(page.getByTestId("checkout-receipt")).toBeVisible();
   await expect(page.getByTestId("customer-write-review-button").first()).toBeVisible();
   await page.getByTestId("customer-write-review-button").first().click();
-  await page.getByLabel("Rate 5 out of 5").click();
+  await expect(page.getByTestId("customer-review-rating").getByRole("button")).toHaveCount(5);
+  await expect(page.getByTestId("customer-review-comment")).toBeVisible();
+  await expect(page.getByTestId("customer-review-add-photos")).toContainText(ruDict.customer.reviews.addPhotos);
+  await expect(page.locator("body")).not.toContainText("????");
+  await expect(page.locator("body")).not.toContainText("Chọn tệp");
+  await page.getByTestId("customer-review-submit").click();
+  await expect(page.locator("body")).toContainText(ruDict.customer.reviews.ratingRequired);
+  await page.getByTestId("customer-review-rating").getByRole("button").nth(4).click();
+  await page.getByTestId("customer-review-submit").click();
+  await expect(page.locator("body")).toContainText(ruDict.customer.reviews.commentRequired);
+
+  await page.getByTestId("customer-review-image-input").setInputFiles({
+    name: "review.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("not-an-image"),
+  });
+  await expect(page.locator("body")).toContainText(ruDict.errors.REVIEW_IMAGE_TYPE_INVALID);
+
+  await page.getByTestId("customer-review-image-input").setInputFiles(
+    Array.from({ length: 6 }, (_, index) => ({
+      name: `review-${index}.png`,
+      mimeType: "image/png",
+      buffer: tinyReviewImage,
+    })),
+  );
+  await expect(page.locator("body")).toContainText(ruDict.errors.REVIEW_IMAGE_LIMIT_EXCEEDED);
+
   await page.getByTestId("customer-review-fit-feedback").selectOption("TRUE_TO_SIZE");
   await page.getByTestId("customer-review-comment").fill("Excellent quality and fast delivery.");
+  await page.getByTestId("customer-review-image-input").setInputFiles({
+    name: "review-image.png",
+    mimeType: "image/png",
+    buffer: tinyReviewImage,
+  });
+  await expect(page.getByTestId("customer-review-pending-images")).toBeVisible();
   await page.getByTestId("customer-review-submit").click();
   await expect(page.getByTestId("customer-edit-review-button").first()).toBeVisible();
 
   await page.goto(`/products/${product.id}`);
   await expect(page.getByTestId("public-product-reviews")).toBeVisible();
   await expect(page.getByRole("heading", { name: ruDict.public.reviews.title, exact: true })).toBeVisible();
+  await expect(page.getByTestId("public-product-reviews-list")).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("public-review-card")).toContainText("Excellent quality and fast delivery.");
   await expect(page.getByText(ruDict.public.reviews.verifiedPurchase).first()).toBeVisible();
+  await expect(page.getByTestId("public-review-image-thumbnail").first()).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("????");
 
   await switchCustomerLocale(page, "en");
   await expect(page.getByRole("heading", { name: enDict.public.reviews.title, exact: true })).toBeVisible();
@@ -395,11 +435,13 @@ test("verified product reviews flow works across customer, public, seller, and a
   await expect(sellerPage.getByRole("heading", { name: viDict.seller.reviews.title, exact: true })).toBeVisible();
   await switchSellerLocale(sellerPage, "en");
   await expect(sellerPage.getByRole("heading", { name: enDict.seller.reviews.title, exact: true })).toBeVisible();
+  await expect(sellerPage.getByTestId("seller-review-image-thumbnail").first()).toBeVisible();
   await sellerPage.getByTestId("seller-review-reply-input").first().fill("Thanks for the feedback from our shop.");
   await sellerPage.getByTestId("seller-review-reply-submit").first().click();
   await expect(sellerPage.getByTestId("seller-review-row").first()).toContainText("Thanks for the feedback from our shop.");
 
   await page.goto(`/products/${product.id}`);
+  await expect(page.getByTestId("public-product-reviews-list")).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("public-review-card").first()).toContainText("Thanks for the feedback from our shop.");
 
   const adminPage = await newPage(browser);
@@ -407,12 +449,21 @@ test("verified product reviews flow works across customer, public, seller, and a
   await adminPage.goto("/admin/reviews");
   await expect(adminPage.getByTestId("admin-reviews-page")).toBeVisible();
   await adminPage.getByTestId("admin-reviews-search").fill(`Review Product ${stamp}`);
+  await expect(adminPage.getByTestId("admin-review-image-thumbnail").first()).toBeVisible();
   await adminPage.getByTestId("admin-review-hide").first().click();
   await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("HIDDEN");
 
   await page.goto(`/products/${product.id}`);
   await expect(page.getByTestId("public-product-reviews-empty")).toBeVisible();
   await expect(page.locator("body")).not.toContainText("Excellent quality and fast delivery.");
+
+  await adminPage.getByTestId("admin-review-restore").first().click();
+  await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("PUBLISHED");
+
+  await page.goto(`/products/${product.id}`);
+  await expect(page.getByTestId("public-product-reviews-list")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("public-review-card")).toContainText("Excellent quality and fast delivery.");
+  await expect(page.getByTestId("public-review-image-thumbnail").first()).toBeVisible();
 
   await sellerPage.close();
   await adminPage.close();

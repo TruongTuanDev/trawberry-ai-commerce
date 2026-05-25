@@ -72,6 +72,17 @@ export type CustomerProductReview = {
   sellerRepliedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  images: ReviewImageAsset[];
+};
+
+export type ReviewImageAsset = {
+  id: string;
+  url: string;
+  mimeType: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
 };
 
 export type CustomerProfile = {
@@ -342,6 +353,7 @@ export type CustomerReviewRecord = {
     variantNameSnapshot: string | null;
     quantity: number;
   } | null;
+  images: ReviewImageAsset[];
 };
 
 export async function getCustomerOrderHistory() {
@@ -582,5 +594,15 @@ export async function updateCustomerReview(
   return apiRequest<CustomerReviewRecord>(`/api/customer/reviews/${encodeURIComponent(reviewId)}`, {
     method: "PATCH",
     body: JSON.stringify(body),
+  });
+}
+
+export async function uploadCustomerReviewImage(reviewId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<CustomerReviewRecord>(`/api/customer/reviews/${encodeURIComponent(reviewId)}/images`, {
+    method: "POST",
+    body: formData,
   });
 }

@@ -1,5 +1,28 @@
 # Project Status
 
+## Product Reviews UX Polish + Review Photo Upload - 2026-05-26
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Added optional review photo upload:
+  - up to `5` images per review
+  - `JPG`, `PNG`, `WEBP` only
+  - `5 MB` max per image
+  - no video upload in this phase
+- Improved customer review UX:
+  - star-icon rating input
+  - explicit review textarea with localized validation
+  - custom localized photo picker with preview and remove-before-submit support
+- Improved public review presentation:
+  - larger rating summary
+  - star filter chips
+  - richer review cards with seller reply and image thumbnails
+- Seller and admin review pages now show customer review photos.
+- Hidden reviews now hide both text and photos from public product/shop surfaces and stay excluded from aggregates.
+- Locale policy remains unchanged:
+  - public/customer review UI: `ru/en`
+  - seller review UI: `ru/en/vi`
+  - admin review UI: English only
+
 ## Buyer-Seller Messaging MVP - 2026-05-26
 
 - Status: implemented in `backend-nest` and `frontend-next`
@@ -64,6 +87,11 @@
   - `REVIEW_ALREADY_EXISTS`
   - `REVIEW_PRODUCT_NOT_IN_ORDER`
   - `REVIEW_RATING_INVALID`
+  - `REVIEW_COMMENT_REQUIRED`
+  - `REVIEW_IMAGE_TOO_LARGE`
+  - `REVIEW_IMAGE_TYPE_INVALID`
+  - `REVIEW_IMAGE_LIMIT_EXCEEDED`
+  - `REVIEW_IMAGE_UPLOAD_FAILED`
 - Locale policy remains unchanged:
   - public/customer review UI: `ru/en`
   - seller review UI: `ru/en/vi`

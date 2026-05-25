@@ -4,10 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, type ProductReview } from '@prisma/client';
+import {
+  Prisma,
+  type ProductReview,
+  type ProductReviewImage,
+} from '@prisma/client';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { FilesService } from '../files/files.service';
+import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
 import { ProductReadinessService } from '../products/product-readiness.service';
 import { CreateCustomerReviewDto } from './dto/create-customer-review.dto';
 import { ListPublicReviewsQueryDto } from './dto/list-public-reviews-query.dto';
@@ -19,6 +25,7 @@ export class ReviewsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly productReadiness: ProductReadinessService,
+    private readonly filesService: FilesService,
   ) {}
 
   async listCustomerReviews(user: AuthenticatedUser) {
@@ -27,21 +34,7 @@ export class ReviewsService {
     const items = await this.prisma.productReview.findMany({
       where: { customerId: user.userId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        product: {
-          select: {
-            id: true,
-            localTitle: true,
-            wbTitle: true,
-          },
-        },
-        shop: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: this.reviewInclude,
     });
 
     return { items: items.map((item) => this.mapReview(item)) };
@@ -53,6 +46,7 @@ export class ReviewsService {
   ) {
     this.assertRole(user, USER_ROLES.CUSTOMER, 'Customer account is required.');
     this.assertRating(dto.rating);
+    this.assertComment(dto.comment);
 
     const orderItem = await this.prisma.orderItem.findFirst({
       where: {
@@ -170,6 +164,9 @@ export class ReviewsService {
     if (dto.rating !== undefined) {
       this.assertRating(dto.rating);
     }
+    if (dto.comment !== undefined) {
+      this.assertComment(dto.comment);
+    }
 
     const existing = await this.prisma.productReview.findFirst({
       where: { id: reviewId, customerId: user.userId },
@@ -198,6 +195,66 @@ export class ReviewsService {
 
     await this.refreshProductReviewSummary(existing.productId);
     return this.mapReview(updated);
+  }
+
+  async uploadCustomerReviewImage(
+    reviewId: string,
+    user: AuthenticatedUser,
+    file: ProductImageUploadFile,
+  ) {
+    this.assertRole(user, USER_ROLES.CUSTOMER, 'Customer account is required.');
+    this.assertReviewImageFile(file);
+
+    const review = await this.prisma.productReview.findFirst({
+      where: { id: reviewId, customerId: user.userId },
+      include: {
+        images: true,
+      },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review was not found.');
+    }
+
+    if (review.images.length >= 5) {
+      throw new BadRequestException({
+        code: 'REVIEW_IMAGE_LIMIT_EXCEEDED',
+        message: 'A review can include up to 5 images.',
+      });
+    }
+
+    const stored = await this.filesService.storeReviewImage(file, {
+      shopId: review.shopId,
+      reviewId: review.id,
+    });
+
+    try {
+      const updated = await this.prisma.productReview.update({
+        where: { id: reviewId },
+        data: {
+          images: {
+            create: {
+              url: stored.publicUrl,
+              storageKey: stored.storageKey,
+              mimeType: stored.mimeType ?? 'application/octet-stream',
+              sizeBytes: stored.size,
+            },
+          },
+        },
+        include: this.reviewInclude,
+      });
+
+      return this.mapReview(updated);
+    } catch {
+      await this.filesService.deleteStoredFile({
+        storageKey: stored.storageKey,
+        fileUrl: stored.publicUrl,
+      });
+      throw new BadRequestException({
+        code: 'REVIEW_IMAGE_UPLOAD_FAILED',
+        message: 'Review image upload failed.',
+      });
+    }
   }
 
   async listPublicReviews(productId: string, query: ListPublicReviewsQueryDto) {
@@ -531,6 +588,32 @@ export class ReviewsService {
     }
   }
 
+  private assertComment(comment: string | null | undefined) {
+    if (!comment?.trim()) {
+      throw new BadRequestException({
+        code: 'REVIEW_COMMENT_REQUIRED',
+        message: 'Review text is required.',
+      });
+    }
+  }
+
+  private assertReviewImageFile(file: ProductImageUploadFile) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      throw new BadRequestException({
+        code: 'REVIEW_IMAGE_TYPE_INVALID',
+        message: 'Review images must be JPG, PNG, or WEBP.',
+      });
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException({
+        code: 'REVIEW_IMAGE_TOO_LARGE',
+        message: 'Review images must be 5 MB or smaller.',
+      });
+    }
+  }
+
   private maskCustomerName(name: string | null | undefined) {
     const trimmed = name?.trim();
     if (!trimmed) return 'Customer';
@@ -543,6 +626,11 @@ export class ReviewsService {
 
   private get reviewInclude() {
     return {
+      images: {
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
       product: {
         select: {
           id: true,
@@ -584,6 +672,7 @@ export class ReviewsService {
 
   private mapReview(
     review: ProductReview & {
+      images?: ProductReviewImage[];
       product?: { id: string; localTitle: string | null; wbTitle: string };
       shop?: { id: string; name: string };
       customer?: { id: string; fullName: string | null };
@@ -635,11 +724,13 @@ export class ReviewsService {
         : null,
       order: review.order ?? null,
       orderItem: review.orderItem ?? null,
+      images: (review.images ?? []).map((image) => this.mapReviewImage(image)),
     };
   }
 
   private mapPublicReview(
     review: ProductReview & {
+      images?: ProductReviewImage[];
       customer?: { id: string; fullName: string | null };
       order?: { orderNumber: string };
     },
@@ -656,6 +747,19 @@ export class ReviewsService {
       verifiedPurchase: true,
       customerName: this.maskCustomerName(review.customer?.fullName),
       orderCode: review.order?.orderNumber ?? null,
+      images: (review.images ?? []).map((image) => this.mapReviewImage(image)),
+    };
+  }
+
+  private mapReviewImage(image: ProductReviewImage) {
+    return {
+      id: image.id,
+      url: image.url,
+      mimeType: image.mimeType,
+      sizeBytes: image.sizeBytes,
+      width: image.width,
+      height: image.height,
+      createdAt: image.createdAt.toISOString(),
     };
   }
 }

@@ -553,6 +553,15 @@ export type SellerReviewRecord = {
     variantNameSnapshot: string | null;
     quantity: number;
   } | null;
+  images: Array<{
+    id: string;
+    url: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+    createdAt: string;
+  }>;
 };
 
 export type SellerOrdersResponse = {

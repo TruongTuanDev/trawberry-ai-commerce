@@ -158,6 +158,33 @@ export function AdminReviewsPageClient() {
               {review.comment ? (
                 <p className="mt-4 text-sm leading-7 text-[var(--foreground)]">{review.comment}</p>
               ) : null}
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Customer photos
+                </p>
+                {review.images.length ? (
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {review.images.map((image) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
+                        onClick={() => window.open(image.url, "_blank", "noopener,noreferrer")}
+                        data-testid="admin-review-image-thumbnail"
+                      >
+                        <img
+                          src={image.url}
+                          alt=""
+                          className="h-20 w-20 object-cover"
+                          loading="lazy"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-[var(--muted)]">No images</p>
+                )}
+              </div>
               {review.sellerReply ? (
                 <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 text-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">

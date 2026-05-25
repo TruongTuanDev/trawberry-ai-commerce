@@ -42,6 +42,18 @@ This phase does not create fake ratings and does not support open public reviews
 - `createdAt`
 - `updatedAt`
 
+`ProductReviewImage`
+
+- `id`
+- `reviewId`
+- `url`
+- `storageKey`
+- `mimeType`
+- `sizeBytes`
+- `width`
+- `height`
+- `createdAt`
+
 ## Customer APIs
 
 ### `POST /api/customer/reviews`
@@ -69,6 +81,20 @@ Lists the authenticated customer's own reviews.
 
 Updates the authenticated customer's own review.
 
+### `POST /api/customer/reviews/:reviewId/images`
+
+Uploads one review image for the authenticated customer's own review.
+
+Rules:
+
+- maximum `5` images per review
+- allowed MIME types:
+  - `image/jpeg`
+  - `image/png`
+  - `image/webp`
+- maximum size: `5 MB` per image
+- no video support in this phase
+
 ## Public APIs
 
 ### `GET /api/public/products/:productId/reviews`
@@ -87,6 +113,14 @@ Example response:
       "fitFeedback": "TRUE_TO_SIZE",
       "status": "PUBLISHED",
       "sellerReply": "Thanks for your feedback.",
+      "images": [
+        {
+          "id": "image_1",
+          "url": "http://localhost:3001/uploads/review-images/shop_1/review_1/photo.png",
+          "mimeType": "image/png",
+          "sizeBytes": 182341
+        }
+      ],
       "createdAt": "2026-05-26T08:00:00.000Z",
       "customer": {
         "maskedName": "Alice E."
@@ -163,10 +197,21 @@ Stable backend codes used by the frontend localization layer:
 - `REVIEW_ALREADY_EXISTS`
 - `REVIEW_PRODUCT_NOT_IN_ORDER`
 - `REVIEW_RATING_INVALID`
+- `REVIEW_COMMENT_REQUIRED`
+- `REVIEW_IMAGE_TOO_LARGE`
+- `REVIEW_IMAGE_TYPE_INVALID`
+- `REVIEW_IMAGE_LIMIT_EXCEEDED`
+- `REVIEW_IMAGE_UPLOAD_FAILED`
 
 ## Non-goals in this phase
 
-- no review images upload
+- no review video upload
 - no abuse/reporting workflow beyond basic moderation state
 - no public anonymous reviews
 - no fake ratings or seeded synthetic review counts
+
+## Public review image visibility
+
+- public review APIs return images only for `PUBLISHED` reviews
+- hidden reviews must not expose text or images publicly
+- hidden reviews must not contribute to public rating aggregates

@@ -2,13 +2,18 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
+  ParseFilePipeBuilder,
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
 import {
@@ -18,6 +23,7 @@ import {
 } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import type { ProductImageUploadFile } from '../product-images/product-image-file.type';
 import { CreateCustomerReviewDto } from './dto/create-customer-review.dto';
 import { HideReviewDto } from './dto/hide-review.dto';
 import { ListPublicReviewsQueryDto } from './dto/list-public-reviews-query.dto';
@@ -53,6 +59,28 @@ export class CustomerReviewsController {
     @Body() dto: UpdateCustomerReviewDto,
   ) {
     return this.reviewsService.updateCustomerReview(reviewId, user, dto);
+  }
+
+  @Post(':reviewId/images')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
+  @HttpCode(200)
+  uploadImage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('reviewId') reviewId: string,
+    @UploadedFile(new ParseFilePipeBuilder().build({ fileIsRequired: true }))
+    file: ProductImageUploadFile,
+  ) {
+    return this.reviewsService.uploadCustomerReviewImage(reviewId, user, file);
   }
 }
 

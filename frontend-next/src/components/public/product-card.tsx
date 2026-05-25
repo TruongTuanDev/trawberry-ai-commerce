@@ -59,12 +59,12 @@ export function ProductCard({ product }: { product: PublicProduct }) {
                 className="inline-flex items-center rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)]"
                 data-testid={`product-rating-summary-${product.id}`}
               >
-                ★ {Number(product.averageRating).toFixed(1)} ({product.feedbackCount})
+                {"★"} {Number(product.averageRating).toFixed(1)} ({product.feedbackCount})
               </span>
             ) : null}
           </div>
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[#cb11ab] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
-            ♡
+            {"♡"}
           </span>
         </div>
 

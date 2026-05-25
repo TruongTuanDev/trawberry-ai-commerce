@@ -1,5 +1,46 @@
 # Phase Report
 
+## 2026-05-26 Product Reviews UX Polish + Review Photo Upload
+
+- extended verified product reviews with optional customer photo upload
+- backend review image support now includes:
+  - `ProductReviewImage`
+  - `POST /api/customer/reviews/:reviewId/images`
+  - validation for `JPG/PNG/WEBP`, `5 MB` max, `5` images max
+- improved customer review editor UX:
+  - star icon selector
+  - explicit localized textarea
+  - custom localized photo picker
+  - preview and remove-before-submit flow
+- improved public review presentation:
+  - richer rating summary
+  - `All / 5★ / 4★ / 3★ / 2★ / 1★` filter chips
+  - review thumbnails and seller reply card
+- seller and admin review pages now show customer review thumbnails
+- fixed remaining Russian review copy so the review flow no longer shows `????`
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-shop-profile.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-buying-ux.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/customer-order-history.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+
+Remaining gaps:
+
+- no review video upload yet
+- public review image preview is intentionally lightweight and does not include a full gallery carousel
+- review abuse/reporting flow is still limited to admin hide/restore
+
 ## 2026-05-26 Buyer-Seller Messaging MVP
 
 - added buyer-seller messaging MVP across backend and frontend
@@ -116,7 +157,7 @@ Verification:
 
 Remaining gaps:
 
-- review images are not included in this MVP phase
+- review images are now supported, but video and richer media tooling are still out of scope
 - abuse/reporting workflow is still limited to admin hide/restore
 - shop rating currently aggregates published reviews only and does not yet include a separate review-quality or trust score
 

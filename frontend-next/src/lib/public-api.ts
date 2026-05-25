@@ -70,6 +70,15 @@ export type PublicProductReview = {
   verifiedPurchase: boolean;
   customerName: string;
   orderCode: string | null;
+  images: Array<{
+    id: string;
+    url: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+    createdAt: string;
+  }>;
 };
 
 export type PublicProductReviewsResponse = {

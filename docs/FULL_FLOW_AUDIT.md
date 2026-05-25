@@ -1,5 +1,30 @@
 # Full Commerce Flow Audit
 
+## Product Reviews UX Polish + Review Photo Upload Addendum
+
+- verified review flow now supports optional customer review photos
+- verified review business rules remain unchanged:
+  - verified purchase only
+  - delivered/completed order only
+  - one review per order item/customer
+- verified customer review UX:
+  - star-icon rating input
+  - explicit required comment text
+  - custom localized photo picker
+  - preview and remove-before-submit
+- verified public product review rendering now includes:
+  - aggregate summary card
+  - star filter chips
+  - review image thumbnails
+  - seller reply block
+- verified moderation effect:
+  - hidden reviews remove both text and images from public surfaces
+  - restored reviews become public again
+  - hidden reviews do not affect public aggregates
+- verified seller/admin internal review visibility:
+  - seller review list shows customer photo thumbnails
+  - admin review moderation list shows customer photo thumbnails
+
 ## Buyer-Seller Messaging MVP Addendum
 
 - buyers can now start a conversation with a shop from:

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { PrismaService } from '../src/common/prisma/prisma.service';
+import { FilesService } from '../src/modules/files/files.service';
 import { ProductReadinessService } from '../src/modules/products/product-readiness.service';
 import { ReviewsService } from '../src/modules/reviews/reviews.service';
 
@@ -38,6 +39,13 @@ function createReadinessMock() {
   } as unknown as ProductReadinessService;
 }
 
+function createFilesMock() {
+  return {
+    storeReviewImage: jest.fn(),
+    deleteStoredFile: jest.fn(),
+  } as unknown as FilesService;
+}
+
 function expectCode(error: unknown, code: string) {
   expect(error).toBeInstanceOf(Error);
   const response =
@@ -62,7 +70,8 @@ describe('ReviewsService', () => {
   it('allows a customer to review only delivered or completed order items', async () => {
     const prisma = createPrismaMock();
     const readiness = createReadinessMock();
-    const service = new ReviewsService(prisma, readiness);
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
 
     prisma.orderItem.findFirst = jest.fn().mockResolvedValue({
       id: 'item-1',
@@ -106,7 +115,8 @@ describe('ReviewsService', () => {
   it('blocks duplicate reviews for the same customer order item', async () => {
     const prisma = createPrismaMock();
     const readiness = createReadinessMock();
-    const service = new ReviewsService(prisma, readiness);
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
 
     prisma.orderItem.findFirst = jest.fn().mockResolvedValue({
       id: 'item-1',
@@ -153,7 +163,8 @@ describe('ReviewsService', () => {
   it('creates a verified review and refreshes the product summary', async () => {
     const prisma = createPrismaMock();
     const readiness = createReadinessMock();
-    const service = new ReviewsService(prisma, readiness);
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
     const updateProduct = jest.fn().mockResolvedValue({});
 
     prisma.orderItem.findFirst = jest.fn().mockResolvedValue({
@@ -245,7 +256,8 @@ describe('ReviewsService', () => {
   it('allows sellers to reply only to reviews in their own shop', async () => {
     const prisma = createPrismaMock();
     const readiness = createReadinessMock();
-    const service = new ReviewsService(prisma, readiness);
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
 
     prisma.shop.findFirst = jest.fn().mockResolvedValue(null);
 
@@ -262,7 +274,8 @@ describe('ReviewsService', () => {
   it('lets admin hide and restore reviews and recalculates the product summary', async () => {
     const prisma = createPrismaMock();
     const readiness = createReadinessMock();
-    const service = new ReviewsService(prisma, readiness);
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
     const updateProduct = jest.fn().mockResolvedValue({});
 
     prisma.productReview.findUnique = jest
@@ -351,5 +364,270 @@ describe('ReviewsService', () => {
     const restored = await service.restoreReview('review-1');
     expect(restored.status).toBe('PUBLISHED');
     expect(updateProduct).toHaveBeenCalledTimes(2);
+  });
+
+  it('requires non-empty review text', async () => {
+    const prisma = createPrismaMock();
+    const readiness = createReadinessMock();
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
+
+    await expectRejectCode(
+      service.createCustomerReview(
+        {
+          userId: 'customer-1',
+          role: 'CUSTOMER',
+          email: 'customer@example.com',
+        },
+        {
+          orderId: 'order-1',
+          orderItemId: 'item-1',
+          productId: 'product-1',
+          rating: 4,
+          comment: '   ',
+        },
+      ),
+      'REVIEW_COMMENT_REQUIRED',
+    );
+  });
+
+  it('validates review image type and size before upload', async () => {
+    const prisma = createPrismaMock();
+    const readiness = createReadinessMock();
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
+
+    await expectRejectCode(
+      service.uploadCustomerReviewImage(
+        'review-1',
+        {
+          userId: 'customer-1',
+          role: 'CUSTOMER',
+          email: 'customer@example.com',
+        },
+        {
+          originalname: 'review.gif',
+          mimetype: 'image/gif',
+          size: 1024,
+          buffer: Buffer.from('gif'),
+        },
+      ),
+      'REVIEW_IMAGE_TYPE_INVALID',
+    );
+
+    await expectRejectCode(
+      service.uploadCustomerReviewImage(
+        'review-1',
+        {
+          userId: 'customer-1',
+          role: 'CUSTOMER',
+          email: 'customer@example.com',
+        },
+        {
+          originalname: 'review.png',
+          mimetype: 'image/png',
+          size: 6 * 1024 * 1024,
+          buffer: Buffer.alloc(16),
+        },
+      ),
+      'REVIEW_IMAGE_TOO_LARGE',
+    );
+  });
+
+  it('enforces max 5 review images and maps uploaded images', async () => {
+    const prisma = createPrismaMock();
+    const readiness = createReadinessMock();
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
+
+    prisma.productReview.findFirst = jest
+      .fn()
+      .mockResolvedValueOnce({
+        id: 'review-1',
+        shopId: 'shop-1',
+        customerId: 'customer-1',
+        images: new Array(5)
+          .fill(null)
+          .map((_, index) => ({ id: `img-${index}` })),
+      })
+      .mockResolvedValueOnce({
+        id: 'review-1',
+        shopId: 'shop-1',
+        customerId: 'customer-1',
+        images: [],
+      });
+
+    await expectRejectCode(
+      service.uploadCustomerReviewImage(
+        'review-1',
+        {
+          userId: 'customer-1',
+          role: 'CUSTOMER',
+          email: 'customer@example.com',
+        },
+        {
+          originalname: 'review.png',
+          mimetype: 'image/png',
+          size: 1024,
+          buffer: Buffer.alloc(8),
+        },
+      ),
+      'REVIEW_IMAGE_LIMIT_EXCEEDED',
+    );
+
+    (files.storeReviewImage as jest.Mock).mockResolvedValue({
+      publicUrl: '/uploads/review-images/shop-1/review-1/review.png',
+      storageKey: 'review-images/shop-1/review-1/review.png',
+      originalName: 'review.png',
+      mimeType: 'image/png',
+      size: 1024,
+    });
+    prisma.productReview.update = jest.fn().mockResolvedValue({
+      id: 'review-1',
+      productId: 'product-1',
+      shopId: 'shop-1',
+      sellerId: 'seller-1',
+      customerId: 'customer-1',
+      orderId: 'order-1',
+      orderItemId: 'item-1',
+      rating: 5,
+      comment: 'Excellent quality',
+      fitFeedback: null,
+      status: 'PUBLISHED',
+      sellerReply: null,
+      sellerRepliedAt: null,
+      hiddenReason: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      images: [
+        {
+          id: 'image-1',
+          url: '/uploads/review-images/shop-1/review-1/review.png',
+          storageKey: 'review-images/shop-1/review-1/review.png',
+          mimeType: 'image/png',
+          sizeBytes: 1024,
+          width: null,
+          height: null,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ],
+      product: { id: 'product-1', localTitle: 'Jacket', wbTitle: 'Jacket' },
+      shop: { id: 'shop-1', name: 'Shop 1' },
+      customer: { id: 'customer-1', fullName: 'Alice Example' },
+      order: {
+        id: 'order-1',
+        orderNumber: 'ORD-1',
+        status: 'DELIVERED',
+        paymentStatus: 'PAID',
+      },
+      orderItem: {
+        id: 'item-1',
+        productTitleSnapshot: 'Jacket',
+        productImageSnapshot: null,
+        variantNameSnapshot: null,
+        quantity: 1,
+      },
+    });
+
+    const result = await service.uploadCustomerReviewImage(
+      'review-1',
+      { userId: 'customer-1', role: 'CUSTOMER', email: 'customer@example.com' },
+      {
+        originalname: 'review.png',
+        mimetype: 'image/png',
+        size: 1024,
+        buffer: Buffer.alloc(8),
+      },
+    );
+
+    expect(result.images).toEqual([
+      expect.objectContaining({
+        id: 'image-1',
+        mimeType: 'image/png',
+      }),
+    ]);
+  });
+
+  it('public review listing excludes hidden review images from public output', async () => {
+    const prisma = createPrismaMock();
+    const readiness = {
+      getReadiness: jest.fn(() => ({ ready: true })),
+    } as unknown as ProductReadinessService;
+    const files = createFilesMock();
+    const service = new ReviewsService(prisma, readiness, files);
+
+    prisma.product.findFirst = jest.fn().mockResolvedValue({
+      id: 'product-1',
+      visibility: 'ACTIVE',
+      images: [{}],
+      variants: [
+        { isActive: true, stockQuantity: 1, discountPrice: 10, basePrice: 10 },
+      ],
+      shop: {
+        status: 'ACTIVE',
+        sellerProfile: { approvalStatus: 'APPROVED' },
+      },
+    });
+    prisma.productReview.count = jest.fn().mockResolvedValue(1);
+    prisma.productReview.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'review-1',
+        productId: 'product-1',
+        shopId: 'shop-1',
+        sellerId: 'seller-1',
+        customerId: 'customer-1',
+        orderId: 'order-1',
+        orderItemId: 'item-1',
+        rating: 5,
+        comment: 'Great',
+        fitFeedback: null,
+        status: 'PUBLISHED',
+        sellerReply: null,
+        sellerRepliedAt: null,
+        hiddenReason: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        images: [
+          {
+            id: 'image-1',
+            url: '/uploads/review-images/shop-1/review-1/review.png',
+            storageKey: 'review-images/shop-1/review-1/review.png',
+            mimeType: 'image/png',
+            sizeBytes: 1024,
+            width: null,
+            height: null,
+            createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          },
+        ],
+        customer: { id: 'customer-1', fullName: 'Alice Example' },
+        order: { orderNumber: 'ORD-1' },
+      },
+    ]);
+    prisma.productReview.groupBy = jest
+      .fn()
+      .mockResolvedValue([{ rating: 5, _count: { rating: 1 } }]);
+    prisma.productReview.aggregate = jest.fn().mockResolvedValue({
+      _avg: { rating: 5 },
+    });
+
+    const result = await service.listPublicReviews('product-1', {
+      page: 1,
+      limit: 20,
+    });
+
+    expect(result.items[0]?.images).toEqual([
+      expect.objectContaining({ id: 'image-1' }),
+    ]);
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+    expect(
+      (prisma.productReview.findMany as jest.Mock).mock.calls[0]?.[0],
+    ).toEqual(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'PUBLISHED',
+        }),
+      }),
+    );
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
   });
 });

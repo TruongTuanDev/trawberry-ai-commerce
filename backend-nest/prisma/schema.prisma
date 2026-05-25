@@ -1117,6 +1117,7 @@ model ProductReview {
   customer        User      @relation("CustomerProductReviews", fields: [customerId], references: [id], onDelete: Cascade)
   order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderItem       OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  images          ProductReviewImage[]
 
   @@index([productId, status, createdAt])
   @@index([shopId, status, createdAt])
@@ -1124,6 +1125,22 @@ model ProductReview {
   @@index([sellerId, createdAt])
   @@unique([orderItemId, customerId])
   @@map("product_reviews")
+}
+
+model ProductReviewImage {
+  id         String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reviewId   String        @map("review_id") @db.Uuid
+  url        String        @db.Text
+  storageKey String?       @map("storage_key") @db.Text
+  mimeType   String        @map("mime_type") @db.VarChar(100)
+  sizeBytes  Int           @map("size_bytes")
+  width      Int?
+  height     Int?
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  review     ProductReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@map("product_review_images")
 }
 
 model ShopMessageThread {
