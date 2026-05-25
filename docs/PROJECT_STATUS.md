@@ -1,5 +1,21 @@
 # Project Status
 
+## Seller Center i18n Remaining Screens Polish - 2026-05-25
+
+- Status: implemented in `frontend-next`
+- Fully localized all remaining Seller Center pages and components to RU, EN, and VI:
+  - Seller Finance page (balance metrics, ledger entries list, commission invoice table)
+  - Seller Returns page (case list, detail log, actions, evidence modals)
+  - Seller AI Images workspace (generator settings, prompt form, recent tasks list, results gallery, OpenAI/mock runtime helper cards)
+  - Seller Settings & Delivery pages (pickup coordinates, package dimension metrics, carrier options)
+  - Seller Notifications dropdown, list pages, and bell component (role-aware labels and headers)
+  - Order and Payment badges (fully localized dynamically using dictionary mappings)
+- Handled E2E test isolation:
+  - Assertions inspect raw status/attributes (such as `data-status`) or load dynamic JSON strings in Playwright runtime, avoiding hardcoded string regressions in multiple locales.
+- E2E Test Coverage:
+  - Created `frontend-next/tests/e2e/i18n-seller-remaining-screens.spec.ts` asserting default RU locale, switching to VI and EN, reloading persistence, and dynamic translations across surfaces.
+  - Resolved E2E race conditions by awaiting the `/api/users/locale` backend response during language switches before triggering navigation.
+
 ## Public Commerce i18n Completion (Phase 1) - 2026-05-25
 
 - Status: implemented in `frontend-next`

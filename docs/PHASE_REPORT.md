@@ -1,5 +1,33 @@
 # Phase Report
 
+## 2026-05-25 Seller Center i18n Remaining Screens Polish
+
+- Fully localized all remaining Seller Center pages and components to RU, EN, and VI:
+  - Seller Finance page (balance metrics, ledger entries list, commission invoice table)
+  - Seller Returns page (case list, detail log, actions, evidence modals)
+  - Seller AI Images workspace (generator settings, prompt form, recent tasks list, results gallery, OpenAI/mock runtime helper cards)
+  - Seller Settings & Delivery pages (pickup coordinates, package dimension metrics, carrier options)
+  - Seller Notifications dropdown, list pages, and bell component (role-aware labels and headers)
+  - Order and Payment badges (fully localized dynamically using dictionary mappings)
+- Updated E2E business regression tests to inspect `data-status` attributes or dynamically load locale dictionary JSON strings during Playwright test runs, avoiding fragile hardcoded strings.
+- Fixed E2E race condition where language selection clicks triggered `/api/users/locale` requests that were aborted on immediate page navigation. We now await the backend locale update API response before navigations.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- Playwright E2E regression suite (9 tests): pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass (28 suites, 224 tests)
+- `backend-nest npm run build`: pass
+- Runtime health checks for backend and frontend: pass
+
+Remaining gaps:
+
+- Admin area remains English-only.
+- Public customer flow remains English and Russian only.
+
 ## 2026-05-25 Seller Operations i18n Completion + Workspace Hydration
 
 - completed seller-facing i18n migration for the main operations surfaces already covered by the role-based locale foundation:
