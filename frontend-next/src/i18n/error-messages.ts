@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/api";
 import { type LocaleRole, type Locale } from "@/i18n/config";
 import { getStoredRoleLocale } from "@/i18n/locale-store";
-import { translate } from "@/i18n/use-i18n";
+import { translate } from "@/i18n/translate";
 
 function normalizeErrorCode(error: unknown) {
   if (error instanceof ApiError && error.code) {

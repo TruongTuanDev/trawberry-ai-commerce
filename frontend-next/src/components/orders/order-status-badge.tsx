@@ -1,6 +1,6 @@
 "use client";
 
-import { translate } from "@/i18n/use-i18n";
+import { translate } from "@/i18n/translate";
 import { useLocaleStore } from "@/i18n/locale-store";
 
 const toneByStatus: Record<string, string> = {
