@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProductGallery } from "@/components/public/product-gallery";
+import { PublicProductReviewsSection } from "@/components/public/public-product-reviews-section";
 import {
   formatCount,
   formatMoney,
@@ -464,6 +465,8 @@ export function PublicProductDetailPageClient({
                   </aside>
                 </div>
               </section>
+
+              <PublicProductReviewsSection product={product} />
 
               <div
                 className="fixed inset-x-3 bottom-3 z-40 lg:hidden"

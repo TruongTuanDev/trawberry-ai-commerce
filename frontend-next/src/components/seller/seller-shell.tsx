@@ -37,6 +37,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     { href: "/seller/ai-images", label: t("sellerShell.aiImages") },
     { href: "/seller/orders", label: t("sellerShell.orders") },
     { href: "/seller/returns", label: t("sellerShell.returns") },
+    { href: "/seller/reviews", label: t("sellerShell.reviews") },
     { href: "/seller/support-cases", label: t("sellerShell.support") },
     { href: "/seller/payments", label: t("sellerShell.payments") },
     { href: "/seller/payments-to-confirm", label: t("sellerShell.toConfirm") },

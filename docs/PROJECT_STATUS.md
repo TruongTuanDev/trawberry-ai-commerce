@@ -1,5 +1,33 @@
 # Project Status
 
+## Product Reviews & Ratings - 2026-05-26
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Added verified-purchase product reviews:
+  - customer can review only purchased delivered/completed order items
+  - one review per customer order item
+  - duplicate reviews are blocked
+- Added public review surfaces:
+  - public product detail review section
+  - product card rating summary
+  - public shop profile rating summary derived from real reviews
+- Added seller review management:
+  - `/seller/reviews`
+  - seller can reply to reviews for their own shops only
+- Added admin moderation:
+  - `/admin/reviews`
+  - admin can hide and restore reviews
+- Added stable review error codes:
+  - `REVIEW_ORDER_NOT_COMPLETED`
+  - `REVIEW_NOT_VERIFIED_PURCHASE`
+  - `REVIEW_ALREADY_EXISTS`
+  - `REVIEW_PRODUCT_NOT_IN_ORDER`
+  - `REVIEW_RATING_INVALID`
+- Locale policy remains unchanged:
+  - public/customer review UI: `ru/en`
+  - seller review UI: `ru/en/vi`
+  - admin review UI: English only
+
 ## Public Shop Profile - 2026-05-25
 
 - Status: implemented in `backend-nest` and `frontend-next`

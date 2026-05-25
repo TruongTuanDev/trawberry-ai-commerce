@@ -58,6 +58,35 @@ export type PublicProduct = {
   };
 };
 
+export type PublicProductReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  createdAt: string;
+  verifiedPurchase: boolean;
+  customerName: string;
+  orderCode: string | null;
+};
+
+export type PublicProductReviewsResponse = {
+  items: PublicProductReview[];
+  summary: {
+    averageRating: string | null;
+    ratingCount: number;
+    countsByRating: Record<"1" | "2" | "3" | "4" | "5", number>;
+  };
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export type PublicShopProfile = {
   id: string;
   slug: string;
@@ -417,6 +446,28 @@ export async function getPublicProduct(productId: string) {
   return apiRequest<PublicProduct>(`/api/public/products/${productId}`, {
     method: "GET",
   });
+}
+
+export async function getPublicProductReviews(
+  productId: string,
+  query?: {
+    rating?: number;
+    page?: number;
+    limit?: number;
+  },
+) {
+  const params = new URLSearchParams();
+  if (query?.rating) params.set("rating", String(query.rating));
+  if (query?.page) params.set("page", String(query.page));
+  if (query?.limit) params.set("limit", String(query.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<PublicProductReviewsResponse>(
+    `/api/public/products/${productId}/reviews${suffix}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function createCheckoutOrder(payload: CheckoutOrderPayload) {

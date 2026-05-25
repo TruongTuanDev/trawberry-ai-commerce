@@ -10,6 +10,7 @@ import { AiImagesModule } from './modules/ai-images/ai-images.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PublicProductsModule } from './modules/public-products/public-products.module';
 import { PublicShopsModule } from './modules/public-shops/public-shops.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrderTrackingModule } from './modules/order-tracking/order-tracking.module';
@@ -60,6 +61,7 @@ import { HealthController } from './health.controller';
     NotificationsModule,
     PublicProductsModule,
     PublicShopsModule,
+    ReviewsModule,
     CheckoutModule,
     OrderTrackingModule,
     CustomerOrdersModule,

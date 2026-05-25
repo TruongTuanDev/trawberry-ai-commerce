@@ -327,7 +327,8 @@
     "loadingShops": "Đang tải shop...",
     "noShopsAvailable": "Chưa có shop nào",
     "chooseActiveShop": "Chọn shop đang hoạt động",
-    "productsCount": "{{count}} sản phẩm"
+    "productsCount": "{{count}} sản phẩm",
+    "reviews": "??nh gi?"
   },
   "sellerOrders": {
     "fulfillment": "Fulfillment",
@@ -1212,6 +1213,36 @@
       "noEntrance": "Không có lối vào",
       "noFloor": "Không có tầng",
       "noApartment": "Không có căn hộ"
+    }
+    ,"reviews": {
+      "eyebrow": "Ni?m tin kh?ch h?ng",
+      "title": "??nh gi? s?n ph?m",
+      "subtitle": "??nh gi? t? ng??i mua ?? x?c minh cho {{shop}}.",
+      "noShop": "Ch?n shop ?ang ho?t ??ng ?? xem ??nh gi?.",
+      "searchPlaceholder": "T?m theo s?n ph?m ho?c kh?ch h?ng",
+      "allRatings": "T?t c? ??nh gi?",
+      "ratingFilter": "{{count}} sao",
+      "loading": "?ang t?i ??nh gi?...",
+      "empty": "Kh?ng t?m th?y ??nh gi? n?o v?i b? l?c hi?n t?i.",
+      "unknownProduct": "S?n ph?m kh?ng x?c ??nh",
+      "customerFallback": "Kh?ch h?ng",
+      "replyLabel": "Ph?n h?i c?a seller",
+      "replyPlaceholder": "Vi?t ph?n h?i c?ng khai cho kh?ch h?ng.",
+      "sendReply": "G?i ph?n h?i",
+      "replySending": "?ang g?i...",
+      "replySent": "?? g?i ph?n h?i.",
+      "replyFailed": "Kh?ng th? g?i ph?n h?i.",
+      "loadFailed": "Kh?ng th? t?i ??nh gi?.",
+      "status": {
+        "PUBLISHED": "?? c?ng khai",
+        "HIDDEN": "?? ?n",
+        "REPORTED": "B? b?o c?o"
+      },
+      "fit": {
+        "RUNS_SMALL": "Nh? h?n chu?n",
+        "TRUE_TO_SIZE": "??ng size",
+        "RUNS_LARGE": "L?n h?n chu?n"
+      }
     }
   }
 }

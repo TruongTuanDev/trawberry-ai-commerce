@@ -1,5 +1,61 @@
 # Phase Report
 
+## 2026-05-26 Product Reviews & Ratings
+
+- added verified-purchase product reviews across backend and frontend
+- customer review eligibility is now enforced by backend rules:
+  - authenticated customer only
+  - must own the order item
+  - order must be delivered/completed
+  - one review per order item/customer
+- added review APIs:
+  - `POST /api/customer/reviews`
+  - `GET /api/customer/reviews`
+  - `PATCH /api/customer/reviews/:reviewId`
+  - `GET /api/public/products/:productId/reviews`
+  - `GET /api/shops/:shopId/reviews`
+  - `PATCH /api/shops/:shopId/reviews/:reviewId/reply`
+  - `GET /api/admin/reviews`
+  - `PATCH /api/admin/reviews/:reviewId/hide`
+  - `PATCH /api/admin/reviews/:reviewId/restore`
+- public surfaces:
+  - product detail now shows review list and rating summary
+  - product cards now show real rating summary when reviews exist
+  - public shop profile now uses real shop rating aggregation from product reviews
+- seller surfaces:
+  - added `/seller/reviews`
+  - seller can see shop reviews and reply
+- admin surfaces:
+  - added `/admin/reviews`
+  - admin can hide and restore reviews
+- i18n:
+  - public/customer review UI supports `ru/en`
+  - seller review UI supports `ru/en/vi`
+  - admin remains English-only
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-shop-profile.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-buying-ux.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/customer-order-history.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/return-refund-dispute.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+
+Remaining gaps:
+
+- review images are not included in this MVP phase
+- abuse/reporting workflow is still limited to admin hide/restore
+- shop rating currently aggregates published reviews only and does not yet include a separate review-quality or trust score
+
 ## 2026-05-25 Public Shop Profile
 
 - added a public marketplace shop profile route:

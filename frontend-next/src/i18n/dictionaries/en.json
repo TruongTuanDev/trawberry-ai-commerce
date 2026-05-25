@@ -209,6 +209,29 @@
       "loadingProducts": "Loading shop products...",
       "loadFailed": "Unable to load this shop right now.",
       "loadProductsFailed": "Unable to load products from this shop."
+    },
+    "reviews": {
+      "sectionKicker": "Verified reviews",
+      "title": "Reviews",
+      "summaryLine": "{{rating}} average from {{count}} review(s)",
+      "average": "Average rating",
+      "total": "Total reviews",
+      "topRating": "5-star reviews",
+      "noRatingYet": "No rating yet",
+      "empty": "No reviews yet",
+      "loading": "Loading reviews...",
+      "loadFailed": "Unable to load reviews right now.",
+      "verifiedPurchase": "Verified purchase",
+      "sellerReply": "Seller reply",
+      "filters": {
+        "all": "All",
+        "stars": "{{count}} stars"
+      },
+      "fit": {
+        "RUNS_SMALL": "Runs small",
+        "TRUE_TO_SIZE": "True to size",
+        "RUNS_LARGE": "Runs large"
+      }
     }
   },
   "productDetail": {
@@ -534,7 +557,8 @@
     "pendingDescription": "Your onboarding profile and verification documents were submitted. Admin review is still pending.",
     "completeOnboarding": "Complete onboarding and upload verification documents so an admin can review the account.",
     "reviewStatus": "Review status",
-    "openOnboarding": "Open onboarding"
+    "openOnboarding": "Open onboarding",
+    "reviews": "Reviews"
   },
   "sellerOrders": {
     "fulfillment": "Fulfillment",
@@ -981,6 +1005,27 @@
     "notifications": {
       "title": "Notifications",
       "description": "View and manage your payment, delivery, order, and return updates."
+    },
+    "reviews": {
+      "writeReview": "Write review",
+      "editReview": "Edit review",
+      "ratingRequired": "Please select a rating.",
+      "verifiedPurchase": "Verified purchase",
+      "sellerReply": "Seller reply",
+      "fitLabel": "Fit feedback",
+      "fitNone": "No fit feedback",
+      "comment": "Comment",
+      "commentPlaceholder": "Tell other buyers about size, quality, and delivery.",
+      "submit": "Submit review",
+      "submitting": "Submitting...",
+      "thankYou": "Thank you for your review.",
+      "updated": "Review updated.",
+      "submitFailed": "Unable to save your review right now.",
+      "fit": {
+        "RUNS_SMALL": "Runs small",
+        "TRUE_TO_SIZE": "True to size",
+        "RUNS_LARGE": "Runs large"
+      }
     }
   },
   "seller": {
@@ -1671,6 +1716,36 @@
       "shopId": "Shop ID",
       "invoice": "Invoice",
       "markRead": "Mark as read"
+    },
+    "reviews": {
+      "eyebrow": "Customer trust",
+      "title": "Product reviews",
+      "subtitle": "Verified-purchase reviews for {{shop}}.",
+      "noShop": "Choose an active shop to view product reviews.",
+      "searchPlaceholder": "Search by product or customer",
+      "allRatings": "All ratings",
+      "ratingFilter": "{{count}} stars",
+      "loading": "Loading reviews...",
+      "empty": "No reviews found for this filter.",
+      "unknownProduct": "Unknown product",
+      "customerFallback": "Customer",
+      "replyLabel": "Seller reply",
+      "replyPlaceholder": "Share a public reply for the buyer.",
+      "sendReply": "Send reply",
+      "replySending": "Sending...",
+      "replySent": "Reply sent.",
+      "replyFailed": "Unable to send the reply.",
+      "loadFailed": "Unable to load reviews.",
+      "status": {
+        "PUBLISHED": "Published",
+        "HIDDEN": "Hidden",
+        "REPORTED": "Reported"
+      },
+      "fit": {
+        "RUNS_SMALL": "Runs small",
+        "TRUE_TO_SIZE": "True to size",
+        "RUNS_LARGE": "Runs large"
+      }
     }
   },
   "errors": {
@@ -1688,6 +1763,11 @@
     "FORBIDDEN": "You do not have permission to perform this action.",
     "VALIDATION_ERROR": "Some data is invalid. Please review and try again.",
     "OUT_OF_STOCK": "One or more products are out of stock.",
-    "PRODUCT_NOT_AVAILABLE": "One or more products are no longer available."
+    "PRODUCT_NOT_AVAILABLE": "One or more products are no longer available.",
+    "REVIEW_ORDER_NOT_COMPLETED": "Only delivered or completed orders can be reviewed.",
+    "REVIEW_NOT_VERIFIED_PURCHASE": "Only verified purchases can be reviewed.",
+    "REVIEW_ALREADY_EXISTS": "A review for this item already exists.",
+    "REVIEW_PRODUCT_NOT_IN_ORDER": "This product is not part of the selected order item.",
+    "REVIEW_RATING_INVALID": "Please choose a rating from 1 to 5."
   }
 }

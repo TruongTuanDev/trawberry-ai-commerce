@@ -9,7 +9,7 @@ async function backendJson<T>(
   options?: Parameters<APIRequestContext["fetch"]>[1],
 ) {
   let response = await request.fetch(`${backendBaseUrl}${url}`, options);
-  for (let attempt = 0; response.status() === 429 && attempt < 4; attempt += 1) {
+  for (let attempt = 0; response.status() === 429 && attempt < 6; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
     response = await request.fetch(`${backendBaseUrl}${url}`, options);
   }

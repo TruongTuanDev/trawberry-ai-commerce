@@ -520,6 +520,41 @@ export type SellerSupportCase = {
   }>;
 };
 
+export type SellerReviewRecord = {
+  id: string;
+  productId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  orderId: string;
+  orderItemId: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  hiddenReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; title: string } | null;
+  shop: { id: string; name: string } | null;
+  customer: { id: string; name: string | null; maskedName: string } | null;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  orderItem: {
+    id: string;
+    productTitleSnapshot: string;
+    productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
+    quantity: number;
+  } | null;
+};
+
 export type SellerOrdersResponse = {
   items: SellerOrderListItem[];
   meta: {
@@ -2604,4 +2639,46 @@ export async function addShopReturnRefundMessage(shopId: string, caseId: string,
     token,
     body: JSON.stringify({ message }),
   });
+}
+
+export async function listShopReviews(
+  shopId: string,
+  query?: {
+    productId?: string;
+    rating?: number;
+    status?: string;
+    q?: string;
+  },
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (query?.productId) params.set("productId", query.productId);
+  if (query?.rating) params.set("rating", String(query.rating));
+  if (query?.status) params.set("status", query.status);
+  if (query?.q) params.set("q", query.q);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<{ items: SellerReviewRecord[] }>(
+    `/api/shops/${shopId}/reviews${suffix}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function replyToShopReview(
+  shopId: string,
+  reviewId: string,
+  payload: { reply: string },
+  token?: string,
+) {
+  return apiRequest<SellerReviewRecord>(
+    `/api/shops/${shopId}/reviews/${encodeURIComponent(reviewId)}/reply`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }

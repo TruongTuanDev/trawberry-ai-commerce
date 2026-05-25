@@ -74,4 +74,13 @@ The public shop profile must not expose:
 - payment proof images
 - internal admin or seller notes
 
-Messaging is placeholder-only in this phase. Reviews and ratings are placeholder-safe until a dedicated review phase is implemented.
+Messaging is placeholder-only in this phase.
+
+## Ratings after reviews phase
+
+Public shop rating fields now derive from real published product reviews only.
+
+- `ratingAverage` is aggregated from published reviews across the shop's public products
+- `ratingCount` is the count of published reviews used in that aggregate
+- hidden reviews must not contribute to public shop rating
+- no fake or placeholder rating value should be shown when there are no reviews

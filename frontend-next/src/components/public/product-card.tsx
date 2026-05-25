@@ -54,9 +54,12 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         <div className="absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <StockBadge label={stockState.label} tone={stockState.tone} />
-            {product.averageRating ? (
-              <span className="inline-flex items-center rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)]">
-                {Number(product.averageRating).toFixed(1)}
+            {product.averageRating && product.feedbackCount > 0 ? (
+              <span
+                className="inline-flex items-center rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)]"
+                data-testid={`product-rating-summary-${product.id}`}
+              >
+                ★ {Number(product.averageRating).toFixed(1)} ({product.feedbackCount})
               </span>
             ) : null}
           </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { CustomerReviewEditor } from "@/components/customer/customer-review-editor";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { PaymentDetailsPanel } from "@/components/payments/payment-details-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
@@ -19,6 +21,7 @@ export function CheckoutReceiptView({
   phone?: string;
 }) {
   const { t, locale } = useI18n("customer");
+  const [reviewOverrides, setReviewOverrides] = useState<Record<string, NonNullable<CustomerCheckoutReceipt["orders"][number]["items"][number]["review"]>>>({});
 
   return (
     <section
@@ -103,6 +106,27 @@ export function CheckoutReceiptView({
                   <p className="text-sm font-semibold text-[var(--foreground)]">
                     {item.lineTotal}
                   </p>
+                  <div className="col-span-3">
+                    {order.status === "DELIVERED" ||
+                    order.deliveryStatus === "DELIVERED" ||
+                    Boolean(order.customerCompletedAt) ||
+                    reviewOverrides[item.id] ||
+                    item.review ? (
+                      <CustomerReviewEditor
+                        orderId={order.orderId}
+                        orderItemId={item.id}
+                        productId={item.productId}
+                        existingReview={reviewOverrides[item.id] ?? item.review}
+                        compact
+                        onSaved={(savedReview) => {
+                          setReviewOverrides((current) => ({
+                            ...current,
+                            [item.id]: savedReview,
+                          }));
+                        }}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>

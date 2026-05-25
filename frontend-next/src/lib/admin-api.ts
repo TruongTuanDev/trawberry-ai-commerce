@@ -716,6 +716,41 @@ export type AdminReturnRefundCase = {
   };
 };
 
+export type AdminReviewRecord = {
+  id: string;
+  productId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  orderId: string;
+  orderItemId: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  hiddenReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; title: string } | null;
+  shop: { id: string; name: string } | null;
+  customer: { id: string; name: string | null; maskedName: string } | null;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  orderItem: {
+    id: string;
+    productTitleSnapshot: string;
+    productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
+    quantity: number;
+  } | null;
+};
+
 export async function getAdminDashboardSummary(query?: {
   dateFrom?: string;
   dateTo?: string;
@@ -1324,4 +1359,45 @@ export async function adminRemindYandex(orderId: string) {
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+export async function listAdminReviews(query?: {
+  productId?: string;
+  rating?: number;
+  status?: string;
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+  if (query?.productId) params.set("productId", query.productId);
+  if (query?.rating) params.set("rating", String(query.rating));
+  if (query?.status) params.set("status", query.status);
+  if (query?.q) params.set("q", query.q);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<{ items: AdminReviewRecord[] }>(
+    `/api/admin/reviews${suffix}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function hideAdminReview(reviewId: string, reason?: string) {
+  return apiRequest<AdminReviewRecord>(
+    `/api/admin/reviews/${encodeURIComponent(reviewId)}/hide`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    },
+  );
+}
+
+export async function restoreAdminReview(reviewId: string) {
+  return apiRequest<AdminReviewRecord>(
+    `/api/admin/reviews/${encodeURIComponent(reviewId)}/restore`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({}),
+    },
+  );
 }

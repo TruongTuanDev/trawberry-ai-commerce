@@ -44,6 +44,8 @@ model User {
   sentRefundTransfers       RefundManualTransfer[] @relation("RefundTransferSeller")
   receivedRefundTransfers   RefundManualTransfer[] @relation("RefundTransferCustomer")
   notifications             Notification[]         @relation("RecipientNotifications")
+  customerProductReviews    ProductReview[]        @relation("CustomerProductReviews")
+  sellerProductReviews      ProductReview[]        @relation("SellerProductReviews")
 
   @@map("users")
 }
@@ -264,6 +266,7 @@ model Shop {
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
   sellerMonthlyInvoices SellerMonthlyInvoice[]
   returnRefundCases     ReturnRefundCase[]
+  productReviews        ProductReview[]
 
   @@map("shops")
 }
@@ -357,6 +360,7 @@ model Product {
   orderItems        OrderItem[]
   aiGenerationTasks AiGenerationTask[]
   aiGeneratedImages AiGeneratedImage[]
+  productReviews    ProductReview[]
 
   @@unique([shopId, wbNmId])
   @@unique([shopId, sellerSku])
@@ -574,6 +578,7 @@ model Order {
   deliveryComments         DeliveryComment[]
   sellerFeeLedgerEntries   SellerFeeLedgerEntry[]
   returnRefundCases        ReturnRefundCase[]
+  productReviews           ProductReview[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
@@ -1074,10 +1079,43 @@ model OrderItem {
   order                     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product                   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   variant                   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  productReview             ProductReview?
 
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+model ProductReview {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId       String    @map("product_id") @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  sellerId        String    @map("seller_id") @db.Uuid
+  customerId      String    @map("customer_id") @db.Uuid
+  orderId         String    @map("order_id") @db.Uuid
+  orderItemId     String    @unique @map("order_item_id") @db.Uuid
+  rating          Int
+  comment         String?
+  fitFeedback     String?   @map("fit_feedback") @db.VarChar(50)
+  status          String    @default("PUBLISHED") @db.VarChar(50)
+  sellerReply     String?   @map("seller_reply")
+  sellerRepliedAt DateTime? @map("seller_replied_at") @db.Timestamptz(6)
+  hiddenReason    String?   @map("hidden_reason") @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seller          User      @relation("SellerProductReviews", fields: [sellerId], references: [id], onDelete: Restrict)
+  customer        User      @relation("CustomerProductReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([productId, status, createdAt])
+  @@index([shopId, status, createdAt])
+  @@index([customerId, createdAt])
+  @@index([sellerId, createdAt])
+  @@unique([orderItemId, customerId])
+  @@map("product_reviews")
 }
 
 model AiGenerationTask {

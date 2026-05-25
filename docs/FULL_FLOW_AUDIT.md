@@ -1,5 +1,21 @@
 # Full Commerce Flow Audit
 
+## Product Reviews & Ratings Addendum
+
+- customers can now create verified product reviews only after a delivered/completed purchase
+- verified review eligibility is enforced by backend order ownership and order-item checks
+- public product detail now shows:
+  - real review list
+  - verified purchase badge
+  - seller reply when present
+  - rating summary aggregated from published reviews only
+- public product cards now show real rating summary when available
+- public shop profiles now use real aggregated review ratings instead of placeholder-only rating state
+- seller can now view and reply to reviews from `/seller/reviews`
+- admin can now moderate reviews from `/admin/reviews` by hiding or restoring them
+- hidden reviews are removed from public product and shop aggregates
+- no fake ratings are generated anywhere in this flow
+
 ## Public Shop Profile Addendum
 
 - buyers can now open a public shop profile route at `/shops/[slug]` from marketplace product surfaces

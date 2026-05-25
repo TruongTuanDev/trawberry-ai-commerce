@@ -101,6 +101,23 @@ export function CustomerOrdersPageClient() {
                   </p>
                 </div>
               </div>
+              {receipt.orders.some(
+                (order) =>
+                  (order.status === "DELIVERED" ||
+                    order.deliveryStatus === "DELIVERED" ||
+                    Boolean(order.customerCompletedAt)) &&
+                  order.items.some((item) => !item.review),
+              ) ? (
+                <div className="mt-4 flex justify-end">
+                  <Link
+                    href={`/customer/orders/${receipt.checkoutCode}`}
+                    className="public-button-secondary inline-flex px-4 py-2 text-sm"
+                    data-testid="customer-order-write-review-link"
+                  >
+                    {t("customer.reviews.writeReview")}
+                  </Link>
+                </div>
+              ) : null}
             </article>
           ))
         ) : (
