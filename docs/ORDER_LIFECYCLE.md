@@ -1,5 +1,33 @@
 # Order Lifecycle
 
+## Seller printable shipping label addendum
+
+Seller order detail now supports an internal printable shipping label for manual Yandex operations.
+
+- route:
+  - `/seller/orders/[id]/shipping-label`
+  - optional print mode: `/seller/orders/[id]/shipping-label?print=1`
+- purpose:
+  - internal marketplace package identification for seller/courier handling
+  - not an official Yandex label
+- default print size:
+  - `100mm x 150mm`
+- content:
+  - order code
+  - recipient summary
+  - sender / pickup summary
+  - manual Yandex id and tracking URL when present
+  - payment summary
+  - package item summary
+  - QR that links to public order tracking lookup
+
+Operational rules remain unchanged:
+
+- seller still creates Yandex shipments manually outside the platform
+- seller still enters `manualYandexOrderId` and optional tracking URL manually
+- no real Yandex API label or provider barcode is generated in this phase
+- payment and fulfillment transitions are unchanged
+
 ## Admin fulfillment supervision addendum
 
 Admin now supervises the same normalized fulfillment lifecycle as the seller board:

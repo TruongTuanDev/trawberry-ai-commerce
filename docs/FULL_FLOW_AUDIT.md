@@ -1,5 +1,31 @@
 # Full Commerce Flow Audit
 
+## Seller Printable Shipping Label Addendum
+
+- seller order detail now supports an internal printable shipping label flow for manual Yandex operations
+- verified route:
+  - `/seller/orders/[id]/shipping-label`
+- verified print behavior:
+  - label preview centered on screen
+  - seller shell/sidebar/header hidden from the print page output
+  - print stylesheet targets `100mm x 150mm`
+- verified label payload sources:
+  - existing seller order detail API
+  - existing seller delivery detail data
+  - existing seller delivery settings data for pickup origin context
+- verified label content:
+  - order code
+  - recipient name/phone/address snapshot
+  - sender/pickup summary
+  - manual Yandex id when present
+  - payment method/status
+  - package summary
+  - QR to public tracking lookup
+- verified business isolation:
+  - no order lifecycle mutation was added
+  - no payment review logic changed
+  - no real Yandex API call or official provider label generation was introduced
+
 ## Seller Payment Settings + Products i18n Addendum
 
 - seller payment settings now render role-based localized copy in `ru`, `en`, and `vi` on the active frontend runtime

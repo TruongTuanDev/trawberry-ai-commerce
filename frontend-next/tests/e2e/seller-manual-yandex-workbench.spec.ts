@@ -212,7 +212,10 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await page.getByTestId("manual-delivery-estimated-at").fill("2024-01-01T10:00");
   await page.getByTestId("manual-delivery-note").fill("Created manually in Yandex dashboard.");
   await page.getByTestId("manual-delivery-save").click();
-  await expect(page.getByTestId("delivery-action-message")).toContainText("saved");
+  await expect(page.getByTestId("delivery-action-message")).toHaveAttribute(
+    "data-raw-status",
+    /saved|updated/i,
+  );
   await expect(page.getByTestId("seller-delivery-status")).toHaveText("YANDEX_MANUAL_CREATED");
 
   await page.getByTestId("manual-delivery-mark-courier-assigned").click();

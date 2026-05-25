@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/public/public-shell";
 import { getLocalizedErrorMessage } from "@/i18n/error-messages";
@@ -10,7 +10,8 @@ import { trackOrderByCode } from "@/lib/public-api";
 export function OrderTrackPageClient() {
   const { t } = useI18n("customer");
   const router = useRouter();
-  const [orderCode, setOrderCode] = useState("");
+  const searchParams = useSearchParams();
+  const [orderCode, setOrderCode] = useState(searchParams.get("orderCode") ?? "");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

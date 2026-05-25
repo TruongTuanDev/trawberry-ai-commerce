@@ -92,6 +92,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const saving = savingStatus || savingPayment;
   const deliveryLoading = runningDelivery || runningManualDelivery || runningReport || runningComment;
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
+  const [deliveryActionStatus, setDeliveryActionStatus] = useState<string | null>(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupLatitude, setPickupLatitude] = useState<string | null>(null);
   const [pickupLongitude, setPickupLongitude] = useState<string | null>(null);
@@ -242,8 +243,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         );
         return updated;
       },
-      successMessage: `Đã cập nhật trạng thái đơn hàng.`,
-      errorMessage: "Không thể cập nhật trạng thái đơn hàng.",
+      successMessage: t("seller.orderDetail.messages.orderStatusUpdated"),
+      errorMessage: t("seller.orderDetail.messages.orderStatusUpdateFailed"),
       onSuccess: async (updated) => {
         setOrder(updated);
         setNextStatus(updated.status as SellerOrderListItem["status"]);
@@ -275,7 +276,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   ) => {
     if (!currentShopId || !order) return;
     if (action === "reject") {
-      if (!window.confirm("Bạn có chắc chắn muốn từ chối thanh toán giao hàng?")) return;
+      if (!window.confirm(t("seller.orderDetail.messages.confirmRejectDeliveryPayment"))) return;
     }
     setError(null);
     await runPaymentAction({
@@ -307,9 +308,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       },
       successMessage:
         action === "confirm"
-          ? "Đã xác nhận thanh toán."
-          : "Đã ghi nhận tranh chấp thanh toán.",
-      errorMessage: "Không thể cập nhật trạng thái thanh toán.",
+          ? t("seller.orderDetail.messages.paymentConfirmed")
+          : t("seller.orderDetail.messages.paymentDisputed"),
+      errorMessage: t("seller.orderDetail.messages.paymentUpdateFailed"),
       onSuccess: async (refreshed) => {
         setOrder(refreshed);
         setNextStatus(refreshed.status as SellerOrderListItem["status"]);
@@ -378,22 +379,27 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       !pickupAddress.trim()
     ) {
       setError(
-        "Pickup address is required. Configure seller delivery settings first.",
+        t("seller.orderDetail.messages.pickupAddressRequired") ||
+          "Pickup address is required. Configure seller delivery settings first.",
       );
       return;
     }
 
     if (action === "cancel" && !delivery?.activeShipment) {
-      setError("No active shipment exists to cancel.");
+      setError(
+        t("seller.orderDetail.messages.noActiveShipmentToCancel") ||
+          "No active shipment exists to cancel.",
+      );
       return;
     }
 
     if (action === "cancel") {
-      if (!window.confirm("Hủy lô giao hàng này?")) return;
+      if (!window.confirm(t("seller.orderDetail.messages.confirmCancelBatch"))) return;
     }
 
     setError(null);
     setDeliveryMessage(null);
+    setDeliveryActionStatus(null);
 
     await runDeliveryAction({
       action: async () => {
@@ -413,7 +419,11 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               result.offers[0]?.id ??
               "",
           );
-          setDeliveryMessage(`Loaded ${result.offers.length} delivery offer(s).`);
+          setDeliveryMessage(
+            t("seller.orderDetail.messages.loadedOffers", { count: result.offers.length }) ||
+              `Loaded ${result.offers.length} delivery offer(s).`,
+          );
+          setDeliveryActionStatus("calculated");
           return;
         } else if (action === "create") {
           await createDeliveryShipment(
@@ -430,7 +440,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             },
             "",
           );
-          setDeliveryMessage("Delivery shipment created.");
+          setDeliveryMessage(
+            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment created.",
+          );
+          setDeliveryActionStatus("created");
         } else if (action === "accept") {
           if (!delivery?.activeShipment) {
             throw new Error("No active shipment exists to accept.");
@@ -441,7 +454,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             delivery.activeShipment.id,
             "",
           );
-          setDeliveryMessage("Delivery shipment accepted.");
+          setDeliveryMessage(
+            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment accepted.",
+          );
+          setDeliveryActionStatus("accepted");
         } else if (action === "refresh") {
           if (!delivery?.activeShipment) {
             throw new Error("No active shipment exists to refresh.");
@@ -452,7 +468,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             delivery.activeShipment.id,
             "",
           );
-          setDeliveryMessage("Delivery shipment refreshed.");
+          setDeliveryMessage(
+            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment refreshed.",
+          );
+          setDeliveryActionStatus("refreshed");
         } else {
           await cancelDeliveryShipment(
             currentShopId,
@@ -461,12 +480,15 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             { reason: "Seller cancelled shipment from the order detail page." },
             "",
           );
-          setDeliveryMessage("Delivery shipment cancelled.");
+          setDeliveryMessage(
+            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment cancelled.",
+          );
+          setDeliveryActionStatus("cancelled");
         }
         await refreshDeliverySnapshot();
       },
-      successMessage: action === "calculate" ? undefined : "Đã cập nhật giao hàng.",
-      errorMessage: "Thao tác giao hàng thất bại.",
+      successMessage: action === "calculate" ? undefined : t("seller.orderDetail.messages.deliveryUpdated"),
+      errorMessage: t("seller.orderDetail.messages.deliveryActionFailed"),
     }).catch(() => {});
   };
 
@@ -475,13 +497,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   ) => {
     if (!currentShopId || !order) return;
     if (action === "delivered") {
-      if (!window.confirm("Xác nhận đã giao hàng thành công?")) return;
+      if (!window.confirm(t("seller.orderDetail.messages.confirmDeliverySuccess"))) return;
     }
     if (action === "cancel") {
-      if (!window.confirm("Hủy giao hàng thủ công này?")) return;
+      if (!window.confirm(t("seller.orderDetail.messages.confirmCancelManualDelivery"))) return;
     }
     setError(null);
     setDeliveryMessage(null);
+    setDeliveryActionStatus(null);
     await runManualDeliveryAction({
       action: async () => {
         if (action === "save") {
@@ -493,7 +516,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               buildManualPayload(),
               "",
             );
-            setDeliveryMessage("Manual delivery updated.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliverySaved") || "Manual delivery updated.",
+            );
+            setDeliveryActionStatus("updated");
           } else {
             await createManualDelivery(
               currentShopId,
@@ -501,7 +527,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               buildManualPayload(),
               "",
             );
-            setDeliveryMessage("Manual delivery saved.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliverySaved") || "Manual delivery saved.",
+            );
+            setDeliveryActionStatus("saved");
           }
         } else {
           if (!activeShipment) throw new Error("No manual delivery exists yet.");
@@ -520,7 +549,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               },
               "",
             );
-            setDeliveryMessage("Manual Yandex delivery marked on the way.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliveryUpdated") || "Manual Yandex delivery marked on the way.",
+            );
+            setDeliveryActionStatus("transit");
           } else if (action === "courier-assigned") {
             await markManualDeliveryCourierAssigned(
               currentShopId,
@@ -536,7 +568,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               },
               "",
             );
-            setDeliveryMessage("Courier assigned.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliveryUpdated") || "Courier assigned.",
+            );
+            setDeliveryActionStatus("courier-assigned");
           } else if (action === "picked-up") {
             await markManualDeliveryPickedUp(
               currentShopId,
@@ -552,7 +587,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               },
               "",
             );
-            setDeliveryMessage("Package marked picked up.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliveryUpdated") || "Package marked picked up.",
+            );
+            setDeliveryActionStatus("picked-up");
           } else if (action === "delivered") {
             await markManualDeliveryDelivered(
               currentShopId,
@@ -561,7 +599,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               { note: "Seller marked manual delivery delivered." },
               "",
             );
-            setDeliveryMessage("Manual delivery marked delivered.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliveryUpdated") || "Manual delivery marked delivered.",
+            );
+            setDeliveryActionStatus("delivered");
           } else {
             await cancelDeliveryShipment(
               currentShopId,
@@ -570,13 +611,16 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               { reason: "Seller cancelled manual delivery." },
               "",
             );
-            setDeliveryMessage("Manual delivery cancelled.");
+            setDeliveryMessage(
+              t("seller.orderDetail.messages.deliveryUpdated") || "Manual delivery cancelled.",
+            );
+            setDeliveryActionStatus("cancelled");
           }
         }
         await refreshDeliverySnapshot();
       },
-      successMessage: action === "save" ? "Đã lưu giao hàng." : "Đã cập nhật giao hàng.",
-      errorMessage: "Thao tác giao hàng thủ công thất bại.",
+      successMessage: action === "save" ? t("seller.orderDetail.messages.deliverySaved") : t("seller.orderDetail.messages.deliveryUpdated"),
+      errorMessage: t("seller.orderDetail.messages.manualDeliveryFailed"),
     }).catch(() => {});
   };
 
@@ -584,6 +628,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     if (!currentShopId || !order || !activeShipment) return;
     setError(null);
     setDeliveryMessage(null);
+    setDeliveryActionStatus(null);
     await runReportAction({
       action: async () => {
         await markManualDeliveryFailed(
@@ -597,11 +642,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           },
           "",
         );
-        setDeliveryMessage("Delivery problem reported.");
+        setDeliveryMessage(
+          t("seller.orderDetail.messages.deliveryProblemReported") || "Delivery problem reported.",
+        );
+        setDeliveryActionStatus("problem-reported");
         await refreshDeliverySnapshot();
       },
-      successMessage: "Đã báo cáo sự cố giao hàng.",
-      errorMessage: "Không thể báo cáo sự cố giao hàng.",
+      successMessage: t("seller.orderDetail.messages.deliveryProblemReported"),
+      errorMessage: t("seller.orderDetail.messages.deliveryProblemFailed"),
     }).catch(() => {});
   };
 
@@ -610,6 +658,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       return;
     setError(null);
     setDeliveryMessage(null);
+    setDeliveryActionStatus(null);
     await runCommentAction({
       action: async () => {
         await addDeliveryComment(
@@ -620,11 +669,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           "",
         );
         setInternalComment("");
-        setDeliveryMessage("Internal delivery comment added.");
+        setDeliveryMessage(
+          t("seller.orderDetail.messages.internalNoteAdded") || "Internal delivery comment added.",
+        );
+        setDeliveryActionStatus("comment-added");
         await refreshDeliverySnapshot();
       },
-      successMessage: "Đã thêm ghi chú nội bộ.",
-      errorMessage: "Không thể thêm ghi chú.",
+      successMessage: t("seller.orderDetail.messages.internalNoteAdded"),
+      errorMessage: t("seller.orderDetail.messages.internalNoteFailed"),
     }).catch(() => {});
   };
 
@@ -762,6 +814,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     await navigator.clipboard.writeText(value);
     setDeliveryMessage(`${label} copied.`);
   };
+
+  const openShippingLabel = (mode: "preview" | "print") => {
+    const url =
+      mode === "print"
+        ? `/seller/orders/${orderId}/shipping-label?print=1`
+        : `/seller/orders/${orderId}/shipping-label`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
   const openMaps = (lat: number | null, lng: number | null) => {
     if (lat === null || lng === null) return;
     window.open(`https://yandex.ru/maps/?pt=${lng},${lat}&z=16`, "_blank", "noopener,noreferrer");
@@ -808,7 +868,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             />
             <Metric
               label={t("seller.orderDetail.nextAction")}
-              value={formatNextAction(order.nextAction)}
+              value={formatNextAction(order.nextAction, t)}
               testId="seller-order-next-action"
             />
             <Metric
@@ -1196,6 +1256,22 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openShippingLabel("print")}
+                    className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
+                    data-testid="seller-print-shipping-label"
+                  >
+                    {t("seller.shippingLabel.print")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openShippingLabel("preview")}
+                    className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold"
+                    data-testid="seller-open-shipping-label"
+                  >
+                    {t("seller.shippingLabel.openPrintableLabel")}
+                  </button>
                   <button type="button" onClick={() => void copyToClipboard(senderText, "Sender")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
                     Copy sender
                   </button>
@@ -1433,6 +1509,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 <div
                   className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
                   data-testid="delivery-action-message"
+                  data-status={deliveryActionStatus ?? undefined}
+                  data-raw-status={deliveryActionStatus ?? undefined}
                 >
                   {deliveryMessage}
                 </div>
@@ -1718,7 +1796,13 @@ function Metric({
   );
 }
 
-function formatNextAction(nextAction: string | null) {
+function formatNextAction(nextAction: string | null, t: (key: string) => string) {
+  if (!nextAction) return t("orderDetail.noAction") || "No action";
+  const key = `orderDetail.nextActions.${nextAction}`;
+  const translated = t(key);
+  if (translated && translated !== key) {
+    return translated;
+  }
   const labels: Record<string, string> = {
     review_payment_proof: "Confirm or reject payment proof",
     accept_pay_on_delivery_order: "Accept COD order",
@@ -1737,7 +1821,7 @@ function formatNextAction(nextAction: string | null) {
     review_order: "Review order detail",
   };
 
-  return nextAction ? labels[nextAction] ?? nextAction : "No action";
+  return labels[nextAction] ?? nextAction;
 }
 
 function Field({

@@ -1,5 +1,49 @@
 # Phase Report
 
+## 2026-05-25 Seller Printable Shipping Label
+
+- added a printable internal shipping label flow for seller manual Yandex handling
+- new route:
+  - `/seller/orders/[id]/shipping-label`
+  - `?print=1` opens the same route in auto-print mode
+- seller order detail now surfaces dedicated shipping-label actions inside the Yandex handoff block
+- print view includes:
+  - order code
+  - recipient identity and dropoff details
+  - sender / pickup summary
+  - manual Yandex id and tracking URL when available
+  - package summary
+  - payment summary
+  - QR for public order tracking lookup
+- print layout behavior:
+  - `100mm x 150mm`
+  - print-only sheet output
+  - seller shell chrome hidden on label page and omitted from print output
+- no backend business contract change was required
+- E2E hardening included:
+  - dedicated `seller-shipping-label.spec.ts`
+  - stable raw-status assertion for manual Yandex save feedback
+  - three-role sync assertions updated to stable address/status contracts
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/seller-manual-yandex-workbench.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/three-role-order-sync.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/orders.e2e-spec.ts`: pass
+- runtime health checks for frontend/backend: pass
+
+Remaining gaps:
+
+- label QR currently opens the public order-tracking lookup with `orderCode` prefilled; customer phone entry is still required to complete lookup
+- this phase does not generate official provider labels, barcodes, or Yandex API payloads
+
 ## 2026-05-25 Seller Payment Settings + Products i18n Polish
 
 - fixed seller payment settings live translation for `ru`, `en`, and `vi`

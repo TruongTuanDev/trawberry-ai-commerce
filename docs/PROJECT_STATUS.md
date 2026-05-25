@@ -1,5 +1,30 @@
 # Project Status
 
+## Seller Printable Shipping Label - 2026-05-25
+
+- Status: implemented in `frontend-next`
+- Seller order detail now exposes printable shipping label actions in the manual Yandex handoff area:
+  - `Print label`
+  - `Open printable label`
+- New seller print route:
+  - `/seller/orders/[id]/shipping-label`
+  - optional auto-print mode via `?print=1`
+- Label behavior:
+  - internal marketplace shipping label only
+  - not an official Yandex label
+  - default print size `100mm x 150mm`
+  - QR links to the public order tracking lookup using `orderCode`
+- No backend business rule changed:
+  - no real Yandex API integration
+  - no payment logic change
+  - no fulfillment status change
+- Verification completed on:
+  - shipping-label dedicated E2E
+  - seller manual Yandex workbench regression
+  - three-role order sync regression
+  - seller i18n regression
+  - action feedback regression
+
 ## Seller Payment Settings + Products i18n Polish - 2026-05-25
 
 - Status: implemented in `frontend-next`
