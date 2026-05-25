@@ -102,14 +102,18 @@
     "returnTypes": {
       "REFUND_ONLY": "Chỉ hoàn tiền",
       "RETURN_AND_REFUND": "Trả hàng và hoàn tiền",
-      "EXCHANGE_REQUEST": "Yêu cầu đổi hàng"
+      "EXCHANGE_REQUEST": "Yêu cầu đổi hàng",
+      "PAYMENT_DISPUTE_ONLY": "Tranh chấp thanh toán"
     },
     "returnReasons": {
       "WRONG_SIZE": "Sai kích cỡ",
       "DAMAGED_ITEM": "Hàng bị hỏng",
       "NOT_AS_DESCRIBED": "Không đúng mô tả",
       "MISSING_ITEM": "Thiếu sản phẩm",
+      "WRONG_ITEM": "Giao sai sản phẩm",
+      "LATE_DELIVERY": "Giao hàng chậm",
       "CHANGED_MIND": "Đổi ý",
+      "PAYMENT_DISPUTE": "Tranh chấp thanh toán",
       "OTHER": "Khác"
     },
     "empty": {

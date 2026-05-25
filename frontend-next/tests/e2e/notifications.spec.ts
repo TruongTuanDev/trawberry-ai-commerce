@@ -237,7 +237,7 @@ test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
-  await sellerPage.goto("/login");
+  await sellerPage.goto("http://127.0.0.1:3000/login");
   await sellerPage.getByTestId("login-email").fill(sellerEmail);
   await sellerPage.getByTestId("login-password").fill(sellerPassword);
   await sellerPage.getByTestId("login-submit").click();
@@ -318,7 +318,7 @@ test("Notification Center Role Layouts and Empty States", async ({ browser }) =>
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();
-  await customerPage.goto("/customer/login");
+  await customerPage.goto("http://127.0.0.1:3000/customer/login");
   await customerPage.getByTestId("customer-login-email").fill("demo-customer@trawberry.local");
   await customerPage.getByTestId("customer-login-password").fill("DemoCustomer123!");
   await customerPage.getByTestId("customer-login-submit").click();

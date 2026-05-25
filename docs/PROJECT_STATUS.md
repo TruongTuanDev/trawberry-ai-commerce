@@ -1,5 +1,20 @@
 # Project Status
 
+## Customer Account i18n Final Audit & Cleanup - 2026-05-25
+
+- Status: in verification
+- Runtime audit found that customer account still had mixed-language copy after the earlier customer i18n completion commit.
+- Customer cleanup scope now includes:
+  - `/customer/notifications` shell title/subtitle
+  - `/customer/returns` form/detail/file-upload copy
+  - customer support section inside order detail
+  - customer receipt lookup and receipt summary copy
+- Buyer policy remains unchanged:
+  - supported locales: `ru`, `en`
+  - default locale: `ru`
+  - no `vi` option in customer/public account UI
+- No seller, admin, backend, or CI workflow changes are part of this cleanup.
+
 ## Customer Account i18n Completion - 2026-05-25
 
 - Status: implemented in `frontend-next`

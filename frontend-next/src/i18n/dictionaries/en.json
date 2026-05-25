@@ -102,14 +102,18 @@
     "returnTypes": {
       "REFUND_ONLY": "Refund only",
       "RETURN_AND_REFUND": "Return and refund",
-      "EXCHANGE_REQUEST": "Exchange request"
+      "EXCHANGE_REQUEST": "Exchange request",
+      "PAYMENT_DISPUTE_ONLY": "Payment dispute"
     },
     "returnReasons": {
       "WRONG_SIZE": "Wrong size",
       "DAMAGED_ITEM": "Damaged item",
       "NOT_AS_DESCRIBED": "Not as described",
       "MISSING_ITEM": "Missing item",
+      "WRONG_ITEM": "Wrong item",
+      "LATE_DELIVERY": "Late delivery",
       "CHANGED_MIND": "Changed mind",
+      "PAYMENT_DISPUTE": "Payment dispute",
       "OTHER": "Other"
     },
     "empty": {
@@ -824,6 +828,13 @@
       "orderTotal": "Order total {{amount}}",
       "requestReturnRefund": "Request return / refund",
       "trackOrder": "Track order",
+      "marketplace": "Marketplace",
+      "myOrders": "My orders",
+      "lookupEyebrow": "Receipt lookup",
+      "phonePlaceholder": "Phone used at checkout",
+      "loadButton": "Load receipt",
+      "phoneRequired": "Phone is required.",
+      "loadFailed": "Unable to load receipt.",
       "support": "Support",
       "casesCount": "{{count}} case(s)"
     },
@@ -852,6 +863,8 @@
       "requestedAmount": "Requested amount",
       "evidenceLabel": "Evidence label",
       "optionalEvidence": "Optional evidence",
+      "chooseFile": "Choose file",
+      "noFileSelected": "No file selected",
       "comment": "Comment",
       "submitting": "Submitting...",
       "openCase": "Open case",
@@ -908,13 +921,30 @@
       "subject": "Subject",
       "message": "Message",
       "submitting": "Submitting...",
+      "submit": "Submit case",
       "existingCases": "Existing cases",
       "empty": "No support cases yet.",
       "selectCase": "Select a support case to review the thread.",
       "loading": "Loading support case...",
+      "loadingCase": "Loading support case...",
+      "entireCheckoutDescription": "Applies to the full checkout receipt",
       "reply": "Reply",
       "sendReply": "Send reply",
-      "fullCheckoutReceipt": "Applies to the full checkout receipt"
+      "fullCheckoutReceipt": "Applies to the full checkout receipt",
+      "caseCount": "{{count}} case(s)",
+      "issueTypes": {
+        "PAYMENT_PROOF": "Payment proof",
+        "DELIVERY_DELAY": "Delivery delay",
+        "WRONG_ITEM": "Wrong item",
+        "DAMAGED_ITEM": "Damaged item",
+        "REFUND_REQUEST": "Refund request",
+        "CANCEL_REQUEST": "Cancel request",
+        "OTHER": "Other"
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "View and manage your payment, delivery, order, and return updates."
     }
   },
   "seller": {

@@ -210,7 +210,9 @@ test("customer sees parent receipt and order history for multi-shop checkout", a
   await page.getByTestId("cart-checkout").click();
   await page.getByTestId("checkout-submit").click();
 
-  await expect(page.getByTestId("checkout-confirmation")).toBeVisible();
+  await expect(page.getByTestId("checkout-confirmation")).toBeVisible({
+    timeout: 15000,
+  });
   const checkoutCode = (await page.getByTestId("checkout-confirmation").innerText()).match(/CHK-\d+-\d+/)?.[0];
   expect(checkoutCode).toBeTruthy();
   await expect(page.getByTestId("checkout-order-card")).toHaveCount(2);

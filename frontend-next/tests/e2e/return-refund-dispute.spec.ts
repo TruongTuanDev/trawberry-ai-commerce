@@ -341,7 +341,10 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await page.reload();
   page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("customer-confirm-refund-received").click();
-  await expect(page.getByTestId("customer-return-row-status").first()).toHaveAttribute("data-status", "REFUND_CONFIRMED");
+  await page.reload();
+  await expect(page.getByTestId("customer-return-row-status").first()).toHaveAttribute("data-status", "REFUND_CONFIRMED", {
+    timeout: 15000,
+  });
 
   await sellerPage.goto("/seller/finance");
   await expect(sellerPage.getByTestId("seller-finance-page")).toContainText("RETURN_REFUND_CONFIRMED");

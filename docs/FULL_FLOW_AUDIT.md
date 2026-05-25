@@ -1,5 +1,18 @@
 # Full Commerce Flow Audit
 
+## Customer Account i18n Cleanup Addendum
+
+- customer notifications route now uses customer-shell dictionary keys for the page frame instead of server-hard-coded Vietnamese text
+- customer returns/refunds now use localized RU/EN UI chrome for:
+  - page frame
+  - form labels
+  - helper text
+  - detail metrics
+  - case actions
+  - file upload trigger/empty filename state
+- customer order detail support section and public receipt lookup now render localized account-level labels while preserving existing API and business behavior
+- no checkout, return/refund, support, or session business logic changed in this cleanup
+
 ## Customer Account i18n Addendum
 
 - customer auth and account surfaces now follow the buyer locale policy:

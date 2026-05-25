@@ -1,5 +1,34 @@
 # Phase Report
 
+## 2026-05-25 Customer Account i18n Final Audit & Cleanup
+
+- removed remaining mixed-language customer account copy that was still visible in runtime after the original customer i18n commit
+- fixed `/customer/notifications` shell header/subtitle:
+  - old issue: server route still hard-coded Vietnamese literals
+  - current behavior: shell title/subtitle use customer RU/EN dictionary keys and live-switch with locale state
+- completed customer returns/refunds cleanup:
+  - localized page title, back action, form labels, helper text, detail labels, action buttons, and feedback
+  - replaced browser-native file input presentation with a localized custom file-picker label so customer UI no longer shows Vietnamese OS/browser copy
+- completed customer support and receipt cleanup:
+  - localized receipt lookup labels and receipt summary copy
+  - localized support case creation/reply labels and issue-type labels
+- hardened customer i18n E2E to catch:
+  - no Vietnamese text on customer notifications
+  - no English leftovers on default-Russian returns page
+  - localized custom file-picker copy
+  - RU/EN persistence with no `VI` option in buyer UI
+
+Verification:
+
+- `frontend-next npm run lint`: pending rerun for this cleanup
+- `frontend-next npm run build`: pending rerun for this cleanup
+- customer E2E/regression rerun: pending in this cleanup step
+
+Remaining gaps:
+
+- some customer support thread/status payloads still render backend role/status codes directly where they are domain data rather than UI chrome
+- seller/admin scopes remain intentionally untouched in this customer-only cleanup
+
 ## 2026-05-25 Customer Account i18n Completion
 
 - localized customer auth pages to `ru` and `en`:

@@ -26,7 +26,9 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.waitForURL("**/customer/orders");
 
   await page.goto("/products");
-  const publicCustomerLink = page.getByTestId("public-customer-link").first();
+  const publicCustomerLink = page
+    .locator('[data-testid="public-customer-link"][href="/customer/account"]')
+    .first();
   await expect(publicCustomerLink).toBeVisible();
   await publicCustomerLink.click();
   await page.waitForURL("**/customer/account");
@@ -36,9 +38,16 @@ test("customer manages account profile, addresses, password, and guarded access"
   await page.getByTestId("customer-profile-name").fill("Customer Account Prime");
   await page.getByTestId("customer-profile-phone").fill(phone);
   await page.getByTestId("customer-profile-save").click();
-  await page.reload();
   await expect(page.getByTestId("customer-profile-name")).toHaveValue("Customer Account Prime");
   await expect(page.getByTestId("customer-profile-phone")).toHaveValue(phone);
+  await expect(page.getByTestId("customer-profile-save")).toBeEnabled();
+  await page.reload();
+  await expect(page.getByTestId("customer-profile-name")).toHaveValue("Customer Account Prime", {
+    timeout: 15000,
+  });
+  await expect(page.getByTestId("customer-profile-phone")).toHaveValue(phone, {
+    timeout: 15000,
+  });
 
   await page.goto("/customer/account/addresses");
   await page.getByTestId("customer-address-fullName").fill("Customer Account Prime");

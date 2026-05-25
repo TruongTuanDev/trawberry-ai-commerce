@@ -3,7 +3,7 @@ import { CustomerLoginPageClient } from "@/components/customer/customer-login-pa
 
 export default function CustomerLoginPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-[var(--muted)]">Loading login...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-[var(--muted)]">...</div>}>
       <CustomerLoginPageClient />
     </Suspense>
   );
