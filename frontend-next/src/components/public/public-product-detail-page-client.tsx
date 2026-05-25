@@ -251,9 +251,19 @@ export function PublicProductDetailPageClient({
 
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                        {product.shop.name}
-                      </p>
+                      {product.shop.slug ? (
+                        <Link
+                          href={`/shops/${product.shop.slug}`}
+                          className="inline-flex text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
+                          data-testid="public-product-shop-link"
+                        >
+                          {product.shop.name}
+                        </Link>
+                      ) : (
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                          {product.shop.name}
+                        </p>
+                      )}
                       <h1
                         className="text-3xl font-bold leading-tight text-[var(--foreground)] sm:text-4xl"
                         data-testid="product-detail-title"

@@ -180,6 +180,37 @@
     "manualPayment": "Manual payment",
     "manualPaymentDesc": "For bank transfer orders, customers can upload payment confirmation from the order tracking page so sellers can review it quickly."
   },
+  "public": {
+    "shop": {
+      "title": "Shop profile",
+      "products": "Shop products",
+      "allProducts": "All products",
+      "about": "About shop",
+      "verified": "Verified shop",
+      "notVerified": "Verification pending",
+      "productCount": "{{count}} product(s)",
+      "rating": "{{rating}} · {{count}} review(s)",
+      "noRatingYet": "No reviews yet",
+      "joinedAt": "Joined {{date}}",
+      "messageShop": "Message shop",
+      "messagingComingSoon": "Messaging with shops is coming soon.",
+      "emptyProducts": "No public products yet",
+      "emptyProductsSubtitle": "This shop is active, but there are no public-ready products to show right now.",
+      "backToCatalog": "Back to catalog",
+      "searchPlaceholder": "Search products from this shop",
+      "sortNewest": "Newest first",
+      "sortPriceAsc": "Price: low to high",
+      "sortPriceDesc": "Price: high to low",
+      "notFoundTitle": "Shop not found",
+      "notFoundSubtitle": "This shop is unavailable, private, or no longer active in the marketplace.",
+      "productsFromShop": "Products from {{shop}}",
+      "noDescription": "This shop has not added a public description yet.",
+      "loading": "Loading shop profile...",
+      "loadingProducts": "Loading shop products...",
+      "loadFailed": "Unable to load this shop right now.",
+      "loadProductsFailed": "Unable to load products from this shop."
+    }
+  },
   "productDetail": {
     "backToProducts": "Back to products",
     "openCart": "Open cart",

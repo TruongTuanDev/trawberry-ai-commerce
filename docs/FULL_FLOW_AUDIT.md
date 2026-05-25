@@ -1,5 +1,27 @@
 # Full Commerce Flow Audit
 
+## Public Shop Profile Addendum
+
+- buyers can now open a public shop profile route at `/shops/[slug]` from marketplace product surfaces
+- public shop profile reads only public-safe data from active approved shops
+- verified shop product grid behavior:
+  - uses the same public visibility rules as the marketplace catalog
+  - excludes hidden, invalid, deleted, or out-of-stock products
+  - reuses the existing public product list contract through `shopSlug`
+- verified public-safe metadata:
+  - shop name
+  - slug
+  - logo/avatar when present
+  - verification state
+  - joined date
+  - pickup city / location label when public-safe
+  - placeholder-safe rating summary
+- verified non-goals:
+  - no private seller phone/email exposure
+  - no warehouse/private full address exposure
+  - no finance, commission, or payment-proof exposure
+  - no real messaging implementation
+
 ## Seller Printable Shipping Label Addendum
 
 - seller order detail now supports an internal printable shipping label flow for manual Yandex operations

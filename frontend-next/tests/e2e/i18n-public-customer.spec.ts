@@ -16,8 +16,8 @@ async function newCleanPage(browser: Browser): Promise<Page> {
 }
 
 async function chooseCustomerLocale(page: Page, locale: "ru" | "en") {
-  await page.getByTestId("language-switcher-customer").click();
-  await page.getByTestId(`language-option-customer-${locale}`).click();
+  await page.getByTestId("language-switcher-customer").first().click();
+  await page.getByTestId(`language-option-customer-${locale}`).first().click();
 }
 
 test("public customer flow languages: default to RU, only RU/EN, no VI, translates correctly", async ({
@@ -42,13 +42,13 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   await expect(heading).toBeVisible();
 
   // 2. Check supported language choices in customer switcher
-  const switcher = page.getByTestId("language-switcher-customer");
+  const switcher = page.getByTestId("language-switcher-customer").first();
   await expect(switcher).toBeVisible();
   await switcher.click();
 
   // Verify only RU and EN exist, and VI does NOT exist
-  const ruOption = page.getByTestId("language-option-customer-ru");
-  const enOption = page.getByTestId("language-option-customer-en");
+  const ruOption = page.getByTestId("language-option-customer-ru").first();
+  const enOption = page.getByTestId("language-option-customer-en").first();
   const viOption = page.getByTestId("language-option-customer-vi");
 
   await expect(ruOption).toBeVisible();

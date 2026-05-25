@@ -58,6 +58,23 @@ export type PublicProduct = {
   };
 };
 
+export type PublicShopProfile = {
+  id: string;
+  slug: string;
+  name: string;
+  displayName: string;
+  description: string | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  isVerified: boolean;
+  approvedAt: string | null;
+  productCount: number;
+  ratingAverage: string | null;
+  ratingCount: number;
+  joinedAt: string | null;
+  locationLabel: string | null;
+};
+
 export type PaginatedPublicProducts = {
   items: PublicProduct[];
   meta: {
@@ -347,6 +364,7 @@ export async function getPublicProducts(query?: {
   q?: string;
   categoryId?: string;
   categorySlug?: string;
+  shopSlug?: string;
   brand?: string;
   color?: string;
   gender?: string;
@@ -362,6 +380,7 @@ export async function getPublicProducts(query?: {
   if (query?.q) params.set("q", query.q);
   if (query?.categoryId) params.set("categoryId", query.categoryId);
   if (query?.categorySlug) params.set("categorySlug", query.categorySlug);
+  if (query?.shopSlug) params.set("shopSlug", query.shopSlug);
   if (query?.brand) params.set("brand", query.brand);
   if (query?.color) params.set("color", query.color);
   if (query?.gender) params.set("gender", query.gender);
@@ -380,6 +399,12 @@ export async function getPublicProducts(query?: {
       method: "GET",
     },
   );
+}
+
+export async function getPublicShopProfile(shopSlug: string) {
+  return apiRequest<{ shop: PublicShopProfile }>(`/api/public/shops/${shopSlug}`, {
+    method: "GET",
+  });
 }
 
 export async function getCategories() {

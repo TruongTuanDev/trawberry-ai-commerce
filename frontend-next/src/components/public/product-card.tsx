@@ -87,9 +87,19 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                {product.shop.name ?? t("productDetail.marketplaceShop")}
-              </p>
+              {product.shop.slug ? (
+                <Link
+                  href={`/shops/${product.shop.slug}`}
+                  className="inline-flex text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
+                  data-testid={`product-shop-link-${product.id}`}
+                >
+                  {product.shop.name ?? t("productDetail.marketplaceShop")}
+                </Link>
+              ) : (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  {product.shop.name ?? t("productDetail.marketplaceShop")}
+                </p>
+              )}
               <Link
                 href={`/products/${product.id}`}
                 className="mt-2 line-clamp-2 block text-base font-semibold text-[var(--foreground)]"

@@ -69,6 +69,11 @@ export class PublicProductsService {
       },
       shop: {
         status: 'ACTIVE',
+        ...(query.shopSlug
+          ? {
+              slug: query.shopSlug,
+            }
+          : {}),
         sellerProfile: {
           approvalStatus: 'APPROVED',
         },

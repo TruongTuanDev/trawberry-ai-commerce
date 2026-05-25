@@ -1,5 +1,45 @@
 # Phase Report
 
+## 2026-05-25 Public Shop Profile
+
+- added a public marketplace shop profile route:
+  - `/shops/[slug]`
+- added public-safe shop metadata API:
+  - `GET /api/public/shops/:slug`
+- extended the existing public products listing contract with an optional `shopSlug` filter so the shop page can reuse the same visibility pipeline as the main marketplace catalog
+- buyers can now open a shop profile from:
+  - public product detail
+  - public product card
+- shop page behavior:
+  - shows shop name, logo/avatar, verified state, joined date, location label, and a public-safe description placeholder
+  - shows a lightweight public product grid scoped to the shop
+  - hides non-public, deleted, invalid, or out-of-stock products
+  - keeps messaging as a non-breaking placeholder CTA
+- i18n:
+  - added `public.shop.*` RU/EN keys
+  - buyer locale policy remains `ru` default with `ru/en` only
+  - no `vi` exposed on the public shop route
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/public-shop-profile.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-marketplace-contract.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-buying-ux.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/cart-checkout.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/orders.e2e-spec.ts`: pass
+- runtime health checks for frontend/backend: pass
+
+Remaining gaps:
+
+- public shop profile currently uses safe existing shop fields and placeholder messaging; no seller-to-buyer messaging system is implemented yet
+- ratings remain placeholder-derived until a real reviews phase is added
+
 ## 2026-05-25 Seller Printable Shipping Label
 
 - added a printable internal shipping label flow for seller manual Yandex handling

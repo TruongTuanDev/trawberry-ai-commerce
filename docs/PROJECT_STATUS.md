@@ -1,5 +1,33 @@
 # Project Status
 
+## Public Shop Profile - 2026-05-25
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Buyers can now open a public shop profile from marketplace product surfaces:
+  - public route: `/shops/[slug]`
+  - public product detail shop link
+  - public product card shop link
+- Public shop profile behavior:
+  - shows public-safe shop metadata only
+  - active approved shops only
+  - verified badge when the seller approval is approved
+  - rating remains placeholder-safe when no review system exists
+  - messaging CTA is placeholder-only in this phase
+- Public shop product grid uses the same visibility rules as the marketplace:
+  - active approved shop
+  - public/published product
+  - readiness passes
+  - valid price
+  - stock greater than zero
+  - invalid/deleted products hidden
+- Added backend contract:
+  - `GET /api/public/shops/:slug`
+  - existing `GET /api/public/products` now also supports `shopSlug`
+- Buyer locale policy remains unchanged:
+  - `ru` default
+  - `ru/en` only
+  - no `vi` in public/customer UI
+
 ## Seller Printable Shipping Label - 2026-05-25
 
 - Status: implemented in `frontend-next`
