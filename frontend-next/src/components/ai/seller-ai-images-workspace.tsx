@@ -58,11 +58,11 @@ const GENERATION_MODES: Array<{
   },
 ];
 
-function defaultPrompt(label: string) {
+function defaultPrompt(label: string): string {
   return `Create one ${label.toLowerCase()} for this marketplace product while preserving the exact item, color, silhouette, logo placement, and material details.`;
 }
 
-function inferFrontImage(images: ProductImage[]) {
+function inferFrontImage(images: ProductImage[]): string {
   return (
     images.find((image) => image.imageType === "FRONT")?.id ??
     images.find((image) => image.isMain)?.id ??
@@ -71,7 +71,7 @@ function inferFrontImage(images: ProductImage[]) {
   );
 }
 
-function getProductTitle(product: ProductListItem, t: (key: string, values?: Record<string, string | number>) => string) {
+function getProductTitle(product: ProductListItem, t: (key: string, values?: Record<string, string | number>) => string): string {
   return product.title || product.localTitle || product.wbTitle || t("seller.aiImages.untitledProduct");
 }
 
@@ -115,7 +115,7 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null, t: (key: string, va
   }
 }
 
-function getSafeRuntimeErrorMessage(safeErrorCode: string | null | undefined, t: (key: string, values?: Record<string, string | number>) => string) {
+function getSafeRuntimeErrorMessage(safeErrorCode: string | null | undefined, t: (key: string, values?: Record<string, string | number>) => string): string {
   switch (safeErrorCode) {
     case "OPENAI_UNAUTHORIZED":
       return t("seller.aiImages.runtime.errors.OPENAI_UNAUTHORIZED");
@@ -392,7 +392,7 @@ export function SellerAiImagesWorkspace() {
         });
       },
       successMessage: t("seller.aiImages.taskCreated"),
-      onSuccess: async (task) => {
+      onSuccess: async (task: AiImageTask) => {
         await Promise.all([refreshCredits(), refreshTasks({ silent: true })]);
         setSelectedTaskId(task.id);
         setSuccessMessage(

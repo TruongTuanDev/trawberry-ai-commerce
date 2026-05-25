@@ -75,7 +75,7 @@ export function SellerReturnsPageClient({
   useEffect(() => {
     if (!hydrated) return;
     let active = true;
-    void (async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
         await loadShops();
@@ -105,7 +105,8 @@ export function SellerReturnsPageClient({
           setLoading(false);
         }
       }
-    })();
+    };
+    void loadData();
 
     return () => {
       active = false;
