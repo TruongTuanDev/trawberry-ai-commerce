@@ -1575,3 +1575,15 @@ Current gap:
 
 - several seller/customer screens still contain legacy hard-coded strings and need phase-2 migration
 - some older E2E specs needed selector/copy hardening because public and seller surfaces now default to localized text instead of legacy English/Vietnamese assumptions
+
+# Locale Switcher UX Status
+
+Implemented:
+
+- seller and buyer/customer headers now share a dropdown locale switcher with flag, short code, native language label, and active state
+- public header exposes the switcher on both desktop and mobile layouts
+- customer account header now exposes the same customer-safe `RU / EN` switcher
+
+Current gap:
+
+- admin remains English-only and intentionally does not use the dropdown switcher

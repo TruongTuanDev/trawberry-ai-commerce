@@ -114,6 +114,15 @@ async function newCleanPage(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
+async function chooseLocale(
+  page: Page,
+  role: "customer" | "seller",
+  locale: "ru" | "en" | "vi",
+) {
+  await page.getByTestId(`language-switcher-${role}`).click();
+  await page.getByTestId(`language-option-${role}-${locale}`).click();
+}
+
 test("role-based locale defaults and switching persist by surface", async ({
   browser,
   request,
@@ -125,13 +134,10 @@ test("role-based locale defaults and switching persist by surface", async ({
   const publicNav = publicPage.getByRole("navigation", {
     name: "Public navigation",
   }).first();
-  const publicEnglishOption = publicPage
-    .getByTestId("language-option-customer-en")
-    .first();
 
   await publicPage.goto("/products");
   await expect(publicNav).toContainText("Каталог");
-  await publicEnglishOption.click();
+  await chooseLocale(publicPage, "customer", "en");
   await expect(publicNav).toContainText("Shop");
   await publicPage.reload();
   await expect(publicNav).toContainText("Shop");
@@ -139,12 +145,6 @@ test("role-based locale defaults and switching persist by surface", async ({
 
   const sellerPage = await newCleanPage(browser);
   const sellerNewTab = sellerPage.getByTestId("seller-order-tab-NEW").first();
-  const sellerVietnameseOption = sellerPage
-    .getByTestId("language-option-seller-vi")
-    .first();
-  const sellerEnglishOption = sellerPage
-    .getByTestId("language-option-seller-en")
-    .first();
 
   await sellerPage.goto("/seller/login");
   await sellerPage.getByTestId("seller-login-email").fill(seller.email);
@@ -153,9 +153,9 @@ test("role-based locale defaults and switching persist by surface", async ({
   await sellerPage.waitForURL("**/seller/dashboard");
   await sellerPage.goto("/seller/orders");
   await expect(sellerNewTab).toContainText("Новые");
-  await sellerVietnameseOption.click();
+  await chooseLocale(sellerPage, "seller", "vi");
   await expect(sellerNewTab).toContainText("Mới");
-  await sellerEnglishOption.click();
+  await chooseLocale(sellerPage, "seller", "en");
   await expect(sellerNewTab).toContainText("New");
   await sellerPage.reload();
   await expect(sellerNewTab).toContainText("New");

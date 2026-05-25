@@ -138,6 +138,7 @@ async function newSellerPage(browser: Browser): Promise<Page> {
 
 async function switchSellerLocale(page: Page, locale: "ru" | "en" | "vi") {
   const responsePromise = page.waitForResponse("**/api/users/locale");
+  await page.getByTestId("language-switcher-seller").click();
   await page.getByTestId(`language-option-seller-${locale}`).click();
   await responsePromise;
 }

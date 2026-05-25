@@ -186,7 +186,7 @@ export function PublicHeader() {
             <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/90">
               {t("publicHeader.currency")}
             </span>
-            <LanguageSwitcher role="customer" />
+            <LanguageSwitcher role="customer" compact tone="dark" />
             {!user?.role ? (
               <Link
                 href="/customer/register"
@@ -314,8 +314,10 @@ export function PublicHeader() {
           </div>
         </div>
 
-        {!user?.role && (
-          <div className="flex gap-2 pb-1 pt-2 lg:hidden">
+        <div className="flex flex-wrap items-center gap-2 pb-1 pt-2 lg:hidden">
+          <LanguageSwitcher role="customer" compact tone="dark" />
+          {!user?.role && (
+            <>
             <Link
               href={customerHref}
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg border border-white/18 bg-white/12 px-3 text-xs font-semibold text-white backdrop-blur"
@@ -328,8 +330,9 @@ export function PublicHeader() {
             >
               {t("publicHeader.register")}
             </Link>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

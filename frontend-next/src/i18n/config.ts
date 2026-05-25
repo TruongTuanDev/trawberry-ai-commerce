@@ -2,6 +2,13 @@ export const locales = ["en", "ru", "vi"] as const;
 
 export type Locale = (typeof locales)[number];
 export type LocaleRole = "admin" | "seller" | "customer";
+export type LocaleMetadata = {
+  code: Locale;
+  shortLabel: string;
+  nativeLabel: string;
+  flag: string;
+  allowedRoles: readonly LocaleRole[];
+};
 
 export const DEFAULT_LOCALE: Locale = "ru";
 export const LOCALE_COOKIE_KEY = "trawberry-locale";
@@ -25,6 +32,30 @@ export const roleLocalePolicy: Record<
   customer: {
     supported: ["ru", "en"],
     defaultLocale: "ru",
+  },
+};
+
+export const localeMetadata: Record<Locale, LocaleMetadata> = {
+  en: {
+    code: "en",
+    shortLabel: "EN",
+    nativeLabel: "English",
+    flag: "🇬🇧",
+    allowedRoles: ["admin", "seller", "customer"],
+  },
+  ru: {
+    code: "ru",
+    shortLabel: "RU",
+    nativeLabel: "Русский",
+    flag: "🇷🇺",
+    allowedRoles: ["seller", "customer"],
+  },
+  vi: {
+    code: "vi",
+    shortLabel: "VI",
+    nativeLabel: "Tiếng Việt",
+    flag: "🇻🇳",
+    allowedRoles: ["seller"],
   },
 };
 
@@ -56,6 +87,10 @@ export function isLocaleSupportedForRole(role: LocaleRole, locale: Locale): bool
 
 export function getSupportedLocalesForRole(role: LocaleRole): readonly Locale[] {
   return roleLocalePolicy[role].supported;
+}
+
+export function getLocaleMetadata(locale: Locale): LocaleMetadata {
+  return localeMetadata[locale];
 }
 
 export function resolveRoleLocale(

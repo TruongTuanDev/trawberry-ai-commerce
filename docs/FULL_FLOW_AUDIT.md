@@ -567,3 +567,11 @@ Future audit item: design an optional marketplace parent order for combined rece
 - public runtime default is Russian when no user preference and no locale cookie exist
 - seller runtime supports `ru -> vi -> en` switching with persistence
 - admin runtime remains English-only with no language switcher
+
+# Locale Switcher UX Audit Addendum
+
+- seller and buyer/customer locale switching now use the same dropdown interaction model instead of always-visible pills
+- live switch remains client-side, immediate, and cookie/profile-backed
+- customer/public surfaces still do not expose `vi`
+- seller surfaces still expose `ru/en/vi`
+- auth, protected shell, cart, and notification bell flows were left unchanged by the switcher redesign

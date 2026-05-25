@@ -2589,3 +2589,19 @@ Resolution notes:
 Known gaps:
 
 - Phase 2 customer account fields (e.g., support, returns, security, and addresses detail) remain to be completed in the next phase.
+
+# Phase Report: Locale Switcher UX Redesign
+
+Implemented:
+
+- replaced the old segmented locale pills with a shared dropdown switcher for seller and buyer/customer surfaces
+- added centralized locale metadata for flag, short code, native language label, and role support policy
+- kept seller locale support at `ru/en/vi`
+- kept public/customer locale support at `ru/en`
+- updated locale persistence to avoid temporary snap-back after an explicit language change
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- targeted locale regression specs rerun for seller and buyer/customer switch flows

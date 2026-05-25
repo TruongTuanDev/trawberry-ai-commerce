@@ -1,4 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function chooseCustomerLocale(page: Page, locale: "ru" | "en") {
+  await page.getByTestId("language-switcher-customer").click();
+  await page.getByTestId(`language-option-customer-${locale}`).click();
+}
 
 test("customer account i18n: auth pages, notifications, returns, and locale persistence", async ({
   page,
@@ -36,8 +41,7 @@ test("customer account i18n: auth pages, notifications, returns, and locale pers
   await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
 
-  await page.getByTestId("language-switcher-customer").click();
-  await page.getByTestId("language-option-customer-ru").click();
+  await chooseCustomerLocale(page, "ru");
   await expect(
     page.getByRole("heading", { name: "Мои заказы", exact: true }),
   ).toBeVisible({ timeout: 15000 });
@@ -67,8 +71,7 @@ test("customer account i18n: auth pages, notifications, returns, and locale pers
     page.getByTestId("customer-return-evidence-file-name"),
   ).toContainText("Файл не выбран");
 
-  await page.getByTestId("language-switcher-customer").click();
-  await page.getByTestId("language-option-customer-en").click();
+  await chooseCustomerLocale(page, "en");
   await expect(
     page.getByRole("heading", { name: "Returns and refunds", exact: true }),
   ).toBeVisible({ timeout: 15000 });
