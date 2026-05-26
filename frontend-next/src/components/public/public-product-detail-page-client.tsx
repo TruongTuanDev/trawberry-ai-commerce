@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { AiTryOnModal } from "@/components/ai-try-on/ai-try-on-modal";
 import { ProductGallery } from "@/components/public/product-gallery";
 import { MessageShopButton } from "@/components/public/message-shop-button";
 import { PublicProductReviewsSection } from "@/components/public/public-product-reviews-section";
@@ -19,7 +20,12 @@ import { StockBadge } from "@/components/public/stock-badge";
 import { toast } from "@/components/ui/use-toast";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import { useI18n } from "@/i18n/use-i18n";
-import { getPublicProduct, type PublicProduct } from "@/lib/public-api";
+import {
+  getPublicAiTryOnConfig,
+  getPublicProduct,
+  type PublicAiTryOnConfig,
+  type PublicProduct,
+} from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
 export function PublicProductDetailPageClient({
@@ -27,10 +33,13 @@ export function PublicProductDetailPageClient({
 }: {
   productId: string;
 }) {
-  const { t } = useI18n("customer");
+  const { locale, t } = useI18n("customer");
   const router = useRouter();
   const [product, setProduct] = useState<PublicProduct | null>(null);
+  const [aiTryOnConfig, setAiTryOnConfig] = useState<PublicAiTryOnConfig | null>(null);
+  const [aiTryOnOpen, setAiTryOnOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
+  const [hasChosenSize, setHasChosenSize] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
   const items = useCartStore((state) => state.items);
@@ -69,6 +78,19 @@ export function PublicProductDetailPageClient({
   }, [hydrateCart]);
 
   useEffect(() => {
+    const previousHtmlOverflowX = document.documentElement.style.overflowX;
+    const previousBodyOverflowX = document.body.style.overflowX;
+
+    document.documentElement.style.overflowX = "hidden";
+    document.body.style.overflowX = "hidden";
+
+    return () => {
+      document.documentElement.style.overflowX = previousHtmlOverflowX;
+      document.body.style.overflowX = previousBodyOverflowX;
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
 
     const run = async () => {
@@ -76,6 +98,7 @@ export function PublicProductDetailPageClient({
         const result = await getPublicProduct(productId);
         if (!mounted) return;
         setProduct(result);
+        setHasChosenSize(false);
         setSelectedVariantId(
           result.variants.find((variant) => variant.inStock)?.id ??
             result.variants[0]?.id ??
@@ -101,6 +124,29 @@ export function PublicProductDetailPageClient({
       mounted = false;
     };
   }, [productId, requestKey]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      try {
+        const config = await getPublicAiTryOnConfig();
+        if (mounted) {
+          setAiTryOnConfig(config);
+        }
+      } catch {
+        if (mounted) {
+          setAiTryOnConfig(null);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const currentPrice = selectedVariant?.price ?? product?.price ?? null;
   const oldPrice = getComparableOldPrice(
@@ -184,6 +230,23 @@ export function PublicProductDetailPageClient({
     router.push("/checkout");
   };
 
+  const handleOpenAiTryOn = () => {
+    if (!aiTryOnConfig?.enabled) {
+      toast.warning(t("aiTryOn.underDevelopment"));
+      return;
+    }
+
+    if (!selectedVariant || !hasChosenSize) {
+      toast.warning(t("aiTryOn.selectSizeFirst"));
+      return;
+    }
+
+    document.documentElement.style.overflowX = "hidden";
+    document.body.style.overflowX = "hidden";
+
+    setAiTryOnOpen(true);
+  };
+
   return (
     <PublicShell>
       <main className="px-4 py-8 pb-32 sm:px-6 sm:py-10 lg:pb-10">
@@ -247,17 +310,17 @@ export function PublicProductDetailPageClient({
             <>
               <section className="card-panel rounded-[2.25rem] bg-white p-4 sm:p-6">
                 <div className="grid gap-8 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.9fr)_320px]">
-                  <div>
+                  <div className="min-w-0">
                     <ProductGallery name={product.name} images={product.images} />
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="min-w-0 space-y-6">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-3">
                         {product.shop.slug ? (
                           <Link
                             href={`/shops/${product.shop.slug}`}
-                            className="inline-flex text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
+                            className="inline-flex min-w-0 break-all text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
                             data-testid="public-product-shop-link"
                           >
                             {product.shop.name}
@@ -277,7 +340,7 @@ export function PublicProductDetailPageClient({
                         ) : null}
                       </div>
                       <h1
-                        className="text-3xl font-bold leading-tight text-[var(--foreground)] sm:text-4xl"
+                        className="break-words text-3xl font-bold leading-tight text-[var(--foreground)] sm:text-4xl"
                         data-testid="product-detail-title"
                       >
                         {product.name}
@@ -333,6 +396,7 @@ export function PublicProductDetailPageClient({
                                 type="button"
                                 onClick={() => {
                                   setSelectedVariantId(variant.id);
+                                  setHasChosenSize(true);
                                   setQuantity(1);
                                 }}
                               className={`min-w-20 rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${active ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--muted)]"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
@@ -400,7 +464,7 @@ export function PublicProductDetailPageClient({
                     </div>
                   </div>
 
-                  <aside className="xl:sticky xl:top-24 xl:self-start">
+                  <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">
                     <div className="rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[0_12px_40px_rgba(203,17,171,0.08)]">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-end gap-3">
@@ -458,6 +522,14 @@ export function PublicProductDetailPageClient({
                           data-testid="continue-to-checkout"
                         >
                           {t("productDetail.buyNow")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleOpenAiTryOn}
+                          className="w-full rounded-full border border-[var(--border)] bg-white px-5 py-3.5 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                          data-testid="product-ai-try-on-button"
+                        >
+                          {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
                         </button>
                       </div>
 
@@ -530,6 +602,14 @@ export function PublicProductDetailPageClient({
                       {t("productDetail.buyNow")}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAiTryOn}
+                    className="mt-2 w-full rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                    data-testid="mobile-product-ai-try-on"
+                  >
+                    {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
+                  </button>
                 </div>
               </div>
 
@@ -537,6 +617,27 @@ export function PublicProductDetailPageClient({
           )}
         </div>
       </main>
+      {product && selectedVariant && aiTryOnConfig && aiTryOnOpen ? (
+        <AiTryOnModal
+          open={aiTryOnOpen}
+          locale={locale === "ru" ? "ru" : "en"}
+          requireConsent={aiTryOnConfig.requireConsent}
+          builtInModels={aiTryOnConfig.builtInModels}
+          product={{
+            id: product.id,
+            name: product.name,
+            imageUrl: product.images[0]?.url ?? null,
+            selectedSize: selectedVariantLabel,
+            selectedRussianSize: selectedVariant.russianSize,
+          }}
+          t={t}
+          onClose={() => {
+            document.documentElement.style.overflowX = "";
+            document.body.style.overflowX = "";
+            setAiTryOnOpen(false);
+          }}
+        />
+      ) : null}
     </PublicShell>
   );
 }

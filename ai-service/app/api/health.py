@@ -31,5 +31,5 @@ async def health() -> HealthResponse:
         openai_configured=openai_configured,
         openai_smoke_enabled=settings.run_openai_smoke,
         safe_error_code=safe_error_code,
-        try_on_ready=False,
+        try_on_ready=True,
     )

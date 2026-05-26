@@ -7,6 +7,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { ProductImagesModule } from './modules/product-images/product-images.module';
 import { FilesModule } from './modules/files/files.module';
 import { AiImagesModule } from './modules/ai-images/ai-images.module';
+import { AiTryOnModule } from './modules/ai-try-on/ai-try-on.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PublicProductsModule } from './modules/public-products/public-products.module';
 import { PublicShopsModule } from './modules/public-shops/public-shops.module';
@@ -49,6 +50,7 @@ import { HealthController } from './health.controller';
     ProductImagesModule,
     FilesModule,
     AiImagesModule,
+    AiTryOnModule,
     OrdersModule,
     PaymentsModule,
     DeliveryModule,

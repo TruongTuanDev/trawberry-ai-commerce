@@ -19,6 +19,7 @@ type PublicProductRecord = {
   seoSlug: string | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
+  aiTryOnEnabled: boolean;
   visibility: string | null;
   catalogStatus: string;
   averageRating: Prisma.Decimal | null;
@@ -429,6 +430,9 @@ export class PublicProductsService {
         slug: product.shop.slug,
         logoUrl: product.shop.logoUrl,
         paymentInstructions: product.shop.paymentInstructions,
+      },
+      aiTryOn: {
+        enabled: product.aiTryOnEnabled,
       },
     };
   }

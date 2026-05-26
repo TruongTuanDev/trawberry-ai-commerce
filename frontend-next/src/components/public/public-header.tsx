@@ -173,6 +173,7 @@ export function PublicHeader() {
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 className="transition hover:text-white"
               >
                 {link.label}
@@ -190,6 +191,7 @@ export function PublicHeader() {
             {!user?.role ? (
               <Link
                 href="/customer/register"
+                prefetch={false}
                 className="rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-semibold text-white/90 hover:bg-white/18"
                 data-testid="public-customer-register-link"
               >
@@ -211,6 +213,7 @@ export function PublicHeader() {
         <div className="flex items-center justify-between gap-3 py-1 sm:gap-4 md:gap-6">
           <Link
             href="/"
+            prefetch={false}
             className="flex shrink-0 items-center"
             data-testid="public-logo"
           >
@@ -263,6 +266,7 @@ export function PublicHeader() {
           <div className="flex shrink-0 items-center gap-3 sm:gap-5 md:gap-6">
             <Link
               href={customerAddressHref}
+              prefetch={false}
               className="hidden cursor-pointer flex-col items-center justify-center text-center text-white/90 transition hover:text-white md:flex"
               title={t("publicHeader.manageAddress")}
               aria-label={t("publicHeader.openAddressSettings")}
@@ -280,6 +284,7 @@ export function PublicHeader() {
 
             <Link
               href={customerHref}
+              prefetch={false}
               className="flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
               data-testid="public-customer-link"
             >
@@ -293,6 +298,7 @@ export function PublicHeader() {
 
             <Link
               href="/cart"
+              prefetch={false}
               className="relative flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
               data-testid="public-cart-link"
             >
@@ -325,12 +331,14 @@ export function PublicHeader() {
             <>
             <Link
               href={customerHref}
+              prefetch={false}
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg border border-white/18 bg-white/12 px-3 text-xs font-semibold text-white backdrop-blur"
             >
               {t("publicHeader.login")}
             </Link>
             <Link
               href="/customer/register"
+              prefetch={false}
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[#cb11ab]"
             >
               {t("publicHeader.register")}

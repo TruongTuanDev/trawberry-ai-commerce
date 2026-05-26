@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="720" viewBox="0 0 480 720">
+  <rect width="480" height="720" rx="36" fill="#f2f0eb"/>
+  <rect x="34" y="34" width="412" height="652" rx="28" fill="#fffdf9"/>
+  <ellipse cx="240" cy="172" rx="90" ry="94" fill="#d9c7b4"/>
+  <rect x="170" y="244" width="140" height="228" rx="56" fill="#d9c7b4"/>
+  <path d="M120 324 C170 260 210 234 240 234 C270 234 310 260 360 324 L388 592 L92 592 Z" fill="#7da486"/>
+  <text x="60" y="628" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#202938">Male regular model</text>
+  <text x="60" y="664" font-family="Arial, sans-serif" font-size="18" fill="#5f6775">175 cm • neutral studio placeholder</text>
+</svg>

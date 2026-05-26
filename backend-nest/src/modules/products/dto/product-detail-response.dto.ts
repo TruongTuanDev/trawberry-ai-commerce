@@ -160,6 +160,9 @@ export class ProductDetailResponseDto {
   @ApiProperty({ isArray: true, type: String })
   reviewWarnings!: string[];
 
+  @ApiProperty()
+  aiTryOnEnabled!: boolean;
+
   @ApiProperty({ type: ProductShopDto })
   shop!: ProductShopDto;
 

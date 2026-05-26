@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     )
     openai_api_key: str | None = None
     openai_image_model: str = "gpt-image-1"
+    ai_try_on_openai_model: str = Field(
+        default="gpt-image-1",
+        validation_alias=AliasChoices(
+            "AI_TRY_ON_OPENAI_MODEL",
+            "OPENAI_TRY_ON_MODEL",
+        ),
+    )
     openai_image_size: str = "1024x1536"
     openai_image_quality: str = "medium"
     openai_image_output_format: Literal["jpeg", "png", "webp"] = "jpeg"

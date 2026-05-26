@@ -56,6 +56,82 @@ export type PublicProduct = {
     logoUrl: string | null;
     paymentInstructions: string | null;
   };
+  aiTryOn: {
+    enabled: boolean;
+  };
+};
+
+export type AiTryOnBuiltInModel = {
+  modelId: string;
+  gender: "male" | "female" | "other";
+  bodyType: "slim" | "regular" | "large";
+  heightCm: number;
+  imageUrl: string;
+  labelRu: string;
+  labelEn: string;
+};
+
+export type PublicAiTryOnConfig = {
+  enabled: boolean;
+  providerMode: "mock" | "demo" | "openai";
+  guestDailyLimit: number;
+  customerDailyLimit: number;
+  requireConsent: boolean;
+  supportedCategories: string[];
+  builtInModels: AiTryOnBuiltInModel[];
+};
+
+export type CreateAiTryOnTaskPayload = {
+  selectedSize: string;
+  selectedRussianSize?: string;
+  heightCm?: number;
+  weightKg?: number;
+  gender?: "male" | "female" | "other";
+  bodyType?: "slim" | "regular" | "large";
+  bodyTraits?: string[];
+  customerImageUrl?: string;
+  customerImageStorageKey?: string;
+  selectedModelId?: string;
+  consentAccepted?: boolean;
+};
+
+export type AiTryOnTask = {
+  id: string;
+  customerId: string | null;
+  guestSessionId: string | null;
+  shopId: string;
+  productId: string;
+  selectedSize: string | null;
+  selectedRussianSize: string | null;
+  providerMode: "mock" | "demo" | "openai";
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  errorCode: string | null;
+  errorMessage: string | null;
+  resultImage: {
+    url: string;
+    storageKey: string | null;
+    mimeType: string | null;
+    width: number | null;
+    height: number | null;
+  } | null;
+  sizeRecommendation: {
+    recommendedSize: string | null;
+    recommendedRussianSize: string | null;
+    note: string | null;
+    noteRu: string | null;
+    noteEn: string | null;
+    confidence: "low" | "medium" | "high" | null;
+  };
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+};
+
+export type UploadAiTryOnReferenceResponse = {
+  url: string;
+  storageKey: string;
+  mimeType: string;
+  size: number;
 };
 
 export type PublicProductReview = {
@@ -564,5 +640,43 @@ export type PublicHomepageSlide = {
 export async function getPublicHomepageSlides() {
   return apiRequest<PublicHomepageSlide[]>("/api/public/homepage-slides", {
     method: "GET",
+  });
+}
+
+export async function getPublicAiTryOnConfig() {
+  return apiRequest<PublicAiTryOnConfig>("/api/public/ai-try-on/config", {
+    method: "GET",
+  });
+}
+
+export async function uploadAiTryOnReference(
+  file: File,
+  guestSessionId?: string,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<UploadAiTryOnReferenceResponse>("/api/public/ai-try-on/uploads", {
+    method: "POST",
+    body: formData,
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function createAiTryOnTask(
+  productId: string,
+  payload: CreateAiTryOnTaskPayload,
+  guestSessionId?: string,
+) {
+  return apiRequest<AiTryOnTask>(`/api/public/products/${productId}/try-on/tasks`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function getAiTryOnTask(taskId: string, guestSessionId?: string) {
+  return apiRequest<AiTryOnTask>(`/api/public/ai-try-on/tasks/${taskId}`, {
+    method: "GET",
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
   });
 }

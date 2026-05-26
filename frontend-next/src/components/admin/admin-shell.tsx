@@ -20,6 +20,7 @@ const navLinks = [
   { href: "/admin/support-cases", label: "Support cases", match: "/admin/support-cases" },
   { href: "/admin/reports", label: "Reports", match: "/admin/reports" },
   { href: "/admin/homepage-slides", label: "Homepage slides", match: "/admin/homepage-slides" },
+  { href: "/admin/ai-settings", label: "AI settings", match: "/admin/ai-settings" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

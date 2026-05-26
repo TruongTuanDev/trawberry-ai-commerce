@@ -1,7 +1,12 @@
 from fastapi.testclient import TestClient
 
 from app.config import get_settings
-from app.dependencies import get_ai_image_service, get_provider
+from app.dependencies import (
+    get_ai_image_service,
+    get_provider,
+    get_try_on_providers,
+    get_try_on_service,
+)
 from app.main import app
 
 
@@ -12,6 +17,8 @@ def setup_function() -> None:
     get_settings.cache_clear()
     get_provider.cache_clear()
     get_ai_image_service.cache_clear()
+    get_try_on_providers.cache_clear()
+    get_try_on_service.cache_clear()
 
 
 def test_health() -> None:
@@ -25,7 +32,7 @@ def test_health() -> None:
     assert body["openaiConfigured"] is False
     assert body["openaiSmokeEnabled"] is False
     assert body["safeErrorCode"] is None
-    assert body["tryOnReady"] is False
+    assert body["tryOnReady"] is True
 
 
 def test_health_reports_openai_blocked_when_provider_is_openai_without_key(monkeypatch) -> None:
@@ -183,3 +190,68 @@ def test_mock_provider_returns_requested_image_count(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert len(response.json()["images"]) == 4
+
+
+def test_generate_try_on_mock() -> None:
+    token = get_settings().ai_service_internal_token
+
+    response = client.post(
+        "/internal/ai-try-on/generate",
+        headers={"X-Internal-Token": token},
+        json={
+            "taskId": "try-on-task-1",
+            "providerMode": "mock",
+            "product": {
+                "id": "prod-1",
+                "name": "Marketplace jacket",
+                "imageUrl": "https://cdn.example.com/product.jpg",
+                "category": "jackets",
+                "selectedSize": "M",
+                "selectedRussianSize": "RU 46",
+            },
+            "person": {
+                "selectedModelId": "female_regular_165",
+                "gender": "female",
+                "bodyType": "regular",
+                "bodyTraits": ["wide_shoulders"],
+            },
+            "prompt": "Create a stable marketplace virtual try-on preview for this jacket.",
+            "locale": "ru",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "mock"
+    assert len(body["images"]) == 1
+    assert body["images"][0]["mimeType"] == "image/svg+xml"
+
+
+def test_generate_try_on_openai_missing_key_returns_configured_error(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    get_settings.cache_clear()
+    get_try_on_providers.cache_clear()
+    get_try_on_service.cache_clear()
+    token = get_settings().ai_service_internal_token
+
+    response = client.post(
+        "/internal/ai-try-on/generate",
+        headers={"X-Internal-Token": token},
+        json={
+            "taskId": "try-on-task-2",
+            "providerMode": "openai",
+            "product": {
+                "id": "prod-1",
+                "name": "Marketplace jacket",
+                "imageUrl": "https://cdn.example.com/product.jpg",
+            },
+            "person": {
+                "selectedModelId": "male_regular_175",
+            },
+            "prompt": "Create a stable marketplace virtual try-on preview for this jacket.",
+            "locale": "ru",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "AI_PROVIDER_NOT_CONFIGURED"

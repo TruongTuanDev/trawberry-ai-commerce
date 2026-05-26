@@ -234,6 +234,11 @@ export class CreateProductDto {
   @MaxLength(50)
   visibility?: string;
 
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  aiTryOnEnabled?: boolean;
+
   @ApiPropertyOptional({
     example: ['summer', 'featured'],
     type: [String],

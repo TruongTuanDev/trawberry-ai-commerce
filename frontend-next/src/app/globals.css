@@ -40,6 +40,7 @@
 
 html {
   background: var(--background);
+  overflow-x: hidden;
 }
 
 body {
@@ -47,6 +48,7 @@ body {
   background: transparent;
   color: var(--foreground);
   font-family: var(--font-sans-app), sans-serif;
+  overflow-x: hidden;
 }
 
 ::selection {

@@ -143,6 +143,21 @@ export class FilesService {
     return this.storeHomepageSlideImageInS3(file, context);
   }
 
+  async storeAiTryOnReference(
+    file: ProductImageUploadFile,
+    context: {
+      scope: 'guest' | 'customer';
+      identifier: string;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeAiTryOnReferenceLocally(file, context);
+    }
+
+    return this.storeAiTryOnReferenceInS3(file, context);
+  }
+
   async deleteProductImageFile(params: {
     storageKey?: string | null;
     fileUrl?: string | null;
@@ -628,6 +643,77 @@ export class FilesService {
     const storageKey = [
       'homepage-slides',
       context.slideId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+
+    const client = this.createS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.getS3Bucket(),
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnReferenceLocally(
+    file: ProductImageUploadFile,
+    context: {
+      scope: 'guest' | 'customer';
+      identifier: string;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'ai-try-on',
+      context.scope,
+      context.identifier,
+    );
+    const extension = extname(file.originalname) || '.bin';
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const absolutePath = join(targetDirectory, filename);
+    const storageKey = [
+      'ai-try-on',
+      context.scope,
+      context.identifier,
+      filename,
+    ].join('/');
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnReferenceInS3(
+    file: ProductImageUploadFile,
+    context: {
+      scope: 'guest' | 'customer';
+      identifier: string;
+    },
+  ): Promise<StoredFileResult> {
+    const extension = extname(file.originalname) || '.bin';
+    const storageKey = [
+      'ai-try-on',
+      context.scope,
+      context.identifier,
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
 

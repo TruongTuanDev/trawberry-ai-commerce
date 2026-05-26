@@ -28,6 +28,11 @@ class PublicProductShopDto {
   paymentInstructions!: string | null;
 }
 
+class PublicProductAiTryOnDto {
+  @ApiProperty()
+  enabled!: boolean;
+}
+
 class PublicProductVariantDto {
   @ApiProperty()
   id!: string;
@@ -138,4 +143,7 @@ export class PublicProductResponseDto {
 
   @ApiProperty({ type: PublicProductShopDto })
   shop!: PublicProductShopDto;
+
+  @ApiProperty({ type: PublicProductAiTryOnDto })
+  aiTryOn!: PublicProductAiTryOnDto;
 }

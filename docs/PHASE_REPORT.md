@@ -1,5 +1,54 @@
 # Phase Report
 
+## 2026-05-27 AI Virtual Try-On MVP Phase 1
+
+- Implemented a configurable AI Try-On MVP across `backend-nest`, `frontend-next`, and `ai-service`.
+- Added Prisma models and migration for:
+  - `AiFeatureSetting`
+  - `AiTryOnTask`
+  - `AiTryOnUsageLog`
+  - `Product.aiTryOnEnabled`
+- Added admin configuration page and APIs:
+  - `/admin/ai-settings`
+  - `GET /api/admin/ai-settings`
+  - `PATCH /api/admin/ai-settings`
+- Added public APIs:
+  - `GET /api/public/ai-try-on/config`
+  - `POST /api/public/ai-try-on/uploads`
+  - `POST /api/public/products/:productId/try-on/tasks`
+  - `GET /api/public/ai-try-on/tasks/:taskId`
+- Added public product detail modal flow with:
+  - always-visible CTA
+  - disabled under-development feedback
+  - manual size-selection requirement
+  - body profile form
+  - built-in model picker
+  - result polling
+- Added ai-service internal endpoint and provider abstraction:
+  - `POST /internal/ai-try-on/generate`
+  - `mock`
+  - `demo`
+  - `openai`
+- OpenAI mode now fails cleanly with `AI_PROVIDER_NOT_CONFIGURED` when no server key is present.
+- Added explainable rule-based size recommendation and explicit reference-only disclaimer.
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `ai-service python -m compileall app`: pass
+- `ai-service python -m pytest -q`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+
+Remaining gaps:
+
+- real OpenAI garment try-on generation is not activated in Phase 1; the `openai` provider path is wiring-ready but still placeholder-based
+- seller-facing product toggle UI is not exposed yet, although backend product support exists
+- full runtime docker and full frontend/backend regression verification still depend on environment-specific local data and are reported separately when run
+
 ## 2026-05-27 Homepage Slider Image Stretching
 
 - Changed image fit layout from `object-contain mx-auto` to `object-fill` on both the public storefront hero slider (`public-homepage-hero-slider.tsx`) and the admin visual preview modal (`admin-homepage-slides-page-client.tsx`).

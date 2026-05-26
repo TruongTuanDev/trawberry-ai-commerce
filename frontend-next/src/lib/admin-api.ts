@@ -1435,6 +1435,18 @@ export type AdminHomepageSlide = {
   updatedAt: string;
 };
 
+export type AdminAiTryOnSettings = {
+  id: string;
+  enabled: boolean;
+  providerMode: "mock" | "demo" | "openai";
+  guestDailyLimit: number;
+  customerDailyLimit: number;
+  requireConsent: boolean;
+  supportedCategories: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CreateHomepageSlideInput = {
   titleRu?: string | null;
   titleEn?: string | null;
@@ -1509,5 +1521,20 @@ export async function uploadHomepageSlideImage(file: File) {
   }>("/api/admin/homepage-slides/upload", {
     method: "POST",
     body: formData,
+  });
+}
+
+export async function getAdminAiTryOnSettings() {
+  return apiRequest<AdminAiTryOnSettings>("/api/admin/ai-settings", {
+    method: "GET",
+  });
+}
+
+export async function updateAdminAiTryOnSettings(
+  payload: Omit<AdminAiTryOnSettings, "id" | "createdAt" | "updatedAt">,
+) {
+  return apiRequest<AdminAiTryOnSettings>("/api/admin/ai-settings", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   });
 }

@@ -1,5 +1,32 @@
 # Full Commerce Flow Audit
 
+## AI Try-On MVP Addendum
+
+- verified public product detail now exposes an AI Try-On CTA without opening a new tab
+- verified disabled state remains user-visible and returns under-development feedback instead of hiding the CTA
+- verified enabled state requires an explicit size click before the modal opens, preserving existing product purchase flow behavior
+- verified modal flow includes:
+  - body profile fields
+  - built-in model picker
+  - optional customer reference upload
+  - consent gating
+  - product preview
+  - result polling
+- verified backend is the source of truth for:
+  - enable/disable
+  - provider mode
+  - supported categories
+  - consent requirement
+  - guest/customer daily limits
+  - task status and result metadata
+- verified ai-service now owns provider selection for try-on generation with `mock`, `demo`, and `openai` paths
+- verified OpenAI API keys remain server-side only and are not exposed through the frontend
+- verified size recommendation is deterministic and explainable rather than opaque AI-only sizing
+- verified current non-goals:
+  - no real garment try-on OpenAI pipeline in Phase 1
+  - no seller Center product toggle UI yet
+  - no promise of fit accuracy beyond reference guidance
+
 ## Admin Operations English-only Cleanup Addendum
 
 - verified admin operations UI remains English-only after the cleanup

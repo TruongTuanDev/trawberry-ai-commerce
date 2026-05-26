@@ -26,11 +26,11 @@ export function QuantityStepper({
   const [inputValue, setInputValue] = useState<string | null>(null);
   const compact = size === "sm";
   const buttonClass = compact
-    ? "h-9 w-9 rounded-xl text-base"
-    : "h-11 w-11 rounded-2xl text-lg";
+    ? "h-9 w-9 shrink-0 rounded-xl text-base"
+    : "h-11 w-11 shrink-0 rounded-2xl text-lg";
   const valueClass = compact
-    ? "min-w-8 text-sm"
-    : "min-w-10 text-base";
+    ? "w-8 shrink-0 text-sm"
+    : "w-10 shrink-0 text-base";
 
   const clamp = (nextValue: number) => {
     const lowerBound = Math.max(min, nextValue);

@@ -25,6 +25,8 @@ model User {
   adminQueueTaskEvents     AdminQueueTaskEvent[]  @relation("AdminQueueTaskEventActor")
   aiGenerationTasks       AiGenerationTask[]
   aiUsageLogs             AiUsageLog[]
+  aiTryOnTasks            AiTryOnTask[]
+  aiTryOnUsageLogs        AiTryOnUsageLog[]
   customerOrders          Order[]                @relation("CustomerOrders")
   marketplaceCheckouts    MarketplaceCheckout[]  @relation("CustomerMarketplaceCheckouts")
   supportCases            SupportCase[]          @relation("CustomerSupportCases")
@@ -257,6 +259,8 @@ model Shop {
   aiGeneratedImages     AiGeneratedImage[]
   aiCredits             SellerAiCredit?
   aiUsageLogs           AiUsageLog[]
+  aiTryOnTasks          AiTryOnTask[]
+  aiTryOnUsageLogs      AiTryOnUsageLog[]
   orders                Order[]
   paymentReviewLogs     PaymentReviewLog[]
   supportCases          SupportCase[]
@@ -366,8 +370,11 @@ model Product {
   orderItems        OrderItem[]
   aiGenerationTasks AiGenerationTask[]
   aiGeneratedImages AiGeneratedImage[]
+  aiTryOnTasks      AiTryOnTask[]
+  aiTryOnUsageLogs  AiTryOnUsageLog[]
   productReviews    ProductReview[]
   messageThreads    ShopMessageThread[]
+  aiTryOnEnabled    Boolean            @default(false) @map("ai_try_on_enabled")
 
   @@unique([shopId, wbNmId])
   @@unique([shopId, sellerSku])
@@ -1297,6 +1304,90 @@ model AiUsageLog {
 
   @@index([shopId, createdAt])
   @@map("ai_usage_logs")
+}
+
+model AiFeatureSetting {
+  id                  String      @id @db.VarChar(64)
+  aiTryOnEnabled      Boolean     @default(false) @map("ai_try_on_enabled")
+  aiTryOnProvider     String      @default("mock") @map("ai_try_on_provider") @db.VarChar(50)
+  guestDailyLimit     Int         @default(3) @map("guest_daily_limit")
+  customerDailyLimit  Int         @default(5) @map("customer_daily_limit")
+  requireConsent      Boolean     @default(true) @map("require_consent")
+  supportedCategories Json?       @map("supported_categories")
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("ai_feature_settings")
+}
+
+model AiTryOnTask {
+  id                       String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId               String?   @map("customer_id") @db.Uuid
+  guestSessionId           String?   @map("guest_session_id") @db.VarChar(255)
+  shopId                   String    @map("shop_id") @db.Uuid
+  productId                String    @map("product_id") @db.Uuid
+  selectedSize             String?   @map("selected_size") @db.VarChar(255)
+  selectedRussianSize      String?   @map("selected_russian_size") @db.VarChar(255)
+  customerImageUrl         String?   @map("customer_image_url") @db.VarChar(1000)
+  customerImageStorageKey  String?   @map("customer_image_storage_key") @db.VarChar(1024)
+  selectedModelId          String?   @map("selected_model_id") @db.VarChar(255)
+  heightCm                 Int?      @map("height_cm")
+  weightKg                 Int?      @map("weight_kg")
+  gender                   String?   @db.VarChar(50)
+  bodyType                 String?   @map("body_type") @db.VarChar(50)
+  bodyTraits               Json?     @map("body_traits")
+  consentAccepted          Boolean   @default(false) @map("consent_accepted")
+  providerMode             String    @map("provider_mode") @db.VarChar(50)
+  status                   String    @default("PENDING") @db.VarChar(50)
+  resultImageUrl           String?   @map("result_image_url") @db.VarChar(1000)
+  resultImageStorageKey    String?   @map("result_image_storage_key") @db.VarChar(1024)
+  resultMimeType           String?   @map("result_mime_type") @db.VarChar(100)
+  resultWidth              Int?      @map("result_width")
+  resultHeight             Int?      @map("result_height")
+  recommendedSize          String?   @map("recommended_size") @db.VarChar(255)
+  recommendedRussianSize   String?   @map("recommended_russian_size") @db.VarChar(255)
+  sizeRecommendationNote   String?   @map("size_recommendation_note")
+  sizeRecommendationNoteRu String?   @map("size_recommendation_note_ru")
+  sizeRecommendationNoteEn String?   @map("size_recommendation_note_en")
+  sizeRecommendationConfidence String? @map("size_recommendation_confidence") @db.VarChar(50)
+  errorCode                String?   @map("error_code") @db.VarChar(100)
+  errorMessage             String?   @map("error_message")
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt              DateTime? @map("completed_at") @db.Timestamptz(6)
+  customer                 User?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shop                     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product                  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  usageLogs                AiTryOnUsageLog[]
+
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([shopId, createdAt])
+  @@index([productId, createdAt])
+  @@index([status, createdAt])
+  @@map("ai_try_on_tasks")
+}
+
+model AiTryOnUsageLog {
+  id             String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taskId         String?     @map("task_id") @db.Uuid
+  customerId     String?     @map("customer_id") @db.Uuid
+  guestSessionId String?     @map("guest_session_id") @db.VarChar(255)
+  shopId         String      @map("shop_id") @db.Uuid
+  productId      String?     @map("product_id") @db.Uuid
+  providerMode   String      @map("provider_mode") @db.VarChar(50)
+  status         String      @db.VarChar(50)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  task           AiTryOnTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  customer       User?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shop           Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product        Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([productId, createdAt])
+  @@index([shopId, createdAt])
+  @@map("ai_try_on_usage_logs")
 }
 
 model Notification {

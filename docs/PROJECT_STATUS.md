@@ -1,5 +1,22 @@
 # Project Status
 
+## AI Try-On MVP Phase 1 - 2026-05-27
+
+- Status: implemented in `backend-nest`, `frontend-next`, and `ai-service`
+- Added admin-controlled AI Try-On runtime settings under `/admin/ai-settings`.
+- Added public product-detail AI Try-On CTA with:
+  - disabled under-development feedback
+  - explicit size-selection gate
+  - responsive modal flow
+- Added public try-on tasks, task polling, guest/customer limits, consent enforcement, and reference image upload.
+- Added ai-service provider abstraction for try-on:
+  - `mock`
+  - `demo`
+  - `openai`
+- OpenAI path is configuration-ready but still placeholder-based in Phase 1.
+- Added deterministic built-in demo models and rule-based size recommendation for stable defense/demo behavior.
+- Added focused backend e2e coverage and frontend Playwright coverage for the MVP path.
+
 ## Admin Responsive Layout Audit & Fix - 2026-05-26
 
 - Status: implemented in `frontend-next`
