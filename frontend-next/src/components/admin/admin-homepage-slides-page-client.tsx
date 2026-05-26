@@ -805,7 +805,7 @@ export function AdminHomepageSlidesPageClient() {
                         : (previewSlide.imageMobileUrl || previewSlide.imageDesktopUrl)
                     }
                     alt="Preview"
-                    className="w-full h-full object-contain mx-auto"
+                    className="w-full h-full object-fill"
                   />
                 </div>
 

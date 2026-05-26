@@ -393,6 +393,8 @@ async function main() {
     }
   ];
 
+  await prisma.homepageSlide.deleteMany({});
+
   for (const slide of demoSlides) {
     await prisma.homepageSlide.upsert({
       where: { id: slide.id },

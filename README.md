@@ -245,3 +245,10 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env logs -f backend
 ```
 
 See `docs/DOCKER_BUILD_RELIABILITY.md` for troubleshooting and CI-readiness notes.
+Kích thước lý tưởng nhất (Tỷ lệ 2.57 : 1):
+
+1800 × 700 px (Khuyên dùng cho độ nét cao trên màn hình Retina/4K).
+1600 × 620 px hoặc 1232 × 480 px (Khít chuẩn xác tuyệt đối với màn hình desktop thông thường).
+Tỷ lệ ảnh cho Mobile (Nếu upload ở trường Mobile Image URL):
+
+900 × 1200 px hoặc 1080 × 1350 px (Tỷ lệ đứng 3:4 hoặc 4:5 để tối ưu không gian hiển thị trên màn hình điện thoại).

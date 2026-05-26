@@ -125,14 +125,14 @@ export function PublicHomepageHeroSlider({
                 <img
                   src={slide.imageDesktopUrl}
                   alt={altText}
-                  className="hidden sm:block w-full h-full object-contain mx-auto"
+                  className="hidden sm:block w-full h-full object-fill"
                   data-testid={`slide-desktop-image-${index}`}
                 />
                 {/* Mobile view: display imageMobileUrl if present, otherwise desktop fallback */}
                 <img
                   src={slide.imageMobileUrl || slide.imageDesktopUrl}
                   alt={altText}
-                  className="block sm:hidden w-full h-full object-contain mx-auto"
+                  className="block sm:hidden w-full h-full object-fill"
                   data-testid={`slide-mobile-image-${index}`}
                 />
               </div>
