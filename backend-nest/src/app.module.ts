@@ -27,6 +27,7 @@ import { CustomerAccountModule } from './modules/customer-account/customer-accou
 import { SellerFinanceModule } from './modules/seller-finance/seller-finance.module';
 import { ReturnRefundsModule } from './modules/return-refunds/return-refunds.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HomepageSlidesModule } from './modules/homepage-slides/homepage-slides.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -60,6 +61,7 @@ import { HealthController } from './health.controller';
     SellerFinanceModule,
     ReturnRefundsModule,
     NotificationsModule,
+    HomepageSlidesModule,
     PublicProductsModule,
     PublicShopsModule,
     ReviewsModule,

@@ -1324,3 +1324,31 @@ model Notification {
   @@index([recipientUserId, recipientRole, status, createdAt])
   @@map("notifications")
 }
+
+model HomepageSlide {
+  id                      String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  titleRu                 String?  @map("title_ru")
+  titleEn                 String?  @map("title_en")
+  subtitleRu              String?  @map("subtitle_ru")
+  subtitleEn              String?  @map("subtitle_en")
+  ctaLabelRu              String?  @map("cta_label_ru")
+  ctaLabelEn              String?  @map("cta_label_en")
+  ctaUrl                  String?  @map("cta_url")
+  altTextRu               String?  @map("alt_text_ru")
+  altTextEn               String?  @map("alt_text_en")
+  imageDesktopUrl         String   @map("image_desktop_url")
+  imageDesktopStorageKey  String?  @map("image_desktop_storage_key")
+  imageMobileUrl          String?  @map("image_mobile_url")
+  imageMobileStorageKey   String?  @map("image_mobile_storage_key")
+  backgroundColor         String?  @map("background_color") @db.VarChar(50)
+  displayOrder            Int      @default(0) @map("display_order")
+  isActive                Boolean  @default(false) @map("is_active")
+  startsAt                DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt                  DateTime? @map("ends_at") @db.Timestamptz(6)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive, displayOrder])
+  @@index([startsAt, endsAt])
+  @@map("homepage_slides")
+}

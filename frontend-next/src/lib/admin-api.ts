@@ -1410,3 +1410,104 @@ export async function restoreAdminReview(reviewId: string) {
     },
   );
 }
+
+export type AdminHomepageSlide = {
+  id: string;
+  titleRu: string | null;
+  titleEn: string | null;
+  subtitleRu: string | null;
+  subtitleEn: string | null;
+  ctaLabelRu: string | null;
+  ctaLabelEn: string | null;
+  ctaUrl: string | null;
+  altTextRu: string | null;
+  altTextEn: string | null;
+  imageDesktopUrl: string;
+  imageDesktopStorageKey: string | null;
+  imageMobileUrl: string | null;
+  imageMobileStorageKey: string | null;
+  backgroundColor: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateHomepageSlideInput = {
+  titleRu?: string | null;
+  titleEn?: string | null;
+  subtitleRu?: string | null;
+  subtitleEn?: string | null;
+  ctaLabelRu?: string | null;
+  ctaLabelEn?: string | null;
+  ctaUrl?: string | null;
+  altTextRu?: string | null;
+  altTextEn?: string | null;
+  imageDesktopUrl: string;
+  imageDesktopStorageKey?: string | null;
+  imageMobileUrl?: string | null;
+  imageMobileStorageKey?: string | null;
+  backgroundColor?: string | null;
+  displayOrder?: number;
+  isActive?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
+
+export type UpdateHomepageSlideInput = Partial<CreateHomepageSlideInput>;
+
+export async function listHomepageSlides() {
+  return apiRequest<AdminHomepageSlide[]>("/api/admin/homepage-slides", {
+    method: "GET",
+  });
+}
+
+export async function createHomepageSlide(input: CreateHomepageSlideInput) {
+  return apiRequest<AdminHomepageSlide>("/api/admin/homepage-slides", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateHomepageSlide(id: string, input: UpdateHomepageSlideInput) {
+  return apiRequest<AdminHomepageSlide>(`/api/admin/homepage-slides/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteHomepageSlide(id: string) {
+  return apiRequest<void>(`/api/admin/homepage-slides/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function toggleHomepageSlide(id: string) {
+  return apiRequest<AdminHomepageSlide>(`/api/admin/homepage-slides/${encodeURIComponent(id)}/toggle`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function reorderHomepageSlides(ids: string[]) {
+  return apiRequest<AdminHomepageSlide[]>("/api/admin/homepage-slides/reorder", {
+    method: "POST",
+    body: JSON.stringify({ slideIds: ids }),
+  });
+}
+
+export async function uploadHomepageSlideImage(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<{
+    url: string;
+    storageKey: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>("/api/admin/homepage-slides/upload", {
+    method: "POST",
+    body: formData,
+  });
+}

@@ -762,3 +762,11 @@ Future audit item: design an optional marketplace parent order for combined rece
 - the label now also renders a thermal-printer-friendly barcode strip and internal sorting code derived from live order identifiers rather than mock data
 - the latest polish layer remaps raw failure-like shipment states into print-friendly handoff states and surfaces delivery type, created-at, postal-code, and sender-phone fields for warehouse operations without touching routing or fulfillment logic
 - the label continues to state that it is not an official Yandex label
+
+# Admin-managed Public Homepage Image Slider Audit Addendum
+
+- **Aesthetics & Visuality**: Public homepage hero slider now uses rich image visuals (desktop and mobile specific) instead of generic text/cards. Visual enhancements include a dark gradient overlay for text readability, interactive micro-animations (hover pause, dot states), and glassmorphic navigation arrows.
+- **Admin Management Operations**: Admin can view, create, edit, delete, toggle active status, reorder (via up/down buttons), upload JPG/PNG/WEBP desktop/mobile assets (up to 5MB, no SVG/video), and view a visual slide preview.
+- **Publish Window Logic**: Public display of slides is strictly gated by `isActive = true` and current time matching the publish window (between `startsAt` and `endsAt` if set). Invalid publish windows (startsAt > endsAt) are rejected by backend validation.
+- **Graceful Fallback**: If no active slides exist within their publish windows, the homepage displays a premium styled fallback banner using localized English/Russian texts without breaking the homepage layout.
+- **Responsive Layout**: Slides are fully responsive. Mobile viewports display the `imageMobileUrl` (or fall back to `imageDesktopUrl`), and no horizontal overflow is present on either public storefront or admin console views.

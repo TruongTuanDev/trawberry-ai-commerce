@@ -357,6 +357,50 @@ async function main() {
     });
   }
 
+  const demoSlides = [
+    {
+      id: "d070b471-1111-4111-8111-111111111111",
+      titleRu: "Распродажа платьев",
+      titleEn: "Summer Dresses Sale",
+      subtitleRu: "Скидки до 50% на все платья из льна",
+      subtitleEn: "Up to 50% off on all linen dresses",
+      ctaLabelRu: "Купить",
+      ctaLabelEn: "Shop Now",
+      ctaUrl: "/products?category=dresses",
+      altTextRu: "Слайд платья",
+      altTextEn: "Dresses Slide",
+      imageDesktopUrl: "http://localhost:3000/demo/demo-product-1.svg",
+      imageMobileUrl: "http://localhost:3000/demo/demo-product-1.svg",
+      backgroundColor: "linear-gradient(135deg, #cb11ab 0%, #8e1cff 100%)",
+      displayOrder: 1,
+      isActive: true,
+    },
+    {
+      id: "d070b472-2222-4222-8222-222222222222",
+      titleRu: "Новая коллекция",
+      titleEn: "New Arrivals",
+      subtitleRu: "Стильные куртки и жакеты этого сезона",
+      subtitleEn: "Stylish jackets and blazers of the season",
+      ctaLabelRu: "Смотреть",
+      ctaLabelEn: "Explore",
+      ctaUrl: "/products?category=jackets",
+      altTextRu: "Слайд куртки",
+      altTextEn: "Jackets Slide",
+      imageDesktopUrl: "http://localhost:3000/demo/demo-product-2.svg",
+      backgroundColor: "linear-gradient(135deg, #9b2bff 0%, #ff5d85 100%)",
+      displayOrder: 2,
+      isActive: true,
+    }
+  ];
+
+  for (const slide of demoSlides) {
+    await prisma.homepageSlide.upsert({
+      where: { id: slide.id },
+      update: slide,
+      create: slide,
+    });
+  }
+
   const publicProductCount = await prisma.product.count({
     where: {
       shopId: shop.id,

@@ -1881,3 +1881,29 @@ Verification:
 Current gap:
 
 - several older seller/admin operations pages outside order detail still contain legacy hard-coded copy and need a later cleanup phase
+
+# Homepage Image Slider Status
+
+Implemented:
+
+- Added `HomepageSlide` data model to `backend-nest/prisma/schema.prisma` with display order, active flag, startsAt/endsAt publish windows, and indices.
+- Implemented backend CRUD, toggle, reorder, and files upload (multipart, JPG/PNG/WEBP up to 5MB, no SVG/video) for admin and public endpoints.
+- Integrated public homepage slider (`PublicHomepageHeroSlider`) with autoplay (6s), hover pause, navigation controls, and localized EN/RU overlay titles, subtitles, CTAs, and alt text.
+- Fallback banner styled with glassmorphism gradients and translations if no active slides exist in database.
+- Implemented admin slide manager (`/admin/homepage-slides`) with forms, list, up/down reordering, preview modal, and upload dropzones in English.
+- Prevented any document horizontal overflow on desktop and mobile viewports.
+
+Verification:
+
+- Backend Prisma generate/db push: pass
+- Backend tests (`homepage-slides.e2e-spec.ts`): pass
+- Backend lint & build: pass
+- Frontend lint & build: pass
+- Playwright E2E admin management test: pass
+- Playwright E2E public homepage slider test (including fallback, translations, and mobile views): pass
+- Regressions E2E (`admin-responsive-layout`, `public-marketplace-contract`, `i18n-public-customer`, `action-feedback`): pass
+- Docker runtime checks & health endpoints: pass
+
+Current gap:
+
+- Direct seller catalog import and legacy Spring Boot services remain out of scope.

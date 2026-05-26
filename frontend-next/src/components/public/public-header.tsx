@@ -230,7 +230,7 @@ export function PublicHeader() {
             <MenuIcon />
           </button>
 
-          <form onSubmit={handleSearch} className="max-w-4xl flex-1">
+          <form onSubmit={handleSearch} className="max-w-4xl flex-1 min-w-0">
             <label htmlFor="public-header-search" className="sr-only">
               {t("publicHeader.searchProducts")}
             </label>

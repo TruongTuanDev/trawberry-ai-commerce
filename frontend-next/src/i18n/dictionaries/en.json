@@ -458,7 +458,11 @@
     "openFilters": "Open filters",
     "noProductsTitle": "No published products on the homepage yet",
     "noProductsDesc": "The homepage now uses the same public catalog feed as the storefront. Products will appear here once sellers publish items that are ready for sale.",
-    "browseCatalog": "Browse catalog"
+    "browseCatalog": "Browse catalog",
+    "heroFallbackTitle": "Find deals and new arrivals in one place",
+    "heroFallbackSubtitle": "Products from multiple sellers come together in one consistent marketplace view.",
+    "heroCtaFallback": "Browse catalog",
+    "bannerAltFallback": "Homepage banner"
   },
   "catalog": {
     "loading": "Loading products...",

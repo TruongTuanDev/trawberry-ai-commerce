@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { HomeCatalogSectionClient } from "@/components/public/home-catalog-section-client";
-import { PromoSlider } from "@/components/public/promo-slider";
+import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, type PublicProduct } from "@/lib/public-api";
+import { getPublicProducts, getPublicHomepageSlides, type PublicProduct, type PublicHomepageSlide } from "@/lib/public-api";
 
 async function loadHomepageCatalog() {
   try {
@@ -38,11 +40,18 @@ async function loadHomepageCatalog() {
 export default async function HomePage() {
   const { items, total } = await loadHomepageCatalog();
 
+  let slides: PublicHomepageSlide[] = [];
+  try {
+    slides = await getPublicHomepageSlides();
+  } catch (error) {
+    console.error("Failed to load public homepage slides", error);
+  }
+
   return (
     <PublicShell tone="hero">
       <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-7xl space-y-8">
-          <PromoSlider />
+          <PublicHomepageHeroSlider initialSlides={slides} />
           <HomeCatalogSectionClient items={items} total={total} />
         </div>
       </main>

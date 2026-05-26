@@ -3095,8 +3095,36 @@ Implemented:
 
 Verification:
 
-- pending current phase verification run
+- verified current phase verification run: pass
 
 Known gaps:
 
 - browser print-preview page-count validation still requires the manual Chrome check described in the task because Playwright cannot assert native print preview pagination
+
+# Phase Report: Admin-Managed Public Homepage Image Slider
+
+Implemented:
+
+- **Database Model**: Added `HomepageSlide` model in `backend-nest/prisma/schema.prisma` mapping to database table `homepage_slides` with display order, active flag, startsAt/endsAt publish windows, and indexes.
+- **Backend Module**: Created NestJS homepage-slides module (service, controller, DTOs, module registration). Endpoints support list/detail/create/update/delete/toggle/reorder/upload.
+- **Multipart Upload**: Integrated image uploading via S3/Minio client using `FilesService` supporting JPG/PNG/WEBP up to 5MB, and explicitly rejecting SVG and video formats.
+- **Storefront Image Slider**: Created premium visual homepage slider (`PublicHomepageHeroSlider`) replacing legacy text cards. Configured with desktop and mobile source rules, autoplay (6s), pause on hover, interactive navigation dots/arrows, and gradient overlay.
+- **Graceful Fallback**: Integrated localized fallback banner matching Russian/English locales. If no active slide exists within the publish window, it renders the fallback safely.
+- **Admin Center Manager**: Created slide management workspace at `/admin/homepage-slides` and client form/list components in English. Admin can CRUD slides, toggle active status, reorder slides, upload visual assets, and view a visual slide preview.
+- **Responsive Layout**: Re-checked and fixed overflow points in both customer storefront and admin dashboard viewports.
+
+Verification:
+
+- `backend-nest` prisma generate & db push: pass
+- `backend-nest` e2e test (`homepage-slides.e2e-spec.ts`): pass (all 3 specs passed)
+- `backend-nest` lint and compile/build: pass
+- `frontend-next` lint and compile/build: pass
+- `frontend-next` admin slides e2e test (`admin-homepage-slides.spec.ts`): pass
+- `frontend-next` customer slider e2e test (`public-homepage-slider.spec.ts`): pass
+- Front-end regression E2E suites (`admin-responsive-layout`, `public-marketplace-contract`, `i18n-public-customer`, `action-feedback`): pass
+- Docker runtime checks & health endpoints: pass
+
+Known Gaps:
+
+- Legacy `strawberry-frontend` and `strawberry-backend` remain untouched.
+- External Wildberries API imports are out of scope.

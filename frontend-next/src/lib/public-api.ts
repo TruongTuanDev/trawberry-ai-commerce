@@ -543,3 +543,26 @@ export async function uploadPaymentProof(
     },
   );
 }
+
+export type PublicHomepageSlide = {
+  id: string;
+  titleRu: string | null;
+  titleEn: string | null;
+  subtitleRu: string | null;
+  subtitleEn: string | null;
+  ctaLabelRu: string | null;
+  ctaLabelEn: string | null;
+  ctaUrl: string | null;
+  altTextRu: string | null;
+  altTextEn: string | null;
+  imageDesktopUrl: string;
+  imageMobileUrl: string | null;
+  backgroundColor: string | null;
+  displayOrder: number;
+};
+
+export async function getPublicHomepageSlides() {
+  return apiRequest<PublicHomepageSlide[]>("/api/public/homepage-slides", {
+    method: "GET",
+  });
+}
