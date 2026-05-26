@@ -1,5 +1,17 @@
 # Phase Report
 
+## 2026-05-27 Homepage Slider Image Stretching
+
+- Changed image fit layout from `object-contain mx-auto` to `object-fill` on both the public storefront hero slider (`public-homepage-hero-slider.tsx`) and the admin visual preview modal (`admin-homepage-slides-page-client.tsx`).
+- This stretches slide images to exactly fit the boundaries of the slider container (stretching without aspect-ratio preservation), eliminating the blank margin gaps on the sides.
+- Hardened the database seed demo script (`seed-demo.js`) to perform `deleteMany` on `HomepageSlide` before seeding, preventing accumulation of duplicate/orphaned slides from failed E2E test runs.
+
+Verification:
+- `backend-nest npm run seed:demo`: pass
+- `frontend-next npx playwright test tests/e2e/public-homepage-slider.spec.ts`: pass
+- `frontend-next npx playwright test tests/e2e/admin-homepage-slides.spec.ts`: pass
+- Rebuilt Docker image for `frontend-next` and restarted containers to ensure parity: pass
+
 ## 2026-05-26 Admin Responsive Layout Audit & Fix
 
 - Audited and fixed responsive layout issues across all Admin Center pages (Sellers, Deliveries, Seller Fees, Seller Detail, and Support Cases).
