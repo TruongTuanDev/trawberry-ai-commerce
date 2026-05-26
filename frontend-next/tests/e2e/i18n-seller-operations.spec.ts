@@ -137,6 +137,93 @@ async function seedSellerCatalog(
   return shop;
 }
 
+async function createPaidOrder(
+  request: APIRequestContext,
+  token: string,
+  stamp: number,
+  phone: string,
+) {
+  const shop = await backendJson<{ id: string }>(request, "/api/shops", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      name: `Seller Order Detail Shop ${stamp}`,
+      slug: `seller-order-detail-shop-${stamp}`,
+      paymentInstructions: "Manual transfer.",
+    },
+  });
+
+  await backendJson(request, `/api/shops/${shop.id}/delivery/settings`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      pickupAddress: "Tverskaya 1, Moscow",
+      pickupCity: "Moscow",
+      pickupPostalCode: "101000",
+      pickupContactPhone: "+74950000000",
+      pickupContactName: "Seller Ops",
+      pickupLatitude: 55.7558,
+      pickupLongitude: 37.6176,
+      enabledCarriers: ["CDEK", "YANDEX"],
+      defaultCarrier: "YANDEX",
+      sameCityPreferredCarrier: "YANDEX",
+      interCityPreferredCarrier: "CDEK",
+      fallbackCarrier: "CDEK",
+      defaultWeightGram: 1200,
+      defaultLengthCm: 36,
+      defaultWidthCm: 24,
+      defaultHeightCm: 12,
+    },
+  });
+
+  const product = await backendJson<{ id: string }>(request, `/api/shops/${shop.id}/products`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      wbNmId: 9300000 + (stamp % 100000),
+      wbTitle: `Seller Order Detail Product ${stamp}`,
+      localTitle: `Seller Order Detail Product ${stamp}`,
+      localDescription: "Seller order detail i18n product",
+      categoryName: "Seller order detail",
+      visibility: "ACTIVE",
+      variants: [{ chrtId: 9400000 + (stamp % 100000), basePrice: 199, discountPrice: 199, stockQuantity: 5 }],
+      images: [{ wbUrl: "https://example.com/seller-order-detail.jpg", localUrl: "https://example.com/seller-order-detail.jpg", isMain: true, sortOrder: 0 }],
+    },
+  });
+
+  await backendJson(request, `/api/shops/${shop.id}/products/${product.id}/publish`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    data: {},
+  });
+
+  const checkout = await backendJson<{ orderId: string }>(request, "/api/checkout/orders", {
+    method: "POST",
+    data: {
+      shopId: shop.id,
+      items: [{ productId: product.id, quantity: 1 }],
+      customer: {
+        fullName: "Seller Order Detail Buyer",
+        phone,
+        email: `seller-order-detail-buyer-${stamp}@example.com`,
+        address: "Lenina 10, Moscow",
+        latitude: 55.751244,
+        longitude: 37.618423,
+        note: `Seller order detail note ${stamp}`,
+      },
+      paymentMethod: "PREPAID_SELLER_QR",
+    },
+  });
+
+  await backendJson(request, `/api/shops/${shop.id}/payments/${checkout.orderId}/mark-paid`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    data: { note: "Paid for seller order detail i18n." },
+  });
+
+  return checkout;
+}
+
 async function newSellerPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ baseURL: frontendBaseUrl });
   await context.clearCookies();
@@ -241,4 +328,40 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
   await expect(page.getByText(enDict.seller.products.statusBadges.outOfStock).first()).toBeVisible();
   await page.reload();
   await expect(page.getByRole("link", { name: enDict.sellerShell.products }).first()).toBeVisible();
+});
+
+test("seller order detail switches RU/VI/EN labels live", async ({
+  browser,
+  request,
+}) => {
+  test.setTimeout(180000);
+  const stamp = Date.now();
+  const seller = await approveSeller(request, `seller-order-detail-i18n-${stamp}@example.com`);
+  const checkout = await createPaidOrder(request, seller.token, stamp, `+7996${String(stamp).slice(-7)}`);
+
+  const page = await newSellerPage(browser);
+  await page.goto("/seller/login");
+  await page.getByTestId("seller-login-email").fill(seller.email);
+  await page.getByTestId("seller-login-password").fill(seller.password);
+  await page.getByTestId("seller-login-submit").click();
+  await page.waitForURL("**/seller/dashboard");
+
+  await page.goto(`/seller/orders/${checkout.orderId}`);
+  await expect(page.getByTestId("seller-order-delivery-section")).toBeVisible();
+  await chooseSellerLocale(page, "ru");
+  await expect(page.getByText(ruDict.seller.orderDetail.yandexHandoffTitle, { exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.orderDetail.paymentMethod, { exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.orderDetail.shippingAddress, { exact: true })).toBeVisible();
+
+  await chooseSellerLocale(page, "vi");
+  await expect(page.getByText(viDict.seller.orderDetail.yandexHandoffTitle, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.orderDetail.paymentMethod, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.orderDetail.shippingAddress, { exact: true })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(ruDict.seller.orderDetail.yandexHandoffTitle);
+
+  await chooseSellerLocale(page, "en");
+  await expect(page.getByText(enDict.seller.orderDetail.yandexHandoffTitle, { exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.orderDetail.paymentMethod, { exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.orderDetail.shippingAddress, { exact: true })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(viDict.seller.orderDetail.yandexHandoffTitle);
 });

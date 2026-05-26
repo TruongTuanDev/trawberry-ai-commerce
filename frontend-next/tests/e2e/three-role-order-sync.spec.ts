@@ -285,7 +285,10 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   await sellerPage.getByTestId("login-submit").click();
   await sellerPage.waitForURL("**/seller/dashboard");
   await sellerPage.goto(`/seller/orders/${orderId}`);
-  await expect(sellerPage.getByTestId("seller-order-next-action")).toContainText(/Wait for payment|Confirm or reject payment proof|No action|create_delivery_order/);
+  await expect(sellerPage.getByTestId("seller-order-next-action")).toHaveAttribute(
+    "data-raw-status",
+    /review_payment_proof|create_delivery_order|accept_pay_on_delivery_order/,
+  );
 
   await backendJson(request, `/api/public/orders/${orderId}/payment-proof`, {
     method: "POST",
@@ -340,7 +343,10 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   expect(normalizedPlatformFeeDue).toBeGreaterThan(0);
 
   await sellerPage.goto(`/seller/orders/${orderId}`);
-  await expect(sellerPage.getByTestId("seller-order-display-status")).toContainText(/Ready to create Yandex|Payment confirmed|Assembling/);
+  await expect(sellerPage.getByTestId("seller-order-display-status")).toHaveAttribute(
+    "data-raw-status",
+    /READY_TO_CREATE_YANDEX|ASSEMBLING|YANDEX_MANUAL_CREATED/,
+  );
   await sellerPage.getByTestId("manual-yandex-order-id").fill(`YANDEX-${stamp}`);
   await sellerPage.getByTestId("manual-delivery-save").click();
   await expect(sellerPage.getByTestId("delivery-action-message")).toHaveAttribute("data-raw-status", /saved|updated/i);

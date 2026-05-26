@@ -1772,3 +1772,23 @@ Implemented:
 Current gap:
 
 - seller order detail and several older admin backoffice pages still contain legacy hard-coded copy outside this phase scope
+
+# Seller Order Detail i18n Cleanup Status
+
+Implemented:
+
+- seller order detail now uses localized seller-only copy across `ru`, `en`, and `vi`
+- manual Yandex handoff labels, fulfillment summary labels, delivery form labels, and shipping-label entry actions now resolve through `seller.orderDetail.*`
+- seller payment method rendering now prefers stable payment codes over snapshot labels, so order detail does not leak mixed-language payment labels
+- seller order detail business tests now assert stable `data-raw-status` / `data-bucket` contracts instead of translated text
+
+Verification:
+
+- frontend lint/build: pass
+- backend lint/build: pass
+- seller order detail and seller i18n Playwright coverage: pass
+- seller manual Yandex, three-role sync, shipping-label, and action-feedback Playwright checks: pass
+
+Current gap:
+
+- several older seller/admin operations pages outside order detail still contain legacy hard-coded copy and need a later cleanup phase

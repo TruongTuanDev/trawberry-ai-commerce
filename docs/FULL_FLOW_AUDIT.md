@@ -704,3 +704,4 @@ Future audit item: design an optional marketplace parent order for combined rece
 - seller locale switching audit found the dropdown menu could sit under page action bars on product operations screens; seller shell header stacking now keeps the locale menu above content
 - runtime route checks for `/products`, `/shops/demo-shop`, `/customer/messages`, `/seller/messages`, `/admin/messages`, and `/seller/orders` returned healthy HTML from the rebuilt runtime
 - focused marketplace UX regressions for reviews, messaging, public shops, shipping label, action feedback, notifications, and role-based locale behavior are now passing against the current runtime
+- seller order detail now live-switches correctly in `ru/en/vi`, and its business E2E contracts use raw status attributes instead of translated labels

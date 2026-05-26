@@ -66,6 +66,10 @@ const exceptionReasons: DeliveryExceptionReasonCode[] = [
   "DELIVERY_TIMEOUT",
   "OTHER",
 ];
+const knownPaymentMethodKeys: Record<string, string> = {
+  PREPAID_SELLER_QR: "seller.orderDetail.directSellerPayment",
+  PAY_ON_DELIVERY_SELLER_QR: "seller.orderDetail.payOnDeliverySellerQr",
+};
 
 export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const { t } = useI18n("seller");
@@ -214,7 +218,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       } catch (err) {
         if (mounted) {
           setError(
-            err instanceof Error ? err.message : "Unable to load order.",
+            err instanceof Error ? err.message : t("seller.orderDetail.errorDescription"),
           );
         }
       } finally {
@@ -228,7 +232,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, hydrated, orderId, selectShop, user]);
+  }, [currentShopId, hydrated, orderId, selectShop, t, user]);
 
   const handleUpdateStatus = async () => {
     if (!currentShopId || !order) return;
@@ -378,18 +382,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       (action === "calculate" || action === "create") &&
       !pickupAddress.trim()
     ) {
-      setError(
-        t("seller.orderDetail.messages.pickupAddressRequired") ||
-          "Pickup address is required. Configure seller delivery settings first.",
-      );
+      setError(t("seller.orderDetail.messages.pickupAddressRequired"));
       return;
     }
 
     if (action === "cancel" && !delivery?.activeShipment) {
-      setError(
-        t("seller.orderDetail.messages.noActiveShipmentToCancel") ||
-          "No active shipment exists to cancel.",
-      );
+      setError(t("seller.orderDetail.messages.noActiveShipmentToCancel"));
       return;
     }
 
@@ -420,8 +418,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               "",
           );
           setDeliveryMessage(
-            t("seller.orderDetail.messages.loadedOffers", { count: result.offers.length }) ||
-              `Loaded ${result.offers.length} delivery offer(s).`,
+            t("seller.orderDetail.messages.loadedOffers", { count: result.offers.length }),
           );
           setDeliveryActionStatus("calculated");
           return;
@@ -441,12 +438,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             "",
           );
           setDeliveryMessage(
-            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment created.",
+            t("seller.orderDetail.messages.deliveryShipmentCreated"),
           );
           setDeliveryActionStatus("created");
         } else if (action === "accept") {
           if (!delivery?.activeShipment) {
-            throw new Error("No active shipment exists to accept.");
+            throw new Error(t("seller.orderDetail.messages.noActiveShipmentToAccept"));
           }
           await acceptDeliveryShipment(
             currentShopId,
@@ -455,12 +452,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             "",
           );
           setDeliveryMessage(
-            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment accepted.",
+            t("seller.orderDetail.messages.deliveryShipmentAccepted"),
           );
           setDeliveryActionStatus("accepted");
         } else if (action === "refresh") {
           if (!delivery?.activeShipment) {
-            throw new Error("No active shipment exists to refresh.");
+            throw new Error(t("seller.orderDetail.messages.noActiveShipmentToRefresh"));
           }
           await refreshDeliveryShipment(
             currentShopId,
@@ -469,7 +466,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             "",
           );
           setDeliveryMessage(
-            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment refreshed.",
+            t("seller.orderDetail.messages.deliveryShipmentRefreshed"),
           );
           setDeliveryActionStatus("refreshed");
         } else {
@@ -481,7 +478,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             "",
           );
           setDeliveryMessage(
-            t("seller.orderDetail.messages.deliveryUpdated") || "Delivery shipment cancelled.",
+            t("seller.orderDetail.messages.deliveryShipmentCancelled"),
           );
           setDeliveryActionStatus("cancelled");
         }
@@ -533,7 +530,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             setDeliveryActionStatus("saved");
           }
         } else {
-          if (!activeShipment) throw new Error("No manual delivery exists yet.");
+          if (!activeShipment) throw new Error(t("seller.orderDetail.messages.noManualDeliveryYet"));
           if (action === "in-transit") {
             await markManualDeliveryInTransit(
               currentShopId,
@@ -550,7 +547,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               "",
             );
             setDeliveryMessage(
-              t("seller.orderDetail.messages.deliveryUpdated") || "Manual Yandex delivery marked on the way.",
+              t("seller.orderDetail.messages.manualDeliveryOnTheWay"),
             );
             setDeliveryActionStatus("transit");
           } else if (action === "courier-assigned") {
@@ -569,7 +566,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               "",
             );
             setDeliveryMessage(
-              t("seller.orderDetail.messages.deliveryUpdated") || "Courier assigned.",
+              t("seller.orderDetail.messages.manualDeliveryCourierAssigned"),
             );
             setDeliveryActionStatus("courier-assigned");
           } else if (action === "picked-up") {
@@ -588,7 +585,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               "",
             );
             setDeliveryMessage(
-              t("seller.orderDetail.messages.deliveryUpdated") || "Package marked picked up.",
+              t("seller.orderDetail.messages.manualDeliveryPickedUp"),
             );
             setDeliveryActionStatus("picked-up");
           } else if (action === "delivered") {
@@ -600,7 +597,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               "",
             );
             setDeliveryMessage(
-              t("seller.orderDetail.messages.deliveryUpdated") || "Manual delivery marked delivered.",
+              t("seller.orderDetail.messages.manualDeliveryDelivered"),
             );
             setDeliveryActionStatus("delivered");
           } else {
@@ -612,7 +609,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               "",
             );
             setDeliveryMessage(
-              t("seller.orderDetail.messages.deliveryUpdated") || "Manual delivery cancelled.",
+              t("seller.orderDetail.messages.manualDeliveryCancelled"),
             );
             setDeliveryActionStatus("cancelled");
           }
@@ -735,21 +732,21 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const entranceValue =
     activeShipment?.dropoffEntrance ??
     order.dropoffEntrance ??
-    (order.dropoffNoEntrance ? "No private entrance" : null);
+    (order.dropoffNoEntrance ? t("seller.orderDetail.noPrivateEntrance") : null);
   const intercomValue = activeShipment?.dropoffIntercom ?? order.dropoffIntercom ?? null;
   const floorValue =
     activeShipment?.dropoffFloor ??
     order.dropoffFloor ??
-    (order.dropoffNoFloor ? "Floor unknown" : null);
+    (order.dropoffNoFloor ? t("seller.orderDetail.noFloorUnknown") : null);
   const apartmentValue =
     activeShipment?.dropoffApartment ??
     order.dropoffApartment ??
-    (order.dropoffNoApartment ? "No apartment" : null);
+    (order.dropoffNoApartment ? t("seller.orderDetail.noApartment") : null);
   const dropoffComment = [
-    entranceValue ? `Entrance ${entranceValue}` : null,
-    intercomValue ? `Intercom ${intercomValue}` : null,
-    floorValue ? `Floor ${floorValue}` : null,
-    apartmentValue ? `Apartment ${apartmentValue}` : null,
+    entranceValue ? t("seller.orderDetail.entranceLine", { value: entranceValue }) : null,
+    intercomValue ? t("seller.orderDetail.intercomLine", { value: intercomValue }) : null,
+    floorValue ? t("seller.orderDetail.floorLine", { value: floorValue }) : null,
+    apartmentValue ? t("seller.orderDetail.apartmentLine", { value: apartmentValue }) : null,
     dropoffCommentNote,
   ]
     .filter(Boolean)
@@ -770,50 +767,76 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
     activeShipment?.yandexApiReady ?? order.yandexApiReady ?? false,
   );
   const senderText = [
-    `Pickup: ${activeShipment?.pickupAddressFullName ?? pickupAddress}`,
+    t("seller.orderDetail.senderSummary.pickup", {
+      value: activeShipment?.pickupAddressFullName ?? pickupAddress,
+    }),
     pickupLat !== null && pickupLng !== null
-      ? `GPS: ${pickupLat}, ${pickupLng}`
+      ? t("seller.orderDetail.senderSummary.gps", { value: `${pickupLat}, ${pickupLng}` })
       : null,
   ]
     .filter(Boolean)
     .join("\n");
   const recipientText = [
-    `Recipient: ${order.customer.name}, ${order.customer.phone}`,
-    `Address: ${dropoffAddressFullName}`,
-    entranceValue ? `Entrance: ${entranceValue}` : null,
-    intercomValue ? `Door code: ${intercomValue}` : null,
-    floorValue ? `Floor: ${floorValue}` : null,
-    apartmentValue ? `Apartment: ${apartmentValue}` : null,
-    dropoffCommentNote ? `Comment: ${dropoffCommentNote}` : null,
+    t("seller.orderDetail.recipientSummary.recipient", {
+      value: `${order.customer.name}, ${order.customer.phone}`,
+    }),
+    t("seller.orderDetail.recipientSummary.address", { value: dropoffAddressFullName }),
+    entranceValue ? t("seller.orderDetail.recipientSummary.entrance", { value: entranceValue }) : null,
+    intercomValue ? t("seller.orderDetail.recipientSummary.doorCode", { value: intercomValue }) : null,
+    floorValue ? t("seller.orderDetail.recipientSummary.floor", { value: floorValue }) : null,
+    apartmentValue ? t("seller.orderDetail.recipientSummary.apartment", { value: apartmentValue }) : null,
+    dropoffCommentNote ? t("seller.orderDetail.recipientSummary.comment", { value: dropoffCommentNote }) : null,
     dropoffLat !== null && dropoffLng !== null
-      ? `Coordinates: ${dropoffLat}, ${dropoffLng}`
+      ? t("seller.orderDetail.recipientSummary.coordinates", { value: `${dropoffLat}, ${dropoffLng}` })
       : null,
   ].filter(Boolean).join("\n");
   const packageText = [
-    `Package: ${packagePreset}, ${weightGram} g, ${lengthCm} x ${widthCm} x ${heightCm} cm`,
-    `Declared value: ${order.totalAmount}`,
-    `Items: ${order.itemsCount}`,
+    t("seller.orderDetail.packageSummary.package", {
+      preset: formatPackagePreset(packagePreset, t),
+      weight: weightGram,
+      length: lengthCm,
+      width: widthCm,
+      height: heightCm,
+    }),
+    t("seller.orderDetail.packageSummary.declaredValue", { value: order.totalAmount }),
+    t("seller.orderDetail.packageSummary.items", { count: order.itemsCount }),
   ].join("\n");
   const fullYandexBlock = [
     `ORDER: ${order.orderNumber}`,
-    `Recipient: ${order.customer.name}, ${order.customer.phone}`,
-    `Address: ${dropoffAddressFullName}`,
-    `Entrance: ${entranceValue ?? "-"}`,
-    `Door code: ${intercomValue ?? "-"}`,
-    `Floor: ${floorValue ?? "-"}`,
-    `Apartment: ${apartmentValue ?? "-"}`,
-    `Comment: ${dropoffCommentNote ?? "-"}`,
-    `Coordinates: ${dropoffLat !== null && dropoffLng !== null ? `${dropoffLat}, ${dropoffLng}` : "-"}`,
-    `Package: ${packagePreset}, ${weightGram} g, ${lengthCm} x ${widthCm} x ${heightCm} cm`,
-    `Declared value: ${order.totalAmount}`,
+    t("seller.orderDetail.recipientSummary.recipient", {
+      value: `${order.customer.name}, ${order.customer.phone}`,
+    }),
+    t("seller.orderDetail.recipientSummary.address", { value: dropoffAddressFullName }),
+    t("seller.orderDetail.recipientSummary.entrance", { value: entranceValue ?? "-" }),
+    t("seller.orderDetail.recipientSummary.doorCode", { value: intercomValue ?? "-" }),
+    t("seller.orderDetail.recipientSummary.floor", { value: floorValue ?? "-" }),
+    t("seller.orderDetail.recipientSummary.apartment", { value: apartmentValue ?? "-" }),
+    t("seller.orderDetail.recipientSummary.comment", { value: dropoffCommentNote ?? "-" }),
+    t("seller.orderDetail.recipientSummary.coordinates", {
+      value: dropoffLat !== null && dropoffLng !== null ? `${dropoffLat}, ${dropoffLng}` : "-",
+    }),
+    t("seller.orderDetail.packageSummary.package", {
+      preset: formatPackagePreset(packagePreset, t),
+      weight: weightGram,
+      length: lengthCm,
+      width: widthCm,
+      height: heightCm,
+    }),
+    t("seller.orderDetail.packageSummary.declaredValue", { value: order.totalAmount }),
   ].join("\n");
   const canCreateDelivery =
     order.paymentStatus === "PAID" ||
     order.paymentStatus === "SELLER_ACCEPTED_PAY_ON_DELIVERY";
   const copyToClipboard = async (value: string, label: string) => {
     await navigator.clipboard.writeText(value);
-    setDeliveryMessage(`${label} copied.`);
+    setDeliveryMessage(t("seller.orderDetail.messages.copied", { label }));
+    setDeliveryActionStatus("copied");
   };
+  const paymentMethodCode = order.paymentMethod ?? order.shippingMethodName;
+  const paymentMethodValue =
+    paymentMethodCode && knownPaymentMethodKeys[paymentMethodCode]
+      ? t(knownPaymentMethodKeys[paymentMethodCode])
+      : order.paymentMethodLabel ?? paymentMethodCode ?? t("common.notProvided");
 
   const openShippingLabel = (mode: "preview" | "print") => {
     const url =
@@ -865,11 +888,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               label={t("seller.orderDetail.financeStatus")}
               value={order.sellerDisplayLabel}
               testId="seller-order-display-status"
+              dataRawStatus={order.sellerDisplayStatus}
+              dataBucket={order.sellerStatusBucket}
             />
             <Metric
               label={t("seller.orderDetail.nextAction")}
               value={formatNextAction(order.nextAction, t)}
               testId="seller-order-next-action"
+              dataRawStatus={order.nextAction ?? undefined}
             />
             <Metric
               label={t("seller.paymentDetail.created")}
@@ -892,22 +918,22 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               </div>
             </div>
             <Metric
-              label="Payment method"
-              value={order.paymentMethodLabel ?? order.paymentMethod ?? "Not set"}
+              label={t("seller.orderDetail.paymentMethod")}
+              value={paymentMethodValue}
             />
             <Metric
-              label="Finance"
+              label={t("seller.orderDetail.finance")}
               value={
                 order.finance?.ledgerStatus
-                  ? `${order.finance.ledgerStatus} · fee ${order.finance.commissionAmount ?? "0"}`
-                  : "Ledger pending"
+                  ? `${order.finance.ledgerStatus} · ${t("seller.orderDetail.fee", { value: order.finance.commissionAmount ?? "0" })}`
+                  : t("seller.orderDetail.ledgerPending")
               }
             />
           </div>
 
           <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
             <p className="text-sm font-semibold text-[var(--foreground)]">
-              Shipping address
+              {t("seller.orderDetail.shippingAddress")}
             </p>
             <p className="mt-2 text-sm text-[var(--muted)]">
               {dropoffAddressFullName}
@@ -916,22 +942,24 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               <p className="mt-2 text-sm text-[var(--muted)]">{dropoffComment}</p>
             ) : null}
             <p className="mt-3 text-xs text-[var(--muted)]">
-              Geo status: {activeShipment?.dropoffGeoPrecision ?? order.dropoffGeoPrecision ?? "UNKNOWN"}
+              {t("seller.orderDetail.geoStatus", {
+                value: activeShipment?.dropoffGeoPrecision ?? order.dropoffGeoPrecision ?? "UNKNOWN",
+              })}
               {dropoffLat !== null && dropoffLng !== null ? ` · ${dropoffLat}, ${dropoffLng}` : ""}
             </p>
             {order.customerNote ? (
               <p className="mt-4 text-sm text-[var(--muted)]">
-                Customer note: {order.customerNote}
+                {t("seller.orderDetail.customerNote", { value: order.customerNote })}
               </p>
             ) : null}
           </div>
           {order.paymentDetails ? (
             <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
               <p className="text-sm font-semibold text-[var(--foreground)]">
-                Payment destination
+                {t("seller.orderDetail.paymentDestination")}
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                {order.paymentMethodLabel ?? order.paymentMethod ?? "Direct seller payment"}
+                {paymentMethodValue}
               </p>
               {order.paymentDetails.paymentInstruction ? (
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
@@ -943,12 +971,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
           {isPayOnDeliverySellerQr ? (
             <div className="mt-6 rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
               <p className="text-sm font-semibold text-[var(--foreground)]">
-                Payment on delivery via seller QR
+                {t("seller.orderDetail.payOnDeliverySellerQr")}
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                Buyer will pay the seller directly by QR/SBP when receiving the
-                parcel. Yandex only handles delivery and does not collect cash
-                or card payment for this flow.
+                {t("seller.orderDetail.payOnDeliveryDescription")}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 {order.paymentStatus === "PAY_ON_DELIVERY_SELECTED" ? (
@@ -959,7 +985,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                     data-testid="seller-accept-pay-on-delivery"
                   >
-                    {saving ? "Đang xác nhận..." : "Accept pay on delivery and prepare Yandex"}
+                    {saving ? t("seller.orderDetail.actions.accepting") : t("seller.orderDetail.actions.acceptPayOnDelivery")}
                   </button>
                 ) : null}
                 {order.status === "DELIVERED" ||
@@ -973,7 +999,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       className="rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                       data-testid="seller-confirm-delivery-payment"
                     >
-                      {saving ? "Đang xác nhận..." : "Đã nhận tiền khi giao hàng"}
+                      {saving ? t("seller.orderDetail.actions.accepting") : t("seller.orderDetail.actions.paymentReceived")}
                     </button>
                     <button
                       type="button"
@@ -982,7 +1008,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                       data-testid="seller-reject-delivery-payment"
                     >
-                      {saving ? "Đang từ chối..." : "Chưa nhận được tiền / mở tranh chấp"}
+                      {saving ? t("seller.orderDetail.actions.rejecting") : t("seller.orderDetail.actions.paymentNotReceived")}
                     </button>
                   </>
                 ) : null}
@@ -992,9 +1018,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
         </SectionCard>
 
         <SectionCard
-          eyebrow="Actions"
-          title="Fulfillment status"
-          description="Move the order through the seller workflow when the current state allows it."
+          eyebrow={t("seller.orderDetail.actionsEyebrow")}
+          title={t("seller.orderDetail.fulfillmentStatus")}
+          description={t("seller.orderDetail.fulfillmentDescription")}
         >
           <div className="space-y-4">
             <select
@@ -1008,7 +1034,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {t(`common.status.order.${status}`)}
                 </option>
               ))}
             </select>
@@ -1018,7 +1044,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               disabled={saving}
               className="w-full rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Đang cập nhật..." : "Update status"}
+              {saving ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.updateStatus")}
             </button>
             {error ? (
               <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -1031,9 +1057,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       </div>
 
       <SectionCard
-        eyebrow="Delivery"
-        title="Yandex Delivery Handoff"
-        description="Use this workbench after payment is confirmed to create and supervise a manual Yandex shipment without calling the real Yandex API."
+        eyebrow={t("seller.orderDetail.deliveryEyebrow")}
+        title={t("seller.orderDetail.yandexHandoffTitle")}
+        description={t("seller.orderDetail.yandexHandoffDescription")}
       >
         <div data-testid="seller-order-delivery-section">
           <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -1043,14 +1069,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
                   data-testid="seller-yandex-reminder-banner"
                 >
-                  Admin reminded you to create Yandex delivery for this order.
+                  {t("seller.orderDetail.adminReminder")}
                   <span className="ml-2 text-xs text-amber-700">
                     {new Date(order.latestYandexReminder.createdAt).toLocaleString()}
                   </span>
                 </div>
               ) : null}
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Manual provider">
+                <Field label={t("seller.orderDetail.manualProvider")}>
                   <select
                     value={manualProvider}
                     onChange={(event) =>
@@ -1061,12 +1087,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="manual-delivery-provider"
                   >
-                    <option value="YANDEX">Yandex</option>
-                    <option value="CDEK">CDEK</option>
-                    <option value="MANUAL">Manual</option>
+                    <option value="YANDEX">{t("seller.orderDetail.providers.YANDEX")}</option>
+                    <option value="CDEK">{t("seller.orderDetail.providers.CDEK")}</option>
+                    <option value="MANUAL">{t("seller.orderDetail.providers.MANUAL")}</option>
                   </select>
                 </Field>
-                <Field label="Mã vận đơn Yandex">
+                <Field label={t("seller.orderDetail.actions.yandexWaybill")}>
                   <input
                     value={manualYandexOrderId}
                     onChange={(event) =>
@@ -1080,7 +1106,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-yandex-order-id"
                   />
                 </Field>
-                <Field label="Yandex claim id">
+                <Field label={t("seller.orderDetail.yandexClaimId")}>
                   <input
                     value={manualYandexClaimId}
                     onChange={(event) =>
@@ -1090,7 +1116,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-yandex-claim-id"
                   />
                 </Field>
-                <Field label="Tracking number">
+                <Field label={t("seller.orderDetail.trackingNumber")}>
                   <input
                     value={manualTrackingNumber}
                     onChange={(event) =>
@@ -1100,7 +1126,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-tracking-number"
                   />
                 </Field>
-                <Field label="Tracking URL">
+                <Field label={t("seller.orderDetail.trackingUrl")}>
                   <input
                     value={manualTrackingUrl}
                     onChange={(event) =>
@@ -1110,7 +1136,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-tracking-url"
                   />
                 </Field>
-                <Field label="Courier name">
+                <Field label={t("seller.orderDetail.courierName")}>
                   <input
                     value={manualCourierName}
                     onChange={(event) =>
@@ -1120,7 +1146,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-courier-name"
                   />
                 </Field>
-                <Field label="Courier phone">
+                <Field label={t("seller.orderDetail.courierPhone")}>
                   <input
                     value={manualCourierPhone}
                     onChange={(event) =>
@@ -1130,7 +1156,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-courier-phone"
                   />
                 </Field>
-                <Field label="Delivery price">
+                <Field label={t("seller.orderDetail.deliveryPrice")}>
                   <input
                     value={manualDeliveryPrice}
                     onChange={(event) =>
@@ -1140,7 +1166,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-price"
                   />
                 </Field>
-                <Field label="Estimated delivery">
+                <Field label={t("seller.orderDetail.estimatedDelivery")}>
                   <input
                     type="datetime-local"
                     value={manualEstimatedDeliveryAt}
@@ -1151,7 +1177,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-estimated-at"
                   />
                 </Field>
-                <Field label="Delivery note">
+                <Field label={t("seller.orderDetail.deliveryNote")}>
                   <input
                     value={manualDeliveryNote}
                     onChange={(event) =>
@@ -1161,7 +1187,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="manual-delivery-note"
                   />
                 </Field>
-                <Field label="Pickup address">
+                <Field label={t("seller.orderDetail.pickupAddress")}>
                   <input
                     value={pickupAddress}
                     onChange={(event) => setPickupAddress(event.target.value)}
@@ -1169,7 +1195,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="delivery-order-pickup-address"
                   />
                 </Field>
-                <Field label="Package preset">
+                <Field label={t("seller.orderDetail.packagePreset")}>
                   <select
                     value={packagePreset}
                     onChange={(event) =>
@@ -1180,14 +1206,14 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="manual-delivery-package-preset"
                   >
-                    {Object.entries(fashionPackagePresets).map(([value, item]) => (
+                    {Object.entries(fashionPackagePresets).map(([value]) => (
                       <option key={value} value={value}>
-                        {item.label}
+                        {formatPackagePreset(value as keyof typeof fashionPackagePresets, t)}
                       </option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Weight (g)">
+                <Field label={t("seller.orderDetail.weightGram")}>
                   <input
                     value={weightGram}
                     onChange={(event) => setWeightGram(event.target.value)}
@@ -1195,7 +1221,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="delivery-order-weight-gram"
                   />
                 </Field>
-                <Field label="Length (cm)">
+                <Field label={t("seller.orderDetail.lengthCm")}>
                   <input
                     value={lengthCm}
                     onChange={(event) => setLengthCm(event.target.value)}
@@ -1203,7 +1229,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="delivery-order-length-cm"
                   />
                 </Field>
-                <Field label="Width (cm)">
+                <Field label={t("seller.orderDetail.widthCm")}>
                   <input
                     value={widthCm}
                     onChange={(event) => setWidthCm(event.target.value)}
@@ -1211,7 +1237,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="delivery-order-width-cm"
                   />
                 </Field>
-                <Field label="Height (cm)">
+                <Field label={t("seller.orderDetail.heightCm")}>
                   <input
                     value={heightCm}
                     onChange={(event) => setHeightCm(event.target.value)}
@@ -1219,17 +1245,17 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     data-testid="delivery-order-height-cm"
                   />
                 </Field>
-                <Field label="Selected offer">
+                <Field label={t("seller.orderDetail.selectedOffer")}>
                   <select
                     value={selectedOfferId}
                     onChange={(event) => setSelectedOfferId(event.target.value)}
                     className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
                     data-testid="delivery-offer-select"
                   >
-                    <option value="">Use default carrier</option>
+                    <option value="">{t("seller.orderDetail.useDefaultCarrier")}</option>
                     {deliveryOffers.map((offer) => (
                       <option key={offer.id} value={offer.id}>
-                        {offer.isRecommended ? "Recommended · " : ""}
+                        {offer.isRecommended ? `${t("seller.orderDetail.recommended")} · ` : ""}
                         {offer.offerType} · {offer.priceAmount}{" "}
                         {offer.priceCurrency}
                       </option>
@@ -1241,17 +1267,17 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${pickupReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {pickupReady ? "Pickup ready" : "Missing pickup coordinates"}
+                    {pickupReady ? t("seller.orderDetail.pickupReady") : t("seller.orderDetail.missingPickupCoordinates")}
                   </span>
                   <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${dropoffReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {dropoffReady ? "Dropoff ready" : "Missing dropoff coordinates"}
+                    {dropoffReady ? t("seller.orderDetail.dropoffReady") : t("seller.orderDetail.missingDropoffCoordinates")}
                   </span>
                   <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${yandexApiReady ? "bg-emerald-100 text-emerald-700" : "bg-sky-100 text-sky-700"}`}>
-                    {yandexApiReady ? "API-ready" : yandexManualReady ? "Manual-only" : "Needs address fixes"}
+                    {yandexApiReady ? t("seller.orderDetail.apiReady") : yandexManualReady ? t("seller.orderDetail.manualOnly") : t("seller.orderDetail.needsAddressFixes")}
                   </span>
                   {!pickupReady || !dropoffReady ? (
                     <span className="text-xs text-amber-700">
-                      Seller may need to verify pickup or dropoff coordinates manually.
+                      {t("seller.orderDetail.verifyCoordinatesWarning")}
                     </span>
                   ) : null}
                 </div>
@@ -1272,26 +1298,26 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   >
                     {t("seller.shippingLabel.openPrintableLabel")}
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard(senderText, "Sender")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    Copy sender
+                  <button type="button" onClick={() => void copyToClipboard(senderText, t("seller.orderDetail.sender"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    {t("seller.orderDetail.copySender")}
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard(recipientText, "Recipient")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    Copy recipient
+                  <button type="button" onClick={() => void copyToClipboard(recipientText, t("seller.orderDetail.recipient"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    {t("seller.orderDetail.copyRecipient")}
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard(dropoffAddressFullName, "Address")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    Copy address
+                  <button type="button" onClick={() => void copyToClipboard(dropoffAddressFullName, t("seller.orderDetail.address"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    {t("seller.orderDetail.copyAddress")}
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard(dropoffComment || "No extra courier details", "Courier details")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    Copy courier details
+                  <button type="button" onClick={() => void copyToClipboard(dropoffComment || t("seller.orderDetail.noExtraCourierDetails"), t("seller.orderDetail.courierDetails"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
+                    {t("seller.orderDetail.copyCourierDetails")}
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard(fullYandexBlock, "Full Yandex block")} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold" data-testid="copy-full-delivery-block">
-                    Copy full Yandex block
+                  <button type="button" onClick={() => void copyToClipboard(fullYandexBlock, t("seller.orderDetail.fullYandexBlock"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold" data-testid="copy-full-delivery-block">
+                    {t("seller.orderDetail.copyFullYandexBlock")}
                   </button>
                   <button type="button" onClick={() => openMaps(pickupLat, pickupLng)} disabled={pickupLat === null || pickupLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
-                    Open pickup map
+                    {t("seller.orderDetail.openPickupMap")}
                   </button>
                   <button type="button" onClick={() => openMaps(dropoffLat, dropoffLng)} disabled={dropoffLat === null || dropoffLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
-                    Open dropoff map
+                    {t("seller.orderDetail.openDropoffMap")}
                   </button>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm text-[var(--muted)]">
@@ -1309,7 +1335,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="manual-delivery-save"
                 >
-                  {deliveryLoading ? "Đang lưu..." : "Save delivery"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.saving") : t("seller.orderDetail.actions.saveDelivery")}
                 </button>
                 <button
                   type="button"
@@ -1318,7 +1344,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-courier-assigned"
                 >
-                  {deliveryLoading ? "Đang cập nhật..." : "Courier assigned"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.courierAssigned")}
                 </button>
                 <button
                   type="button"
@@ -1327,7 +1353,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-picked-up"
                 >
-                  {deliveryLoading ? "Đang cập nhật..." : "Picked up"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.pickedUp")}
                 </button>
                 <button
                   type="button"
@@ -1336,7 +1362,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-in-transit"
                 >
-                  {deliveryLoading ? "Đang cập nhật..." : "On the way"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.onTheWay")}
                 </button>
                 <button
                   type="button"
@@ -1345,7 +1371,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="manual-delivery-mark-delivered"
                 >
-                  {deliveryLoading ? "Đang cập nhật..." : "Mark delivered"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.markDelivered")}
                 </button>
                 <button
                   type="button"
@@ -1358,7 +1384,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="manual-delivery-cancel"
                 >
-                  {deliveryLoading ? "Đang hủy..." : "Cancel delivery"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.cancelling") : t("seller.orderDetail.actions.cancelDelivery")}
                 </button>
               </div>
 
@@ -1370,7 +1396,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="delivery-calculate-offers"
                 >
-                  {deliveryLoading ? "Đang tính..." : "Calculate offers"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.calculating") : t("seller.orderDetail.actions.calculateOffers")}
                 </button>
                 <button
                   type="button"
@@ -1381,8 +1407,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 >
                   {deliveryOffers.find((offer) => offer.id === selectedOfferId)
                     ?.provider === "YANDEX"
-                    ? "Create claim"
-                    : "Create shipment"}
+                    ? t("seller.orderDetail.createClaim")
+                    : t("seller.orderDetail.createShipment")}
                 </button>
                 <button
                   type="button"
@@ -1394,7 +1420,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   }
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Accept claim
+                  {t("seller.orderDetail.acceptClaim")}
                 </button>
                 <button
                   type="button"
@@ -1403,7 +1429,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="delivery-refresh-shipment"
                 >
-                  Refresh
+                  {t("seller.orderDetail.refreshShipment")}
                 </button>
                 <button
                   type="button"
@@ -1411,7 +1437,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   disabled={deliveryLoading || !activeShipment}
                   className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {deliveryLoading ? "Đang hủy..." : "Cancel"}
+                  {deliveryLoading ? t("seller.orderDetail.actions.cancelling") : t("seller.orderDetail.actions.cancel")}
                 </button>
               </div>
 
@@ -1420,10 +1446,10 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 data-testid="delivery-exception-panel"
               >
                 <p className="text-sm font-semibold text-[var(--foreground)]">
-                  Report delivery problem
+                  {t("seller.orderDetail.reportProblem")}
                 </p>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <Field label="Reason code">
+                  <Field label={t("seller.orderDetail.reasonCode")}>
                     <select
                       value={exceptionReasonCode}
                       onChange={(event) =>
@@ -1436,12 +1462,12 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     >
                       {exceptionReasons.map((reason) => (
                         <option key={reason} value={reason}>
-                          {reason}
+                          {formatExceptionReason(reason, t)}
                         </option>
                       ))}
                     </select>
                   </Field>
-                  <Field label="Customer message">
+                  <Field label={t("seller.orderDetail.customerMessage")}>
                     <textarea
                       value={exceptionCustomerMessage}
                       onChange={(event) =>
@@ -1452,7 +1478,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       data-testid="delivery-exception-customer-message"
                     />
                   </Field>
-                  <Field label="Reason note">
+                  <Field label={t("seller.orderDetail.reasonNote")}>
                     <textarea
                       value={exceptionReasonText}
                       onChange={(event) =>
@@ -1463,7 +1489,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       data-testid="delivery-exception-note"
                     />
                   </Field>
-                  <Field label="Internal comment">
+                  <Field label={t("seller.orderDetail.internalComment")}>
                     <textarea
                       value={internalComment}
                       onChange={(event) =>
@@ -1487,7 +1513,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                     data-testid="delivery-report-problem"
                   >
-                    {deliveryLoading ? "Đang gửi..." : "Submit problem"}
+                    {deliveryLoading ? t("seller.orderDetail.actions.sending") : t("seller.orderDetail.actions.submitProblem")}
                   </button>
                   <button
                     type="button"
@@ -1500,7 +1526,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                     data-testid="delivery-add-internal-comment"
                   >
-                    {deliveryLoading ? "Đang gửi..." : "Add internal comment"}
+                    {deliveryLoading ? t("seller.orderDetail.actions.sending") : t("seller.orderDetail.actions.addInternalComment")}
                   </button>
                 </div>
               </div>
@@ -1519,59 +1545,56 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
             <div className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
               <p className="text-sm font-semibold text-[var(--foreground)]">
-                Current shipment
+                {t("seller.orderDetail.currentShipment")}
               </p>
               <div className="grid gap-4 md:grid-cols-2">
                 <Metric
-                  label="Provider"
+                  label={t("seller.orderDetail.provider")}
                   value={
-                    activeShipment?.provider ??
-                    order.delivery?.provider ??
-                    "Not created"
+                    formatDeliveryProvider(activeShipment?.provider ?? order.delivery?.provider ?? null, t)
                   }
                   testId="seller-delivery-provider"
                 />
                 <Metric
-                  label="Status"
+                  label={t("seller.orderDetail.status")}
                   value={
-                    activeShipment?.internalStatus ??
-                    order.delivery?.status ??
-                    "Not created"
+                    formatDeliveryStatus(activeShipment?.internalStatus ?? order.delivery?.status ?? null, t)
                   }
                   testId="seller-delivery-status"
+                  dataRawStatus={activeShipment?.internalStatus ?? order.delivery?.status ?? undefined}
                 />
                 <Metric
-                  label="Shipment id"
+                  label={t("seller.orderDetail.shipmentId")}
                   value={
                     activeShipment?.providerShipmentId ??
                     order.delivery?.providerShipmentId ??
-                    "Not assigned"
+                    t("seller.orderDetail.notAssigned")
                   }
                 />
                 <Metric
-                  label="Tracking"
+                  label={t("seller.orderDetail.tracking")}
                   value={
                     activeShipment?.trackingNumber ??
                     order.delivery?.trackingNumber ??
-                    "Not assigned"
+                    t("seller.orderDetail.notAssigned")
                   }
                 />
                 <Metric
-                  label="Courier"
+                  label={t("seller.orderDetail.courier")}
                   value={
                     activeShipment?.courierPhone ??
                     order.delivery?.courierPhone ??
-                    "Not assigned"
+                    t("seller.orderDetail.notAssigned")
                   }
                 />
                 <Metric
-                  label="ETA"
+                  label={t("seller.orderDetail.eta")}
                   value={
                     activeShipment?.estimatedDeliveryAt
                       ? new Date(
                           activeShipment.estimatedDeliveryAt,
                         ).toLocaleString()
-                      : "Not assigned"
+                      : t("seller.orderDetail.notAssigned")
                   }
                 />
               </div>
@@ -1594,7 +1617,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   <p className="mt-1">
                     {activeShipment.customerVisibleMessage ??
                       activeShipment.failureReasonText ??
-                      "No customer message set."}
+                      t("seller.orderDetail.noCustomerMessage")}
                   </p>
                 </div>
               ) : null}
@@ -1610,7 +1633,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
                   data-testid="seller-delivery-tracking-link"
                 >
-                  Open tracking link
+                  {t("seller.orderDetail.openTrackingLink")}
                 </a>
               ) : null}
               <div className="space-y-3">
@@ -1627,11 +1650,11 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                             {offer.offerType}
                           </p>
                           <p className="mt-1 text-xs text-[var(--muted)]">
-                            Provider: {offer.provider}
+                            {t("seller.orderDetail.provider")}: {formatDeliveryProvider(offer.provider, t)}
                           </p>
                           {offer.isRecommended ? (
                             <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                              Recommended
+                              {t("seller.orderDetail.recommended")}
                             </span>
                           ) : null}
                         </div>
@@ -1642,8 +1665,8 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                           <p className="mt-1 text-xs text-[var(--muted)]">
                             {offer.estimatedMinDays !== null &&
                             offer.estimatedMaxDays !== null
-                              ? `${offer.estimatedMinDays}-${offer.estimatedMaxDays} day(s)`
-                              : "ETA unavailable"}
+                              ? t("seller.orderDetail.offerEtaDays", { min: offer.estimatedMinDays, max: offer.estimatedMaxDays })
+                              : t("seller.orderDetail.etaUnavailable")}
                           </p>
                         </div>
                       </div>
@@ -1651,7 +1674,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   ))
                 ) : (
                   <p className="text-sm text-[var(--muted)]">
-                    No delivery offers loaded yet.
+                    {t("seller.orderDetail.noDeliveryOffers")}
                   </p>
                 )}
               </div>
@@ -1671,7 +1694,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                         </p>
                       </div>
                       <p className="mt-2 text-sm text-[var(--foreground)]">
-                        {event.message ?? event.providerStatus ?? "No message"}
+                        {event.message ?? event.providerStatus ?? t("seller.orderDetail.noMessage")}
                       </p>
                     </article>
                   ))}
@@ -1689,7 +1712,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                          {comment.visibility}
+                          {formatCommentVisibility(comment.visibility, t)}
                         </span>
                         <p className="text-xs text-[var(--muted)]">
                           {new Date(comment.createdAt).toLocaleString()}
@@ -1708,13 +1731,13 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       </SectionCard>
 
       <SectionCard
-        eyebrow="Items"
-        title="Ordered products"
-        description="Snapshot data is taken from the legacy order records so seller support sees exactly what the customer bought."
+        eyebrow={t("seller.orderDetail.itemsEyebrow")}
+        title={t("seller.orderDetail.itemsTitle")}
+        description={t("seller.orderDetail.itemsDescription")}
       >
         {order.returnRefundCases?.length ? (
           <div className="mb-6 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5" data-testid="seller-order-active-return-cases">
-            <p className="text-sm font-semibold text-[var(--foreground)]">Active return / refund cases</p>
+            <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.orderDetail.activeReturnCases")}</p>
             <div className="mt-3 grid gap-3">
               {order.returnRefundCases.map((entry) => (
                 <Link key={entry.id} href={`/seller/returns/${entry.id}`} className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-3 text-sm">
@@ -1750,19 +1773,19 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 </p>
                 {item.variantNameSnapshot ? (
                   <p className="mt-1 text-sm text-[var(--muted)]">
-                    Variant: {item.variantNameSnapshot}
+                    {t("seller.orderDetail.variant", { value: item.variantNameSnapshot })}
                   </p>
                 ) : null}
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  Slug: {item.productSlugSnapshot}
+                  {t("seller.orderDetail.slug", { value: item.productSlugSnapshot })}
                 </p>
               </div>
               <div className="text-sm text-[var(--muted)] md:text-right">
-                <p>Qty: {item.quantity}</p>
+                <p>{t("seller.orderDetail.qty", { value: item.quantity })}</p>
                 <p className="mt-1">
-                  Unit: {item.unitPrice ?? item.priceAtPurchase}
+                  {t("seller.orderDetail.unit", { value: item.unitPrice ?? item.priceAtPurchase })}
                 </p>
-                <p className="mt-1">Line: {item.lineTotal}</p>
+                <p className="mt-1">{t("seller.orderDetail.line", { value: item.lineTotal })}</p>
               </div>
             </article>
           ))}
@@ -1776,10 +1799,14 @@ function Metric({
   label,
   value,
   testId,
+  dataBucket,
+  dataRawStatus,
 }: {
   label: string;
   value: string;
   testId?: string;
+  dataBucket?: string;
+  dataRawStatus?: string;
 }) {
   return (
     <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
@@ -1789,6 +1816,8 @@ function Metric({
       <p
         className="mt-2 text-sm font-semibold text-[var(--foreground)]"
         data-testid={testId}
+        data-bucket={dataBucket}
+        data-raw-status={dataRawStatus}
       >
         {value}
       </p>
@@ -1797,31 +1826,51 @@ function Metric({
 }
 
 function formatNextAction(nextAction: string | null, t: (key: string) => string) {
-  if (!nextAction) return t("orderDetail.noAction") || "No action";
-  const key = `orderDetail.nextActions.${nextAction}`;
+  if (!nextAction) return t("seller.orderDetail.noAction");
+  const key = `seller.orderDetail.nextActions.${nextAction}`;
   const translated = t(key);
   if (translated && translated !== key) {
     return translated;
   }
-  const labels: Record<string, string> = {
-    review_payment_proof: "Confirm or reject payment proof",
-    accept_pay_on_delivery_order: "Accept COD order",
-    create_yandex_delivery: "Create Yandex manually",
-    prepare_order: "Prepare the order",
-    continue_preparing: "Continue preparing",
-    mark_picked_up: "Mark picked up",
-    mark_on_the_way: "Mark on the way",
-    mark_delivered: "Mark delivered",
-    confirm_delivery_payment: "Confirm final payment",
-    wait_for_delivery_payment: "Wait for buyer payment",
-    resolve_delivery_payment_issue: "Resolve payment dispute",
-    review_payment_issue: "Resolve payment issue",
-    wait_for_payment: "Wait for payment",
-    monitor_delivery: "Monitor delivery",
-    review_order: "Review order detail",
-  };
+  return nextAction;
+}
 
-  return labels[nextAction] ?? nextAction;
+function formatPackagePreset(
+  preset: keyof typeof fashionPackagePresets,
+  t: (key: string) => string,
+) {
+  const key = `seller.orderDetail.packagePresets.${preset}`;
+  const translated = t(key);
+  return translated !== key ? translated : fashionPackagePresets[preset].label;
+}
+
+function formatExceptionReason(
+  reason: DeliveryExceptionReasonCode,
+  t: (key: string) => string,
+) {
+  const key = `seller.orderDetail.exceptionReasons.${reason}`;
+  const translated = t(key);
+  return translated !== key ? translated : reason;
+}
+
+function formatDeliveryProvider(provider: string | null, t: (key: string) => string) {
+  if (!provider) return t("seller.orderDetail.notCreated");
+  const key = `seller.orderDetail.providers.${provider}`;
+  const translated = t(key);
+  return translated !== key ? translated : provider;
+}
+
+function formatDeliveryStatus(status: string | null, t: (key: string) => string) {
+  if (!status) return t("seller.orderDetail.notCreated");
+  const key = `seller.orderDetail.deliveryStatuses.${status}`;
+  const translated = t(key);
+  return translated !== key ? translated : status;
+}
+
+function formatCommentVisibility(visibility: string, t: (key: string) => string) {
+  const key = `seller.orderDetail.commentVisibility.${visibility}`;
+  const translated = t(key);
+  return translated !== key ? translated : visibility;
 }
 
 function Field({

@@ -1,5 +1,34 @@
 # Phase Report
 
+## 2026-05-26 Seller Order Detail i18n Cleanup
+
+- completed seller order detail i18n cleanup for `/seller/orders/[id]`
+- migrated remaining seller-only order detail labels to `seller.orderDetail.*` and related shared namespaces
+- localized manual Yandex handoff labels, seller fulfillment summary labels, delivery form copy, and shipping-label entry actions for `ru/en/vi`
+- seller payment method rendering now prefers stable payment codes over snapshot labels to avoid mixed-language payment labels on detail
+- hardened seller order detail business tests to assert `data-raw-status` / `data-bucket` instead of translated copy
+- updated seller order list shipment placeholder copy to use dictionary-backed text
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/seller-manual-yandex-workbench.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/three-role-order-sync.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+- runtime `curl -I` checks for seller routes: pending current phase summary below
+
+Remaining gaps:
+
+- several older seller/admin operations pages outside order detail still contain legacy hard-coded copy and need a later targeted migration phase
+- this phase intentionally did not change seller fulfillment or manual Yandex business logic
+
 ## 2026-05-26 Product Reviews UX Polish + Review Photo Upload
 
 - extended verified product reviews with optional customer photo upload

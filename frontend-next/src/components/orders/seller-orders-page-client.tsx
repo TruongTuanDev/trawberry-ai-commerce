@@ -508,7 +508,7 @@ export function SellerOrdersPageClient() {
                     current ? { ...current, manualYandexOrderId: event.target.value } : current,
                   )
                 }
-                placeholder="manualYandexOrderId"
+                placeholder={t("sellerOrders.manualYandexOrderIdPlaceholder")}
                 className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
               />
               <input
