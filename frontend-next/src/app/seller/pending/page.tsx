@@ -10,6 +10,18 @@ export default function SellerPendingPage() {
   const status = user?.sellerApprovalStatus ?? "PENDING";
   const nextStep = user?.sellerNextStep ?? "WAIT_FOR_APPROVAL";
 
+  const formatStatus = (value: string) => {
+    const key = `seller.pending.status.${value}`;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
+  const formatNextStep = (value: string) => {
+    const key = `seller.pending.nextSteps.${value}`;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
   return (
     <div className="space-y-6" data-testid="seller-pending-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
@@ -28,7 +40,7 @@ export default function SellerPendingPage() {
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{t("seller.pending.currentStatus")}</p>
           <p className="mt-2 text-2xl font-bold text-[var(--foreground)]" data-testid="seller-pending-status">
-            {status}
+            {formatStatus(status)}
           </p>
           {user?.sellerRejectionReason ? (
             <div className="mt-4 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -53,7 +65,7 @@ export default function SellerPendingPage() {
 
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{t("seller.pending.nextStep")}</p>
-          <p className="mt-2 text-lg font-bold text-[var(--foreground)]">{nextStep}</p>
+          <p className="mt-2 text-lg font-bold text-[var(--foreground)]">{formatNextStep(nextStep)}</p>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
             {nextStep === "CONTACT_SUPPORT"
               ? t("seller.pending.nextStepContact")

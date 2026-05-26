@@ -245,3 +245,92 @@ test("seller payment settings and products filters switch RU/VI/EN live without 
     enDict.seller.products.filters.apply,
   );
 });
+
+test("seller remaining operations screens switch RU/VI/EN live", async ({
+  browser,
+  request,
+}) => {
+  test.setTimeout(180000);
+  const stamp = Date.now();
+  const seller = await approveSeller(request, `seller-i18n-remaining-${stamp}@example.com`);
+  const shop = await seedSellerCatalog(request, seller.token, stamp);
+  const page = await newSellerPage(browser);
+
+  await page.goto("/seller/login");
+  await page.getByTestId("seller-login-email").fill(seller.email);
+  await page.getByTestId("seller-login-password").fill(seller.password);
+  await page.getByTestId("seller-login-submit").click();
+  await page.waitForURL("**/seller/dashboard");
+  await page.getByRole("combobox").first().selectOption(shop.id);
+
+  await page.goto("/seller/dashboard");
+  await page.waitForURL("**/seller/dashboard");
+  await expect(page.getByRole("heading", { name: ruDict.seller.dashboard.title, exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.dashboard.activeShop, { exact: true })).toBeVisible();
+
+  await switchSellerLocale(page, "vi");
+  await expect(page.getByRole("heading", { name: viDict.seller.dashboard.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.dashboard.activeShop, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/support-cases");
+  await expect(page.getByTestId("seller-support-cases-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.support.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.support.empty, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/onboarding");
+  await expect(page.getByTestId("seller-onboarding-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.onboarding.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.onboarding.approvalStatus, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.onboarding.legalType, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/pending");
+  await expect(page.getByTestId("seller-pending-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.pending.titleReview, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.pending.currentStatus, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.pending.nextStep, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/import/wildberries");
+  await expect(page.getByTestId("wb-import-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.wbExcel.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.wbExcel.excelFile, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.wbExcel.targetShop, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/import/wildberries-api");
+  await expect(page.getByTestId("wb-api-sync-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.wbSync.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.wbSync.currentMode, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.wbSync.connection, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/messages");
+  await expect(page.getByTestId("seller-messages-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.messages.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.messages.empty, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/reviews");
+  await expect(page.getByTestId("seller-reviews-page")).toBeVisible();
+  await expect(page.getByRole("heading", { name: viDict.seller.reviews.title, exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.reviews.empty, { exact: true })).toBeVisible();
+
+  await switchSellerLocale(page, "ru");
+  await page.goto("/seller/import/wildberries-api");
+  await expect(page.getByRole("heading", { name: ruDict.seller.wbSync.title, exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.wbSync.currentMode, { exact: true })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(viDict.seller.wbSync.title);
+
+  await page.goto("/seller/messages");
+  await expect(page.getByRole("heading", { name: ruDict.seller.messages.title, exact: true })).toBeVisible();
+  await expect(page.getByText(ruDict.seller.messages.empty, { exact: true })).toBeVisible();
+
+  await switchSellerLocale(page, "en");
+  await page.goto("/seller/dashboard");
+  await expect(page.getByRole("heading", { name: enDict.seller.dashboard.title, exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.dashboard.activeShop, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/support-cases");
+  await expect(page.getByRole("heading", { name: enDict.seller.support.title, exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.support.empty, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/reviews");
+  await expect(page.getByRole("heading", { name: enDict.seller.reviews.title, exact: true })).toBeVisible();
+  await expect(page.getByText(enDict.seller.reviews.empty, { exact: true })).toBeVisible();
+});

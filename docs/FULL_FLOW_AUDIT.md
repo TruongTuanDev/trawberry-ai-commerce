@@ -1,5 +1,24 @@
 # Full Commerce Flow Audit
 
+## Seller Remaining Operations i18n Cleanup Addendum
+
+- verified seller remaining operational screens now live-switch correctly in `ru`, `en`, and `vi`:
+  - `/seller/support-cases`
+  - `/seller/onboarding`
+  - `/seller/pending`
+  - `/seller/import/wildberries`
+  - `/seller/import/wildberries-api`
+  - `/seller/messages`
+  - `/seller/reviews`
+- verified cleanup scope is UI-only:
+  - support-case status and sender-role rendering changed to dictionary-backed labels
+  - onboarding/pending approval and next-step chrome changed to dictionary-backed labels
+  - Wildberries import pages changed only visible placeholders and headings, not import/sync behavior
+  - seller message list status chips changed only visible labels, not thread ownership or reply flow
+- verified seller messaging business regression remains selector-based rather than locale-text based
+- verified frontend Docker runtime now builds without external Google Fonts fetches, removing a non-business runtime blocker from seller route verification
+- verified no customer/public or admin behavior was expanded in this phase
+
 ## Product Reviews UX Polish + Review Photo Upload Addendum
 
 - verified review flow now supports optional customer review photos

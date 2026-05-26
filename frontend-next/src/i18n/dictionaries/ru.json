@@ -721,7 +721,10 @@
     "finance": "Финансы",
     "system": "Система",
     "return": "Возврат",
-    "read": "Прочитано"
+    "read": "Прочитано",
+    "loadDropdownFailed": "Не удалось загрузить уведомления в выпадающем списке.",
+    "markAllReadFailed": "Не удалось отметить все уведомления как прочитанные.",
+    "markReadFailed": "Не удалось отметить уведомление как прочитанное."
   },
   "customer": {
     "auth": {
@@ -1800,22 +1803,22 @@
         "addInternalComment": "Добавить внутренний комментарий",
         "recommended": "Рекомендовано"
       },
-      "customer": "??????????",
-      "paymentStatus": "?????? ??????",
-      "financeStatus": "???????",
-      "nextAction": "????????? ????????",
-      "trackingNumber": "????? ????????????",
-      "trackingUrl": "?????? ????????????",
-      "courierName": "??? ???????",
-      "courierPhone": "??????? ???????",
-      "pickupAddress": "????? ??????",
-      "customerMessage": "????????? ??? ??????????",
-      "reasonNote": "????????? ???????",
-      "internalComment": "?????????? ???????????",
-      "createClaim": "??????? ??????",
-      "createShipment": "??????? ????????",
-      "acceptClaim": "??????? ??????",
-      "refreshShipment": "????????"
+      "customer": "Покупатель",
+      "paymentStatus": "Статус оплаты",
+      "financeStatus": "Финансы",
+      "nextAction": "Следующее действие",
+      "trackingNumber": "Номер отслеживания",
+      "trackingUrl": "Ссылка отслеживания",
+      "courierName": "Имя курьера",
+      "courierPhone": "Телефон курьера",
+      "pickupAddress": "Адрес забора",
+      "customerMessage": "Сообщение покупателю",
+      "reasonNote": "Причина или примечание",
+      "internalComment": "Внутренний комментарий",
+      "createClaim": "Создать заявку",
+      "createShipment": "Создать отправку",
+      "acceptClaim": "Принять заявку",
+      "refreshShipment": "Обновить"
     },
     "aiImages": {
       "pipelineEyebrow": "AI-пайплайн",
@@ -2009,7 +2012,9 @@
       "createAccount": "Создать аккаунт продавца",
       "alreadyHaveAccount": "Уже есть аккаунт продавца?",
       "registerAsCustomer": "Зарегистрироваться как покупатель",
-      "customerLogin": "Вход для покупателей"
+      "customerLogin": "Вход для покупателей",
+      "emailPlaceholder": "name@example.com",
+      "phonePlaceholder": "+7XXXXXXXXXX"
     },
     "auth": {
       "emailOrPhone": "Email или телефон",
@@ -2068,7 +2073,31 @@
       "empty": "Нет запросов в поддержку для этого магазина.",
       "selectCase": "Выберите запрос в поддержку.",
       "sendReply": "Отправить ответ",
-      "replySent": "Ответ отправлен."
+      "replySent": "Ответ отправлен.",
+      "status": {
+        "OPEN": "Открыт",
+        "IN_REVIEW": "На рассмотрении",
+        "WAITING_CUSTOMER": "Ожидает покупателя",
+        "WAITING_SELLER": "Ожидает продавца",
+        "RESOLVED": "Решен",
+        "REJECTED": "Отклонен",
+        "CLOSED": "Закрыт"
+      },
+      "issueTypes": {
+        "PAYMENT_PROOF": "Подтверждение оплаты",
+        "DELIVERY_DELAY": "Задержка доставки",
+        "WRONG_ITEM": "Неверный товар",
+        "DAMAGED_ITEM": "Поврежденный товар",
+        "REFUND_REQUEST": "Запрос на возврат",
+        "CANCEL_REQUEST": "Запрос на отмену",
+        "OTHER": "Другое"
+      },
+      "senderRoles": {
+        "CUSTOMER": "Покупатель",
+        "SELLER": "Продавец",
+        "ADMIN": "Администратор",
+        "SYSTEM": "Система"
+      }
     },
     "onboarding": {
       "eyebrow": "Верификация продавца",
@@ -2105,7 +2134,31 @@
       "uploading": "Загрузка...",
       "awaitingReview": "Ожидает проверки администратором",
       "reviewed": "Проверено {{date}}",
-      "noDocuments": "Документы еще не загружены."
+      "noDocuments": "Документы еще не загружены.",
+      "legalTypes": {
+        "INDIVIDUAL": "Физлицо",
+        "IP": "ИП",
+        "LLC": "ООО",
+        "OTHER": "Другое"
+      },
+      "documentTypes": {
+        "PASSPORT": "Паспорт",
+        "INN": "ИНН",
+        "OGRN": "ОГРН",
+        "COMPANY_REGISTRATION": "Регистрация компании",
+        "BANK_DETAILS": "Банковские реквизиты",
+        "OTHER": "Другое"
+      },
+      "documentStatuses": {
+        "PENDING": "На проверке",
+        "APPROVED": "Одобрен",
+        "REJECTED": "Отклонен"
+      },
+      "approvalStatuses": {
+        "PENDING": "На проверке",
+        "APPROVED": "Одобрен",
+        "REJECTED": "Отклонен"
+      }
     },
     "pending": {
       "eyebrow": "Одобрение продавца",
@@ -2118,7 +2171,18 @@
       "tryDashboard": "Открыть панель управления",
       "nextStep": "Следующий шаг",
       "nextStepContact": "Обновите данные подключения, при необходимости замените отклоненные документы и обратитесь в службу поддержки или к администратору, если примечание об отклонении неясно.",
-      "nextStepDefault": "Сейчас никаких дополнительных действий от продавца не требуется. Администратор одобрит или отклонит учетную запись после проверки профиля и документов."
+      "nextStepDefault": "Сейчас никаких дополнительных действий от продавца не требуется. Администратор одобрит или отклонит учетную запись после проверки профиля и документов.",
+      "status": {
+        "PENDING": "На проверке",
+        "APPROVED": "Одобрен",
+        "REJECTED": "Отклонен"
+      },
+      "nextSteps": {
+        "COMPLETE_ONBOARDING": "Завершите онбординг",
+        "WAIT_FOR_APPROVAL": "Ожидайте одобрения",
+        "CONTACT_SUPPORT": "Свяжитесь с поддержкой",
+        "APPROVED": "Одобрен"
+      }
     },
     "wbExcel": {
       "eyebrow": "Wildberries Excel",
@@ -2171,7 +2235,8 @@
       "imagesSkipped": "Пропущено изображений",
       "resultHelper": "Просмотрите импортированные товары, укажите недостающие цены, остатки, категории или изображения, а затем опубликуйте товары, которые хотите продать.",
       "viewImported": "Просмотреть импортированные товары",
-      "viewNeedsReview": "Просмотреть товары, требующие проверки"
+      "viewNeedsReview": "Просмотреть товары, требующие проверки",
+      "rowLabel": "Строка {{row}}: "
     },
     "wbSync": {
       "eyebrow": "Wildberries API",
@@ -2216,7 +2281,13 @@
       "imagesCount": "изображений",
       "resultHelper": "Товары, синхронизированные из Wildberries, были добавлены в каталог продавца для проверки. Опубликуйте только те товары, которые готовы к оформлению заказа на маркетплейсе.",
       "viewImported": "Просмотреть импортированные товары",
-      "viewNeedsReview": "Просмотреть товары, требующие проверки"
+      "viewNeedsReview": "Просмотреть товары, требующие проверки",
+      "mock": "MOCK",
+      "notVerified": "Не проверено",
+      "fetched": "Получено",
+      "resultEyebrow": "Результат WB API",
+      "resultTitle": "{{syncType}} {{mode}}",
+      "runStatusDescription": "Статус запуска: {{status}}. Проверьте список импортированных товаров, даже если вы не меняли и не подтверждали их."
     },
     "reviews": {
       "eyebrow": "Доверие покупателей",
@@ -2275,7 +2346,12 @@
       "productContext": "Товар",
       "orderContext": "Заказ",
       "customer": "Покупатель",
-      "seller": "Продавец"
+      "seller": "Продавец",
+      "status": {
+        "OPEN": "Открыт",
+        "CLOSED": "Закрыт",
+        "REPORTED": "Есть жалоба"
+      }
     }
   }
 }

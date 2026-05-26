@@ -1,5 +1,25 @@
 # Project Status
 
+## Seller Remaining Operations i18n Cleanup - 2026-05-26
+
+- Status: implemented in `frontend-next`
+- Remaining seller operational screens now follow seller locale policy cleanly:
+  - `ru` default
+  - `ru/en/vi` live switching
+  - no admin/customer scope expansion in this phase
+- Cleaned seller operational copy on:
+  - `/seller/support-cases`
+  - `/seller/onboarding`
+  - `/seller/pending`
+  - `/seller/import/wildberries`
+  - `/seller/import/wildberries-api`
+  - `/seller/messages`
+  - seller login/register seller-only helper copy
+- Stable test contract preserved:
+  - business regressions continue to rely on `data-testid` or raw status contracts rather than translated labels
+- Runtime hardening:
+  - frontend app shell no longer depends on Google Fonts fetches during Docker builds, so seller route runtime verification is not blocked by external font access
+
 ## Product Reviews UX Polish + Review Photo Upload - 2026-05-26
 
 - Status: implemented in `backend-nest` and `frontend-next`

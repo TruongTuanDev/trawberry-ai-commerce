@@ -171,6 +171,9 @@ export default function WildberriesApiSyncPage() {
         : t("seller.wbSync.realModeKeyMsg")
       : t("seller.wbSync.mockModeKeyMsg");
 
+  const formatConnectionValue = (value: boolean) =>
+    value ? t("common.yes") : t("common.no");
+
   return (
     <div className="space-y-6" data-testid="wb-api-sync-page">
       <SectionCard
@@ -185,7 +188,7 @@ export default function WildberriesApiSyncPage() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbSync.currentMode")}</p>
                   <p className="mt-2 text-2xl font-bold text-[var(--foreground)]" data-testid="wb-api-mode-badge">
-                    {visibleCredentials?.mode?.toUpperCase() ?? "MOCK"}
+                    {visibleCredentials?.mode?.toUpperCase() ?? t("seller.wbSync.mock")}
                   </p>
                 </div>
                 <div className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
@@ -229,10 +232,10 @@ export default function WildberriesApiSyncPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbSync.connection")}</p>
             <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? t("seller.wbSync.noShopSelected")}</p>
             <div className="mt-4 space-y-2 text-sm" data-testid="wb-api-credentials-status">
-              <p><span className="font-semibold">{t("seller.wbSync.mode")}:</span> {visibleCredentials?.mode?.toUpperCase() ?? "MOCK"}</p>
-              <p><span className="font-semibold">{t("seller.wbSync.connected")}:</span> {visibleCredentials?.connected ? "Yes" : "No"}</p>
+              <p><span className="font-semibold">{t("seller.wbSync.mode")}:</span> {visibleCredentials?.mode?.toUpperCase() ?? t("seller.wbSync.mock")}</p>
+              <p><span className="font-semibold">{t("seller.wbSync.connected")}:</span> {formatConnectionValue(Boolean(visibleCredentials?.connected))}</p>
               <p><span className="font-semibold">{t("seller.wbSync.keyLast4")}:</span> {visibleCredentials?.keyLast4 ?? "--"}</p>
-              <p><span className="font-semibold">{t("seller.wbSync.lastVerify")}:</span> {visibleCredentials?.lastVerificationStatus ?? "NOT_VERIFIED"}</p>
+              <p><span className="font-semibold">{t("seller.wbSync.lastVerify")}:</span> {visibleCredentials?.lastVerificationStatus ?? t("seller.wbSync.notVerified")}</p>
               <p><span className="font-semibold">{t("seller.wbSync.verifiedAt")}:</span> {visibleCredentials?.lastVerifiedAt ?? "--"}</p>
               {visibleCredentials?.missingConfig?.length ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">{t("seller.wbSync.missingConfig")}:</span> {visibleCredentials.missingConfig.join(", ")}</p> : null}
               {visibleCredentials?.lastVerificationError ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">{t("seller.wbSync.lastError")}:</span> {visibleCredentials.lastVerificationError}</p> : null}
@@ -267,13 +270,13 @@ export default function WildberriesApiSyncPage() {
 
       {result ? (
         <SectionCard
-          eyebrow="WB API result"
-          title={`${result.syncType} ${result.mode}`}
-          description={`Run status: ${result.status}. Imported products stay private until you review and publish them.`}
+          eyebrow={t("seller.wbSync.resultEyebrow")}
+          title={t("seller.wbSync.resultTitle", { syncType: result.syncType, mode: result.mode })}
+          description={t("seller.wbSync.runStatusDescription", { status: result.status })}
         >
           <div className="grid gap-3 sm:grid-cols-4" data-testid="wb-api-result">
             <Metric label={t("seller.wbSync.mode")} value={result.sourceMode.toUpperCase()} />
-            <Metric label="Fetched" value={String(result.totalFetched)} />
+            <Metric label={t("seller.wbSync.fetched")} value={String(result.totalFetched)} />
             <Metric label={t("seller.wbExcel.metricProducts")} value={String(result.totalProducts)} />
             <Metric label={t("seller.wbExcel.metricVariants")} value={String(result.totalVariants)} />
             <Metric label={t("seller.wbExcel.metricImages")} value={String(result.totalImages)} />

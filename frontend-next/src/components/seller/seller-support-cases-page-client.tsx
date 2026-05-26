@@ -65,6 +65,24 @@ export function SellerSupportCasesPageClient() {
     setItems(response.items);
   };
 
+  const formatStatus = (status: string) => {
+    const key = `seller.support.status.${status}`;
+    const translated = t(key);
+    return translated !== key ? translated : status;
+  };
+
+  const formatIssueType = (issueType: string) => {
+    const key = `seller.support.issueTypes.${issueType}`;
+    const translated = t(key);
+    return translated !== key ? translated : issueType;
+  };
+
+  const formatSenderRole = (senderRole: string) => {
+    const key = `seller.support.senderRoles.${senderRole}`;
+    const translated = t(key);
+    return translated !== key ? translated : senderRole;
+  };
+
   return (
     <div className="space-y-6" data-testid="seller-support-cases-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
@@ -81,7 +99,7 @@ export function SellerSupportCasesPageClient() {
               <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`w-full px-5 py-4 text-left ${selectedId === item.id ? "bg-[var(--panel)]" : "bg-white"}`} data-testid="seller-support-case-row">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold text-[var(--foreground)]">{item.subject}</p>
-                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{item.status}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{formatStatus(item.status)}</span>
                 </div>
                 <p className="mt-2 text-sm text-[var(--muted)]">{item.order?.orderCode ?? item.checkoutCode}</p>
               </button>
@@ -95,7 +113,7 @@ export function SellerSupportCasesPageClient() {
           ) : (
             <div className="space-y-5" data-testid="seller-support-case-detail">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{selected.issueType}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{formatIssueType(selected.issueType)}</p>
                 <h3 className="mt-2 text-2xl font-bold text-[var(--foreground)]">{selected.subject}</h3>
                 <p className="mt-2 text-sm text-[var(--muted)]">{selected.order?.orderCode ?? selected.checkoutCode}</p>
               </div>
@@ -104,7 +122,7 @@ export function SellerSupportCasesPageClient() {
                 {selected.messages.map((entry) => (
                   <article key={entry.id} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">{entry.senderRole}{entry.senderName ? ` - ${entry.senderName}` : ""}</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">{formatSenderRole(entry.senderRole)}{entry.senderName ? ` - ${entry.senderName}` : ""}</p>
                       <p className="text-xs text-[var(--muted)]">{new Date(entry.createdAt).toLocaleString()}</p>
                     </div>
                     <p className="mt-2 text-sm text-[var(--muted)]">{entry.message}</p>

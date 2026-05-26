@@ -719,7 +719,12 @@
     "messages": "Messages",
     "system": "System",
     "return": "Refund",
-    "read": "Read"
+    "read": "Read",
+    "shopId": "Shop ID",
+    "invoice": "Invoice",
+    "loadDropdownFailed": "Failed to load dropdown notifications.",
+    "markAllReadFailed": "Failed to mark all notifications as read.",
+    "markReadFailed": "Failed to mark notification as read."
   },
   "customer": {
     "auth": {
@@ -1983,7 +1988,12 @@
       "productContext": "Product",
       "orderContext": "Order",
       "customer": "Customer",
-      "seller": "Seller"
+      "seller": "Seller",
+      "status": {
+        "OPEN": "Open",
+        "CLOSED": "Closed",
+        "REPORTED": "Reported"
+      }
     },
     "notifications": {
       "heading": "Action center",
@@ -2011,7 +2021,9 @@
       "createAccount": "Create seller account",
       "alreadyHaveAccount": "Already have a seller account?",
       "registerAsCustomer": "Register as customer instead",
-      "customerLogin": "Customer login"
+      "customerLogin": "Customer login",
+      "emailPlaceholder": "name@example.com",
+      "phonePlaceholder": "+7XXXXXXXXXX"
     },
     "auth": {
       "emailOrPhone": "Email or phone",
@@ -2070,7 +2082,31 @@
       "empty": "No support cases for this shop.",
       "selectCase": "Select a support case.",
       "sendReply": "Send reply",
-      "replySent": "Reply sent."
+      "replySent": "Reply sent.",
+      "status": {
+        "OPEN": "Open",
+        "IN_REVIEW": "In review",
+        "WAITING_CUSTOMER": "Waiting for customer",
+        "WAITING_SELLER": "Waiting for seller",
+        "RESOLVED": "Resolved",
+        "REJECTED": "Rejected",
+        "CLOSED": "Closed"
+      },
+      "issueTypes": {
+        "PAYMENT_PROOF": "Payment proof",
+        "DELIVERY_DELAY": "Delivery delay",
+        "WRONG_ITEM": "Wrong item",
+        "DAMAGED_ITEM": "Damaged item",
+        "REFUND_REQUEST": "Refund request",
+        "CANCEL_REQUEST": "Cancel request",
+        "OTHER": "Other"
+      },
+      "senderRoles": {
+        "CUSTOMER": "Customer",
+        "SELLER": "Seller",
+        "ADMIN": "Admin",
+        "SYSTEM": "System"
+      }
     },
     "onboarding": {
       "eyebrow": "Seller verification",
@@ -2107,7 +2143,31 @@
       "uploading": "Uploading...",
       "awaitingReview": "Awaiting admin review",
       "reviewed": "Reviewed {{date}}",
-      "noDocuments": "No documents uploaded yet."
+      "noDocuments": "No documents uploaded yet.",
+      "legalTypes": {
+        "INDIVIDUAL": "Individual",
+        "IP": "Sole proprietor",
+        "LLC": "LLC",
+        "OTHER": "Other"
+      },
+      "documentTypes": {
+        "PASSPORT": "Passport",
+        "INN": "Tax ID (INN)",
+        "OGRN": "OGRN",
+        "COMPANY_REGISTRATION": "Company registration",
+        "BANK_DETAILS": "Bank details",
+        "OTHER": "Other"
+      },
+      "documentStatuses": {
+        "PENDING": "Pending review",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      },
+      "approvalStatuses": {
+        "PENDING": "Pending review",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      }
     },
     "pending": {
       "eyebrow": "Seller approval",
@@ -2120,7 +2180,18 @@
       "tryDashboard": "Try dashboard",
       "nextStep": "Next step",
       "nextStepContact": "Update onboarding details, replace rejected documents if needed, and contact support or an admin reviewer if the rejection note is unclear.",
-      "nextStepDefault": "No further seller action is required right now. An admin will approve or reject the account after reviewing the onboarding profile and documents."
+      "nextStepDefault": "No further seller action is required right now. An admin will approve or reject the account after reviewing the onboarding profile and documents.",
+      "status": {
+        "PENDING": "Pending review",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      },
+      "nextSteps": {
+        "COMPLETE_ONBOARDING": "Complete onboarding",
+        "WAIT_FOR_APPROVAL": "Wait for approval",
+        "CONTACT_SUPPORT": "Contact support",
+        "APPROVED": "Approved"
+      }
     },
     "wbExcel": {
       "eyebrow": "Wildberries Excel",
@@ -2173,7 +2244,8 @@
       "imagesSkipped": "Images skipped",
       "resultHelper": "Review imported products, fill any missing price, stock, category, or images, then publish the products you want to sell.",
       "viewImported": "View imported products",
-      "viewNeedsReview": "View needs review"
+      "viewNeedsReview": "View needs review",
+      "rowLabel": "Row {{row}}: "
     },
     "wbSync": {
       "eyebrow": "Wildberries API",
@@ -2218,7 +2290,13 @@
       "imagesCount": "images",
       "resultHelper": "Products synced from Wildberries were added to Seller Catalog for review. Publish only the products that are ready for marketplace checkout.",
       "viewImported": "View imported products",
-      "viewNeedsReview": "View needs review"
+      "viewNeedsReview": "View needs review",
+      "mock": "MOCK",
+      "notVerified": "Not verified",
+      "fetched": "Fetched",
+      "resultEyebrow": "WB API result",
+      "resultTitle": "{{syncType}} {{mode}}",
+      "runStatusDescription": "Run status: {{status}}. Imported products stay private until you review and publish them."
     }
   },
   "errors": {

@@ -480,7 +480,7 @@
     "sellerEmptyDescription": "Khi có đơn mới, bill thanh toán, yêu cầu trả hàng hoặc nhắc tạo Yandex, thông báo sẽ xuất hiện ở đây.",
     "customerEmptyTitle": "Bạn chưa có cập nhật mới",
     "customerEmptyDescription": "Khi đơn hàng hoặc thanh toán thay đổi trạng thái, thông báo sẽ xuất hiện ở đây.",
-    "shopId": "Shop ID",
+    "shopId": "M? shop",
     "invoice": "Hóa đơn",
     "messages": "Tin nhắn",
     "needAction": "Cần xử lý",
@@ -491,7 +491,10 @@
     "finance": "Tài chính",
     "system": "Hệ thống",
     "return": "Hoàn tiền",
-    "read": "Đã đọc"
+    "read": "Đã đọc",
+    "loadDropdownFailed": "Kh?ng th? t?i th?ng b?o trong menu th? xu?ng.",
+    "markAllReadFailed": "Kh?ng th? ??nh d?u t?t c? th?ng b?o l? ?? ??c.",
+    "markReadFailed": "Kh?ng th? ??nh d?u th?ng b?o l? ?? ??c."
   },
   "errors": {
     "default": "Đã xảy ra lỗi. Vui lòng thử lại.",
@@ -1350,7 +1353,9 @@
       "createAccount": "Tạo tài khoản seller",
       "alreadyHaveAccount": "Đã có tài khoản seller?",
       "registerAsCustomer": "Đăng ký làm khách hàng",
-      "customerLogin": "Đăng nhập khách hàng"
+      "customerLogin": "Đăng nhập khách hàng",
+      "emailPlaceholder": "name@example.com",
+      "phonePlaceholder": "+7XXXXXXXXXX"
     },
     "auth": {
       "emailOrPhone": "Email hoặc số điện thoại",
@@ -1409,7 +1414,31 @@
       "empty": "Không có yêu cầu hỗ trợ nào cho shop này.",
       "selectCase": "Chọn một yêu cầu hỗ trợ.",
       "sendReply": "Gửi phản hồi",
-      "replySent": "Đã gửi phản hồi."
+      "replySent": "Đã gửi phản hồi.",
+      "status": {
+        "OPEN": "?ang m?",
+        "IN_REVIEW": "?ang xem x?t",
+        "WAITING_CUSTOMER": "?ang ch? kh?ch h?ng",
+        "WAITING_SELLER": "?ang ch? seller",
+        "RESOLVED": "?? x? l?",
+        "REJECTED": "?? t? ch?i",
+        "CLOSED": "?? ??ng"
+      },
+      "issueTypes": {
+        "PAYMENT_PROOF": "Minh ch?ng thanh to?n",
+        "DELIVERY_DELAY": "Ch?m giao h?ng",
+        "WRONG_ITEM": "Giao sai s?n ph?m",
+        "DAMAGED_ITEM": "S?n ph?m b? h?ng",
+        "REFUND_REQUEST": "Y?u c?u ho?n ti?n",
+        "CANCEL_REQUEST": "Y?u c?u h?y ??n",
+        "OTHER": "Kh?c"
+      },
+      "senderRoles": {
+        "CUSTOMER": "Kh?ch h?ng",
+        "SELLER": "Seller",
+        "ADMIN": "Admin",
+        "SYSTEM": "H? th?ng"
+      }
     },
     "onboarding": {
       "eyebrow": "Xác minh seller",
@@ -1446,7 +1475,31 @@
       "uploading": "Đang tải lên...",
       "awaitingReview": "Chờ admin phê duyệt",
       "reviewed": "Đã duyệt {{date}}",
-      "noDocuments": "Chưa tải lên tài liệu nào."
+      "noDocuments": "Chưa tải lên tài liệu nào.",
+      "legalTypes": {
+        "INDIVIDUAL": "C? nh?n",
+        "IP": "H? kinh doanh",
+        "LLC": "C?ng ty TNHH",
+        "OTHER": "Kh?c"
+      },
+      "documentTypes": {
+        "PASSPORT": "H? chi?u",
+        "INN": "M? s? thu? (INN)",
+        "OGRN": "OGRN",
+        "COMPANY_REGISTRATION": "??ng k? doanh nghi?p",
+        "BANK_DETAILS": "Th?ng tin ng?n h?ng",
+        "OTHER": "Kh?c"
+      },
+      "documentStatuses": {
+        "PENDING": "?ang ch? duy?t",
+        "APPROVED": "?? duy?t",
+        "REJECTED": "?? t? ch?i"
+      },
+      "approvalStatuses": {
+        "PENDING": "?ang ch? duy?t",
+        "APPROVED": "?? duy?t",
+        "REJECTED": "?? t? ch?i"
+      }
     },
     "wbExcel": {
       "eyebrow": "Wildberries Excel",
@@ -1499,7 +1552,8 @@
       "imagesSkipped": "Hình ảnh bỏ qua",
       "resultHelper": "Xem lại sản phẩm đã nhập, bổ sung các thông tin thiếu về giá, tồn kho, danh mục hoặc hình ảnh, sau đó hiển thị sản phẩm bạn muốn bán.",
       "viewImported": "Xem sản phẩm đã nhập",
-      "viewNeedsReview": "Xem sản phẩm cần duyệt"
+      "viewNeedsReview": "Xem sản phẩm cần duyệt",
+      "rowLabel": "D?ng {{row}}: "
     },
     "wbSync": {
       "eyebrow": "Wildberries API",
@@ -1544,7 +1598,13 @@
       "imagesCount": "hình ảnh",
       "resultHelper": "Sản phẩm đồng bộ từ Wildberries đã được thêm vào danh mục Seller để xem duyệt. Chỉ kích hoạt sản phẩm sẵn sàng bán trên marketplace.",
       "viewImported": "Xem sản phẩm đã nhập",
-      "viewNeedsReview": "Xem sản phẩm cần duyệt"
+      "viewNeedsReview": "Xem sản phẩm cần duyệt",
+      "mock": "MOCK",
+      "notVerified": "Ch?a x?c minh",
+      "fetched": "?? l?y",
+      "resultEyebrow": "K?t qu? WB API",
+      "resultTitle": "{{syncType}} {{mode}}",
+      "runStatusDescription": "Tr?ng th?i ch?y: {{status}}. S?n ph?m ?? nh?p v?n ? tr?ng th?i ri?ng t? cho ??n khi b?n xem l?i v? hi?n th?."
     },
     "pending": {
       "eyebrow": "Duyệt tài khoản bán hàng",
@@ -1557,7 +1617,18 @@
       "tryDashboard": "Thử xem trang quản trị",
       "nextStep": "Bước tiếp theo",
       "nextStepContact": "Cập nhật thông tin đăng ký, thay thế tài liệu bị từ chối nếu cần, và liên hệ hỗ trợ hoặc quản trị viên nếu lý do từ chối chưa rõ ràng.",
-      "nextStepDefault": "Bạn không cần thực hiện thêm hành động nào lúc này. Quản trị viên sẽ phê duyệt hoặc từ chối sau khi xem xét hồ sơ và tài liệu."
+      "nextStepDefault": "Bạn không cần thực hiện thêm hành động nào lúc này. Quản trị viên sẽ phê duyệt hoặc từ chối sau khi xem xét hồ sơ và tài liệu.",
+      "status": {
+        "PENDING": "?ang ch? duy?t",
+        "APPROVED": "?? duy?t",
+        "REJECTED": "?? t? ch?i"
+      },
+      "nextSteps": {
+        "COMPLETE_ONBOARDING": "Ho?n t?t onboarding",
+        "WAIT_FOR_APPROVAL": "Ch? ph? duy?t",
+        "CONTACT_SUPPORT": "Li?n h? h? tr?",
+        "APPROVED": "?? duy?t"
+      }
     },
     "reviews": {
       "eyebrow": "Niềm tin khách hàng",
@@ -1616,7 +1687,12 @@
       "productContext": "Sản phẩm",
       "orderContext": "Đơn hàng",
       "customer": "Khách hàng",
-      "seller": "Seller"
+      "seller": "Seller",
+      "status": {
+        "OPEN": "?ang m?",
+        "CLOSED": "?? ??ng",
+        "REPORTED": "?? b? b?o c?o"
+      }
     }
   }
 }

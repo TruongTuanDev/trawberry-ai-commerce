@@ -129,6 +129,30 @@ export default function SellerOnboardingPage() {
     setProfile((current) => ({ ...current, [field]: value }));
   };
 
+  const formatLegalType = (value: LegalType) => {
+    const key = `seller.onboarding.legalTypes.${value}`;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
+  const formatDocumentType = (value: SellerDocumentType) => {
+    const key = `seller.onboarding.documentTypes.${value}`;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
+  const formatDocumentStatus = (value: SellerDocument["status"]) => {
+    const key = `seller.onboarding.documentStatuses.${value}`;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
+  const formatApprovalStatus = (value: string) => {
+    const key = `seller.onboarding.approvalStatuses.${value}`;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
   return (
     <div className="space-y-6" data-testid="seller-onboarding-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
@@ -145,7 +169,7 @@ export default function SellerOnboardingPage() {
           <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{t("seller.onboarding.approvalStatus")}</p>
             <p className="mt-1 font-bold text-[var(--foreground)]" data-testid="seller-onboarding-status">
-              {approval?.sellerApprovalStatus ?? t("seller.onboarding.loading")}
+              {approval?.sellerApprovalStatus ? formatApprovalStatus(approval.sellerApprovalStatus) : t("seller.onboarding.loading")}
             </p>
             <p className="mt-2 text-xs text-[var(--muted)]">
               {approval?.sellerApprovalStatus === "REJECTED"
@@ -177,7 +201,7 @@ export default function SellerOnboardingPage() {
               data-testid="seller-legal-type"
             >
               {legalTypes.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>{formatLegalType(item)}</option>
               ))}
             </select>
           </label>
@@ -216,7 +240,7 @@ export default function SellerOnboardingPage() {
               data-testid="seller-document-type"
             >
               {documentTypes.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>{formatDocumentType(item)}</option>
               ))}
             </select>
           </label>
@@ -247,10 +271,10 @@ export default function SellerOnboardingPage() {
               <div key={document.id} className="grid gap-3 border-b border-[var(--border)] px-4 py-4 last:border-b-0 md:grid-cols-[1fr_140px_1.2fr]" data-testid="seller-document-row">
                 <div>
                   <p className="text-sm font-semibold text-[var(--foreground)]">{document.originalName ?? document.documentType}</p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">{document.documentType}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{formatDocumentType(document.documentType)}</p>
                 </div>
                 <span className="w-fit rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                  {document.status}
+                  {formatDocumentStatus(document.status)}
                 </span>
                 <p className="text-sm text-[var(--muted)]">
                   {document.rejectionReason ??

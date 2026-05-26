@@ -71,10 +71,10 @@ export function SellerRegisterPageClient() {
               <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="public-input" data-testid="seller-register-name" />
             </Field>
             <Field label={t("seller.register.email")}>
-              <input value={email} onChange={(event) => setEmail(event.target.value)} className="public-input" placeholder="name@example.com" data-testid="seller-register-email" />
+              <input value={email} onChange={(event) => setEmail(event.target.value)} className="public-input" placeholder={t("seller.register.emailPlaceholder")} data-testid="seller-register-email" />
             </Field>
             <Field label={t("seller.register.phone")}>
-              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="seller-register-phone" />
+              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" placeholder={t("seller.register.phonePlaceholder")} data-testid="seller-register-phone" />
             </Field>
             <Field label={t("seller.register.password")}>
               <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="seller-register-password" />

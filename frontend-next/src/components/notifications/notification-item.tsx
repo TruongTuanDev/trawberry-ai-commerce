@@ -148,9 +148,9 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
         <div className="min-w-0 flex-1 pr-8">
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {typeLabels[type] ?? typeConfig.label}
+              {typeLabels[type] ?? type}
             </span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="text-slate-300 dark:text-slate-700">·</span>
             <span className="text-xs text-slate-400 dark:text-slate-500">{formatTime(notification.createdAt)}</span>
             {isUnread ? (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-2xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">

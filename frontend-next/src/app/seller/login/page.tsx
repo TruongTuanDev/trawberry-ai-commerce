@@ -45,8 +45,8 @@ export default async function SellerLoginStandardPage() {
               submitRole="SELLER"
               defaultRedirect="/seller/dashboard"
               footerLinks={[
-                { href: "/seller/register", label: "Create seller account" },
-                { href: "/customer/login", label: "Customer login" },
+                { href: "/seller/register", label: t("seller.register.createAccount") },
+                { href: "/customer/login", label: t("seller.register.customerLogin") },
               ]}
               testIdPrefix="seller-login"
             />

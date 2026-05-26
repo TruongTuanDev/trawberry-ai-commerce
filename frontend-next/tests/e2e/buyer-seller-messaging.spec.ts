@@ -182,6 +182,14 @@ async function newPage(browser: Browser) {
   return page;
 }
 
+async function waitForSellerThreadRow(page: Page) {
+  await expect
+    .poll(async () => page.getByTestId("seller-message-thread-row").count(), {
+      timeout: 15000,
+    })
+    .toBeGreaterThan(0);
+}
+
 test("buyer seller messaging MVP works across customer, seller, admin, and notifications", async ({
   browser,
   request,
@@ -245,6 +253,7 @@ test("buyer seller messaging MVP works across customer, seller, admin, and notif
 
   await sellerPage.goto("/seller/messages");
   await expect(sellerPage.getByTestId("seller-messages-page")).toBeVisible();
+  await waitForSellerThreadRow(sellerPage);
   await expect(sellerPage.getByTestId("seller-message-thread-row").first()).toBeVisible();
   await switchLocale(sellerPage, "seller", "vi");
   await expect(sellerPage.getByRole("heading", { name: "Tin nhắn", exact: true })).toBeVisible();
@@ -272,7 +281,4 @@ test("buyer seller messaging MVP works across customer, seller, admin, and notif
   await expect(adminPage.getByTestId("admin-message-thread-page")).toBeVisible();
   await expect(adminPage.getByTestId("message-thread-view")).toContainText("Reported");
 
-  await adminPage.context().close();
-  await sellerPage.context().close();
-  await customerPage.context().close();
 });

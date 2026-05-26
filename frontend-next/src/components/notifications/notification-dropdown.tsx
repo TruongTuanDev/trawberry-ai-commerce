@@ -46,11 +46,11 @@ export function NotificationDropdown({
       const all = await getNotifications(role, { page: 1, limit: 5 });
       setNotifications(all.items);
     } catch (error) {
-      console.error("Failed to load dropdown notifications:", error);
+      console.error(t("notifications.loadDropdownFailed"), error);
     } finally {
       setLoading(false);
     }
-  }, [role]);
+  }, [role, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -71,7 +71,7 @@ export function NotificationDropdown({
           onMutation?.();
         }
       } catch (error) {
-        console.error("Failed to mark all read:", error);
+        console.error(t("notifications.markAllReadFailed"), error);
       }
     });
   };
@@ -82,7 +82,7 @@ export function NotificationDropdown({
         await markNotificationRead(role, item.id);
         onMutation?.();
       } catch (error) {
-        console.error("Failed to mark read on click:", error);
+        console.error(t("notifications.markReadFailed"), error);
       }
     }
     onClose();

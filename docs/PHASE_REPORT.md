@@ -1,5 +1,44 @@
 # Phase Report
 
+## 2026-05-26 Seller Remaining Operations i18n Cleanup
+
+- completed the remaining seller-only i18n cleanup for older operational screens outside seller order detail
+- localized seller-only chrome and enum-backed labels on:
+  - `/seller/support-cases`
+  - `/seller/onboarding`
+  - `/seller/pending`
+  - `/seller/import/wildberries`
+  - `/seller/import/wildberries-api`
+  - `/seller/messages`
+  - seller login/register helper copy
+- migrated seller support statuses, issue types, sender roles, onboarding approval/document/legal labels, pending next-step labels, WB import placeholders, and seller message status chips to dictionary-backed `ru/en/vi` keys
+- kept seller business flows unchanged:
+  - no onboarding approval logic change
+  - no Wildberries sync/import logic change
+  - no seller messaging or notification business logic change
+- hardened seller messaging regression timing by waiting for stable thread-row selectors instead of assuming the list appears within a fixed 5 second window
+- removed the frontend Docker runtime dependency on `next/font/google`, which previously blocked `docker compose ... up -d --build frontend-next` when the container could not reach Google Fonts
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/buyer-seller-messaging.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/notifications.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+- runtime `curl -I` checks for `/seller/dashboard`, `/seller/support-cases`, `/seller/reviews`, `/seller/messages`, `/seller/import/wildberries`, and `/seller/import/wildberries-api`: pass
+
+Remaining gaps:
+
+- seller finance, returns, and some older seller AI/workbench screens still contain legacy hard-coded copy outside this focused seller-operations cleanup
+- admin legacy operations copy remains intentionally out of scope for this phase
+
 ## 2026-05-26 Seller Order Detail i18n Cleanup
 
 - completed seller order detail i18n cleanup for `/seller/orders/[id]`

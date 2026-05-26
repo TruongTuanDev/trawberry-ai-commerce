@@ -3,6 +3,16 @@
 :root {
   --background: #f4f2fb;
   --foreground: #1f1f29;
+  --font-sans-app:
+    "Segoe UI",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  --font-mono-app:
+    "Consolas",
+    "SFMono-Regular",
+    "Liberation Mono",
+    monospace;
   --panel: #ffffff;
   --panel-strong: #f3f0f8;
   --border: #e7dff0;

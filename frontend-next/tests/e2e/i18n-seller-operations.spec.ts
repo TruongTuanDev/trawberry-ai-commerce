@@ -316,6 +316,12 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
 
   await chooseSellerLocale(page, "en");
   await expect(page.getByRole("link", { name: enDict.sellerShell.products }).first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: enDict.seller.notifications.heading,
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.goto("/seller/orders");
   await expect(page.getByTestId("seller-order-tab-NEW").first()).toContainText(
     enDict.sellerOrders.new,

@@ -61,6 +61,12 @@ export function SellerMessageThreadListPageClient() {
     };
   }, [currentShopId, filter]);
 
+  const formatStatus = (status: string) => {
+    const key = `seller.messages.filters.${status.toLowerCase()}`;
+    const translated = t(key);
+    return translated !== key ? translated : status;
+  };
+
   return (
     <div className="space-y-6" data-testid="seller-messages-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
@@ -147,7 +153,7 @@ export function SellerMessageThreadListPageClient() {
                   </span>
                 ) : null}
                 <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-                  {thread.status}
+                  {formatStatus(thread.status)}
                 </span>
               </div>
             </div>

@@ -191,8 +191,8 @@ export default function WildberriesImportPage() {
             <Metric label={t("seller.wbExcel.metricErrors")} value={preview.errors.length} />
           </div>
 
-          <IssueList title={t("seller.wbExcel.metricErrors")} issues={preview.errors} />
-          <IssueList title={t("seller.wbExcel.metricWarnings")} issues={preview.warnings.slice(0, 12)} />
+          <IssueList title={t("seller.wbExcel.metricErrors")} issues={preview.errors} rowLabel={t("seller.wbExcel.rowLabel")} />
+          <IssueList title={t("seller.wbExcel.metricWarnings")} issues={preview.warnings.slice(0, 12)} rowLabel={t("seller.wbExcel.rowLabel")} />
 
           <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
             <div className="grid grid-cols-[1fr_1.4fr_1fr_1fr_90px_90px_100px] gap-3 border-b border-[var(--border)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -210,14 +210,14 @@ export default function WildberriesImportPage() {
                 className="grid grid-cols-[1fr_1.4fr_1fr_1fr_90px_90px_100px] gap-3 border-b border-[var(--border)] px-4 py-3 text-sm last:border-b-0"
                 data-testid="wb-import-product-row"
               >
-                <div className="truncate font-semibold">{product.sellerSku ?? product.externalProductId ?? "N/A"}</div>
+                <div className="truncate font-semibold">{product.sellerSku ?? product.externalProductId ?? t("common.notProvided")}</div>
                 <div className="truncate">{product.name}</div>
-                <div className="truncate">{product.brand ?? "N/A"}</div>
+                <div className="truncate">{product.brand ?? t("common.notProvided")}</div>
                 <div className="truncate" title={product.sourceCategoryName ?? undefined}>
-                  {product.mappedCategoryName ?? product.categoryName ?? "N/A"}
+                  {product.mappedCategoryName ?? product.categoryName ?? t("common.notProvided")}
                   {product.sourceCategoryName && product.sourceCategoryName !== (product.mappedCategoryName ?? product.categoryName) ? (
                     <span className="ml-1 text-xs text-[var(--muted)]">
-                      {t("seller.wbExcel.from") !== "seller.wbExcel.from" ? t("seller.wbExcel.from") : "from"}{" "}
+                      {t("seller.wbExcel.from")}{" "}
                       {product.sourceCategoryName}
                     </span>
                   ) : null}
@@ -286,7 +286,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function IssueList({ title, issues }: { title: string; issues: WbImportIssue[] }) {
+function IssueList({ title, issues, rowLabel }: { title: string; issues: WbImportIssue[]; rowLabel: string }) {
   if (!issues.length) return null;
 
   return (
@@ -295,7 +295,7 @@ function IssueList({ title, issues }: { title: string; issues: WbImportIssue[] }
       <div className="mt-3 space-y-2">
         {issues.map((issue, index) => (
           <p key={`${issue.code}-${issue.row ?? index}`} className="text-sm text-[var(--muted)]">
-            {issue.row ? `Row ${issue.row}: ` : ""}
+            {issue.row ? rowLabel.replace("{{row}}", String(issue.row)) : ""}
             {issue.message}
           </p>
         ))}
