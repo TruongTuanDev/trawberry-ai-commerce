@@ -5,6 +5,7 @@
 - Changed image fit layout from `object-contain mx-auto` to `object-fill` on both the public storefront hero slider (`public-homepage-hero-slider.tsx`) and the admin visual preview modal (`admin-homepage-slides-page-client.tsx`).
 - This stretches slide images to exactly fit the boundaries of the slider container (stretching without aspect-ratio preservation), eliminating the blank margin gaps on the sides.
 - Hardened the database seed demo script (`seed-demo.js`) to perform `deleteMany` on `HomepageSlide` before seeding, preventing accumulation of duplicate/orphaned slides from failed E2E test runs.
+- Added `category` query parameter fallback mapping to `categorySlug` on the catalog products page (`products/page.tsx`) to resolve slider banner CTA target links properly, which filters products and hides the legacy `PromoSlider`.
 
 Verification:
 - `backend-nest npm run seed:demo`: pass

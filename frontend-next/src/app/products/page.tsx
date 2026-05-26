@@ -22,7 +22,7 @@ const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 }
 function readFilters(searchParams: { get(name: string): string | null }) {
   return {
     q: searchParams.get("q") ?? searchParams.get("search") ?? "",
-    categorySlug: searchParams.get("categorySlug") ?? "",
+    categorySlug: searchParams.get("categorySlug") ?? searchParams.get("category") ?? "",
     brand: searchParams.get("brand") ?? "",
     color: searchParams.get("color") ?? "",
     gender: searchParams.get("gender") ?? "",
