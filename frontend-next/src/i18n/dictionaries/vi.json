@@ -884,9 +884,16 @@
           "readyToShip": "Sẵn sàng gửi",
           "readyForHandoff": "Sẵn sàng bàn giao"
         },
-      "paymentMethod": "Phương thức thanh toán",
-      "paymentStatus": "Trạng thái thanh toán",
-      "paymentConfirmedNotice": "Thanh toán đã được xác nhận.",
+        "paymentMethod": "Phương thức thanh toán",
+        "paymentStatus": "Trạng thái thanh toán",
+        "paymentStatuses": {
+          "paid": "Đã thanh toán",
+          "approved": "Đã duyệt",
+          "pending": "Đang chờ",
+          "unpaid": "Chưa thanh toán",
+          "cancelled": "Đã hủy"
+        },
+        "paymentConfirmedNotice": "Thanh toán đã được xác nhận.",
       "paymentPendingNotice": "Seller cần xác minh thanh toán trước khi bàn giao vận chuyển.",
       "codSellerQrNotice": "Thanh toán do seller xử lý. Shipper Yandex không thu tiền mặt.",
       "itemsCount": "Số mặt hàng",

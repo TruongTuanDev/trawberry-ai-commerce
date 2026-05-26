@@ -1534,9 +1534,16 @@
           "readyToShip": "Готово к отправке",
           "readyForHandoff": "Готово к передаче"
         },
-      "paymentMethod": "Способ оплаты",
-      "paymentStatus": "Статус оплаты",
-      "paymentConfirmedNotice": "Оплата подтверждена.",
+        "paymentMethod": "Способ оплаты",
+        "paymentStatus": "Статус оплаты",
+        "paymentStatuses": {
+          "paid": "Оплачено",
+          "approved": "Подтверждено",
+          "pending": "В ожидании",
+          "unpaid": "Не оплачено",
+          "cancelled": "Отменено"
+        },
+        "paymentConfirmedNotice": "Оплата подтверждена.",
       "paymentPendingNotice": "Перед передачей в доставку нужна проверка оплаты продавцом.",
       "codSellerQrNotice": "Оплату принимает продавец. Курьер Yandex не принимает наличные.",
       "itemsCount": "Товаров",

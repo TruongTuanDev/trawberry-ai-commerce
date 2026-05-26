@@ -314,7 +314,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
           {documents.length ? (
             documents.map((document) => (
               <article key={document.id} className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4" data-testid="admin-document-row">
-                <div className="grid gap-3 lg:grid-cols-[1fr_140px_1.4fr] lg:items-start">
+                <div className="grid gap-3 grid-cols-1 xl:grid-cols-[1fr_140px_1.4fr] lg:items-start">
                   <div>
                     <p className="text-sm font-semibold text-[var(--foreground)]">{document.originalName ?? document.documentType}</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">{formatDocumentType(document.documentType)}</p>

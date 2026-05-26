@@ -276,7 +276,7 @@ test("buyer seller messaging MVP works across customer, seller, admin, and notif
   await loginAdmin(adminPage);
   await adminPage.goto("/admin/messages");
   await expect(adminPage.getByTestId("admin-messages-page")).toBeVisible();
-  await expect(adminPage.getByTestId("admin-message-thread-row").first()).toContainText("REPORTED");
+  await expect(adminPage.getByTestId("admin-message-thread-row").first()).toContainText("Reported");
   await adminPage.getByTestId("admin-message-thread-row").first().click();
   await expect(adminPage.getByTestId("admin-message-thread-page")).toBeVisible();
   await expect(adminPage.getByTestId("message-thread-view")).toContainText("Reported");

@@ -170,8 +170,8 @@ export function AdminSellerFeesPageClient() {
         {success ? <p className="mt-4 text-sm text-emerald-600">{success}</p> : null}
       </section>
 
-      <section className="card-panel overflow-x-auto rounded-[1.75rem] p-0">
-        <table className="min-w-full text-sm">
+      <section className="card-panel overflow-x-auto rounded-[1.75rem] p-0 scrollbar-thin">
+        <table className="min-w-[1200px] text-sm">
           <thead className="bg-[var(--panel-strong)] text-left text-[var(--muted)]">
             <tr>
               <th className="px-4 py-3 font-medium">Shop</th>

@@ -743,6 +743,7 @@ export class OrdersService {
     shippingAddress: string;
     dropoffAddressFullName?: string | null;
     dropoffCity?: string | null;
+    dropoffPostalCode?: string | null;
     dropoffStreet?: string | null;
     dropoffBuilding?: string | null;
     dropoffEntrance?: string | null;
@@ -890,6 +891,7 @@ export class OrdersService {
       dropoffAddressFullName:
         order.dropoffAddressFullName ?? order.shippingAddress,
       dropoffCity: order.dropoffCity ?? null,
+      dropoffPostalCode: order.dropoffPostalCode ?? null,
       dropoffStreet: order.dropoffStreet ?? null,
       dropoffBuilding: order.dropoffBuilding ?? null,
       dropoffEntrance: order.dropoffEntrance ?? null,
@@ -1253,6 +1255,7 @@ export class OrdersService {
           yandexClaimId: true,
           yandexTrackingLink: true,
           deliveryNote: true,
+          dropoffPostalCode: true,
         },
       },
       sellerFeeLedgerEntries: {

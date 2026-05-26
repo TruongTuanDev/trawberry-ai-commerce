@@ -169,7 +169,7 @@ export function AdminSupportCasesPageClient() {
       </section>
 
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-support-status-filter">
             {statuses.map((item) => <option key={item} value={item}>{item ? formatStatus(item) : "All statuses"}</option>)}
           </select>

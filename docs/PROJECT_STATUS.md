@@ -1,5 +1,15 @@
 # Project Status
 
+## Admin Responsive Layout Audit & Fix - 2026-05-26
+
+- Status: implemented in `frontend-next`
+- Audited and stabilized Admin Center layouts across different viewports (Desktop, Laptop, Tablet, Mobile).
+- Introduced mobile drawer menu and responsive shell adjustments under the `lg` breakpoint, hiding desktop margins and shadow padding.
+- Standardized scrollable wrappers (`overflow-x-auto` container with min-width constraints) around large data grids/tables to avoid layout breaking and button cut-offs.
+- Refactored admin filters to wrap dynamically instead of causing horizontal scrolls.
+- Casing mismatches resolved across Playwright E2E assertions for admin status chips.
+- Added a dedicated E2E layout validation test `admin-responsive-layout.spec.ts`.
+
 ## Language Switcher SVG Flags - 2026-05-26
 
 - Status: implemented in `frontend-next`

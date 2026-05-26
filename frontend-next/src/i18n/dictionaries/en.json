@@ -1403,9 +1403,16 @@
           "readyToShip": "READY TO SHIP",
           "readyForHandoff": "READY FOR HANDOFF"
         },
-      "paymentMethod": "Payment method",
-      "paymentStatus": "Payment status",
-      "paymentConfirmedNotice": "Payment confirmed.",
+        "paymentMethod": "Payment method",
+        "paymentStatus": "Payment status",
+        "paymentStatuses": {
+          "paid": "Paid",
+          "approved": "Approved",
+          "pending": "Pending",
+          "unpaid": "Unpaid",
+          "cancelled": "Cancelled"
+        },
+        "paymentConfirmedNotice": "Payment confirmed.",
       "paymentPendingNotice": "Payment needs seller review before handoff.",
       "codSellerQrNotice": "Payment is handled by the seller. Yandex courier does not collect cash.",
       "itemsCount": "Items",

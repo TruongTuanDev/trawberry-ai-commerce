@@ -1,15 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+
+const navLinks = [
+  { href: "/admin/dashboard", label: "Dashboard", match: "/admin/dashboard" },
+  { href: "/admin/notifications", label: "Notifications", match: "/admin/notifications" },
+  { href: "/admin/sellers", label: "Seller approvals", match: "/admin/sellers" },
+  { href: "/admin/deliveries", label: "Delivery supervision", match: "/admin/deliveries" },
+  { href: "/admin/payments-supervision", label: "Payments supervision", match: "/admin/payments-supervision" },
+  { href: "/admin/returns", label: "Returns / disputes", match: "/admin/returns" },
+  { href: "/admin/messages", label: "Messages", match: "/admin/messages" },
+  { href: "/admin/reviews", label: "Reviews", match: "/admin/reviews" },
+  { href: "/admin/finance/seller-fees", label: "Finance / Seller fees", match: "/admin/finance" },
+  { href: "/admin/queues", label: "Operational queues", match: "/admin/queues" },
+  { href: "/admin/support-cases", label: "Support cases", match: "/admin/support-cases" },
+  { href: "/admin/reports", label: "Reports", match: "/admin/reports" },
+];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.adminUser);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -28,119 +44,49 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="grain-overlay min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:h-screen lg:overflow-hidden" data-testid="admin-shell">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1400px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)] lg:h-[calc(100vh-3rem)] lg:min-h-0">
-        <aside className="hidden w-72 border-r border-slate-800 bg-slate-900 p-6 text-slate-100 lg:sticky lg:top-0 lg:block lg:h-full lg:overflow-y-auto">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
-          <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
-          <nav className="mt-8 space-y-2">
-            <Link
-              href="/admin/dashboard"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/dashboard") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/admin/notifications"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/notifications") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Notifications
-            </Link>
-            <Link
-              href="/admin/sellers"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/sellers") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Seller approvals
-            </Link>
-            <Link
-              href="/admin/deliveries"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/deliveries") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Delivery supervision
-            </Link>
-            <Link
-              href="/admin/payments-supervision"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/payments-supervision") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Payments supervision
-            </Link>
-            <Link
-              href="/admin/returns"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/returns") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Returns / disputes
-            </Link>
-            <Link
-              href="/admin/messages"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/messages") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Messages
-            </Link>
-            <Link
-              href="/admin/reviews"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/reviews") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Reviews
-            </Link>
-            <Link
-              href="/admin/finance/seller-fees"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/finance") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Finance / Seller fees
-            </Link>
-            <Link
-              href="/admin/queues"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/queues") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Operational queues
-            </Link>
-            <Link
-              href="/admin/support-cases"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/support-cases") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Support cases
-            </Link>
-            <Link
-              href="/admin/reports"
-              className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                pathname.startsWith("/admin/reports") ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              Reports
-            </Link>
-          </nav>
+    <div className="grain-overlay min-h-screen lg:h-screen lg:overflow-hidden lg:p-6" data-testid="admin-shell">
+      <div className="mx-auto flex min-h-screen lg:min-h-0 lg:h-full w-full max-w-[1400px] overflow-hidden bg-[var(--panel)] lg:rounded-[2rem] lg:border lg:border-[var(--border)] lg:shadow-[var(--shadow)]">
+        <aside className="hidden w-72 border-r border-slate-800 bg-slate-900 text-slate-100 lg:sticky lg:top-0 lg:block lg:h-full shrink-0">
+          <div className="h-full overflow-y-auto p-6 scrollbar-thin">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
+            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
+            <nav className="mt-8 space-y-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                    pathname.startsWith(link.match) ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
           <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                Marketplace Ops
-              </p>
-              <h2 className="text-sm font-semibold text-slate-800">
-                Logged in as {user.email}
-              </h2>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 lg:hidden cursor-pointer"
+                aria-label="Open menu"
+                data-testid="admin-mobile-menu-toggle"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                  Marketplace Ops
+                </p>
+                <h2 className="text-sm font-semibold text-slate-800">
+                  Logged in as {user.email}
+                </h2>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <NotificationBell role="admin" />
@@ -158,6 +104,49 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
         </div>
       </div>
+
+      {/* Mobile Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden" data-testid="admin-mobile-menu">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          {/* Drawer content */}
+          <aside className="relative flex w-72 max-w-xs flex-col bg-slate-900 p-6 text-slate-100 shadow-2xl transition-transform">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+                aria-label="Close menu"
+                data-testid="admin-mobile-menu-close"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
+            <nav className="mt-8 flex-1 space-y-2 overflow-y-auto scrollbar-thin">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                    pathname.startsWith(link.match) ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

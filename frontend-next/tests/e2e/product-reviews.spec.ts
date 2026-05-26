@@ -451,14 +451,14 @@ test("verified product reviews flow works across customer, public, seller, and a
   await adminPage.getByTestId("admin-reviews-search").fill(`Review Product ${stamp}`);
   await expect(adminPage.getByTestId("admin-review-image-thumbnail").first()).toBeVisible();
   await adminPage.getByTestId("admin-review-hide").first().click();
-  await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("HIDDEN");
+  await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("Hidden");
 
   await page.goto(`/products/${product.id}`);
   await expect(page.getByTestId("public-product-reviews-empty").first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText("Excellent quality and fast delivery.");
 
   await adminPage.getByTestId("admin-review-restore").first().click();
-  await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("PUBLISHED");
+  await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("Published");
 
   await page.goto(`/products/${product.id}`);
   await expect(page.getByTestId("public-product-reviews-list")).toBeVisible({ timeout: 15000 });

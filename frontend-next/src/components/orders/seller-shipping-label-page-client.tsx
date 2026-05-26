@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProtectedShell } from "@/components/auth/protected-shell";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { ShippingLabelPrintView } from "@/components/orders/shipping-label-print-view";
+import { getSellerOnboardingProfile, type SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
 import {
   DEFAULT_SHIPPING_LABEL_SIZE,
   getDeliverySettings,
@@ -41,6 +42,8 @@ export function SellerShippingLabelPageClient({
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings | null>(
     null,
   );
+  const [onboardingProfile, setOnboardingProfile] =
+    useState<SellerOnboardingProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const labelSize = useMemo(() => {
@@ -79,9 +82,10 @@ export function SellerShippingLabelPageClient({
       setLoading(true);
       try {
         const orderResult = await getSellerOrderById(orderId, "");
-        const [deliveryResult, settingsResult] = await Promise.all([
+        const [deliveryResult, settingsResult, onboardingResult] = await Promise.all([
           getOrderDelivery(orderResult.shopId, orderId, "").catch(() => null),
           getDeliverySettings(orderResult.shopId, "").catch(() => null),
+          getSellerOnboardingProfile().catch(() => null),
         ]);
 
         if (!mounted) {
@@ -91,6 +95,7 @@ export function SellerShippingLabelPageClient({
         setOrder(orderResult);
         setDelivery(deliveryResult);
         setDeliverySettings(settingsResult);
+        setOnboardingProfile(onboardingResult);
         setError(null);
       } catch (err) {
         if (mounted) {
@@ -240,6 +245,7 @@ export function SellerShippingLabelPageClient({
                 order={order}
                 delivery={delivery}
                 deliverySettings={deliverySettings}
+                sellerContactPhone={onboardingProfile?.contactPhone ?? null}
                 trackingLookupUrl={trackingLookupUrl}
                 size={labelSize}
               />

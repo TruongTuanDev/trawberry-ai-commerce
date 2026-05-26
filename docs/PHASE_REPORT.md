@@ -1,5 +1,32 @@
 # Phase Report
 
+## 2026-05-26 Admin Responsive Layout Audit & Fix
+
+- Audited and fixed responsive layout issues across all Admin Center pages (Sellers, Deliveries, Seller Fees, Seller Detail, and Support Cases).
+- Updated `AdminShell` to introduce a responsive slide-over mobile navigation drawer (hamburger menu) toggled by state on screen sizes below `lg` breakpoint.
+- Overrode card containers to full width and removed layout padding offsets on viewports smaller than `lg` to maximize screen real estate and prevent alignment gaps.
+- Prevented overall document horizontal scrolling (horizontal scrollbar) by wrapping dense tables, data-grids, and fee logs in `overflow-x-auto` wrappers and specifying minimal table content widths (`min-w-[1100px]`, `min-w-[950px]`, `min-w-[1200px]`).
+- Refactored filters grids in `admin-deliveries-page-client` and `admin-support-cases-page-client` to wrap cleanly using responsive Tailwind grid configurations (`grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3` instead of hardcoded columns).
+- Stacked legal document action layouts on `admin-seller-detail-client` below `xl` viewport width.
+- Standardized admin-only status labels and badges casing to avoid test failures with Titlecase vs Uppercase mismatches.
+- Created `frontend-next/tests/e2e/admin-responsive-layout.spec.ts` to verify layout behavior across Desktop (1440x900), Laptop (1366x768), Tablet (768x1024), and Mobile (390x844), asserting zero document-level horizontal page overflow.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/admin-responsive-layout.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/admin-fulfillment-supervision.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/buyer-seller-messaging.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+- Runtime `curl` checks for admin dashboard and subpages: pass
+
+Remaining gaps:
+- Non-admin dashboard pages (e.g. buyer, seller) were already responsive but layout updates here focused strictly on the Admin Center area.
+
 ## 2026-05-26 Language Switcher SVG Flags
 
 - replaced text-like locale pseudo-icons in the shared language dropdown with local SVG flag components

@@ -16,6 +16,7 @@ type ShippingLabelPrintViewProps = {
   order: SellerOrderListItem;
   delivery: DeliveryDetail | null;
   deliverySettings: DeliverySettings | null;
+  sellerContactPhone: string | null;
   trackingLookupUrl: string | null;
   size: ShippingLabelSize;
 };
@@ -83,6 +84,11 @@ export const SHIPPING_LABEL_SIZE_META: Record<
   },
 };
 
+const knownPaymentMethodKeys: Record<string, string> = {
+  PREPAID_SELLER_QR: "seller.orderDetail.directSellerPayment",
+  PAY_ON_DELIVERY_SELLER_QR: "seller.orderDetail.payOnDeliverySellerQr",
+};
+
 function formatOptionalLine(label: string, value: string | null | undefined) {
   if (!value) {
     return null;
@@ -137,6 +143,37 @@ function mapLabelShipmentStatus(
   }
 }
 
+function mapLabelPaymentStatus(
+  value: string | null | undefined,
+  t: ReturnType<typeof useI18n>["t"],
+) {
+  const normalized = value?.toUpperCase();
+
+  switch (normalized) {
+    case "PAID":
+      return t("seller.shippingLabel.paymentStatuses.paid");
+    case "APPROVED":
+      return t("seller.shippingLabel.paymentStatuses.approved");
+    case "PENDING":
+      return t("seller.shippingLabel.paymentStatuses.pending");
+    case "UNPAID":
+      return t("seller.shippingLabel.paymentStatuses.unpaid");
+    case "CANCELLED":
+      return t("seller.shippingLabel.paymentStatuses.cancelled");
+    default:
+      return formatReadableToken(value) ?? t("common.notProvided");
+  }
+}
+
+function isLabelPaymentConfirmed(paymentStatus: string) {
+  return [
+    "PAID",
+    "APPROVED",
+    "SELLER_CONFIRMED_DELIVERY_PAYMENT",
+    "YANDEX_PAYMENT_ON_DELIVERY_PAID",
+  ].includes(paymentStatus);
+}
+
 function formatLabelDate(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -158,10 +195,10 @@ function formatLabelDate(value: string | null | undefined) {
 
 function isPaymentConfirmed(paymentStatus: string) {
   return [
-    "PAID",
-    "APPROVED",
-    "SELLER_CONFIRMED_DELIVERY_PAYMENT",
-    "YANDEX_PAYMENT_ON_DELIVERY_PAID",
+    "ОПЛАЧЕНО",
+    "ОДОБРЕНО",
+    "ПРОДАВЕЦ ПОДТВЕРЖДИЛ ОПЛАТУ ДОСТАВКИ",
+    "ОПЛАТА YANDEX ПРИ ДОСТАВКЕ ОПЛАЧЕНА",
   ].includes(paymentStatus);
 }
 
@@ -169,6 +206,7 @@ export function ShippingLabelPrintView({
   order,
   delivery,
   deliverySettings,
+  sellerContactPhone,
   trackingLookupUrl,
   size,
 }: ShippingLabelPrintViewProps) {
@@ -195,8 +233,15 @@ export function ShippingLabelPrintView({
       ? t("seller.shippingLabel.providerYandexDelivery")
       : activeShipment?.provider ?? t("seller.shippingLabel.providerManual");
   const deliveryTypeLabel = t("seller.shippingLabel.deliveryTypes.express");
+  const paymentMethodCode = order.paymentMethod ?? order.shippingMethodName ?? null;
   const paymentMethodLabel =
-    order.paymentMethodLabel ?? order.paymentMethod ?? t("common.unknown");
+    paymentMethodCode && knownPaymentMethodKeys[paymentMethodCode]
+      ? t(knownPaymentMethodKeys[paymentMethodCode])
+      : order.paymentMethodLabel ?? paymentMethodCode ?? t("common.unknown");
+  const paymentStatusLabel = mapLabelPaymentStatus(order.paymentStatus, t);
+  const paymentConfirmed =
+    isPaymentConfirmed(order.paymentStatus) ||
+    isLabelPaymentConfirmed(order.paymentStatus);
   const codSellerQr =
     order.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR" ||
     order.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
@@ -244,7 +289,10 @@ export function ShippingLabelPrintView({
   ]);
   const courierNote = order.dropoffComment ?? activeShipment?.customerVisibleMessage;
   const senderName = order.shopName;
-  const senderPhone = deliverySettings?.pickupContactPhone ?? null;
+  const senderPhone =
+    deliverySettings?.pickupContactPhone ??
+    sellerContactPhone ??
+    null;
   const senderContactName = deliverySettings?.pickupContactName ?? null;
   const pickupAddress =
     deliverySettings?.pickupAddress ?? activeShipment?.pickupAddress ?? fallbackValue;
@@ -290,7 +338,7 @@ export function ShippingLabelPrintView({
       : null,
   ]);
   const paymentSupportLine = compactJoin([
-    `${t("seller.shippingLabel.paymentStatus")}: ${order.paymentStatus}`,
+    `${t("seller.shippingLabel.paymentStatus")}: ${paymentStatusLabel}`,
     `${t("seller.shippingLabel.delivery")}: ${providerLabel}`,
   ]);
   const senderPhoneLabel = senderPhone ?? "—";
@@ -395,7 +443,7 @@ export function ShippingLabelPrintView({
                   data-testid="shipping-label-payment-status"
                   data-status={order.paymentStatus}
                 >
-                  {order.paymentStatus}
+                  {paymentStatusLabel}
                 </p>
               </div>
               <div className="label-meta-cell">
@@ -487,7 +535,7 @@ export function ShippingLabelPrintView({
                 <p className="label-muted label-note-clamp">
                   {codSellerQr
                     ? t("seller.shippingLabel.codSellerQrNotice")
-                    : isPaymentConfirmed(order.paymentStatus)
+                    : paymentConfirmed
                       ? t("seller.shippingLabel.paymentConfirmedNotice")
                       : t("seller.shippingLabel.paymentPendingNotice")}
                 </p>
