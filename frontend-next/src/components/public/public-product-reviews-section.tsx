@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useMemo, useState } from "react";
 import { Star, X } from "lucide-react";
 import { ReviewStars } from "@/components/reviews/review-stars";
@@ -232,14 +234,14 @@ export function PublicProductReviewsSection({
                         <button
                           key={image.id}
                           type="button"
-                          className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
+                          className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
                           onClick={() => setPreviewImageUrl(image.url)}
                           data-testid="public-review-image-thumbnail"
                         >
                           <img
                             src={image.url}
                             alt=""
-                            className="h-20 w-20 object-cover"
+                            className="h-full w-full object-cover"
                             loading="lazy"
                           />
                         </button>
@@ -277,7 +279,7 @@ export function PublicProductReviewsSection({
           <img
             src={previewImageUrl}
             alt=""
-            className="max-h-[85vh] max-w-[90vw] rounded-[1.5rem] bg-white object-contain shadow-2xl"
+            className="max-h-[85vh] max-w-full rounded-[1.5rem] bg-white object-contain shadow-2xl sm:max-w-[90vw]"
           />
         </div>
       ) : null}

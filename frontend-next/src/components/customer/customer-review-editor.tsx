@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { ReviewStars } from "@/components/reviews/review-stars";
@@ -59,13 +61,13 @@ function ExistingReviewImages({ images }: { images: ReviewImageAsset[] }) {
         <button
           key={image.id}
           type="button"
-          className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
+          className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
           onClick={() => window.open(image.url, "_blank", "noopener,noreferrer")}
         >
           <img
             src={image.url}
             alt=""
-            className="h-20 w-20 object-cover"
+            className="h-full w-full object-cover"
             loading="lazy"
           />
         </button>
@@ -399,12 +401,12 @@ export function CustomerReviewEditor({
                 {pendingImages.map((image) => (
                   <div
                     key={image.id}
-                    className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
+                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
                   >
                     <img
                       src={image.previewUrl}
                       alt=""
-                      className="h-20 w-20 object-cover"
+                      className="h-full w-full object-cover"
                     />
                     <button
                       type="button"

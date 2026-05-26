@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useMemo, useState } from "react";
 import { ReviewStars } from "@/components/reviews/review-stars";
 import { toast } from "@/components/ui/use-toast";
@@ -212,14 +214,14 @@ export function SellerReviewsPageClient() {
                       <button
                         key={image.id}
                         type="button"
-                        className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
+                        className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
                         onClick={() => window.open(image.url, "_blank", "noopener,noreferrer")}
                         data-testid="seller-review-image-thumbnail"
                       >
                         <img
                           src={image.url}
                           alt=""
-                          className="h-20 w-20 object-cover"
+                          className="h-full w-full object-cover"
                           loading="lazy"
                         />
                       </button>

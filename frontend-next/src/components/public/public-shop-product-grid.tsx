@@ -96,13 +96,13 @@ export function PublicShopProductGrid({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("public.shop.searchPlaceholder")}
-            className="min-w-[220px] rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+            className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)] sm:min-w-[220px]"
             data-testid="public-shop-search"
           />
           <select
             value={sort}
             onChange={(event) => setSort(event.target.value as SortKey)}
-            className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
+            className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)] sm:w-auto"
             data-testid="public-shop-sort"
           >
             <option value="newest">{t("public.shop.sortNewest")}</option>

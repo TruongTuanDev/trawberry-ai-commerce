@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Browser } from "@playwright/test";
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
@@ -153,13 +153,6 @@ async function registerCustomer(
       phone: `+7995${String(stamp).slice(-7)}`,
     },
   });
-}
-
-async function loginCustomer(page: Page, email: string, password: string) {
-  await page.goto("/customer/login");
-  await page.getByTestId("customer-login-email").fill(email);
-  await page.getByTestId("customer-login-password").fill(password);
-  await page.getByTestId("customer-login-submit").click();
 }
 
 async function loginSeller(page: Page, email: string, password: string) {

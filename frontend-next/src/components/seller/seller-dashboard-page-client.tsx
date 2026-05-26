@@ -87,7 +87,7 @@ export function SellerDashboardPageClient() {
     return () => {
       active = false;
     };
-  }, [currentShopId, hydrated, loadShops, shops.length]);
+  }, [currentShopId, hydrated, loadShops, shops.length, t]);
 
   const currentShop = useMemo(
     () => shops.find((shop) => shop.id === currentShopId) ?? null,

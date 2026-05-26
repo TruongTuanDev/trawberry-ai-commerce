@@ -1758,4 +1758,17 @@ Verification:
 Current gap:
 
 - some older seller/admin screens still contain legacy untranslated copy outside the cleanup scope
-- lint still has pre-existing warnings unrelated to this cleanup phase
+- the earlier lint-warning note from the marketplace stabilization phase is now resolved by the follow-up frontend quality cleanup
+
+# Frontend Quality Cleanup Status
+
+Implemented:
+
+- frontend lint is now clean after removing the remaining safe warnings from review surfaces and messaging E2E
+- review photo thumbnails still intentionally use native `<img>` for arbitrary remote assets and blob previews instead of changing image infrastructure in a cleanup-only phase
+- public shop search and sort controls were tightened for narrow mobile widths to reduce overflow risk
+- seller/admin priority screen audit confirmed no new in-scope role-policy regressions for seller `ru/en/vi` and admin `en` only
+
+Current gap:
+
+- seller order detail and several older admin backoffice pages still contain legacy hard-coded copy outside this phase scope

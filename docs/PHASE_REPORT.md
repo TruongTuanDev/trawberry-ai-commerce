@@ -2888,3 +2888,33 @@ Known gaps:
 
 - frontend lint still reports pre-existing warnings on raw `<img>` usage and one stale unused variable in `buyer-seller-messaging.spec.ts`
 - seller order detail and a few admin/payment flows still contain legacy hard-coded copy outside the cleanup files touched in this phase
+
+# Phase Report: Frontend Quality Cleanup
+
+Implemented:
+
+- removed the remaining safe frontend lint warnings after the marketplace stabilization phase
+- kept review photo thumbnails and previews on native `<img>` because they render arbitrary remote URLs and temporary blob object URLs that do not fit the current `next/image` setup
+- removed the stale unused helper from the buyer-seller messaging Playwright spec without weakening coverage
+- tightened mobile sizing for public shop search and sort controls to avoid narrow-screen overflow
+- rechecked seller/admin priority screens for hard-coded copy and confirmed the remaining legacy mixed-language copy is outside this cleanup scope
+
+Verification:
+
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/buyer-seller-messaging.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-shop-profile.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+- runtime frontend route smoke checks for `/products`, `/shops/demo-shop`, `/customer/messages`, `/seller/messages`, and `/admin/messages`: pass
+
+Known gaps:
+
+- seller order detail and several older admin operations screens still contain legacy hard-coded copy and need a dedicated i18n migration phase
+- this cleanup focused on code-quality and responsive fixes only; it did not expand seller/admin dictionary coverage beyond the audited priority screens
