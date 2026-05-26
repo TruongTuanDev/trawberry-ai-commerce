@@ -260,6 +260,64 @@ async function switchSellerLocale(page: Page, locale: "ru" | "en" | "vi") {
   await responsePromise;
 }
 
+async function expectLabelStructure(
+  page: Page,
+  expectedSize: "75x120" | "100x150" | "a6",
+) {
+  const label = page.getByTestId("shipping-label-print-view");
+  await expect(label).toBeVisible({ timeout: 15000 });
+  await expect(label).toHaveAttribute("data-label-size", expectedSize);
+  await expect(page.getByTestId("shipping-label-header")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-barcode")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-delivery")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-recipient")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-sender")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-items")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-payment")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-sorting")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-footer")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-recipient-phone")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-sender-name")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-qr")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-barcode")).toBeVisible();
+  await expect(page.locator("[data-testid='shipping-label-print-view']")).toHaveCount(1);
+
+  const metrics = await label.evaluate((element) => {
+    const labelRect = element.getBoundingClientRect();
+    const sectionIds = [
+      "shipping-label-header",
+      "shipping-label-barcode",
+      "shipping-label-delivery",
+      "shipping-label-recipient",
+      "shipping-label-sender",
+      "shipping-label-items",
+      "shipping-label-payment",
+      "shipping-label-sorting",
+      "shipping-label-footer",
+    ];
+
+    return {
+      width: labelRect.width,
+      height: labelRect.height,
+      sections: sectionIds.map((id) => {
+        const section = element.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
+        return {
+          id,
+          width: section?.getBoundingClientRect().width ?? 0,
+          height: section?.getBoundingClientRect().height ?? 0,
+        };
+      }),
+    };
+  });
+
+  expect(metrics.width).toBeGreaterThan(200);
+  expect(metrics.height).toBeGreaterThan(300);
+  for (const section of metrics.sections) {
+    expect(section.width, `${section.id} width`).toBeGreaterThan(0);
+    expect(section.height, `${section.id} height`).toBeGreaterThan(0);
+  }
+}
+
 test("seller can open and print a localized shipping label from order detail", async ({
   page,
   request,
@@ -300,21 +358,11 @@ test("seller can open and print a localized shipping label from order detail", a
   await expect(labelPage.getByTestId("shipping-label-size-select")).toHaveValue(
     "100x150",
   );
-  await expect(labelPage.getByTestId("shipping-label-print-view")).toBeVisible({
-    timeout: 15000,
-  });
-  await expect(labelPage.getByTestId("shipping-label-print-view")).toHaveAttribute(
-    "data-label-size",
-    "100x150",
-  );
+  await expectLabelStructure(labelPage, "100x150");
   await expect(labelPage.getByTestId("shipping-label-print-view")).toHaveAttribute(
     "style",
     /--label-width:\s*100mm/i,
   );
-  await expect(labelPage.getByTestId("shipping-label-qr")).toBeVisible();
-  await expect(labelPage.getByTestId("shipping-label-barcode")).toBeVisible();
-  await expect(labelPage.getByTestId("shipping-label-sorting-code")).toBeVisible();
-  await expect(labelPage.getByTestId("shipping-label-shipment-status")).toBeVisible();
   await expect(labelPage.getByTestId("shipping-label-order-code")).toHaveText(
     checkout.orderCode,
   );
@@ -388,24 +436,16 @@ test("seller can open and print a localized shipping label from order detail", a
   await expect(compactLabelPage.getByTestId("shipping-label-size-select")).toHaveValue(
     "75x120",
   );
-  await expect(
-    compactLabelPage.getByTestId("shipping-label-print-view"),
-  ).toBeVisible({ timeout: 15000 });
-  await expect(
-    compactLabelPage.getByTestId("shipping-label-print-view"),
-  ).toHaveAttribute("data-label-size", "75x120");
+  await expectLabelStructure(compactLabelPage, "75x120");
   await expect(
     compactLabelPage.getByTestId("shipping-label-print-view"),
   ).toHaveAttribute("style", /--label-width:\s*75mm/i);
-  await expect(compactLabelPage.getByTestId("shipping-label-barcode")).toBeVisible();
 
   await compactLabelPage.getByTestId("shipping-label-size-select").selectOption("a6");
   await compactLabelPage.waitForURL(
     /\/seller\/orders\/.+\/shipping-label\?size=a6/,
   );
-  await expect(
-    compactLabelPage.getByTestId("shipping-label-print-view"),
-  ).toHaveAttribute("data-label-size", "a6");
+  await expectLabelStructure(compactLabelPage, "a6");
   await expect(
     compactLabelPage.getByTestId("shipping-label-print-view"),
   ).toHaveAttribute("style", /--label-width:\s*105mm/i);

@@ -177,3 +177,4 @@ Important rule:
 - default label size is `100x150`, stored client-side for seller convenience, and passed through the `size` query param
 - the printable label remains an internal marketplace handoff aid for manual/Yandex-compatible delivery and must not be presented as an official Yandex label
 - the print layout now includes QR plus barcode scanning zones, compact sender/recipient blocks, and a warehouse sorting code while remaining single-page per supported label size
+- text-heavy blocks such as recipient address, courier note, item preview, and internal note must clamp or wrap within their own section and must not visually overlap neighboring sections in any supported size

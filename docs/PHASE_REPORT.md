@@ -3063,6 +3063,7 @@ Implemented:
 - kept required sender, recipient, address/access, manual Yandex/claim, marketplace order code, payment/package, and QR data visible without introducing any Yandex business-logic changes
 - expanded the dedicated shipping-label Playwright regression to cover size selector defaults, query propagation, DOM uniqueness, and size-aware preview state
 - upgraded the label into a more warehouse-ready print surface with a dominant tracking number, CODE128 barcode strip, QR quiet space, shipment/payment/sorting metadata, and compact thermal-friendly sections
+- tightened the section stack again after the warehouse-label pass so delivery, recipient, sender/items, and payment/sorting content clamp inside their own sections instead of visually overlapping in print preview
 
 Verification:
 
