@@ -139,6 +139,7 @@ async function newSellerPage(browser: Browser): Promise<Page> {
 async function switchSellerLocale(page: Page, locale: "ru" | "en" | "vi") {
   const responsePromise = page.waitForResponse("**/api/users/locale");
   await page.getByTestId("language-switcher-seller").click();
+  await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   await page.getByTestId(`language-option-seller-${locale}`).click();
   await responsePromise;
 }
@@ -262,6 +263,11 @@ test("seller remaining operations screens switch RU/VI/EN live", async ({
   await page.getByTestId("seller-login-submit").click();
   await page.waitForURL("**/seller/dashboard");
   await page.getByRole("combobox").first().selectOption(shop.id);
+  await page.getByTestId("language-switcher-seller").click();
+  await expect(page.getByTestId("locale-flag-ru")).toBeVisible();
+  await expect(page.getByTestId("locale-flag-en")).toBeVisible();
+  await expect(page.getByTestId("locale-flag-vi")).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await page.goto("/seller/dashboard");
   await page.waitForURL("**/seller/dashboard");

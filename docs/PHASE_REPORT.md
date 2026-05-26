@@ -1,5 +1,27 @@
 # Phase Report
 
+## 2026-05-26 Language Switcher SVG Flags
+
+- replaced text-like locale pseudo-icons in the shared language dropdown with local SVG flag components
+- updated trigger and dropdown rows to render:
+  - flag icon
+  - locale short code
+  - full native language name
+  - active check mark
+- preserved existing role policy and locale persistence:
+  - public/customer: `ru/en`
+  - seller: `ru/en/vi`
+  - admin: no switcher
+- added locale flag regression assertions to the focused locale Playwright coverage
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+
 ## 2026-05-26 Admin Operations English-only Cleanup
 
 - completed the focused admin operations copy cleanup without changing admin, seller, customer, payment, return, or fulfillment business logic

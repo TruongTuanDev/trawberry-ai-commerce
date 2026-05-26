@@ -2,11 +2,13 @@ export const locales = ["en", "ru", "vi"] as const;
 
 export type Locale = (typeof locales)[number];
 export type LocaleRole = "admin" | "seller" | "customer";
+export type LocaleFlagKey = "ru" | "gb" | "vn";
+
 export type LocaleMetadata = {
   code: Locale;
   shortLabel: string;
   nativeLabel: string;
-  flag: string;
+  flagKey: LocaleFlagKey;
   allowedRoles: readonly LocaleRole[];
 };
 
@@ -40,21 +42,21 @@ export const localeMetadata: Record<Locale, LocaleMetadata> = {
     code: "en",
     shortLabel: "EN",
     nativeLabel: "English",
-    flag: "🇬🇧",
+    flagKey: "gb",
     allowedRoles: ["admin", "seller", "customer"],
   },
   ru: {
     code: "ru",
     shortLabel: "RU",
     nativeLabel: "Русский",
-    flag: "🇷🇺",
+    flagKey: "ru",
     allowedRoles: ["seller", "customer"],
   },
   vi: {
     code: "vi",
     shortLabel: "VI",
     nativeLabel: "Tiếng Việt",
-    flag: "🇻🇳",
+    flagKey: "vn",
     allowedRoles: ["seller"],
   },
 };

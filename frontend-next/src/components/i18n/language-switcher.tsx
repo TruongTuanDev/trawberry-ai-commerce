@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { renderLocaleFlag } from "@/components/i18n/locale-flags";
 import { updateMyPreferredLocale } from "@/lib/auth-api";
 import {
   type Locale,
@@ -184,10 +185,12 @@ export function LanguageSwitcher({
           }
         }}
         className={`inline-flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4 ${triggerClasses}`}
+        data-testid="language-switcher-trigger"
       >
-        <span className="text-base leading-none" aria-hidden="true">
-          {currentLocale.flag}
-        </span>
+        {renderLocaleFlag(currentLocale.flagKey, {
+          className: "h-4 w-6",
+          testId: "language-switcher-trigger-flag",
+        })}
         <span className="tracking-[0.14em]">{currentLocale.shortLabel}</span>
         {!compact ? (
           <span className="hidden max-w-[9rem] truncate text-left text-xs font-medium tracking-normal opacity-80 sm:inline">
@@ -203,6 +206,7 @@ export function LanguageSwitcher({
           role="menu"
           aria-label={t("language.label")}
           className={`absolute right-0 top-[calc(100%+0.65rem)] z-50 min-w-[15rem] overflow-hidden rounded-3xl border p-2 ${menuClasses}`}
+          data-testid="language-switcher-dropdown"
         >
           <div className="space-y-1">
             {options.map((entry, index) => {
@@ -216,6 +220,7 @@ export function LanguageSwitcher({
                   type="button"
                   role="menuitemradio"
                   aria-checked={active}
+                  aria-current={active ? "true" : undefined}
                   onClick={() => void persistPreference(entry.code)}
                   onKeyDown={(event) => {
                     if (event.key === "ArrowDown") {
@@ -239,9 +244,10 @@ export function LanguageSwitcher({
                   }`}
                   data-testid={`language-option-${role}-${entry.code}`}
                 >
-                  <span className="text-lg leading-none" aria-hidden="true">
-                    {entry.flag}
-                  </span>
+                  {renderLocaleFlag(entry.flagKey, {
+                    className: "h-4 w-6",
+                    testId: `locale-flag-${entry.code}`,
+                  })}
                   <span className="min-w-[2.2rem] text-xs font-bold tracking-[0.18em] text-[var(--muted)]">
                     {entry.shortLabel}
                   </span>

@@ -1,5 +1,20 @@
 # Project Status
 
+## Language Switcher SVG Flags - 2026-05-26
+
+- Status: implemented in `frontend-next`
+- Shared locale dropdown now uses local SVG flag icons instead of text-like pseudo-icons.
+- Trigger and dropdown items now present:
+  - flag icon
+  - locale code
+  - native language label
+  - active state check mark
+- Locale policy remains unchanged:
+  - admin: English only, no switcher
+  - seller: `ru/en/vi`
+  - public/customer: `ru/en`
+- No i18n logic, role policy, or persistence behavior changed in this UI cleanup.
+
 ## Admin Operations English-only Cleanup - 2026-05-26
 
 - Status: implemented in `frontend-next`

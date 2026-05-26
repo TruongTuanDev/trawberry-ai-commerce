@@ -17,6 +17,7 @@ async function newCleanPage(browser: Browser): Promise<Page> {
 
 async function chooseCustomerLocale(page: Page, locale: "ru" | "en") {
   await page.getByTestId("language-switcher-customer").first().click();
+  await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   await page.getByTestId(`language-option-customer-${locale}`).first().click();
 }
 
@@ -54,6 +55,9 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   await expect(ruOption).toBeVisible();
   await expect(enOption).toBeVisible();
   await expect(viOption).toHaveCount(0); // VI should not exist in the DOM for customer role
+  await expect(page.getByTestId("locale-flag-ru")).toBeVisible();
+  await expect(page.getByTestId("locale-flag-en")).toBeVisible();
+  await expect(page.getByTestId("locale-flag-vi")).toHaveCount(0);
 
   // 3. Switch to English (EN)
   console.log("Clicking EN option...");
