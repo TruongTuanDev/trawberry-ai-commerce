@@ -231,7 +231,7 @@ test("admin commission settings and seller finance dashboard work end-to-end", a
 
   await page.goto("/admin/finance/seller-fees");
   await expect(page.getByTestId("admin-seller-fees-page")).toBeVisible();
-  await expect(page.getByText("Phí sàn cấu hình theo shop.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Seller fee settings", exact: true })).toBeVisible();
   await expect(page.getByText("commission snapshot")).toBeVisible();
   await page.getByTestId(`admin-commission-input-${shop.id}`).fill("3");
   await page.getByTestId(`admin-save-commission-${shop.id}`).click();

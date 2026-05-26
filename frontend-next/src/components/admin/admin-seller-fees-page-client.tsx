@@ -89,7 +89,7 @@ export function AdminSellerFeesPageClient() {
       action: async () => {
         return updateAdminShopCommission(row.shopId, { commissionPercent: value });
       },
-      successMessage: "Đã lưu hoa hồng thành công.",
+      successMessage: "Commission saved successfully.",
       onSuccess: async () => {
         setSuccess(`Commission saved for ${row.shopName}.`);
         await loadData();
@@ -101,7 +101,7 @@ export function AdminSellerFeesPageClient() {
   };
 
   const handleGenerateInvoice = async (row: AdminSellerFeeRow) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn TẠO hóa đơn mới cho ${row.shopName} (${row.billingPeriod}) không?`)) {
+    if (!window.confirm(`Create a new invoice for ${row.shopName} (${row.billingPeriod})?`)) {
       return;
     }
     setGeneratingShopId(row.shopId);
@@ -113,7 +113,7 @@ export function AdminSellerFeesPageClient() {
           billingPeriod: row.billingPeriod,
         });
       },
-      successMessage: "Đã tạo hóa đơn thành công.",
+      successMessage: "Invoice created successfully.",
       onSuccess: async () => {
         setSuccess(`Invoice generated for ${row.shopName} (${row.billingPeriod}).`);
         await loadData();
@@ -125,7 +125,7 @@ export function AdminSellerFeesPageClient() {
   };
 
   const handleMarkPaid = async (invoiceId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn XÁC NHẬN hóa đơn này đã được thanh toán không?")) {
+    if (!window.confirm("Confirm that this invoice has been paid?")) {
       return;
     }
     setPayingInvoiceId(invoiceId);
@@ -135,7 +135,7 @@ export function AdminSellerFeesPageClient() {
       action: async () => {
         return markAdminSellerFeeInvoicePaid(invoiceId);
       },
-      successMessage: "Đã xác nhận thanh toán hóa đơn.",
+      successMessage: "Invoice payment confirmed.",
       onSuccess: async () => {
         setSuccess("Invoice marked as paid.");
         await loadData();
@@ -160,10 +160,10 @@ export function AdminSellerFeesPageClient() {
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]">
-            Phí sàn cấu hình theo shop.
+            Platform fee settings are configured per shop.
           </div>
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]">
-            Đơn hàng dùng commission snapshot tại thời điểm xác nhận thanh toán.
+            Orders use the commission snapshot captured at payment confirmation time.
           </div>
         </div>
         {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}

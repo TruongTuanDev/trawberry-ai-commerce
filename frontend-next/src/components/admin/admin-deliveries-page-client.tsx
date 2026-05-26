@@ -50,6 +50,69 @@ const deliveryStatusOptions = [
   "CANCELLED",
 ];
 
+function formatPaymentStatus(value: string) {
+  switch (value) {
+    case "":
+      return "All payment statuses";
+    case "PENDING":
+      return "Pending";
+    case "APPROVED":
+      return "Approved";
+    case "PAID":
+      return "Paid";
+    case "SELLER_CONFIRMED_DELIVERY_PAYMENT":
+      return "Seller confirmed delivery payment";
+    case "REJECTED":
+      return "Rejected";
+    case "FAILED":
+      return "Failed";
+    default:
+      return value;
+  }
+}
+
+function formatDeliveryStatus(value: string) {
+  switch (value) {
+    case "":
+      return "All delivery statuses";
+    case "YANDEX_MANUAL_CREATED":
+      return "Yandex delivery created manually";
+    case "CREATED_MANUALLY":
+      return "Created manually";
+    case "CREATED":
+      return "Created";
+    case "COURIER_ASSIGNED":
+      return "Courier assigned";
+    case "PICKED_UP":
+      return "Picked up";
+    case "ON_THE_WAY":
+      return "On the way";
+    case "IN_TRANSIT":
+      return "In transit";
+    case "DELIVERED":
+      return "Delivered";
+    case "FAILED":
+      return "Failed";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return value;
+  }
+}
+
+function formatProvider(value: string | null | undefined) {
+  switch (value) {
+    case "YANDEX":
+      return "Yandex";
+    case "CDEK":
+      return "CDEK";
+    case "MANUAL":
+      return "Manual";
+    default:
+      return value ?? "Not assigned";
+  }
+}
+
 function resolveInitialTab(searchParams: URLSearchParams): AdminFulfillmentBucket {
   const bucket = searchParams.get("bucket");
   if (bucket && fulfillmentTabs.some((tab) => tab.value === bucket)) {
@@ -269,22 +332,22 @@ export function AdminDeliveriesPageClient() {
           <select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
             {paymentStatusOptions.map((value) => (
               <option key={value || "all"} value={value}>
-                {value || "All payment statuses"}
+                {formatPaymentStatus(value)}
               </option>
             ))}
           </select>
           <select value={deliveryStatus} onChange={(event) => setDeliveryStatus(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
             {deliveryStatusOptions.map((value) => (
               <option key={value || "all"} value={value}>
-                {value || "All delivery statuses"}
+                {formatDeliveryStatus(value)}
               </option>
             ))}
           </select>
           <select value={provider} onChange={(event) => setProvider(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
             <option value="">All providers</option>
-            <option value="YANDEX">YANDEX</option>
+            <option value="YANDEX">Yandex</option>
             <option value="CDEK">CDEK</option>
-            <option value="MANUAL">MANUAL</option>
+            <option value="MANUAL">Manual</option>
           </select>
           <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
           <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
@@ -339,11 +402,11 @@ export function AdminDeliveriesPageClient() {
                   </div>
                   <div>
                     <span className="inline-flex rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                      {item.paymentStatus}
+                      {formatPaymentStatus(item.paymentStatus)}
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm text-[var(--foreground)]">{item.manualYandexOrderId ?? "Missing"}</p>
+                    <p className="text-sm text-[var(--foreground)]">{item.manualYandexOrderId ?? "Missing Yandex order ID"}</p>
                     {item.yandexTrackingUrl ? (
                       <a href={item.yandexTrackingUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex text-xs font-semibold text-[var(--accent)] underline">
                         Tracking
@@ -382,15 +445,15 @@ export function AdminDeliveriesPageClient() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <Metric label="Bucket" value={selected.fulfillmentLabel} testId="admin-delivery-detail-status" />
-                <Metric label="Payment status" value={selected.paymentStatus} />
+                <Metric label="Payment status" value={formatPaymentStatus(selected.paymentStatus)} />
                 <Metric label="Seller" value={selected.sellerName ?? selected.sellerEmail} />
                 <Metric label="Shop" value={selected.shopName} />
                 <Metric label="Buyer" value={`${selected.customerName} - ${selected.customerPhone}`} />
-                <Metric label="Yandex ID" value={selected.manualYandexOrderId ?? "Missing"} />
-                <Metric label="Delivery status" value={selected.deliveryStatus ?? "Not created"} />
+                <Metric label="Yandex ID" value={selected.manualYandexOrderId ?? "Missing Yandex order ID"} />
+                <Metric label="Delivery status" value={selected.deliveryStatus ? formatDeliveryStatus(selected.deliveryStatus) : "Not created"} />
                 <Metric label="Last update" value={formatDateTime(selected.updatedAt)} />
                 <Metric label="Last reminder" value={selected.lastReminderAt ? formatDateTime(selected.lastReminderAt) : "Not reminded"} />
-                <Metric label="Provider" value={selected.provider ?? "Not assigned"} />
+                <Metric label="Provider" value={formatProvider(selected.provider)} />
               </div>
 
               <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">

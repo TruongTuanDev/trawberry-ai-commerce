@@ -1,5 +1,34 @@
 # Full Commerce Flow Audit
 
+## Admin Operations English-only Cleanup Addendum
+
+- verified admin operations UI remains English-only after the cleanup
+- verified cleanup scope is presentation-only:
+  - no seller/customer locale policy expansion
+  - no payment, fulfillment, Yandex, return, or moderation business logic change
+- verified admin-only visible raw states now map to readable English labels on:
+  - `/admin/sellers`
+  - `/admin/sellers/[id]`
+  - seller fee supervision
+  - `/admin/deliveries`
+  - payments supervision
+  - returns / refunds / disputes
+  - `/admin/messages`
+  - `/admin/reviews`
+  - `/admin/support-cases`
+- verified touched admin regressions remain stable without depending on mutable human copy where a selector or raw status contract is safer:
+  - seller fee dashboard assertion aligned to current English UI
+  - admin delivery supervision read-only assertions narrowed to delivery-page scope
+  - admin fulfillment supervision no longer fails on teardown-only manual page close
+  - product reviews empty-state assertion now tolerates duplicated shell rendering by using the first matching test id
+  - notifications role-layout test timeout increased to avoid false negatives during multi-role setup
+- verified runtime admin route smoke checks returned healthy responses for:
+  - `/admin/dashboard`
+  - `/admin/deliveries`
+  - `/admin/reviews`
+  - `/admin/messages`
+  - `/admin/notifications`
+
 ## Seller Remaining Operations i18n Cleanup Addendum
 
 - verified seller remaining operational screens now live-switch correctly in `ru`, `en`, and `vi`:

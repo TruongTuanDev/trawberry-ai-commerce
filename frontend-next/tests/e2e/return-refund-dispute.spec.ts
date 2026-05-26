@@ -33,7 +33,7 @@ async function loginAdminWithRetry(page: Page, maxAttempts = 5): Promise<void> {
     await page.getByTestId("admin-login-submit").click();
 
     // Check whether we hit the rate-limit warning within 3 s
-    const rateLimitMsg = page.locator("text=/quá nhanh|thử lại/i");
+    const rateLimitMsg = page.locator("text=/too many requests|try again|rate limit/i");
     const redirected = page.waitForURL("**/admin/dashboard", { timeout: 8000 }).then(() => "ok").catch(() => "timeout");
     const rateLimited = rateLimitMsg.waitFor({ timeout: 3000 }).then(() => "rate").catch(() => "none");
 

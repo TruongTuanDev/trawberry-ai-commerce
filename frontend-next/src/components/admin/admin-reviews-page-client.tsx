@@ -22,6 +22,19 @@ function formatReviewDate(value: string) {
   }).format(date);
 }
 
+function formatReviewStatus(value: string) {
+  switch (value) {
+    case "PUBLISHED":
+      return "Published";
+    case "HIDDEN":
+      return "Hidden";
+    case "REPORTED":
+      return "Reported";
+    default:
+      return value;
+  }
+}
+
 export function AdminReviewsPageClient() {
   const [items, setItems] = useState<AdminReviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +166,7 @@ export function AdminReviewsPageClient() {
                   className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)]"
                   data-testid="admin-review-status"
                 >
-                  {review.status}
+                  {formatReviewStatus(review.status)}
                 </span>
               </div>
 

@@ -1,5 +1,33 @@
 # Project Status
 
+## Admin Operations English-only Cleanup - 2026-05-26
+
+- Status: implemented in `frontend-next`
+- Admin policy remains English-only across the cleaned admin operations surfaces.
+- Removed legacy Vietnamese, mixed-language, and garbled copy from:
+  - seller approval list and seller moderation detail
+  - seller fee supervision
+  - admin support cases
+  - payments supervision
+  - returns / refunds / disputes
+  - deliveries supervision
+  - admin messages
+  - admin reviews
+- Visible admin-only raw backend states are now mapped to readable English labels where they appear in the UI:
+  - support case status, issue type, priority, sender role
+  - seller approval, document, legal type, and payment-config states
+  - payment supervision payment/proof/ledger states
+  - delivery payment state, provider, and delivery state
+  - admin message thread status
+  - admin review status
+- Stable test contracts were preserved:
+  - touched admin regressions now prefer `data-testid`, scoped selectors, or stable raw status fields instead of brittle human-copy assertions where appropriate
+- No business logic changed for:
+  - seller fulfillment ownership
+  - admin supervision scope
+  - manual Yandex handling
+  - payments, returns, or review moderation flow semantics
+
 ## Seller Remaining Operations i18n Cleanup - 2026-05-26
 
 - Status: implemented in `frontend-next`

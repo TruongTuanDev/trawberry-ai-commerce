@@ -4,6 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listAdminMessageThreads, type MessageThreadSummary } from "@/lib/messages-api";
 
+function formatThreadStatus(value: string) {
+  switch (value) {
+    case "REPORTED":
+      return "Reported";
+    case "OPEN":
+      return "Open";
+    case "CLOSED":
+      return "Closed";
+    default:
+      return value;
+  }
+}
+
 export function AdminMessagesPageClient() {
   const [status, setStatus] = useState("REPORTED");
   const [items, setItems] = useState<MessageThreadSummary[]>([]);
@@ -56,7 +69,7 @@ export function AdminMessagesPageClient() {
                   : "border border-[var(--border)] bg-[var(--panel)] text-[var(--muted)]"
               }`}
             >
-              {value}
+              {formatThreadStatus(value)}
             </button>
           ))}
         </div>
@@ -98,7 +111,7 @@ export function AdminMessagesPageClient() {
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-                  {thread.status}
+                  {formatThreadStatus(thread.status)}
                 </span>
               </div>
             </div>

@@ -1,5 +1,49 @@
 # Phase Report
 
+## 2026-05-26 Admin Operations English-only Cleanup
+
+- completed the focused admin operations copy cleanup without changing admin, seller, customer, payment, return, or fulfillment business logic
+- removed legacy Vietnamese and mixed garbled copy from:
+  - seller approval list and seller detail moderation actions
+  - seller fee supervision
+  - admin support cases
+  - payments supervision
+  - returns / refunds / disputes
+- normalized admin-only visible labels on:
+  - support case status, issue type, sender role, and priority
+  - seller approval/document/legal/payment-config states
+  - payment supervision status, proof state, and ledger state
+  - admin deliveries payment, provider, and delivery-state presentation
+  - admin message thread status
+  - admin review status
+- hardened touched admin regression specs:
+  - removed teardown-only page-close failures in admin fulfillment supervision
+  - narrowed read-only admin delivery assertions so they do not match unrelated shell buttons
+  - stabilized seller-fee and product-review assertions around current admin UI/test ids
+  - raised notification role-layout timeout to avoid false teardown failures
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/admin-fulfillment-supervision.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/admin-delivery-supervision.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/seller-fee-dashboard.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/return-refund-dispute.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/buyer-seller-messaging.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/notifications.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build frontend-next`: pass
+- runtime `curl -I` checks for `/admin/dashboard`, `/admin/deliveries`, `/admin/reviews`, `/admin/messages`, and `/admin/notifications`: pass
+
+Remaining gaps:
+
+- older admin queues/reports/dashboard sub-views outside the touched components may still contain raw backend codes that are readable but not yet fully normalized
+- seller/customer notification layout tests still keep multilingual assertions in shared role coverage outside this admin-only copy cleanup
+
 ## 2026-05-26 Seller Remaining Operations i18n Cleanup
 
 - completed the remaining seller-only i18n cleanup for older operational screens outside seller order detail

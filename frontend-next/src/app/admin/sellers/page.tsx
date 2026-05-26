@@ -14,6 +14,21 @@ import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const statuses: Array<SellerApprovalStatus | "ALL"> = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
+function formatApprovalStatus(value: SellerApprovalStatus | "ALL") {
+  switch (value) {
+    case "PENDING":
+      return "Pending";
+    case "APPROVED":
+      return "Approved";
+    case "REJECTED":
+      return "Rejected";
+    case "ALL":
+      return "All";
+    default:
+      return value;
+  }
+}
+
 export default function AdminSellersPage() {
   const [status, setStatus] = useState<SellerApprovalStatus | "ALL">("PENDING");
   const [sellers, setSellers] = useState<AdminSeller[]>([]);
@@ -74,7 +89,7 @@ export default function AdminSellersPage() {
       action: async () => {
         return approveAdminSeller(seller.userId);
       },
-      successMessage: "Phê duyệt người bán thành công.",
+      successMessage: "Seller approved successfully.",
       onSuccess: async () => {
         await refresh();
       },
@@ -86,7 +101,7 @@ export default function AdminSellersPage() {
 
   const reject = async () => {
     if (!selectedSeller) return;
-    if (!window.confirm(`Bạn có chắc chắn muốn từ chối người bán ${selectedSeller.email} không?`)) {
+    if (!window.confirm(`Reject seller ${selectedSeller.email}?`)) {
       return;
     }
     setSavingUserId(selectedSeller.userId);
@@ -96,7 +111,7 @@ export default function AdminSellersPage() {
       action: async () => {
         return rejectAdminSeller(selectedSeller.userId, reason.trim() || undefined);
       },
-      successMessage: "Từ chối người bán thành công.",
+      successMessage: "Seller rejected successfully.",
       onSuccess: async () => {
         setSelectedSeller(null);
         setReason("");
@@ -144,7 +159,7 @@ export default function AdminSellersPage() {
               }`}
               data-testid={`seller-status-tab-${item}`}
             >
-              {item}
+              {formatApprovalStatus(item)}
             </button>
           ))}
         </div>
@@ -187,7 +202,7 @@ export default function AdminSellersPage() {
                   </div>
                   <div>
                     <span className="inline-flex rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                      {seller.sellerApprovalStatus}
+                      {formatApprovalStatus(seller.sellerApprovalStatus)}
                     </span>
                     {seller.sellerRejectionReason ? (
                       <p className="mt-2 text-xs text-[var(--muted)]">{seller.sellerRejectionReason}</p>
@@ -216,7 +231,7 @@ export default function AdminSellersPage() {
                       className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid={`approve-seller-${seller.userId}`}
                     >
-                      {savingUserId === seller.userId && isRunning ? "Đang xác nhận..." : "Approve"}
+                      {savingUserId === seller.userId && isRunning ? "Approving..." : "Approve"}
                     </button>
                     <button
                       type="button"
@@ -256,7 +271,7 @@ export default function AdminSellersPage() {
                 Cancel
               </button>
               <button type="button" onClick={() => void reject()} disabled={isRunning} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" data-testid="confirm-reject-seller">
-                {isRunning ? "Đang từ chối..." : "Reject seller"}
+                {isRunning ? "Rejecting..." : "Reject seller"}
               </button>
             </div>
           </div>

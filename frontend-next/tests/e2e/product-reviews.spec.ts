@@ -454,7 +454,7 @@ test("verified product reviews flow works across customer, public, seller, and a
   await expect(adminPage.getByTestId("admin-review-status").first()).toContainText("HIDDEN");
 
   await page.goto(`/products/${product.id}`);
-  await expect(page.getByTestId("public-product-reviews-empty")).toBeVisible();
+  await expect(page.getByTestId("public-product-reviews-empty").first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText("Excellent quality and fast delivery.");
 
   await adminPage.getByTestId("admin-review-restore").first().click();

@@ -255,5 +255,4 @@ test("admin fulfillment page is supervision-only while seller keeps status owner
   await expect(adminPage.getByRole("button", { name: "Remind seller" })).toHaveCount(0);
   await expect(adminPage.getByTestId("admin-delivery-detail").getByRole("button", { name: /archive/i })).toHaveCount(0);
 
-  await adminPage.close();
 });

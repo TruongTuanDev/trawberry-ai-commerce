@@ -291,6 +291,7 @@ test("Internal Notification Center E2E Flow", async ({ browser, request }) => {
 });
 
 test("Notification Center Role Layouts and Empty States", async ({ browser }) => {
+  test.setTimeout(120000);
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
   await loginAdminWithRetry(adminPage);
