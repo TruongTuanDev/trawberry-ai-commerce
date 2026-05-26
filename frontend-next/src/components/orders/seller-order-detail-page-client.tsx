@@ -9,6 +9,7 @@ import { labelForReturnStatus, labelForReturnType } from "@/components/returns/r
 import { SectionCard } from "@/components/seller/section-card";
 import { useI18n } from "@/i18n/use-i18n";
 import {
+  DEFAULT_SHIPPING_LABEL_SIZE,
   calculateDeliveryOffers,
   acceptDeliveryShipment,
   addDeliveryComment,
@@ -27,6 +28,9 @@ import {
   markManualDeliveryPickedUp,
   refreshDeliveryShipment,
   rejectPayment,
+  normalizeShippingLabelSize,
+  SHIPPING_LABEL_SIZE_OPTIONS,
+  SHIPPING_LABEL_SIZE_STORAGE_KEY,
   updateShopOrderStatus,
   updateManualDelivery,
   type DeliveryDetail,
@@ -34,6 +38,7 @@ import {
   type DeliveryProviderName,
   type DeliveryExceptionReasonCode,
   type SellerOrderListItem,
+  type ShippingLabelSize,
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
@@ -124,6 +129,15 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const [exceptionReasonText, setExceptionReasonText] = useState("");
   const [exceptionCustomerMessage, setExceptionCustomerMessage] = useState("");
   const [internalComment, setInternalComment] = useState("");
+  const [shippingLabelSize, setShippingLabelSize] = useState<ShippingLabelSize>(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_SHIPPING_LABEL_SIZE;
+    }
+
+    return normalizeShippingLabelSize(
+      window.localStorage.getItem(SHIPPING_LABEL_SIZE_STORAGE_KEY),
+    );
+  });
   const isPayOnDeliverySellerQr =
     order?.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR";
 
@@ -839,11 +853,19 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       : order.paymentMethodLabel ?? paymentMethodCode ?? t("common.notProvided");
 
   const openShippingLabel = (mode: "preview" | "print") => {
-    const url =
-      mode === "print"
-        ? `/seller/orders/${orderId}/shipping-label?print=1`
-        : `/seller/orders/${orderId}/shipping-label`;
+    const params = new URLSearchParams();
+    params.set("size", shippingLabelSize);
+    if (mode === "print") {
+      params.set("print", "1");
+    }
+    const url = `/seller/orders/${orderId}/shipping-label?${params.toString()}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+  const handleShippingLabelSizeChange = (nextSize: ShippingLabelSize) => {
+    setShippingLabelSize(nextSize);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SHIPPING_LABEL_SIZE_STORAGE_KEY, nextSize);
+    }
   };
   const openMaps = (lat: number | null, lng: number | null) => {
     if (lat === null || lng === null) return;
@@ -1282,6 +1304,25 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+                    <span>{t("seller.shippingLabel.labelSize")}</span>
+                    <select
+                      value={shippingLabelSize}
+                      onChange={(event) =>
+                        handleShippingLabelSizeChange(
+                          normalizeShippingLabelSize(event.target.value),
+                        )
+                      }
+                      className="bg-transparent text-sm outline-none"
+                      data-testid="seller-shipping-label-size-select"
+                    >
+                      {SHIPPING_LABEL_SIZE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {t(`seller.shippingLabel.sizes.${option}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <button
                     type="button"
                     onClick={() => openShippingLabel("print")}

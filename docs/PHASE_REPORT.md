@@ -3052,3 +3052,21 @@ Known gaps:
 
 - seller order detail and several older admin operations screens still contain legacy hard-coded copy and need a dedicated i18n migration phase
 - this cleanup focused on code-quality and responsive fixes only; it did not expand seller/admin dictionary coverage beyond the audited priority screens
+
+# Phase Report: Shipping Label Print Layout And Size Selector
+
+Implemented:
+
+- added seller-facing shipping label size selection with `75x120`, `100x150`, and `a6` options on both seller order detail and the printable label page
+- persisted the seller's preferred label size in localStorage and propagated it through `/seller/orders/[id]/shipping-label?size=...`
+- rebuilt the internal manual/Yandex-compatible shipping label into a compact single-label container with size-aware print CSS and a single `@page` target per selection
+- kept required sender, recipient, address/access, manual Yandex/claim, marketplace order code, payment/package, and QR data visible without introducing any Yandex business-logic changes
+- expanded the dedicated shipping-label Playwright regression to cover size selector defaults, query propagation, DOM uniqueness, and size-aware preview state
+
+Verification:
+
+- pending current phase verification run
+
+Known gaps:
+
+- browser print-preview page-count validation still requires the manual Chrome check described in the task because Playwright cannot assert native print preview pagination

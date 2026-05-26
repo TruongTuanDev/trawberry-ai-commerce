@@ -1,30 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedShell } from "@/components/auth/protected-shell";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { ShippingLabelPrintView } from "@/components/orders/shipping-label-print-view";
 import {
+  DEFAULT_SHIPPING_LABEL_SIZE,
   getDeliverySettings,
   getOrderDelivery,
   getSellerOrderById,
+  normalizeShippingLabelSize,
+  SHIPPING_LABEL_SIZE_OPTIONS,
+  SHIPPING_LABEL_SIZE_STORAGE_KEY,
   type DeliveryDetail,
   type DeliverySettings,
   type SellerOrderListItem,
+  type ShippingLabelSize,
 } from "@/lib/seller-api";
 import { useI18n } from "@/i18n/use-i18n";
 
 type SellerShippingLabelPageClientProps = {
   orderId: string;
   autoPrint?: boolean;
+  initialSize?: ShippingLabelSize;
 };
 
 export function SellerShippingLabelPageClient({
   orderId,
   autoPrint = false,
+  initialSize = DEFAULT_SHIPPING_LABEL_SIZE,
 }: SellerShippingLabelPageClientProps) {
   const { t } = useI18n("seller");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [order, setOrder] = useState<SellerOrderListItem | null>(null);
   const [delivery, setDelivery] = useState<DeliveryDetail | null>(null);
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings | null>(
@@ -32,6 +43,34 @@ export function SellerShippingLabelPageClient({
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const labelSize = useMemo(() => {
+    const sizeFromQuery = searchParams.get("size");
+    if (sizeFromQuery) {
+      return normalizeShippingLabelSize(sizeFromQuery);
+    }
+
+    if (typeof window !== "undefined") {
+      return normalizeShippingLabelSize(
+        window.localStorage.getItem(SHIPPING_LABEL_SIZE_STORAGE_KEY),
+      );
+    }
+
+    return initialSize;
+  }, [initialSize, searchParams]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(SHIPPING_LABEL_SIZE_STORAGE_KEY, labelSize);
+
+    if (searchParams.get("size") !== labelSize) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("size", labelSize);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [labelSize, pathname, router, searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -96,6 +135,16 @@ export function SellerShippingLabelPageClient({
     )}`;
   }, [order]);
 
+  const handleLabelSizeChange = (nextSize: ShippingLabelSize) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SHIPPING_LABEL_SIZE_STORAGE_KEY, nextSize);
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("size", nextSize);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   return (
     <ProtectedShell
       role="seller"
@@ -120,9 +169,32 @@ export function SellerShippingLabelPageClient({
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <LanguageSwitcher role="seller" compact />
+                <label
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                  data-print-toolbar="true"
+                >
+                  <span>{t("seller.shippingLabel.labelSize")}</span>
+                  <select
+                    value={labelSize}
+                    onChange={(event) =>
+                      handleLabelSizeChange(
+                        normalizeShippingLabelSize(event.target.value),
+                      )
+                    }
+                    className="bg-transparent text-sm outline-none"
+                    data-testid="shipping-label-size-select"
+                  >
+                    {SHIPPING_LABEL_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {t(`seller.shippingLabel.sizes.${option}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <Link
                   href={`/seller/orders/${orderId}`}
                   className="inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
+                  data-print-toolbar="true"
                 >
                   {t("seller.shippingLabel.backToOrder")}
                 </Link>
@@ -131,6 +203,7 @@ export function SellerShippingLabelPageClient({
                   onClick={() => window.print()}
                   className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
                   data-testid="shipping-label-print-button"
+                  data-print-toolbar="true"
                 >
                   {t("seller.shippingLabel.print")}
                 </button>
@@ -155,6 +228,7 @@ export function SellerShippingLabelPageClient({
                 delivery={delivery}
                 deliverySettings={deliverySettings}
                 trackingLookupUrl={trackingLookupUrl}
+                size={labelSize}
               />
             ) : null}
           </div>

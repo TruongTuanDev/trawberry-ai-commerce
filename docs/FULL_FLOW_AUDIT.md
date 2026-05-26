@@ -753,3 +753,10 @@ Future audit item: design an optional marketplace parent order for combined rece
 - runtime route checks for `/products`, `/shops/demo-shop`, `/customer/messages`, `/seller/messages`, `/admin/messages`, and `/seller/orders` returned healthy HTML from the rebuilt runtime
 - focused marketplace UX regressions for reviews, messaging, public shops, shipping label, action feedback, notifications, and role-based locale behavior are now passing against the current runtime
 - seller order detail now live-switches correctly in `ru/en/vi`, and its business E2E contracts use raw status attributes instead of translated labels
+
+# Shipping Label Print Audit Addendum
+
+- printable seller shipping labels now expose size-aware routes via `/seller/orders/[id]/shipping-label?size=75x120|100x150|a6`
+- seller order detail and the label page both keep the same selected size, with client-side persistence only; no fulfillment or Yandex business logic changed
+- the print DOM is constrained to a single internal marketplace label container, and the label keeps sender, recipient, address/access, manual Yandex reference, order code, and QR data visible in the supported sizes
+- the label continues to state that it is not an official Yandex label

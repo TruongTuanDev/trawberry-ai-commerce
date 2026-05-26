@@ -1,10 +1,12 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type {
   DeliveryDetail,
   DeliverySettings,
   SellerOrderListItem,
+  ShippingLabelSize,
 } from "@/lib/seller-api";
 import { useI18n } from "@/i18n/use-i18n";
 
@@ -13,6 +15,50 @@ type ShippingLabelPrintViewProps = {
   delivery: DeliveryDetail | null;
   deliverySettings: DeliverySettings | null;
   trackingLookupUrl: string | null;
+  size: ShippingLabelSize;
+};
+
+type ShippingLabelSizeMeta = {
+  widthMm: number;
+  heightMm: number;
+  paddingMm: number;
+  fontSizePx: number;
+  qrSizePx: number;
+  compact: boolean;
+  showExtendedFooter: boolean;
+};
+
+export const SHIPPING_LABEL_SIZE_META: Record<
+  ShippingLabelSize,
+  ShippingLabelSizeMeta
+> = {
+  "75x120": {
+    widthMm: 75,
+    heightMm: 120,
+    paddingMm: 4,
+    fontSizePx: 10,
+    qrSizePx: 86,
+    compact: true,
+    showExtendedFooter: false,
+  },
+  "100x150": {
+    widthMm: 100,
+    heightMm: 150,
+    paddingMm: 5,
+    fontSizePx: 11,
+    qrSizePx: 106,
+    compact: false,
+    showExtendedFooter: true,
+  },
+  a6: {
+    widthMm: 105,
+    heightMm: 148,
+    paddingMm: 5,
+    fontSizePx: 11,
+    qrSizePx: 106,
+    compact: false,
+    showExtendedFooter: true,
+  },
 };
 
 function formatOptionalLine(label: string, value: string | null | undefined) {
@@ -37,11 +83,13 @@ export function ShippingLabelPrintView({
   delivery,
   deliverySettings,
   trackingLookupUrl,
+  size,
 }: ShippingLabelPrintViewProps) {
   const { t } = useI18n("seller");
   const activeShipment = delivery?.activeShipment;
-  const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const meta = SHIPPING_LABEL_SIZE_META[size];
   const fallbackValue = t("common.notProvided");
+  const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const paymentMethodLabel =
     order.paymentMethodLabel ?? order.paymentMethod ?? t("common.unknown");
   const providerLabel =
@@ -52,225 +100,430 @@ export function ShippingLabelPrintView({
   const codSellerQr =
     order.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR" ||
     order.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
-  const addressLines = [
-    order.dropoffAddressFullName ?? order.shippingAddress,
-    order.dropoffCity,
-    formatOptionalLine(t("seller.shippingLabel.fields.street"), order.dropoffStreet),
-    formatOptionalLine(
-      t("seller.shippingLabel.fields.building"),
-      order.dropoffBuilding,
-    ),
-    order.dropoffNoEntrance
-      ? `${t("seller.shippingLabel.fields.entrance")}: ${t("seller.shippingLabel.noEntrance")}`
-      : formatOptionalLine(
-          t("seller.shippingLabel.fields.entrance"),
-          order.dropoffEntrance,
-        ),
-    formatOptionalLine(
-      t("seller.shippingLabel.fields.intercom"),
-      order.dropoffIntercom,
-    ),
-    order.dropoffNoFloor
-      ? `${t("seller.shippingLabel.fields.floor")}: ${t("seller.shippingLabel.noFloor")}`
-      : formatOptionalLine(t("seller.shippingLabel.fields.floor"), order.dropoffFloor),
-    order.dropoffNoApartment
-      ? `${t("seller.shippingLabel.fields.apartment")}: ${t("seller.shippingLabel.noApartment")}`
-      : formatOptionalLine(
-          t("seller.shippingLabel.fields.apartment"),
-          order.dropoffApartment,
-        ),
-  ].filter(Boolean);
+  const yandexReference =
+    activeShipment?.manualYandexOrderId ??
+    activeShipment?.providerOrderNumber ??
+    fallbackValue;
   const pickupCoords =
     deliverySettings?.pickupLatitude && deliverySettings?.pickupLongitude
       ? `${deliverySettings.pickupLatitude}, ${deliverySettings.pickupLongitude}`
       : null;
+  const recipientAddress = [
+    activeShipment?.dropoffAddressFullName ??
+      order.dropoffAddressFullName ??
+      order.shippingAddress,
+    order.dropoffCity ?? activeShipment?.dropoffCity,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const recipientAddressExtra = [
+    formatOptionalLine(
+      t("seller.shippingLabel.fields.street"),
+      order.dropoffStreet ?? activeShipment?.dropoffStreet,
+    ),
+    formatOptionalLine(
+      t("seller.shippingLabel.fields.building"),
+      order.dropoffBuilding ?? activeShipment?.dropoffBuilding,
+    ),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const recipientAccess = [
+    order.dropoffNoEntrance
+      ? `${t("seller.shippingLabel.fields.entrance")}: ${t("seller.shippingLabel.noEntrance")}`
+      : formatOptionalLine(
+          t("seller.shippingLabel.fields.entrance"),
+          order.dropoffEntrance ?? activeShipment?.dropoffEntrance,
+        ),
+    formatOptionalLine(
+      t("seller.shippingLabel.fields.intercom"),
+      order.dropoffIntercom ?? activeShipment?.dropoffIntercom,
+    ),
+    order.dropoffNoFloor
+      ? `${t("seller.shippingLabel.fields.floor")}: ${t("seller.shippingLabel.noFloor")}`
+      : formatOptionalLine(
+          t("seller.shippingLabel.fields.floor"),
+          order.dropoffFloor ?? activeShipment?.dropoffFloor,
+        ),
+    order.dropoffNoApartment
+      ? `${t("seller.shippingLabel.fields.apartment")}: ${t("seller.shippingLabel.noApartment")}`
+      : formatOptionalLine(
+          t("seller.shippingLabel.fields.apartment"),
+          order.dropoffApartment ?? activeShipment?.dropoffApartment,
+        ),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const senderName = order.shopName;
+  const senderContact = deliverySettings?.pickupContactName || null;
+  const senderPhone = deliverySettings?.pickupContactPhone || null;
+  const pickupAddress =
+    deliverySettings?.pickupAddress ?? activeShipment?.pickupAddress ?? fallbackValue;
+  const courierNote = order.dropoffComment ?? activeShipment?.customerVisibleMessage;
+  const internalNote =
+    activeShipment?.deliveryNote ?? activeShipment?.lastSellerNote ?? order.customerNote;
+  const packageDetails = [
+    `${t("seller.shippingLabel.itemsCount")}: ${order.items.length}`,
+    `${t("seller.shippingLabel.totalQuantity")}: ${totalQuantity}`,
+    activeShipment?.packageWeightGram
+      ? `${t("seller.shippingLabel.weight")}: ${activeShipment.packageWeightGram} g`
+      : null,
+    activeShipment?.packageLengthCm &&
+    activeShipment?.packageWidthCm &&
+    activeShipment?.packageHeightCm
+      ? `${t("seller.shippingLabel.dimensions")}: ${activeShipment.packageLengthCm} x ${activeShipment.packageWidthCm} x ${activeShipment.packageHeightCm} cm`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const productSummary = order.items
+    .slice(0, meta.compact ? 2 : 3)
+    .map((item) => `${item.productTitleSnapshot} x ${item.quantity}`)
+    .join(" • ");
+  const qrValue =
+    trackingLookupUrl ??
+    activeShipment?.trackingNumber ??
+    activeShipment?.manualYandexOrderId ??
+    order.orderNumber;
+  const labelStyle = {
+    "--label-width": `${meta.widthMm}mm`,
+    "--label-height": `${meta.heightMm}mm`,
+    "--label-padding": `${meta.paddingMm}mm`,
+    "--label-font-size": `${meta.fontSizePx}px`,
+    "--page-size": `${meta.widthMm}mm ${meta.heightMm}mm`,
+    "--qr-size": `${meta.qrSizePx}px`,
+  } as CSSProperties;
 
   return (
     <>
       <div
-        className="shipping-label-sheet mx-auto w-full max-w-[420px] rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_24px_56px_rgba(15,23,42,0.12)] sm:p-6"
+        className="shipping-label-sheet"
         data-testid="shipping-label-print-view"
+        data-label-size={size}
+        style={labelStyle}
       >
-        <article className="shipping-label-card mx-auto flex h-[150mm] w-[100mm] flex-col overflow-hidden border border-slate-300 bg-white text-slate-900">
-          <div className="flex items-start justify-between gap-3 border-b border-slate-300 px-[5mm] py-[5mm]">
-            <div className="min-w-0">
-              <p className="text-[2.5mm] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                trawberry
-              </p>
-              <h1 className="mt-[1.5mm] text-[5.2mm] font-bold leading-none">
-                {t("seller.shippingLabel.title")}
-              </h1>
-              <p className="mt-[2mm] text-[3.2mm] font-semibold">
+        <article className={`shipping-label-card ${meta.compact ? "is-compact" : ""}`}>
+          <header className="label-header">
+            <div className="label-brand-block">
+              <p className="label-brand">trawberry</p>
+              <h1 className="label-title">{t("seller.shippingLabel.title")}</h1>
+              <p className="label-order-line">
                 {t("seller.shippingLabel.orderCode")}:{" "}
                 <span data-testid="shipping-label-order-code">{order.orderNumber}</span>
               </p>
             </div>
-            <div className="flex shrink-0 flex-col items-center gap-[1.5mm]">
-              {trackingLookupUrl ? (
-                <>
-                  <QRCodeSVG
-                    value={trackingLookupUrl}
-                    size={112}
-                    includeMargin={false}
-                    data-testid="shipping-label-qr"
-                  />
-                  <span className="text-center text-[2.4mm] text-slate-600">
-                    {t("seller.shippingLabel.scanToTrack")}
-                  </span>
-                </>
-              ) : (
-                <div className="flex h-[28mm] w-[28mm] items-center justify-center rounded-lg border border-dashed border-slate-300 px-[2mm] text-center text-[2.3mm] text-slate-500">
-                  {t("seller.shippingLabel.qrUnavailable")}
-                </div>
-              )}
+            <div className="label-qr-block">
+              <QRCodeSVG
+                value={qrValue}
+                size={meta.qrSizePx}
+                includeMargin={false}
+                data-testid="shipping-label-qr"
+              />
+              <span className="label-qr-caption">{t("seller.shippingLabel.scanToTrack")}</span>
             </div>
-          </div>
+          </header>
 
-          <div className="grid flex-1 grid-rows-[auto_auto_auto_auto_1fr_auto] gap-[2.5mm] px-[5mm] py-[4.5mm]">
-            <section className="rounded-[3mm] border border-slate-200 px-[3.2mm] py-[2.6mm]">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[2.5mm] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  {t("seller.shippingLabel.delivery")}
-                </p>
-                <span className="rounded-full bg-slate-100 px-[2mm] py-[1mm] text-[2.3mm] font-semibold text-slate-700">
-                  {providerLabel}
+          <section className="label-section label-meta-grid">
+            <div>
+              <p className="label-kicker">{t("seller.shippingLabel.delivery")}</p>
+              <p className="label-emphasis">{providerLabel}</p>
+            </div>
+            <div>
+              <p className="label-kicker">{t("seller.shippingLabel.yandexId")}</p>
+              <p className="label-emphasis" data-testid="shipping-label-yandex-id">
+                {yandexReference}
+              </p>
+            </div>
+            <div>
+              <p className="label-kicker">{t("seller.shippingLabel.claimId")}</p>
+              <p className="label-value">{activeShipment?.yandexClaimId ?? fallbackValue}</p>
+            </div>
+            <div>
+              <p className="label-kicker">{t("seller.shippingLabel.trackingCode")}</p>
+              <p className="label-value">{activeShipment?.trackingNumber ?? order.orderNumber}</p>
+            </div>
+          </section>
+
+          <section className="label-section">
+            <p className="label-kicker">{t("seller.shippingLabel.recipient")}</p>
+            <p
+              className="label-emphasis label-name"
+              data-testid="shipping-label-recipient-name"
+            >
+              {activeShipment?.recipientName ?? order.customer.name}
+            </p>
+            <p className="label-value" data-testid="shipping-label-recipient-phone">
+              {activeShipment?.recipientPhone ?? order.customer.phone}
+            </p>
+            <p className="label-value">{recipientAddress}</p>
+            {recipientAddressExtra ? (
+              <p className="label-muted label-clamp-2">{recipientAddressExtra}</p>
+            ) : null}
+            {recipientAccess ? (
+              <p className="label-muted label-clamp-2">{recipientAccess}</p>
+            ) : null}
+            {courierNote ? (
+              <p className="label-muted label-clamp-2">
+                {t("seller.shippingLabel.courierInstructions")}: {courierNote}
+              </p>
+            ) : null}
+          </section>
+
+          <section className="label-section">
+            <p className="label-kicker">{t("seller.shippingLabel.sender")}</p>
+            <p className="label-emphasis label-name" data-testid="shipping-label-sender-name">
+              {senderName}
+            </p>
+            {senderContact ? <p className="label-value">{senderContact}</p> : null}
+            {senderPhone ? <p className="label-value">{senderPhone}</p> : null}
+            <p className="label-value" data-testid="shipping-label-pickup-address">
+              {pickupAddress}
+            </p>
+            {pickupCoords ? <p className="label-muted">{pickupCoords}</p> : null}
+          </section>
+
+          <section className="label-section label-two-column">
+            <div>
+              <p className="label-kicker">{t("seller.shippingLabel.payment")}</p>
+              <p className="label-value">
+                {t("seller.shippingLabel.paymentMethod")}: {paymentMethodLabel}
+              </p>
+              <p className="label-value">
+                {t("seller.shippingLabel.paymentStatus")}:{" "}
+                <span
+                  data-testid="shipping-label-payment-status"
+                  data-status={order.paymentStatus}
+                >
+                  {order.paymentStatus}
                 </span>
-              </div>
-              <div className="mt-[1.6mm] space-y-[0.7mm] text-[2.9mm]">
-                {activeShipment?.manualYandexOrderId ? (
-                  <p data-testid="shipping-label-yandex-id">
-                    {t("seller.shippingLabel.yandexId")}:{" "}
-                    <span className="font-semibold">{activeShipment.manualYandexOrderId}</span>
-                  </p>
-                ) : null}
-                {activeShipment?.trackingUrl || order.delivery?.trackingUrl ? (
-                  <p className="break-all text-[2.5mm] text-slate-600">
-                    {activeShipment?.trackingUrl ?? order.delivery?.trackingUrl}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="grid gap-[2mm] rounded-[3mm] border border-slate-200 px-[3.2mm] py-[2.6mm]">
-              <p className="text-[2.5mm] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {t("seller.shippingLabel.recipient")}
               </p>
-              <div className="space-y-[0.8mm] text-[2.9mm] leading-[1.35]">
-                <p className="text-[3.5mm] font-bold" data-testid="shipping-label-recipient-name">
-                  {order.customer.name}
-                </p>
-                <p data-testid="shipping-label-recipient-phone">{order.customer.phone}</p>
-                {addressLines.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-                {order.dropoffComment ? (
-                  <p>
-                    {t("seller.shippingLabel.courierInstructions")}: {order.dropoffComment}
-                  </p>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="grid gap-[2mm] rounded-[3mm] border border-slate-200 px-[3.2mm] py-[2.6mm]">
-              <p className="text-[2.5mm] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {t("seller.shippingLabel.sender")}
+              <p className="label-muted">
+                {codSellerQr
+                  ? t("seller.shippingLabel.codSellerQrNotice")
+                  : isPaymentConfirmed(order.paymentStatus)
+                    ? t("seller.shippingLabel.paymentConfirmedNotice")
+                    : t("seller.shippingLabel.paymentPendingNotice")}
               </p>
-              <div className="space-y-[0.8mm] text-[2.9mm] leading-[1.35]">
-                <p className="text-[3.5mm] font-bold" data-testid="shipping-label-sender-name">
-                  {order.shopName}
+            </div>
+            <div>
+              <p className="label-kicker">{t("seller.shippingLabel.package")}</p>
+              <p className="label-value label-clamp-2">{packageDetails}</p>
+              {productSummary ? (
+                <p className="label-muted label-clamp-2">{productSummary}</p>
+              ) : null}
+              {internalNote && !meta.compact ? (
+                <p className="label-muted label-clamp-2">
+                  {t("seller.shippingLabel.internalNote")}: {internalNote}
                 </p>
-                {deliverySettings?.pickupContactPhone ? (
-                  <p>{deliverySettings.pickupContactPhone}</p>
-                ) : null}
-                <p data-testid="shipping-label-pickup-address">
-                  {deliverySettings?.pickupAddress ?? activeShipment?.pickupAddress ?? fallbackValue}
-                </p>
-                {pickupCoords ? (
-                  <p className="text-[2.4mm] text-slate-600">
-                    {t("seller.shippingLabel.pickupCoordinates")}: {pickupCoords}
-                  </p>
-                ) : null}
-              </div>
-            </section>
+              ) : null}
+            </div>
+          </section>
 
-            <section className="grid gap-[2mm] rounded-[3mm] border border-slate-200 px-[3.2mm] py-[2.6mm]">
-              <p className="text-[2.5mm] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {t("seller.shippingLabel.package")}
-              </p>
-              <div className="space-y-[1mm] text-[2.8mm] leading-[1.35]">
-                <p>
-                  {t("seller.shippingLabel.itemsCount")}: {order.items.length}
-                </p>
-                <p>
-                  {t("seller.shippingLabel.totalQuantity")}: {totalQuantity}
-                </p>
-                {activeShipment?.packageWeightGram ? (
-                  <p>
-                    {t("seller.shippingLabel.weight")}: {activeShipment.packageWeightGram} g
-                  </p>
-                ) : null}
-                {activeShipment?.packageLengthCm &&
-                activeShipment?.packageWidthCm &&
-                activeShipment?.packageHeightCm ? (
-                  <p>
-                    {t("seller.shippingLabel.dimensions")}: {activeShipment.packageLengthCm} x{" "}
-                    {activeShipment.packageWidthCm} x {activeShipment.packageHeightCm} cm
-                  </p>
-                ) : null}
-                <div className="space-y-[0.6mm]">
-                  {order.items.slice(0, 4).map((item) => (
-                    <p key={item.id} className="truncate">
-                      * {item.productTitleSnapshot} x {item.quantity}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="grid gap-[2mm] rounded-[3mm] border border-slate-200 px-[3.2mm] py-[2.6mm]">
-              <p className="text-[2.5mm] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {t("seller.shippingLabel.payment")}
-              </p>
-              <div className="space-y-[0.8mm] text-[2.8mm] leading-[1.35]">
-                <p>
-                  {t("seller.shippingLabel.paymentMethod")}: {paymentMethodLabel}
-                </p>
-                <p>
-                  {t("seller.shippingLabel.paymentStatus")}:{" "}
-                  <span data-testid="shipping-label-payment-status" data-status={order.paymentStatus}>
-                    {order.paymentStatus}
-                  </span>
-                </p>
-                <p className="text-[2.5mm] text-slate-700">
-                  {codSellerQr
-                    ? t("seller.shippingLabel.codSellerQrNotice")
-                    : isPaymentConfirmed(order.paymentStatus)
-                      ? t("seller.shippingLabel.paymentConfirmedNotice")
-                      : t("seller.shippingLabel.paymentPendingNotice")}
-                </p>
-              </div>
-            </section>
-
-            <footer className="border-t border-dashed border-slate-300 pt-[2.2mm] text-[2.25mm] leading-[1.35] text-slate-500">
-              <p>
-                {t("seller.shippingLabel.printedAt")}: {printedAt}
-              </p>
-              <p>{t("seller.shippingLabel.internalNotice")}</p>
+          <footer className="label-footer">
+            <p>
+              {t("seller.shippingLabel.printedAt")}: {printedAt}
+            </p>
+            <p>{t("seller.shippingLabel.internalNotice")}</p>
+            {meta.showExtendedFooter ? (
               <p>{t("seller.shippingLabel.notOfficialYandex")}</p>
-            </footer>
-          </div>
+            ) : null}
+          </footer>
         </article>
       </div>
 
       <style jsx global>{`
         @page {
-          size: 100mm 150mm;
+          size: ${meta.widthMm}mm ${meta.heightMm}mm;
           margin: 0;
+        }
+
+        .shipping-label-sheet {
+          width: calc(var(--label-width) + 20px);
+          max-width: 100%;
+          margin: 0 auto;
+          padding: 10px;
+          border-radius: 24px;
+          background: #f8fafc;
+          box-sizing: border-box;
+        }
+
+        .shipping-label-card {
+          width: var(--label-width);
+          height: var(--label-height);
+          box-sizing: border-box;
+          overflow: hidden;
+          border: 1px solid #0f172a;
+          background: #fff;
+          color: #0f172a;
+          padding: var(--label-padding);
+          font-size: var(--label-font-size);
+          line-height: 1.25;
+          display: grid;
+          grid-template-rows: auto auto auto auto auto;
+          gap: 2.2mm;
+          break-inside: avoid;
+          page-break-inside: avoid;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .label-header,
+        .label-section,
+        .label-footer {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .label-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 3mm;
+          align-items: start;
+          padding-bottom: 2.2mm;
+          border-bottom: 1px solid #cbd5e1;
+        }
+
+        .label-brand {
+          margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 0.18em;
+          font-size: 0.72em;
+          font-weight: 700;
+          color: #64748b;
+        }
+
+        .label-title,
+        .label-order-line,
+        .label-kicker,
+        .label-emphasis,
+        .label-value,
+        .label-muted,
+        .label-footer p,
+        .label-qr-caption {
+          margin: 0;
+        }
+
+        .label-title {
+          margin-top: 1.2mm;
+          font-size: 1.55em;
+          line-height: 1;
+        }
+
+        .label-order-line {
+          margin-top: 1.8mm;
+          font-size: 0.98em;
+          font-weight: 700;
+        }
+
+        .label-qr-block {
+          display: grid;
+          gap: 1mm;
+          justify-items: center;
+          text-align: center;
+        }
+
+        .label-qr-block svg {
+          display: block;
+          width: var(--qr-size);
+          height: var(--qr-size);
+        }
+
+        .label-qr-caption {
+          font-size: 0.72em;
+          color: #64748b;
+        }
+
+        .label-section {
+          border: 1px solid #cbd5e1;
+          border-radius: 3mm;
+          padding: 2.1mm 2.4mm;
+          overflow: hidden;
+        }
+
+        .label-meta-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 1.6mm 2.2mm;
+        }
+
+        .label-two-column {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 2.2mm;
+        }
+
+        .label-kicker {
+          text-transform: uppercase;
+          letter-spacing: 0.14em;
+          font-size: 0.72em;
+          font-weight: 700;
+          color: #64748b;
+          margin-bottom: 0.9mm;
+        }
+
+        .label-emphasis {
+          font-weight: 700;
+          font-size: 1em;
+        }
+
+        .label-name {
+          font-size: 1.14em;
+          margin-bottom: 0.6mm;
+        }
+
+        .label-value {
+          color: #0f172a;
+        }
+
+        .label-muted {
+          color: #475569;
+          font-size: 0.88em;
+          margin-top: 0.7mm;
+        }
+
+        .label-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .label-footer {
+          align-self: end;
+          border-top: 1px dashed #cbd5e1;
+          padding-top: 1.8mm;
+          font-size: 0.72em;
+          color: #64748b;
+          display: grid;
+          gap: 0.4mm;
+        }
+
+        .shipping-label-card.is-compact {
+          gap: 1.8mm;
+        }
+
+        .shipping-label-card.is-compact .label-section {
+          padding: 1.8mm 2mm;
+        }
+
+        .shipping-label-card.is-compact .label-title {
+          font-size: 1.38em;
+        }
+
+        .shipping-label-card.is-compact .label-name {
+          font-size: 1.05em;
+        }
+
+        .shipping-label-card.is-compact .label-meta-grid,
+        .shipping-label-card.is-compact .label-two-column {
+          gap: 1.3mm 1.8mm;
         }
 
         @media print {
           html,
           body {
+            margin: 0 !important;
+            padding: 0 !important;
             background: #fff !important;
           }
 
@@ -285,24 +538,28 @@ export function ShippingLabelPrintView({
 
           .shipping-label-sheet {
             position: absolute;
-            left: 0;
-            top: 0;
-            width: 100mm !important;
-            max-width: none !important;
+            inset: 0;
+            width: ${meta.widthMm}mm !important;
+            height: ${meta.heightMm}mm !important;
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
             border-radius: 0 !important;
+            background: transparent !important;
             box-shadow: none !important;
+            overflow: hidden !important;
           }
 
           .shipping-label-card {
-            width: 100mm !important;
-            height: 150mm !important;
-            border: none !important;
+            width: ${meta.widthMm}mm !important;
+            height: ${meta.heightMm}mm !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
           }
 
-          .no-print {
+          .no-print,
+          [data-print-toolbar="true"] {
             display: none !important;
           }
         }

@@ -1498,6 +1498,7 @@
       "pageTitle": "Печатная транспортная наклейка",
       "print": "Печать наклейки",
       "openPrintableLabel": "Открыть версию для печати",
+      "labelSize": "Размер этикетки",
       "backToOrder": "Назад к заказу",
       "orderCode": "Код заказа",
       "delivery": "Доставка",
@@ -1508,9 +1509,12 @@
       "scanToTrack": "Сканируйте для отслеживания",
       "qrUnavailable": "QR для отслеживания недоступен",
       "yandexId": "ID Yandex",
+      "claimId": "ID claim",
+      "trackingCode": "Код отслеживания",
       "courierInstructions": "Инструкции курьеру",
       "printedAt": "Напечатано",
       "internalNotice": "Внутренняя наклейка маркетплейса.",
+      "internalNote": "Внутренняя заметка",
       "notOfficialYandex": "Это не официальная наклейка Yandex.",
       "providerManualYandex": "Ручной Yandex",
       "providerManual": "Ручная доставка",
@@ -1525,6 +1529,11 @@
       "dimensions": "Габариты",
       "pickupCoordinates": "Координаты забора",
       "loadFailed": "Не удалось загрузить транспортную наклейку.",
+      "sizes": {
+        "75x120": "75 × 120 мм",
+        "100x150": "100 × 150 мм",
+        "a6": "A6 105 × 148 мм"
+      },
       "fields": {
         "street": "Улица",
         "building": "Дом",

@@ -1836,6 +1836,19 @@ Current gap:
 
 - seller order detail and several older admin backoffice pages still contain legacy hard-coded copy outside this phase scope
 
+# Shipping Label Print Status
+
+Implemented:
+
+- seller shipping labels now support `75x120`, `100x150`, and `a6` sizing on both the order-detail handoff block and the printable label page
+- current default remains `100x150`, and the selection is carried in the `size` query param plus seller localStorage
+- the print view now uses a compact single-label layout with size-specific print dimensions to reduce overflow and sender-block clipping in Chrome print flows
+- the label remains an internal marketplace label and explicitly does not claim to be an official Yandex label
+
+Current gap:
+
+- native Chrome print-preview pagination still needs the manual runtime spot check for a real order id after deployment/runtime rebuild
+
 # Seller Order Detail i18n Cleanup Status
 
 Implemented:

@@ -122,6 +122,28 @@ export type DeliverySettings = {
   updatedAt: string;
 };
 
+export type ShippingLabelSize = "75x120" | "100x150" | "a6";
+
+export const DEFAULT_SHIPPING_LABEL_SIZE: ShippingLabelSize = "100x150";
+export const SHIPPING_LABEL_SIZE_STORAGE_KEY = "seller-shipping-label-size";
+export const SHIPPING_LABEL_SIZE_OPTIONS: ShippingLabelSize[] = [
+  "75x120",
+  "100x150",
+  "a6",
+];
+
+export function isShippingLabelSize(
+  value: string | null | undefined,
+): value is ShippingLabelSize {
+  return value === "75x120" || value === "100x150" || value === "a6";
+}
+
+export function normalizeShippingLabelSize(
+  value: string | null | undefined,
+): ShippingLabelSize {
+  return isShippingLabelSize(value) ? value : DEFAULT_SHIPPING_LABEL_SIZE;
+}
+
 export type DeliveryOffer = {
   id: string;
   provider: DeliveryProviderName | string;

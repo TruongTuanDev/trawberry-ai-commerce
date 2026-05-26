@@ -1367,6 +1367,7 @@
       "pageTitle": "Printable shipping label",
       "print": "Print label",
       "openPrintableLabel": "Open printable label",
+      "labelSize": "Label size",
       "backToOrder": "Back to order",
       "orderCode": "Order code",
       "delivery": "Delivery",
@@ -1377,9 +1378,12 @@
       "scanToTrack": "Scan to track",
       "qrUnavailable": "Tracking QR unavailable",
       "yandexId": "Yandex ID",
+      "claimId": "Claim ID",
+      "trackingCode": "Tracking code",
       "courierInstructions": "Courier instructions",
       "printedAt": "Printed at",
       "internalNotice": "Internal marketplace label.",
+      "internalNote": "Internal note",
       "notOfficialYandex": "Not an official Yandex label.",
       "providerManualYandex": "Manual Yandex",
       "providerManual": "Manual delivery",
@@ -1394,6 +1398,11 @@
       "dimensions": "Dimensions",
       "pickupCoordinates": "Pickup coordinates",
       "loadFailed": "Unable to load shipping label.",
+      "sizes": {
+        "75x120": "75 × 120 mm",
+        "100x150": "100 × 150 mm",
+        "a6": "A6 105 × 148 mm"
+      },
       "fields": {
         "street": "Street",
         "building": "Building",

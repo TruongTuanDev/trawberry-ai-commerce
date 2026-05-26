@@ -170,3 +170,9 @@ Important rule:
 
 - opening a case does not change payment history or delete prior ledger rows
 - only confirmed refund closes the finance loop
+
+## Internal shipping label note
+
+- seller order detail and `/seller/orders/[id]/shipping-label` now support internal label sizes `75x120`, `100x150`, and `a6`
+- default label size is `100x150`, stored client-side for seller convenience, and passed through the `size` query param
+- the printable label remains an internal marketplace handoff aid for manual/Yandex-compatible delivery and must not be presented as an official Yandex label
