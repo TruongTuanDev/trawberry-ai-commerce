@@ -695,3 +695,12 @@ Future audit item: design an optional marketplace parent order for combined rece
 - customer/public surfaces still do not expose `vi`
 - seller surfaces still expose `ru/en/vi`
 - auth, protected shell, cart, and notification bell flows were left unchanged by the switcher redesign
+
+# Marketplace Final UX & Cleanup Audit Addendum
+
+- dirty worktree cleanup preserved only active-stack marketplace stabilization changes and removed the unrelated deleted workspace artifact from the phase scope
+- seller shipping-label regression root cause was auth compatibility drift on `/login`; seller/admin compatibility login now reapplies the role-specific cookie path before redirecting into protected workspaces
+- customer locale switching audit found duplicate canonical locale-switcher ids across public and account shells; the customer-safe canonical id is now single-instance again
+- seller locale switching audit found the dropdown menu could sit under page action bars on product operations screens; seller shell header stacking now keeps the locale menu above content
+- runtime route checks for `/products`, `/shops/demo-shop`, `/customer/messages`, `/seller/messages`, `/admin/messages`, and `/seller/orders` returned healthy HTML from the rebuilt runtime
+- focused marketplace UX regressions for reviews, messaging, public shops, shipping label, action feedback, notifications, and role-based locale behavior are now passing against the current runtime

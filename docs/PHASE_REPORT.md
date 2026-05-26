@@ -2850,3 +2850,41 @@ Verification:
 - `frontend-next npm run lint`: pass
 - `frontend-next npm run build`: pass
 - targeted locale regression specs rerun for seller and buyer/customer switch flows
+
+# Phase Report: Marketplace Final UX & Dirty Worktree Cleanup
+
+Implemented:
+
+- cleaned the leftover dirty worktree down to active `frontend-next` stabilization files only and restored the unrelated deleted workspace file
+- fixed compatibility `/login` so seller/admin logins establish role-specific auth cookies and protected seller routes survive direct refresh/navigation
+- removed ambiguous duplicate customer locale-switcher test ids across public/auth/account shells without changing locale policy
+- raised seller header stacking so the seller locale dropdown stays clickable above product-page bulk action bars
+- verified shipping label, public shop profile, reviews/photos, messaging, notifications, and action-feedback flows against the current runtime
+- validated the remaining seller i18n cleanup set with dedicated locale regression coverage
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass with pre-existing warnings only
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/product-reviews.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/buyer-seller-messaging.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-shop-profile.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-customer-account.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-remaining-screens.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/notifications.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build backend-nest frontend-next`: pass
+- runtime health checks for backend, frontend, and ai-service: pass
+
+Known gaps:
+
+- frontend lint still reports pre-existing warnings on raw `<img>` usage and one stale unused variable in `buyer-seller-messaging.spec.ts`
+- seller order detail and a few admin/payment flows still contain legacy hard-coded copy outside the cleanup files touched in this phase

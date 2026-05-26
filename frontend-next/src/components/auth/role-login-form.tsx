@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useI18n } from "@/i18n/use-i18n";
+import { getLocalizedErrorMessage } from "@/i18n/error-messages";
 import {
   getAdminMeRequest,
   getAuthErrorMessage,
@@ -27,6 +29,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 type RoleLoginFormProps = {
+  role?: "seller" | "customer" | "admin";
   roleLabel: string;
   badgeLabel: string;
   title: string;
@@ -65,6 +68,7 @@ async function loadRoleUser(
 }
 
 export function RoleLoginForm({
+  role,
   roleLabel,
   badgeLabel,
   title,
@@ -84,8 +88,20 @@ export function RoleLoginForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const { t } = useI18n("seller");
+
+  const dynamicLoginSchema = useMemo(() => {
+    if (role === "seller") {
+      return z.object({
+        identifier: z.string().trim().min(1, t("seller.auth.emailOrPhoneRequired")),
+        password: z.string().min(6, t("seller.auth.passwordLength")),
+      });
+    }
+    return loginSchema;
+  }, [role, t]);
+
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(dynamicLoginSchema),
     defaultValues: {
       identifier: "",
       password: "",
@@ -101,21 +117,32 @@ export function RoleLoginForm({
         ? values.identifier.trim()
         : maybeNormalizePhone(values.identifier);
 
+      let authenticatedRole = submitRole;
+
       if (submitRole) {
         await roleLoginRequest(submitRole, {
           identifier: normalizedIdentifier,
           password: values.password,
         });
       } else {
-        await loginRequest({
+        const response = await loginRequest({
+          identifier: normalizedIdentifier,
+          password: values.password,
+        });
+        authenticatedRole = response.role as StaffRole;
+        await roleLoginRequest(authenticatedRole, {
           identifier: normalizedIdentifier,
           password: values.password,
         });
       }
-      const user = await loadRoleUser(submitRole, expectedRoles);
+      const user = await loadRoleUser(authenticatedRole, expectedRoles);
 
       if (!expectedRoles.includes(user.role as StaffRole)) {
-        throw new Error(`${roleLabel} account is required.`);
+        throw new Error(
+          role === "seller"
+            ? t("seller.auth.sellerAccountRequired")
+            : `${roleLabel} account is required.`,
+        );
       }
 
       setSession({ user });
@@ -126,28 +153,51 @@ export function RoleLoginForm({
           defaultRedirect,
       );
     } catch (error) {
-      setFormError(getAuthErrorMessage(error, "login"));
+      if (role === "seller") {
+        setFormError(getLocalizedErrorMessage({ role: "seller", error }));
+      } else {
+        setFormError(getAuthErrorMessage(error, "login"));
+      }
     } finally {
       setLoading(false);
     }
   });
 
+  const displayBadgeLabel = role === "seller" ? t("seller.auth.badgeLabel") : badgeLabel;
+  const displayTitle = role === "seller" ? t("seller.auth.title") : title;
+  const displayDescription = role === "seller" ? (t("seller.auth.description") || description) : description;
+
+  const displayFooterLinks = useMemo(() => {
+    if (role === "seller" && footerLinks) {
+      return footerLinks.map((link) => {
+        if (link.href === "/seller/register") {
+          return { ...link, label: t("seller.register.createAccount") };
+        }
+        if (link.href === "/customer/login") {
+          return { ...link, label: t("seller.register.customerLogin") };
+        }
+        return link;
+      });
+    }
+    return footerLinks;
+  }, [role, footerLinks, t]);
+
   return (
     <div className="mx-auto w-full max-w-md" data-testid={`${testIdPrefix}-form`}>
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">{badgeLabel}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">{displayBadgeLabel}</p>
       <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-        {title}
+        {displayTitle}
       </h2>
-      {description ? <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{description}</p> : null}
+      {displayDescription ? <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{displayDescription}</p> : null}
       {searchParams.get("registered") === "1" ? (
         <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Tài khoản đã được tạo. Vui lòng đăng nhập.
+          {role === "seller" ? t("seller.auth.registeredNotice") : "Tài khoản đã được tạo. Vui lòng đăng nhập."}
         </div>
       ) : null}
       <form className="mt-8 space-y-5" onSubmit={onSubmit}>
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor={`${testIdPrefix}-email`}>
-            Email or phone
+            {role === "seller" ? t("seller.auth.emailOrPhone") : "Email or phone"}
           </label>
           <input
             id={`${testIdPrefix}-email`}
@@ -155,7 +205,7 @@ export function RoleLoginForm({
             autoComplete="username"
             data-testid={`${testIdPrefix}-email`}
             className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-[var(--accent)]"
-            placeholder="name@example.com or +7XXXXXXXXXX"
+            placeholder={role === "seller" ? t("seller.auth.emailOrPhonePlaceholder") : "name@example.com or +7XXXXXXXXXX"}
             {...form.register("identifier")}
           />
           {form.formState.errors.identifier ? (
@@ -164,7 +214,7 @@ export function RoleLoginForm({
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor={`${testIdPrefix}-password`}>
-            Password
+            {role === "seller" ? t("seller.auth.password") : "Password"}
           </label>
           <input
             id={`${testIdPrefix}-password`}
@@ -189,12 +239,14 @@ export function RoleLoginForm({
           data-testid={`${testIdPrefix}-submit`}
           className="inline-flex w-full items-center justify-center rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading
+            ? (role === "seller" ? t("seller.auth.signingIn") : "Signing in...")
+            : (role === "seller" ? t("seller.auth.signIn") : "Sign in")}
         </button>
       </form>
-      {footerLinks?.length ? (
+      {displayFooterLinks?.length ? (
         <div className="mt-6 flex flex-wrap gap-3 text-sm text-[var(--muted)]">
-          {footerLinks.map((link) => (
+          {displayFooterLinks.map((link) => (
             <Link key={link.href} href={link.href} className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">
               {link.label}
             </Link>
@@ -203,7 +255,7 @@ export function RoleLoginForm({
       ) : null}
       {secondaryLinkHref && secondaryLinkLabel ? (
         <div className="mt-8 flex items-center justify-between text-sm text-[var(--muted)]">
-          <span>Need another account area?</span>
+          <span>{role === "seller" ? t("seller.auth.needAnotherAccount") : "Need another account area?"}</span>
           <Link href={secondaryLinkHref} className="font-semibold text-[var(--foreground)] underline-offset-4 hover:underline">
             {secondaryLinkLabel}
           </Link>

@@ -1737,3 +1737,25 @@ Implemented:
 Current gap:
 
 - admin remains English-only and intentionally does not use the dropdown switcher
+
+# Marketplace Final UX & Cleanup Status
+
+Implemented:
+
+- dirty worktree narrowed back to active marketplace frontend stabilization files only
+- compatibility staff login now re-establishes role-specific cookies, so seller protected routes work after direct refresh and deep linking
+- customer locale switchers no longer expose duplicate canonical test ids across public/auth/account surfaces
+- seller locale dropdown now layers above seller page action bars and remains clickable on product operations screens
+- runtime audit passed for shipping label, public shop profile, review/photos, messaging MVP, notification center, and action feedback flows
+
+Verification:
+
+- backend required verification: pass
+- frontend lint/build: pass
+- targeted marketplace UX/i18n/notification Playwright suite: pass
+- docker runtime and health endpoints: pass
+
+Current gap:
+
+- some older seller/admin screens still contain legacy untranslated copy outside the cleanup scope
+- lint still has pre-existing warnings unrelated to this cleanup phase

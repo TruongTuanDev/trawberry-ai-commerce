@@ -69,43 +69,51 @@ export interface NotificationTypeConfig {
 
 export const TYPE_CONFIGS: Record<string, NotificationTypeConfig> = {
   ORDER_NEW: {
-    label: "Đơn hàng mới",
+    label: "New order",
     icon: ShoppingBag,
   },
   PAYMENT_CONFIRMATION_REQUIRED: {
-    label: "Thanh toán cần xác nhận",
+    label: "Payment confirmation required",
     icon: DollarSign,
   },
   DELIVERY_STATUS_CHANGED: {
-    label: "Cập nhật vận chuyển",
+    label: "Delivery status changed",
     icon: Truck,
   },
   YANDEX_CREATION_REMINDER: {
-    label: "Nhắc nhở tạo đơn Yandex",
+    label: "Yandex creation reminder",
     icon: Truck,
   },
   RETURN_CASE_OPENED: {
-    label: "Khiếu nại trả hàng/hoàn tiền mới",
+    label: "New return/refund case opened",
     icon: MessageSquare,
   },
   RETURN_SELLER_RESPONSE_REQUIRED: {
-    label: "Phản hồi khiếu nại yêu cầu",
+    label: "Return response required",
     icon: MessageSquare,
   },
   RETURN_ADMIN_REVIEW_REQUIRED: {
-    label: "Admin cần can thiệp",
+    label: "Admin intervention required",
     icon: AlertTriangle,
   },
   SELLER_FEE_INVOICE_ISSUED: {
-    label: "Hóa đơn phí nền tảng",
+    label: "Platform fee invoice",
     icon: FileText,
   },
   ORDER_FULFILLMENT_OVERDUE: {
-    label: "Đơn hàng quá hạn",
+    label: "Order fulfillment overdue",
     icon: AlertOctagon,
   },
   SYSTEM: {
-    label: "Thông báo hệ thống",
+    label: "System notification",
     icon: Bell,
+  },
+  MESSAGE_RECEIVED: {
+    label: "New message",
+    icon: MessageSquare,
+  },
+  MESSAGE_REPORTED: {
+    label: "Reported conversation",
+    icon: AlertTriangle,
   },
 };

@@ -1,7 +1,19 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 const frontendBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+
+const enDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/en.json"), "utf-8"),
+);
+const ruDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/ru.json"), "utf-8"),
+);
+const viDict = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/vi.json"), "utf-8"),
+);
 
 async function backendJson<T>(
   request: APIRequestContext,
@@ -136,6 +148,11 @@ async function newSellerPage(browser: Browser): Promise<Page> {
   return page;
 }
 
+async function chooseSellerLocale(page: Page, locale: "ru" | "en" | "vi") {
+  await page.getByTestId("language-switcher-seller").click();
+  await page.getByTestId(`language-option-seller-${locale}`).click();
+}
+
 test("seller operations surface follows RU/VI/EN locale switching", async ({
   browser,
   request,
@@ -154,48 +171,74 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
   await page.waitForURL("**/seller/dashboard");
 
   await page.goto("/seller/products");
+  await chooseSellerLocale(page, "ru");
   await page.getByRole("combobox").first().selectOption(shop.id);
   await expect(page.getByTestId("seller-product-row").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Товары" }).first()).toBeVisible();
-  await expect(page.getByText("Нет в наличии").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: ruDict.sellerShell.products }).first()).toBeVisible();
+  await expect(page.getByText(ruDict.seller.products.statusBadges.outOfStock).first()).toBeVisible();
 
+  await page.getByTestId("language-switcher-seller").click();
   await expect(page.getByTestId("language-option-seller-ru")).toBeVisible();
   await expect(page.getByTestId("language-option-seller-en")).toBeVisible();
   await expect(page.getByTestId("language-option-seller-vi")).toBeVisible();
-
-  await page.getByTestId("action-menu-trigger").first().click();
-  await expect(page.getByRole("menuitem", { name: "Изменить товар" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Сгенерировать AI-фото" })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  await page.getByTestId("language-option-seller-vi").click();
-  await expect(page.getByRole("link", { name: "Sản phẩm" }).first()).toBeVisible();
-  await expect(page.getByText("Hết hàng").first()).toBeVisible();
   await page.getByTestId("action-menu-trigger").first().click();
-  await expect(page.getByRole("menuitem", { name: "Sửa sản phẩm" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Tạo ảnh AI" })).toBeVisible();
+  await expect(page.getByRole("menu").last()).toBeVisible();
+  await expect(page.getByRole("menu").last()).toContainText(
+    ruDict.seller.products.actions.editProduct,
+  );
+  await expect(page.getByRole("menu").last()).toContainText(
+    ruDict.seller.products.actions.generateAiImages,
+  );
+  await page.keyboard.press("Escape");
+
+  await chooseSellerLocale(page, "vi");
+  await expect(page.getByRole("link", { name: viDict.sellerShell.products }).first()).toBeVisible();
+  await expect(page.getByText(viDict.seller.products.statusBadges.outOfStock).first()).toBeVisible();
+  await page.getByTestId("action-menu-trigger").first().click();
+  await expect(page.getByRole("menu").last()).toBeVisible();
+  await expect(page.getByRole("menu").last()).toContainText(
+    viDict.seller.products.actions.editProduct,
+  );
+  await expect(page.getByRole("menu").last()).toContainText(
+    viDict.seller.products.actions.generateAiImages,
+  );
   await page.keyboard.press("Escape");
 
   await page.goto("/seller/orders");
-  await expect(page.getByTestId("seller-order-tab-NEW").first()).toContainText("Mới");
-
-  await page.goto("/seller/payments");
-  await expect(page.getByRole("button", { name: "Tải lại queue" })).toBeVisible();
-
-  await page.goto("/seller/notifications");
-  await expect(page.getByRole("heading", { name: "Việc cần xử lý", exact: true })).toBeVisible();
-  await expect(page.getByTestId("empty-state-title")).toContainText(
-    "Bạn chưa có việc cần xử lý",
+  await expect(page.getByTestId("seller-order-tab-NEW").first()).toContainText(
+    viDict.sellerOrders.new,
   );
 
-  await page.getByTestId("language-option-seller-en").click();
-  await expect(page.getByRole("link", { name: "Products" }).first()).toBeVisible();
-  await page.goto("/seller/orders");
-  await expect(page.getByTestId("seller-order-tab-NEW").first()).toContainText("New");
   await page.goto("/seller/payments");
-  await expect(page.getByRole("button", { name: "Reload queue" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: viDict.seller.payments.reloadQueue }),
+  ).toBeVisible();
+
+  await page.goto("/seller/notifications");
+  await expect(
+    page.getByRole("heading", {
+      name: viDict.seller.notifications.heading,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByTestId("empty-state-title")).toContainText(
+    viDict.seller.notifications.emptyTitle,
+  );
+
+  await chooseSellerLocale(page, "en");
+  await expect(page.getByRole("link", { name: enDict.sellerShell.products }).first()).toBeVisible();
+  await page.goto("/seller/orders");
+  await expect(page.getByTestId("seller-order-tab-NEW").first()).toContainText(
+    enDict.sellerOrders.new,
+  );
+  await page.goto("/seller/payments");
+  await expect(
+    page.getByRole("button", { name: enDict.seller.payments.reloadQueue }),
+  ).toBeVisible();
   await page.goto("/seller/products");
-  await expect(page.getByText("Out of stock").first()).toBeVisible();
+  await expect(page.getByText(enDict.seller.products.statusBadges.outOfStock).first()).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("link", { name: "Products" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: enDict.sellerShell.products }).first()).toBeVisible();
 });

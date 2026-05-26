@@ -15,6 +15,7 @@ type LanguageSwitcherProps = {
   compact?: boolean;
   tone?: "light" | "dark";
   className?: string;
+  testId?: string;
 };
 
 function CheckIcon() {
@@ -56,6 +57,7 @@ export function LanguageSwitcher({
   compact = false,
   tone = "light",
   className = "",
+  testId,
 }: LanguageSwitcherProps) {
   const { locale, setLocale, supportedLocales, t } = useI18n(role);
   const user = useAuthStore((state) =>
@@ -159,7 +161,7 @@ export function LanguageSwitcher({
     <div
       ref={rootRef}
       className={`relative inline-flex ${className}`.trim()}
-      data-testid={`language-switcher-${role}`}
+      data-testid={testId ?? `language-switcher-${role}`}
     >
       <button
         ref={triggerRef}

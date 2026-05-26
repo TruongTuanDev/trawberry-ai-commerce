@@ -122,7 +122,10 @@ export function CustomerAccountShell({
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <LanguageSwitcher role="customer" />
+                    <LanguageSwitcher
+                      role="customer"
+                      testId="language-switcher-customer-account"
+                    />
                     {actions}
                   </div>
                 </div>

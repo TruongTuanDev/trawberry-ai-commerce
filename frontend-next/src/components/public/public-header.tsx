@@ -315,7 +315,12 @@ export function PublicHeader() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pb-1 pt-2 lg:hidden">
-          <LanguageSwitcher role="customer" compact tone="dark" />
+          <LanguageSwitcher
+            role="customer"
+            compact
+            tone="dark"
+            testId="language-switcher-customer-mobile"
+          />
           {!user?.role && (
             <>
             <Link

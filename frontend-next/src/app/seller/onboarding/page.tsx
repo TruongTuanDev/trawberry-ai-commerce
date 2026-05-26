@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   getSellerOnboardingProfile,
   listSellerDocuments,
@@ -31,6 +32,7 @@ const emptyProfile = {
 };
 
 export default function SellerOnboardingPage() {
+  const { t } = useI18n("seller");
   const [profile, setProfile] = useState(emptyProfile);
   const [approval, setApproval] = useState<Pick<SellerOnboardingProfile, "sellerApprovalStatus" | "sellerRejectionReason"> | null>(null);
   const [documents, setDocuments] = useState<SellerDocument[]>([]);
@@ -73,7 +75,7 @@ export default function SellerOnboardingPage() {
         setDocuments(documentResult);
         setError(null);
       } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : "Unable to load onboarding.");
+        if (mounted) setError(err instanceof Error ? err.message : t("seller.onboarding.loadFailed"));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -82,7 +84,7 @@ export default function SellerOnboardingPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
   const saveProfile = async (event: FormEvent) => {
     event.preventDefault();
@@ -95,9 +97,9 @@ export default function SellerOnboardingPage() {
         sellerApprovalStatus: updated.sellerApprovalStatus,
         sellerRejectionReason: updated.sellerRejectionReason,
       });
-      setMessage("Onboarding profile saved.");
+      setMessage(t("seller.onboarding.profileSaved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save onboarding profile.");
+      setError(err instanceof Error ? err.message : t("seller.onboarding.profileSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -105,7 +107,7 @@ export default function SellerOnboardingPage() {
 
   const uploadDocument = async () => {
     if (!file) {
-      setError("Choose a document file first.");
+      setError(t("seller.onboarding.chooseFileFirst"));
       return;
     }
     setUploading(true);
@@ -115,9 +117,9 @@ export default function SellerOnboardingPage() {
       const uploaded = await uploadSellerDocument(documentType, file);
       setDocuments((current) => [uploaded, ...current]);
       setFile(null);
-      setMessage("Document uploaded for review.");
+      setMessage(t("seller.onboarding.documentUploaded"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to upload document.");
+      setError(err instanceof Error ? err.message : t("seller.onboarding.documentUploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -130,27 +132,27 @@ export default function SellerOnboardingPage() {
   return (
     <div className="space-y-6" data-testid="seller-onboarding-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Seller verification</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">{t("seller.onboarding.eyebrow")}</p>
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-              Onboarding and KYC documents
+              {t("seller.onboarding.title")}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-              Complete legal profile details and upload verification documents before admin approval.
+              {t("seller.onboarding.subtitle")}
             </p>
           </div>
           <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Approval status</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{t("seller.onboarding.approvalStatus")}</p>
             <p className="mt-1 font-bold text-[var(--foreground)]" data-testid="seller-onboarding-status">
-              {approval?.sellerApprovalStatus ?? "Loading"}
+              {approval?.sellerApprovalStatus ?? t("seller.onboarding.loading")}
             </p>
             <p className="mt-2 text-xs text-[var(--muted)]">
               {approval?.sellerApprovalStatus === "REJECTED"
-                ? "Review the rejection note, update onboarding details, and re-upload any required documents."
+                ? t("seller.onboarding.statusRejected")
                 : approval?.sellerApprovalStatus === "APPROVED"
-                  ? "Seller approval is active. Marketplace tools are available."
-                  : "Complete profile details and add at least one verification document before admin approval."}
+                  ? t("seller.onboarding.statusApproved")
+                  : t("seller.onboarding.statusDefault")}
             </p>
           </div>
         </div>
@@ -167,7 +169,7 @@ export default function SellerOnboardingPage() {
       <form onSubmit={(event) => void saveProfile(event)} className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-            <span>Legal type</span>
+            <span>{t("seller.onboarding.legalType")}</span>
             <select
               value={profile.legalType}
               onChange={(event) => setField("legalType", event.target.value)}
@@ -179,17 +181,17 @@ export default function SellerOnboardingPage() {
               ))}
             </select>
           </label>
-          <ProfileInput label="Legal name" value={profile.legalName} onChange={(value) => setField("legalName", value)} testId="seller-legal-name" />
-          <ProfileInput label="INN" value={profile.inn} onChange={(value) => setField("inn", value)} testId="seller-inn" />
-          <ProfileInput label="OGRN / OGRNIP" value={profile.ogrn} onChange={(value) => setField("ogrn", value)} testId="seller-ogrn" />
-          <ProfileInput label="KPP" value={profile.kpp} onChange={(value) => setField("kpp", value)} testId="seller-kpp" />
-          <ProfileInput label="Legal address" value={profile.legalAddress} onChange={(value) => setField("legalAddress", value)} testId="seller-legal-address" />
-          <ProfileInput label="Contact name" value={profile.contactName} onChange={(value) => setField("contactName", value)} testId="seller-contact-name" />
-          <ProfileInput label="Contact phone" value={profile.contactPhone} onChange={(value) => setField("contactPhone", value)} testId="seller-contact-phone" />
-          <ProfileInput label="Contact email" value={profile.contactEmail} onChange={(value) => setField("contactEmail", value)} testId="seller-contact-email" />
-          <ProfileInput label="Bank name" value={profile.bankName} onChange={(value) => setField("bankName", value)} testId="seller-bank-name" />
-          <ProfileInput label="Bank account" value={profile.bankAccount} onChange={(value) => setField("bankAccount", value)} testId="seller-bank-account" />
-          <ProfileInput label="BIK" value={profile.bik} onChange={(value) => setField("bik", value)} testId="seller-bik" />
+          <ProfileInput label={t("seller.onboarding.legalName")} value={profile.legalName} onChange={(value) => setField("legalName", value)} testId="seller-legal-name" />
+          <ProfileInput label={t("seller.onboarding.inn")} value={profile.inn} onChange={(value) => setField("inn", value)} testId="seller-inn" />
+          <ProfileInput label={t("seller.onboarding.ogrn")} value={profile.ogrn} onChange={(value) => setField("ogrn", value)} testId="seller-ogrn" />
+          <ProfileInput label={t("seller.onboarding.kpp")} value={profile.kpp} onChange={(value) => setField("kpp", value)} testId="seller-kpp" />
+          <ProfileInput label={t("seller.onboarding.legalAddress")} value={profile.legalAddress} onChange={(value) => setField("legalAddress", value)} testId="seller-legal-address" />
+          <ProfileInput label={t("seller.onboarding.contactName")} value={profile.contactName} onChange={(value) => setField("contactName", value)} testId="seller-contact-name" />
+          <ProfileInput label={t("seller.onboarding.contactPhone")} value={profile.contactPhone} onChange={(value) => setField("contactPhone", value)} testId="seller-contact-phone" />
+          <ProfileInput label={t("seller.onboarding.contactEmail")} value={profile.contactEmail} onChange={(value) => setField("contactEmail", value)} testId="seller-contact-email" />
+          <ProfileInput label={t("seller.onboarding.bankName")} value={profile.bankName} onChange={(value) => setField("bankName", value)} testId="seller-bank-name" />
+          <ProfileInput label={t("seller.onboarding.bankAccount")} value={profile.bankAccount} onChange={(value) => setField("bankAccount", value)} testId="seller-bank-account" />
+          <ProfileInput label={t("seller.onboarding.bik")} value={profile.bik} onChange={(value) => setField("bik", value)} testId="seller-bik" />
         </div>
         <div className="mt-5 flex justify-end">
           <button
@@ -198,7 +200,7 @@ export default function SellerOnboardingPage() {
             className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="seller-onboarding-save"
           >
-            {saving ? "Saving..." : "Save profile"}
+            {saving ? t("seller.onboarding.saving") : t("seller.onboarding.saveProfile")}
           </button>
         </div>
       </form>
@@ -206,7 +208,7 @@ export default function SellerOnboardingPage() {
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <label className="w-full space-y-2 text-sm font-semibold text-[var(--foreground)] lg:max-w-xs">
-            <span>Document type</span>
+            <span>{t("seller.onboarding.documentType")}</span>
             <select
               value={documentType}
               onChange={(event) => setDocumentType(event.target.value as SellerDocumentType)}
@@ -219,7 +221,7 @@ export default function SellerOnboardingPage() {
             </select>
           </label>
           <label className="w-full space-y-2 text-sm font-semibold text-[var(--foreground)]">
-            <span>Document file</span>
+            <span>{t("seller.onboarding.documentFile")}</span>
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
@@ -235,7 +237,7 @@ export default function SellerOnboardingPage() {
             className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             data-testid="seller-document-upload"
           >
-            {uploading ? "Uploading..." : "Upload"}
+            {uploading ? t("seller.onboarding.uploading") : t("seller.onboarding.upload")}
           </button>
         </div>
 
@@ -250,11 +252,16 @@ export default function SellerOnboardingPage() {
                 <span className="w-fit rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
                   {document.status}
                 </span>
-                <p className="text-sm text-[var(--muted)]">{document.rejectionReason ?? (document.reviewedAt ? `Reviewed ${new Date(document.reviewedAt).toLocaleDateString()}` : "Awaiting admin review")}</p>
+                <p className="text-sm text-[var(--muted)]">
+                  {document.rejectionReason ??
+                    (document.reviewedAt
+                      ? t("seller.onboarding.reviewed", { date: new Date(document.reviewedAt).toLocaleDateString() })
+                      : t("seller.onboarding.awaitingReview"))}
+                </p>
               </div>
             ))
           ) : (
-            <div className="px-4 py-6 text-sm text-[var(--muted)]">No documents uploaded yet.</div>
+            <div className="px-4 py-6 text-sm text-[var(--muted)]">{t("seller.onboarding.noDocuments")}</div>
           )}
         </div>
       </section>

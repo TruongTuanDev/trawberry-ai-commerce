@@ -23,13 +23,13 @@ import { Button } from "@/components/ui/button";
 import { ActionMenu } from "@/components/ui/action-menu";
 
 const sellerTabs: Array<{ value: SellerFulfillmentBucket; label: string }> = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "NEW", label: "Mới" },
-  { value: "ASSEMBLING", label: "Lắp ráp" },
-  { value: "IN_TRANSIT", label: "Trong quá trình giao hàng" },
-  { value: "COMPLETED", label: "Hoàn thành" },
-  { value: "CANCELLED", label: "Đã hủy" },
-  { value: "ARCHIVED", label: "Lưu trữ" },
+  { value: "ALL", label: "All" },
+  { value: "NEW", label: "New" },
+  { value: "ASSEMBLING", label: "Assembling" },
+  { value: "IN_TRANSIT", label: "In Transit" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
+  { value: "ARCHIVED", label: "Archived" },
 ];
 
 type ShipmentPanelState = {
