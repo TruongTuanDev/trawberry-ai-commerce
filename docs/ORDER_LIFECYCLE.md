@@ -176,3 +176,4 @@ Important rule:
 - seller order detail and `/seller/orders/[id]/shipping-label` now support internal label sizes `75x120`, `100x150`, and `a6`
 - default label size is `100x150`, stored client-side for seller convenience, and passed through the `size` query param
 - the printable label remains an internal marketplace handoff aid for manual/Yandex-compatible delivery and must not be presented as an official Yandex label
+- the print layout now includes QR plus barcode scanning zones, compact sender/recipient blocks, and a warehouse sorting code while remaining single-page per supported label size

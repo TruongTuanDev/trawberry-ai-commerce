@@ -156,7 +156,7 @@ export function SellerShippingLabelPageClient({
       }}
     >
       <>
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(203,17,171,0.08),transparent_38%),linear-gradient(180deg,#f8f5fb_0%,#ffffff_62%)] px-4 py-6 sm:px-6">
+        <main className="min-h-screen bg-[#f3f4f6] px-4 py-6 sm:px-6">
           <div className="mx-auto max-w-5xl space-y-5">
             <header className="no-print flex flex-wrap items-center justify-between gap-3">
               <div>

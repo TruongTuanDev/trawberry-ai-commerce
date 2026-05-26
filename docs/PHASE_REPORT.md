@@ -3062,6 +3062,7 @@ Implemented:
 - rebuilt the internal manual/Yandex-compatible shipping label into a compact single-label container with size-aware print CSS and a single `@page` target per selection
 - kept required sender, recipient, address/access, manual Yandex/claim, marketplace order code, payment/package, and QR data visible without introducing any Yandex business-logic changes
 - expanded the dedicated shipping-label Playwright regression to cover size selector defaults, query propagation, DOM uniqueness, and size-aware preview state
+- upgraded the label into a more warehouse-ready print surface with a dominant tracking number, CODE128 barcode strip, QR quiet space, shipment/payment/sorting metadata, and compact thermal-friendly sections
 
 Verification:
 

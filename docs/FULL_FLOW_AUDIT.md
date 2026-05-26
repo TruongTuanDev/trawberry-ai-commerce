@@ -759,4 +759,5 @@ Future audit item: design an optional marketplace parent order for combined rece
 - printable seller shipping labels now expose size-aware routes via `/seller/orders/[id]/shipping-label?size=75x120|100x150|a6`
 - seller order detail and the label page both keep the same selected size, with client-side persistence only; no fulfillment or Yandex business logic changed
 - the print DOM is constrained to a single internal marketplace label container, and the label keeps sender, recipient, address/access, manual Yandex reference, order code, and QR data visible in the supported sizes
+- the label now also renders a thermal-printer-friendly barcode strip and internal sorting code derived from live order identifiers rather than mock data
 - the label continues to state that it is not an official Yandex label

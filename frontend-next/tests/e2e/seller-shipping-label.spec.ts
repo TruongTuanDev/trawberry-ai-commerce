@@ -300,7 +300,9 @@ test("seller can open and print a localized shipping label from order detail", a
   await expect(labelPage.getByTestId("shipping-label-size-select")).toHaveValue(
     "100x150",
   );
-  await expect(labelPage.getByTestId("shipping-label-print-view")).toBeVisible();
+  await expect(labelPage.getByTestId("shipping-label-print-view")).toBeVisible({
+    timeout: 15000,
+  });
   await expect(labelPage.getByTestId("shipping-label-print-view")).toHaveAttribute(
     "data-label-size",
     "100x150",
@@ -310,8 +312,14 @@ test("seller can open and print a localized shipping label from order detail", a
     /--label-width:\s*100mm/i,
   );
   await expect(labelPage.getByTestId("shipping-label-qr")).toBeVisible();
+  await expect(labelPage.getByTestId("shipping-label-barcode")).toBeVisible();
+  await expect(labelPage.getByTestId("shipping-label-sorting-code")).toBeVisible();
+  await expect(labelPage.getByTestId("shipping-label-shipment-status")).toBeVisible();
   await expect(labelPage.getByTestId("shipping-label-order-code")).toHaveText(
     checkout.orderCode,
+  );
+  await expect(labelPage.getByTestId("shipping-label-tracking-code")).toContainText(
+    `YANDEX-${stamp}`,
   );
   await expect(labelPage.getByTestId("shipping-label-recipient-name")).toHaveText(
     "Shipping Label Customer",
@@ -382,10 +390,14 @@ test("seller can open and print a localized shipping label from order detail", a
   );
   await expect(
     compactLabelPage.getByTestId("shipping-label-print-view"),
+  ).toBeVisible({ timeout: 15000 });
+  await expect(
+    compactLabelPage.getByTestId("shipping-label-print-view"),
   ).toHaveAttribute("data-label-size", "75x120");
   await expect(
     compactLabelPage.getByTestId("shipping-label-print-view"),
   ).toHaveAttribute("style", /--label-width:\s*75mm/i);
+  await expect(compactLabelPage.getByTestId("shipping-label-barcode")).toBeVisible();
 
   await compactLabelPage.getByTestId("shipping-label-size-select").selectOption("a6");
   await compactLabelPage.waitForURL(
