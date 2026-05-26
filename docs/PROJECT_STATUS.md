@@ -1845,6 +1845,7 @@ Implemented:
 - the print view now uses a compact single-label layout with size-specific print dimensions to reduce overflow and sender-block clipping in Chrome print flows
 - the label now includes a warehouse-style tracking hierarchy with QR, barcode, shipment status, package summary, and internal sorting code while staying non-official
 - the latest print-layout hardening clamps long recipient, sender, courier-note, and item-preview text so sections do not overlap each other in the supported label sizes
+- the latest logistics polish adds UI-only handoff status mapping plus explicit delivery type, created-at, postal-code, sender-phone, and taller barcode treatment without altering real order or shipment state
 - the label remains an internal marketplace label and explicitly does not claim to be an official Yandex label
 
 Current gap:

@@ -125,6 +125,19 @@ export function SellerShippingLabelPageClient({
     return () => window.clearTimeout(timer);
   }, [autoPrint, error, loading, order]);
 
+  useEffect(() => {
+    if (typeof document === "undefined" || !order?.orderNumber) {
+      return;
+    }
+
+    const previousTitle = document.title;
+    document.title = order.orderNumber;
+
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [order?.orderNumber]);
+
   const trackingLookupUrl = useMemo(() => {
     if (!order || typeof window === "undefined" || !order.orderNumber) {
       return null;

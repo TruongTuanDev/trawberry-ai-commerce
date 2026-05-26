@@ -219,6 +219,7 @@ export type DeliveryShipment = {
   dropoffAddress: string;
   dropoffAddressFullName?: string | null;
   dropoffCity?: string | null;
+  dropoffPostalCode?: string | null;
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
@@ -337,6 +338,7 @@ export type SellerOrderListItem = {
   shippingAddress: string;
   dropoffAddressFullName?: string | null;
   dropoffCity?: string | null;
+  dropoffPostalCode?: string | null;
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;

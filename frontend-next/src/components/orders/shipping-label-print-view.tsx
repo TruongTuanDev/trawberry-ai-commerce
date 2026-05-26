@@ -44,9 +44,9 @@ export const SHIPPING_LABEL_SIZE_META: Record<
     heightMm: 120,
     paddingMm: 3.4,
     fontSizePx: 7,
-    trackingFontPx: 15.5,
+    trackingFontPx: 18.5,
     qrSizePx: 62,
-    barcodeHeightPx: 20,
+    barcodeHeightPx: 23,
     gapMm: 1.05,
     noteLines: 1,
     itemLines: 1,
@@ -58,9 +58,9 @@ export const SHIPPING_LABEL_SIZE_META: Record<
     heightMm: 150,
     paddingMm: 3.8,
     fontSizePx: 8.1,
-    trackingFontPx: 19.5,
+    trackingFontPx: 26,
     qrSizePx: 84,
-    barcodeHeightPx: 27,
+    barcodeHeightPx: 33,
     gapMm: 1.15,
     noteLines: 1,
     itemLines: 1,
@@ -72,9 +72,9 @@ export const SHIPPING_LABEL_SIZE_META: Record<
     heightMm: 148,
     paddingMm: 3.9,
     fontSizePx: 8.2,
-    trackingFontPx: 20,
+    trackingFontPx: 27,
     qrSizePx: 86,
-    barcodeHeightPx: 28,
+    barcodeHeightPx: 34,
     gapMm: 1.15,
     noteLines: 1,
     itemLines: 1,
@@ -95,12 +95,65 @@ function compactJoin(parts: Array<string | null | undefined>) {
   return parts.filter(Boolean).join(" | ");
 }
 
-function formatStatusToken(value: string | null | undefined) {
+function formatReadableToken(value: string | null | undefined) {
   if (!value) {
     return null;
   }
 
-  return value.replaceAll("_", " ");
+  return value
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function mapLabelShipmentStatus(
+  value: string | null | undefined,
+  t: ReturnType<typeof useI18n>["t"],
+) {
+  const normalized = value?.toUpperCase();
+
+  switch (normalized) {
+    case "FAILED":
+    case "PENDING":
+    case "NEW":
+      return t("seller.shippingLabel.statuses.created");
+    case "READY_TO_CREATE_YANDEX":
+    case "CREATED_WITH_YANDEX_ID":
+    case "YANDEX_MANUAL_CREATED":
+    case "ASSEMBLING":
+      return t("seller.shippingLabel.statuses.readyToShip");
+    case "SHIPPING":
+    case "IN_DELIVERY":
+    case "IN_TRANSIT":
+      return "IN TRANSIT";
+    case "DELIVERED":
+      return "DELIVERED";
+    case "CANCELLED":
+      return "CANCELLED";
+    default:
+      return formatReadableToken(value) ?? t("common.notProvided");
+  }
+}
+
+function formatLabelDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toLocaleString([], {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function isPaymentConfirmed(paymentStatus: string) {
@@ -133,15 +186,15 @@ export function ShippingLabelPrintView({
     activeShipment?.manualYandexOrderId ??
     activeShipment?.providerOrderNumber ??
     fallbackValue;
-  const shipmentStatus =
-    formatStatusToken(activeShipment?.internalStatus) ??
-    formatStatusToken(order.delivery?.status) ??
-    formatStatusToken(order.status) ??
-    fallbackValue;
+  const shipmentStatus = mapLabelShipmentStatus(
+    activeShipment?.internalStatus ?? order.delivery?.status ?? order.status,
+    t,
+  );
   const providerLabel =
     activeShipment?.provider === "YANDEX" || activeShipment?.manualYandexOrderId
-      ? t("seller.shippingLabel.providerManualYandex")
+      ? t("seller.shippingLabel.providerYandexDelivery")
       : activeShipment?.provider ?? t("seller.shippingLabel.providerManual");
+  const deliveryTypeLabel = t("seller.shippingLabel.deliveryTypes.express");
   const paymentMethodLabel =
     order.paymentMethodLabel ?? order.paymentMethod ?? t("common.unknown");
   const codSellerQr =
@@ -163,6 +216,8 @@ export function ShippingLabelPrintView({
       order.dropoffBuilding ?? activeShipment?.dropoffBuilding,
     ),
   ]);
+  const recipientPostalCode =
+    activeShipment?.dropoffPostalCode ?? order.dropoffPostalCode ?? null;
   const recipientAccess = compactJoin([
     order.dropoffNoEntrance
       ? `${t("seller.shippingLabel.fields.entrance")}: ${t("seller.shippingLabel.noEntrance")}`
@@ -190,11 +245,19 @@ export function ShippingLabelPrintView({
   const courierNote = order.dropoffComment ?? activeShipment?.customerVisibleMessage;
   const senderName = order.shopName;
   const senderPhone = deliverySettings?.pickupContactPhone ?? null;
+  const senderContactName = deliverySettings?.pickupContactName ?? null;
   const pickupAddress =
     deliverySettings?.pickupAddress ?? activeShipment?.pickupAddress ?? fallbackValue;
+  const pickupLocation = compactJoin([
+    deliverySettings?.pickupCity,
+    deliverySettings?.pickupPostalCode,
+  ]);
+  const pickupComment = deliverySettings?.pickupComment ?? null;
   const packageSummary = compactJoin([
     `${t("seller.shippingLabel.itemsCount")}: ${order.items.length}`,
     `${t("seller.shippingLabel.totalQuantity")}: ${totalQuantity}`,
+  ]);
+  const packageMetrics = compactJoin([
     activeShipment?.packageWeightGram
       ? `${t("seller.shippingLabel.weight")}: ${activeShipment.packageWeightGram} g`
       : null,
@@ -215,13 +278,22 @@ export function ShippingLabelPrintView({
     .toUpperCase()}`;
   const printedAt = new Date().toLocaleString();
   const qrValue = trackingLookupUrl ?? trackingCode;
-  const compactCreatedAt = `${t("seller.shippingLabel.createdAt")}: ${new Date(order.createdAt).toLocaleString()}`;
+  const labelCreatedAtValue =
+    formatLabelDate(activeShipment?.createdAt) ??
+    formatLabelDate(order.createdAt) ??
+    printedAt;
+  const compactCreatedAt = `${t("seller.shippingLabel.createdAt")}: ${labelCreatedAtValue}`;
   const deliveryReferenceLine = compactJoin([
     `${t("seller.shippingLabel.yandexId")}: ${shipmentReference}`,
     activeShipment?.yandexClaimId
       ? `${t("seller.shippingLabel.claimId")}: ${activeShipment.yandexClaimId}`
       : null,
   ]);
+  const paymentSupportLine = compactJoin([
+    `${t("seller.shippingLabel.paymentStatus")}: ${order.paymentStatus}`,
+    `${t("seller.shippingLabel.delivery")}: ${providerLabel}`,
+  ]);
+  const senderPhoneLabel = senderPhone ?? "—";
   const labelStyle = {
     "--label-width": `${meta.widthMm}mm`,
     "--label-height": `${meta.heightMm}mm`,
@@ -265,12 +337,12 @@ export function ShippingLabelPrintView({
             <div className="label-header-copy">
               <p className="label-brand">Trawberry Marketplace</p>
               <p className="label-kicker">{t("seller.shippingLabel.title")}</p>
-              <p
-                className="label-tracking-number label-clamp-2"
-                data-testid="shipping-label-tracking-code"
-              >
-                {trackingCode}
-              </p>
+              <div data-testid="shipping-label-tracking-number">
+                <p className="label-tracking-number label-clamp-2">{trackingCode}</p>
+                <p className="label-tracking-subline" data-testid="shipping-label-tracking-code">
+                  {deliveryReferenceLine || shipmentReference}
+                </p>
+              </div>
               <p className="label-order-line">
                 {t("seller.shippingLabel.orderCode")}:{" "}
                 <span data-testid="shipping-label-order-code">{order.orderNumber}</span>
@@ -300,7 +372,21 @@ export function ShippingLabelPrintView({
             <section className="label-section label-delivery-grid" data-testid="shipping-label-delivery">
               <div className="label-meta-cell">
                 <p className="label-kicker">{t("seller.shippingLabel.delivery")}</p>
-                <p className="label-token label-clamp-1">{providerLabel}</p>
+                <p className="label-token label-clamp-1" data-testid="shipping-label-provider">
+                  {providerLabel}
+                </p>
+              </div>
+              <div className="label-meta-cell">
+                <p className="label-kicker">{t("seller.shippingLabel.deliveryType")}</p>
+                <p className="label-token" data-testid="shipping-label-delivery-type">
+                  {deliveryTypeLabel}
+                </p>
+              </div>
+              <div className="label-meta-cell">
+                <p className="label-kicker">{t("seller.shippingLabel.shipmentStatus")}</p>
+                <p className="label-value label-clamp-1" data-testid="shipping-label-shipment-status">
+                  {shipmentStatus}
+                </p>
               </div>
               <div className="label-meta-cell">
                 <p className="label-kicker">{t("seller.shippingLabel.paymentStatus")}</p>
@@ -313,12 +399,10 @@ export function ShippingLabelPrintView({
                 </p>
               </div>
               <div className="label-meta-cell">
-                <p className="label-kicker">{t("seller.shippingLabel.shipmentStatus")}</p>
-                <p className="label-value label-clamp-1">{shipmentStatus}</p>
-              </div>
-              <div className="label-meta-cell">
-                <p className="label-kicker">{t("seller.shippingLabel.trackingCode")}</p>
-                <p className="label-value label-clamp-1">{trackingCode}</p>
+                <p className="label-kicker">{t("seller.shippingLabel.createdAt")}</p>
+                <p className="label-value label-clamp-1" data-testid="shipping-label-created-at">
+                  {labelCreatedAtValue}
+                </p>
               </div>
               <div className="label-meta-strip">
                 <p className="label-kicker">{t("seller.shippingLabel.yandexId")}</p>
@@ -337,6 +421,9 @@ export function ShippingLabelPrintView({
                 {activeShipment?.recipientPhone ?? order.customer.phone}
               </p>
               <p className="label-value label-address-clamp">{recipientAddress}</p>
+              <p className="label-value label-clamp-1" data-testid="shipping-label-postal-code">
+                {t("seller.shippingLabel.postalCode")}: {recipientPostalCode ?? "—"}
+              </p>
               {recipientAddressExtra ? (
                 <p className="label-muted label-clamp-1">{recipientAddressExtra}</p>
               ) : null}
@@ -351,20 +438,37 @@ export function ShippingLabelPrintView({
             </section>
 
             <div className="label-sender-items-grid">
-              <section className="label-section" data-testid="shipping-label-sender">
+              <section className="label-section label-sender" data-testid="shipping-label-sender">
                 <p className="label-kicker">{t("seller.shippingLabel.sender")}</p>
                 <p className="label-name" data-testid="shipping-label-sender-name">
                   {senderName}
                 </p>
-                {senderPhone ? <p className="label-value label-clamp-1">{senderPhone}</p> : null}
-                <p className="label-value label-clamp-1" data-testid="shipping-label-pickup-address">
+                <p className="label-value label-clamp-1" data-testid="shipping-label-sender-phone">
+                  {t("seller.shippingLabel.senderPhone")}: {senderPhoneLabel}
+                </p>
+                {senderContactName ? (
+                  <p className="label-muted label-clamp-1">{senderContactName}</p>
+                ) : null}
+                <p
+                  className="label-value label-clamp-2"
+                  data-testid="shipping-label-pickup-address"
+                >
                   {pickupAddress}
                 </p>
+                {pickupLocation ? (
+                  <p className="label-muted label-clamp-1">{pickupLocation}</p>
+                ) : null}
+                {!meta.compact && pickupComment ? (
+                  <p className="label-muted label-clamp-1">{pickupComment}</p>
+                ) : null}
               </section>
 
-              <section className="label-section" data-testid="shipping-label-items">
+              <section className="label-section label-items" data-testid="shipping-label-items">
                 <p className="label-kicker">{t("seller.shippingLabel.package")}</p>
                 <p className="label-value label-clamp-1">{packageSummary}</p>
+                {packageMetrics ? (
+                  <p className="label-muted label-clamp-1">{packageMetrics}</p>
+                ) : null}
                 {itemsPreview ? (
                   <p className="label-muted label-items-clamp">{itemsPreview}</p>
                 ) : null}
@@ -372,11 +476,14 @@ export function ShippingLabelPrintView({
             </div>
 
             <div className="label-payment-sorting-grid">
-              <section className="label-section" data-testid="shipping-label-payment">
+              <section className="label-section label-payment" data-testid="shipping-label-payment">
                 <p className="label-kicker">{t("seller.shippingLabel.payment")}</p>
                 <p className="label-value label-clamp-1">
                   {t("seller.shippingLabel.paymentMethod")}: {paymentMethodLabel}
                 </p>
+                {!meta.compact ? (
+                  <p className="label-muted label-clamp-1">{paymentSupportLine}</p>
+                ) : null}
                 <p className="label-muted label-note-clamp">
                   {codSellerQr
                     ? t("seller.shippingLabel.codSellerQrNotice")
@@ -386,11 +493,12 @@ export function ShippingLabelPrintView({
                 </p>
               </section>
 
-              <section className="label-section" data-testid="shipping-label-sorting">
+              <section className="label-section label-sorting" data-testid="shipping-label-sorting">
                 <p className="label-kicker">{t("seller.shippingLabel.warehouseCode")}</p>
                 <p className="label-sort-code" data-testid="shipping-label-sorting-code">
                   {sortingCode}
                 </p>
+                <p className="label-muted label-clamp-1">{deliveryReferenceLine || shipmentReference}</p>
                 <p className="label-muted label-clamp-1">{compactCreatedAt}</p>
                 {!meta.compact && internalNote ? (
                   <p className="label-muted label-clamp-1">
@@ -503,9 +611,16 @@ export function ShippingLabelPrintView({
           margin-top: 0.45mm;
           font-size: var(--tracking-font-size);
           font-weight: 800;
-          line-height: 1.04;
-          letter-spacing: 0.03em;
+          line-height: 0.98;
+          letter-spacing: 0.05em;
           overflow-wrap: anywhere;
+        }
+
+        .label-tracking-subline {
+          margin: 0.55mm 0 0;
+          font-size: 0.86em;
+          font-weight: 700;
+          line-height: 1.16;
         }
 
         .label-order-line {
@@ -582,7 +697,7 @@ export function ShippingLabelPrintView({
           flex: 1;
           min-height: 0;
           display: grid;
-          grid-template-rows: auto minmax(0, 1.75fr) auto auto;
+          grid-template-rows: auto minmax(0, 1.42fr) auto auto;
           gap: var(--section-gap);
         }
 
@@ -656,6 +771,7 @@ export function ShippingLabelPrintView({
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: var(--section-gap);
+          align-items: stretch;
         }
 
         .label-sort-code {
@@ -707,8 +823,17 @@ export function ShippingLabelPrintView({
           -webkit-line-clamp: var(--address-lines);
         }
 
+        .label-payment .label-value,
+        .label-payment .label-muted,
+        .label-recipient .label-muted,
+        .label-sorting .label-muted,
+        .label-sender [data-testid="shipping-label-sender-phone"] {
+          font-size: 1.04em;
+          line-height: 1.22;
+        }
+
         .label-size-75x120 .label-body {
-          grid-template-rows: auto minmax(0, 1.95fr) auto auto;
+          grid-template-rows: auto minmax(0, 1.54fr) auto auto;
         }
 
         .label-size-75x120 .label-section {
@@ -717,6 +842,10 @@ export function ShippingLabelPrintView({
 
         .label-size-75x120 .label-name {
           font-size: 1.08em;
+        }
+
+        .label-size-75x120 .label-tracking-subline {
+          font-size: 0.8em;
         }
 
         .label-size-75x120 .label-delivery-grid {
@@ -730,7 +859,7 @@ export function ShippingLabelPrintView({
 
         .label-size-a6 .label-body,
         .label-size-100x150 .label-body {
-          grid-template-rows: auto minmax(0, 1.78fr) auto auto;
+          grid-template-rows: auto minmax(0, 1.45fr) auto auto;
         }
 
         @media print {

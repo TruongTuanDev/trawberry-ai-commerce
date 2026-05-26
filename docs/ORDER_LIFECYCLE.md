@@ -178,3 +178,5 @@ Important rule:
 - the printable label remains an internal marketplace handoff aid for manual/Yandex-compatible delivery and must not be presented as an official Yandex label
 - the print layout now includes QR plus barcode scanning zones, compact sender/recipient blocks, and a warehouse sorting code while remaining single-page per supported label size
 - text-heavy blocks such as recipient address, courier note, item preview, and internal note must clamp or wrap within their own section and must not visually overlap neighboring sections in any supported size
+- print-label UI status text is mapped separately from backend shipment status so raw failure enums are not printed on handoff labels
+- the label should expose delivery type, created-at, postal-code, and sender-phone fields when present, using placeholders instead of invented data when values are missing

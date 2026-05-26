@@ -760,4 +760,5 @@ Future audit item: design an optional marketplace parent order for combined rece
 - seller order detail and the label page both keep the same selected size, with client-side persistence only; no fulfillment or Yandex business logic changed
 - the print DOM is constrained to a single internal marketplace label container, and the label keeps sender, recipient, address/access, manual Yandex reference, order code, and QR data visible in the supported sizes
 - the label now also renders a thermal-printer-friendly barcode strip and internal sorting code derived from live order identifiers rather than mock data
+- the latest polish layer remaps raw failure-like shipment states into print-friendly handoff states and surfaces delivery type, created-at, postal-code, and sender-phone fields for warehouse operations without touching routing or fulfillment logic
 - the label continues to state that it is not an official Yandex label

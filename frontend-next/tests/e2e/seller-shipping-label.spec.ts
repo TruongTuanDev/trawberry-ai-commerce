@@ -276,8 +276,14 @@ async function expectLabelStructure(
   await expect(page.getByTestId("shipping-label-payment")).toBeVisible();
   await expect(page.getByTestId("shipping-label-sorting")).toBeVisible();
   await expect(page.getByTestId("shipping-label-footer")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-tracking-number")).toBeVisible();
   await expect(page.getByTestId("shipping-label-recipient-phone")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-postal-code")).toBeVisible();
   await expect(page.getByTestId("shipping-label-sender-name")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-sender-phone")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-provider")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-delivery-type")).toBeVisible();
+  await expect(page.getByTestId("shipping-label-created-at")).toBeVisible();
   await expect(page.getByTestId("shipping-label-qr")).toBeVisible();
   await expect(page.getByTestId("shipping-label-barcode")).toBeVisible();
   await expect(page.locator("[data-testid='shipping-label-print-view']")).toHaveCount(1);
@@ -294,6 +300,11 @@ async function expectLabelStructure(
       "shipping-label-payment",
       "shipping-label-sorting",
       "shipping-label-footer",
+      "shipping-label-tracking-number",
+      "shipping-label-postal-code",
+      "shipping-label-sender-phone",
+      "shipping-label-delivery-type",
+      "shipping-label-created-at",
     ];
 
     return {
@@ -366,8 +377,23 @@ test("seller can open and print a localized shipping label from order detail", a
   await expect(labelPage.getByTestId("shipping-label-order-code")).toHaveText(
     checkout.orderCode,
   );
-  await expect(labelPage.getByTestId("shipping-label-tracking-code")).toContainText(
+  await expect(labelPage.getByTestId("shipping-label-tracking-number")).toContainText(
     `YANDEX-${stamp}`,
+  );
+  await expect(labelPage.getByTestId("shipping-label-provider")).toHaveText(
+    "Yandex Delivery",
+  );
+  await expect(labelPage.getByTestId("shipping-label-provider")).not.toContainText(
+    "Yandex thủ công",
+  );
+  await expect(labelPage.getByTestId("shipping-label-delivery-type")).not.toHaveText("");
+  await expect(labelPage.getByTestId("shipping-label-created-at")).not.toHaveText("");
+  await expect(labelPage.getByTestId("shipping-label-postal-code")).toContainText("—");
+  await expect(labelPage.getByTestId("shipping-label-sender-phone")).toContainText(
+    "+74950000000",
+  );
+  await expect(labelPage.getByTestId("shipping-label-shipment-status")).not.toContainText(
+    "FAILED",
   );
   await expect(labelPage.getByTestId("shipping-label-recipient-name")).toHaveText(
     "Shipping Label Customer",
