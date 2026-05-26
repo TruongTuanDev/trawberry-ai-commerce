@@ -116,7 +116,7 @@ export function PublicHomepageHeroSlider({
               className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out flex items-stretch ${
                 isActive ? "opacity-100 z-10 pointer-events-auto" : "opacity-0 z-0 pointer-events-none"
               }`}
-              style={{ backgroundColor: slide.backgroundColor || "#0f172a" }}
+              style={{ background: slide.backgroundColor || "#0f172a" }}
               data-testid={`slide-item-${index}`}
             >
               {/* MainVisual: Image background with responsive override */}
@@ -125,48 +125,50 @@ export function PublicHomepageHeroSlider({
                 <img
                   src={slide.imageDesktopUrl}
                   alt={altText}
-                  className="hidden sm:block w-full h-full object-cover"
+                  className="hidden sm:block w-full h-full object-contain mx-auto"
                   data-testid={`slide-desktop-image-${index}`}
                 />
                 {/* Mobile view: display imageMobileUrl if present, otherwise desktop fallback */}
                 <img
                   src={slide.imageMobileUrl || slide.imageDesktopUrl}
                   alt={altText}
-                  className="block sm:hidden w-full h-full object-cover"
+                  className="block sm:hidden w-full h-full object-contain mx-auto"
                   data-testid={`slide-mobile-image-${index}`}
                 />
-                {/* Dark Vignette Overlay for premium typography readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent sm:bg-gradient-to-r sm:from-black/70 sm:via-black/30 sm:to-transparent" />
               </div>
 
               {/* Slide Content Overlay */}
-              <div className="relative z-10 w-full max-w-4xl px-6 sm:px-12 md:px-16 flex flex-col justify-end pb-12 sm:pb-16 pt-16 md:justify-center md:pb-0 md:pt-0 text-white space-y-4 sm:space-y-6">
-                {(title || subtitle) && (
-                  <div className="space-y-2 sm:space-y-4 max-w-2xl">
-                    {title && (
-                      <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-white drop-shadow-md">
-                        {title}
-                      </h2>
+              {(title || subtitle || (ctaLabel && slide.ctaUrl)) && (
+                <div className="relative z-10 w-full max-w-4xl px-6 sm:px-12 md:px-16 flex flex-col justify-end pb-12 sm:pb-16 pt-16 md:justify-center md:pb-0 md:pt-0 text-white pointer-events-none">
+                  <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-[2rem] p-6 sm:p-8 max-w-lg space-y-4 sm:space-y-6 shadow-2xl pointer-events-auto">
+                    {(title || subtitle) && (
+                      <div className="space-y-2 sm:space-y-4">
+                        {title && (
+                          <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl md:text-5xl text-white drop-shadow-md">
+                            {title}
+                          </h2>
+                        )}
+                        {subtitle && (
+                          <p className="text-xs sm:text-sm md:text-base text-white/90 leading-relaxed drop-shadow">
+                            {subtitle}
+                          </p>
+                        )}
+                      </div>
                     )}
-                    {subtitle && (
-                      <p className="text-sm sm:text-lg md:text-xl text-white/90 leading-relaxed drop-shadow">
-                        {subtitle}
-                      </p>
+                    {ctaLabel && slide.ctaUrl && (
+                      <div>
+                        <Link
+                          href={slide.ctaUrl}
+                          className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-[#ffcf33] hover:text-[#5f0b67] transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                          data-testid={`slide-cta-link-${index}`}
+                        >
+                          {ctaLabel}
+                        </Link>
+                      </div>
                     )}
                   </div>
-                )}
-                {ctaLabel && slide.ctaUrl && (
-                  <div>
-                    <Link
-                      href={slide.ctaUrl}
-                      className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-[#ffcf33] hover:text-[#5f0b67] transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
-                      data-testid={`slide-cta-link-${index}`}
-                    >
-                      {ctaLabel}
-                    </Link>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}

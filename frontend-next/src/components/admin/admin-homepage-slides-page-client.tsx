@@ -794,7 +794,7 @@ export function AdminHomepageSlidesPageClient() {
                 className={`relative overflow-hidden rounded-2xl shadow-xl transition-all duration-300 border border-slate-800 ${
                   previewMode === "desktop" ? "w-full aspect-[21/9] min-h-[250px]" : "w-[300px] aspect-[9/12]"
                 }`}
-                style={{ backgroundColor: previewSlide.backgroundColor || "#0f172a" }}
+                style={{ background: previewSlide.backgroundColor || "#0f172a" }}
               >
                 {/* Visual Backdrop */}
                 <div className="absolute inset-0 w-full h-full">
@@ -805,27 +805,34 @@ export function AdminHomepageSlidesPageClient() {
                         : (previewSlide.imageMobileUrl || previewSlide.imageDesktopUrl)
                     }
                     alt="Preview"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain mx-auto"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 </div>
 
                 {/* Overlay Text */}
-                <div className="absolute inset-0 flex flex-col justify-end p-6 text-white space-y-2">
-                  <h4 className="text-xl font-bold leading-tight drop-shadow-md">
-                    {previewSlide.titleEn || previewSlide.titleRu || "Slide Title"}
-                  </h4>
-                  <p className="text-xs text-white/80 leading-relaxed max-w-md drop-shadow">
-                    {previewSlide.subtitleEn || previewSlide.subtitleRu}
-                  </p>
-                  {previewSlide.ctaLabelEn && (
-                    <div className="pt-2">
-                      <span className="inline-block rounded-full bg-white text-slate-950 px-4 py-1.5 text-xs font-semibold shadow-sm">
-                        {previewSlide.ctaLabelEn}
-                      </span>
+                {(previewSlide.titleEn || previewSlide.titleRu || previewSlide.subtitleEn || previewSlide.subtitleRu || previewSlide.ctaLabelEn) && (
+                  <div className="absolute inset-0 flex flex-col justify-end p-4 text-white pointer-events-none">
+                    <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl p-4 max-w-[85%] space-y-1 shadow-2xl pointer-events-auto">
+                      {(previewSlide.titleEn || previewSlide.titleRu) && (
+                        <h4 className="text-sm font-bold leading-tight drop-shadow-md">
+                          {previewSlide.titleEn || previewSlide.titleRu}
+                        </h4>
+                      )}
+                      {(previewSlide.subtitleEn || previewSlide.subtitleRu) && (
+                        <p className="text-[10px] text-white/90 leading-relaxed drop-shadow">
+                          {previewSlide.subtitleEn || previewSlide.subtitleRu}
+                        </p>
+                      )}
+                      {previewSlide.ctaLabelEn && (
+                        <div className="pt-1.5">
+                          <span className="inline-block rounded-full bg-white text-slate-950 px-3 py-1 text-[10px] font-semibold shadow-sm">
+                            {previewSlide.ctaLabelEn}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
