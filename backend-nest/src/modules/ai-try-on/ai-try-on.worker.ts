@@ -13,7 +13,10 @@ import {
   AI_TRY_ON_QUEUE,
   AI_TRY_ON_STATUSES,
 } from './ai-try-on.constants';
-import { AiTryOnAiServiceClientService } from './ai-try-on-ai-service-client.service';
+import {
+  AiTryOnAiServiceClientService,
+  AiTryOnAiServiceError,
+} from './ai-try-on-ai-service-client.service';
 import { findBuiltInTryOnModel } from './ai-try-on-models';
 
 @Injectable()
@@ -128,7 +131,13 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
             backendInternalBaseUrl,
             backendPublicBaseUrl,
           }),
-          selectedModelImageUrl: null,
+          selectedModelImageUrl: rewriteUrlForAiService(
+            model?.imageUrl ?? null,
+            {
+              backendInternalBaseUrl,
+              backendPublicBaseUrl,
+            },
+          ),
           selectedModelId: model?.modelId ?? task.selectedModelId,
           heightCm: task.heightCm,
           weightKg: task.weightKg,
@@ -233,6 +242,13 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
   }
 
   private parseError(error: unknown) {
+    if (error instanceof AiTryOnAiServiceError) {
+      return {
+        code: error.safeErrorCode ?? 'AI_PROVIDER_ERROR',
+        message: error.message,
+      };
+    }
+
     const rawMessage =
       error instanceof Error ? error.message : 'AI try-on generation failed.';
     const match = rawMessage.match(/^([A-Z0-9_]+):\s*(.+)$/);

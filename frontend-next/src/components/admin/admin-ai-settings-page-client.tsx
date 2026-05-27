@@ -29,6 +29,10 @@ export function AdminAiSettingsPageClient() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [runtime, setRuntime] = useState<Pick<
+    AdminAiTryOnSettings,
+    "providerConfigured" | "aiServiceReachable" | "providerSafeErrorCode"
+  > | null>(null);
 
   const hydrateForm = (settings: AdminAiTryOnSettings) => {
     setForm({
@@ -38,6 +42,11 @@ export function AdminAiSettingsPageClient() {
       customerDailyLimit: String(settings.customerDailyLimit),
       requireConsent: settings.requireConsent,
       supportedCategories: settings.supportedCategories.join(", "),
+    });
+    setRuntime({
+      providerConfigured: settings.providerConfigured,
+      aiServiceReachable: settings.aiServiceReachable,
+      providerSafeErrorCode: settings.providerSafeErrorCode,
     });
   };
 
@@ -246,6 +255,24 @@ export function AdminAiSettingsPageClient() {
             <li>OpenAI mode stays on the same backend to ai-service provider path and never exposes API keys to the browser.</li>
             <li>Rate limits are enforced server-side for both guests and authenticated customers.</li>
           </ul>
+          {form.providerMode === "openai" ? (
+            <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4 text-sm leading-6 text-[var(--foreground)]">
+              <p className="font-semibold">OpenAI provider requires OPENAI_API_KEY in the ai-service environment.</p>
+              <p className="mt-2" data-testid="admin-ai-settings-openai-status">
+                Status:{" "}
+                {runtime?.aiServiceReachable === false
+                  ? "ai-service unreachable"
+                  : runtime?.providerConfigured
+                    ? "configured"
+                    : "not configured"}
+              </p>
+              {runtime?.providerSafeErrorCode ? (
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  Safe status code: {runtime.providerSafeErrorCode}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </aside>
       </section>
     </div>

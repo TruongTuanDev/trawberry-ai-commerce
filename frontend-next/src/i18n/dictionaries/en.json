@@ -327,7 +327,11 @@
     "referenceRequired": "Upload your photo or choose a built-in model first.",
     "uploadFailed": "Unable to upload the reference image.",
     "generateFailed": "Unable to create the AI try-on right now.",
-    "genericError": "Something went wrong in the AI try-on flow."
+    "genericError": "Something went wrong in the AI try-on flow.",
+    "providerNotConfigured": "AI provider is not configured.",
+    "imageUnsuitable": "The uploaded image is not suitable for try-on.",
+    "providerError": "AI generation failed. Please try again.",
+    "timeout": "AI generation timed out. Please try again."
   },
   "cart": {
     "backToProducts": "Back to products",

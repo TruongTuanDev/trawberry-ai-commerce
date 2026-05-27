@@ -1443,8 +1443,20 @@ export type AdminAiTryOnSettings = {
   customerDailyLimit: number;
   requireConsent: boolean;
   supportedCategories: string[];
+  providerConfigured: boolean | null;
+  aiServiceReachable: boolean | null;
+  providerSafeErrorCode: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type UpdateAdminAiTryOnSettingsPayload = {
+  enabled: boolean;
+  providerMode: "mock" | "demo" | "openai";
+  guestDailyLimit: number;
+  customerDailyLimit: number;
+  requireConsent: boolean;
+  supportedCategories: string[];
 };
 
 export type CreateHomepageSlideInput = {
@@ -1531,7 +1543,7 @@ export async function getAdminAiTryOnSettings() {
 }
 
 export async function updateAdminAiTryOnSettings(
-  payload: Omit<AdminAiTryOnSettings, "id" | "createdAt" | "updatedAt">,
+  payload: UpdateAdminAiTryOnSettingsPayload,
 ) {
   return apiRequest<AdminAiTryOnSettings>("/api/admin/ai-settings", {
     method: "PATCH",

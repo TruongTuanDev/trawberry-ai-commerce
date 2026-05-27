@@ -50,6 +50,15 @@ export class AiTryOnSettingsResponseDto extends UpdateAiTryOnSettingsDto {
   @ApiProperty()
   id!: string;
 
+  @ApiProperty({ nullable: true })
+  providerConfigured!: boolean | null;
+
+  @ApiProperty({ nullable: true })
+  aiServiceReachable!: boolean | null;
+
+  @ApiProperty({ nullable: true })
+  providerSafeErrorCode!: string | null;
+
   @ApiProperty()
   createdAt!: string;
 

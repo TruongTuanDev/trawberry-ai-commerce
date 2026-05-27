@@ -1,3 +1,49 @@
+# AI Try-On Phase 2
+
+## Status
+
+Phase 2 keeps the Phase 1 MVP flow and wires the real `openai` provider path end-to-end.
+
+- `mock` and `demo` remain deterministic local/demo modes
+- `openai` now downloads the product image and customer/model reference image, calls OpenAI Images edit, validates the output, and stores the result through the configured storage service
+- OpenAI credentials still live only in `ai-service`
+- frontend and `backend-nest` never receive or expose the raw API key
+
+## Required Environment
+
+`ai-service` owns the real provider configuration:
+
+- `OPENAI_API_KEY`
+- `AI_TRY_ON_OPENAI_MODEL`
+- `AI_TRY_ON_PROVIDER_TIMEOUT_SECONDS`
+- `AI_TRY_ON_OUTPUT_SIZE`
+
+Recommended rollout:
+
+1. set admin provider mode to `openai`
+2. configure the `ai-service` environment only
+3. rebuild/restart `ai-service`, `backend-nest`, and `frontend-next`
+4. verify `/health` and `/admin/ai-settings`
+
+## OpenAI Provider Behavior
+
+- downloads product and person reference images server-side
+- accepts customer upload or built-in model reference
+- rejects unsupported/empty/non-raster images with stable error codes
+- maps provider and timeout failures to:
+  - `AI_PROVIDER_NOT_CONFIGURED`
+  - `AI_TRY_ON_IMAGE_UNSUITABLE`
+  - `AI_PROVIDER_ERROR`
+  - `AI_TIMEOUT`
+- stores generated output as image bytes in storage, never base64 in the database
+
+## Real-provider limitations
+
+- output quality still depends on source image quality and provider capability
+- the result is a realistic virtual try-on approximation, not an exact garment simulation guarantee
+- size recommendation remains rule-based and reference-only
+- privacy/consent rules from Phase 1 still apply in Phase 2
+
 # AI Try-On Phase 1
 
 ## Scope
@@ -113,20 +159,19 @@ Behavior:
 ### OpenAI
 
 - separate provider class and env-backed configuration path already exist
-- current Phase 1 implementation is a placeholder provider path, not a real garment-generation integration
+- Phase 2 now calls the real OpenAI Images edit path from `ai-service`
 - if `OPENAI_API_KEY` is missing and mode is `openai`, ai-service returns `AI_PROVIDER_NOT_CONFIGURED`
 
 ## OpenAI Readiness
 
-To switch toward real OpenAI integration in Phase 2:
+To switch toward real OpenAI integration:
 
 1. set admin provider mode to `openai`
 2. configure `OPENAI_API_KEY` in `ai-service`
 3. optionally configure `AI_TRY_ON_OPENAI_MODEL`
 4. rebuild/restart `ai-service` and dependent services
-5. replace the placeholder `OpenAITryOnProvider` implementation with the real generation pipeline
-
-No frontend change is required for that provider swap.
+5. ensure the selected product and person reference images are valid raster images
+No frontend secret handling change is required for that provider swap.
 
 ## Size Recommendation
 
@@ -162,7 +207,7 @@ Current Phase 1 counting is task-based.
 
 ## Current Limitations
 
-- OpenAI try-on provider is wired but still placeholder-only
-- built-in models use local static demo assets
+- OpenAI try-on provider is real, but still constrained by current OpenAI image-edit capability and prompt fidelity
+- built-in models use local static demo PNG assets
 - size recommendation is intentionally conservative and explainable
 - product-level seller UI toggle is not yet exposed in Seller Center, although backend product support exists

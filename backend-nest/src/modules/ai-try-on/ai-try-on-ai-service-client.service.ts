@@ -113,6 +113,7 @@ export class AiTryOnAiServiceClientService {
         throw new AiTryOnAiServiceError(
           `AI try-on service timed out after ${timeoutMs}ms.`,
           true,
+          'AI_TIMEOUT',
         );
       }
 
@@ -121,6 +122,7 @@ export class AiTryOnAiServiceClientService {
           ? error.message
           : 'AI try-on service request failed.',
         true,
+        'AI_PROVIDER_ERROR',
       );
     } finally {
       clearTimeout(timeout);

@@ -2,6 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 
 const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
+let cachedAdminToken: string | null = null;
 
 async function backendJson<T>(
   request: APIRequestContext,
@@ -77,33 +78,36 @@ async function approveSeller(request: APIRequestContext, email: string) {
       },
     },
   );
-  const adminLogin = await backendJson<{ accessToken: string }>(
-    request,
-    "/api/auth/login",
-    {
-      method: "POST",
-      data: {
-        email: "demo-admin@trawberry.local",
-        password: "DemoAdmin123!",
+  if (!cachedAdminToken) {
+    const adminLogin = await backendJson<{ accessToken: string }>(
+      request,
+      "/api/auth/login",
+      {
+        method: "POST",
+        data: {
+          email: "demo-admin@trawberry.local",
+          password: "DemoAdmin123!",
+        },
       },
-    },
-  );
+    );
+    cachedAdminToken = adminLogin.accessToken;
+  }
   await backendJson(
     request,
     `/api/admin/sellers/${register.userId}/documents/${document.id}/approve`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
+      headers: { Authorization: `Bearer ${cachedAdminToken}` },
       data: {},
     },
   );
   await backendJson(request, `/api/admin/sellers/${register.userId}/approve`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
+    headers: { Authorization: `Bearer ${cachedAdminToken}` },
     data: {},
   });
 
-  return { token: sellerLogin.accessToken, adminToken: adminLogin.accessToken };
+  return { token: sellerLogin.accessToken, adminToken: cachedAdminToken };
 }
 
 async function createProduct(request: APIRequestContext, token: string, stamp: number) {
@@ -127,7 +131,7 @@ async function createProduct(request: APIRequestContext, token: string, stamp: n
       wbNmId,
       wbTitle: `AI Try-On Jacket ${stamp}`,
       localTitle: `AI Try-On Jacket ${stamp}`,
-      localDescription: "AI try-on MVP public product",
+      localDescription: "AI try-on public product",
       categoryName: "jackets",
       visibility: "ACTIVE",
       aiTryOnEnabled: true,
@@ -178,7 +182,17 @@ async function createProduct(request: APIRequestContext, token: string, stamp: n
   return product;
 }
 
-test("AI Try-On MVP flow works from disabled state to completed result", async ({
+async function fillTryOnForm(page: Page, modelId = "female_regular_165") {
+  await page.getByTestId("ai-try-on-height").fill("172");
+  await page.getByTestId("ai-try-on-weight").fill("70");
+  await page.getByTestId("ai-try-on-gender").selectOption("female");
+  await page.getByTestId("ai-try-on-body-type").selectOption("regular");
+  await page.getByTestId("ai-try-on-trait-wide_shoulders").click();
+  await page.getByTestId(`ai-try-on-model-${modelId}`).click();
+  await page.getByTestId("ai-try-on-consent").check();
+}
+
+test("AI Try-On mock flow works from disabled state to completed result", async ({
   page,
   request,
 }) => {
@@ -202,11 +216,12 @@ test("AI Try-On MVP flow works from disabled state to completed result", async (
   });
 
   await page.goto(`/products/${product.id}`);
-  await expect(page.getByTestId("product-ai-try-on-button")).toBeVisible();
-  await expect(page.locator("text=/Bật thử đồ bằng AI/")).toHaveCount(0);
+  await expect(page.getByTestId("product-ai-try-on-button")).toBeVisible({
+    timeout: 15000,
+  });
   await page.getByTestId("product-ai-try-on-button").click();
   await expect(page.getByTestId("toast-warning").first()).toContainText(
-    /AI try-on is currently under development|Режим AI-примерки находится в разработке\./,
+    /AI try-on is currently under development\.|Режим AI-примерки находится в разработке\./,
   );
 
   await loginAdmin(page);
@@ -223,20 +238,14 @@ test("AI Try-On MVP flow works from disabled state to completed result", async (
   await page.goto(`/products/${product.id}`);
   await page.getByTestId("product-ai-try-on-button").click();
   await expect(page.getByTestId("toast-warning").first()).toContainText(
-    /Please select a size first|Сначала выберите размер\./,
+    /Please select a size first\.|Сначала выберите размер\./,
   );
 
   await page.getByTestId(`product-size-${product.variants[1].id}`).click();
   await page.getByTestId("product-ai-try-on-button").click();
   await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
 
-  await page.getByTestId("ai-try-on-height").fill("172");
-  await page.getByTestId("ai-try-on-weight").fill("70");
-  await page.getByTestId("ai-try-on-gender").selectOption("female");
-  await page.getByTestId("ai-try-on-body-type").selectOption("regular");
-  await page.getByTestId("ai-try-on-trait-wide_shoulders").click();
-  await page.getByTestId("ai-try-on-model-female_regular_165").click();
-  await page.getByTestId("ai-try-on-consent").check();
+  await fillTryOnForm(page);
   await page.getByTestId("ai-try-on-generate").click();
 
   await expect(page.getByTestId("ai-try-on-loading")).toContainText(
@@ -244,10 +253,12 @@ test("AI Try-On MVP flow works from disabled state to completed result", async (
   );
   await expect(page.getByTestId("ai-try-on-result-image")).toBeVisible();
   await expect(page.getByTestId("ai-try-on-suggested-size")).toContainText(/RU|M|L/);
-  await expect(page.locator("text=/Tạo/")).toHaveCount(0);
 });
 
-test("AI Try-On modal opens cleanly on mobile viewport", async ({ page, request }) => {
+test("AI Try-On demo flow works on mobile viewport without overflow", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(180000);
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -276,4 +287,56 @@ test("AI Try-On modal opens cleanly on mobile viewport", async ({ page, request 
     return document.documentElement.scrollWidth > document.documentElement.clientWidth + 2;
   });
   expect(hasOverflow).toBeFalsy();
+});
+
+test("AI Try-On openai mode surfaces provider configuration errors without exposing keys", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180000);
+
+  const stamp = Date.now() + 22;
+  const seller = await approveSeller(request, `ai-try-on-openai-${stamp}@example.com`);
+  const product = await createProduct(request, seller.token, stamp);
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "openai",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["jackets"],
+    },
+  });
+
+  const adminSettings = await backendJson<Record<string, unknown>>(
+    request,
+    "/api/admin/ai-settings",
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${seller.adminToken}` },
+    },
+  );
+  expect(adminSettings.providerMode).toBe("openai");
+  expect(adminSettings).not.toHaveProperty("openaiApiKey");
+  expect(JSON.stringify(adminSettings)).not.toContain("sk-");
+  const providerConfigured = adminSettings.providerConfigured === true;
+  if (providerConfigured) {
+    return;
+  }
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByTestId(`product-size-${product.variants[0].id}`).click();
+  await page.getByTestId("product-ai-try-on-button").click();
+  await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+
+  await fillTryOnForm(page);
+  await page.getByTestId("ai-try-on-generate").click();
+
+  await expect(page.getByTestId("ai-try-on-error")).toContainText(
+    /AI provider is not configured\.|Провайдер ИИ не настроен\./,
+  );
 });

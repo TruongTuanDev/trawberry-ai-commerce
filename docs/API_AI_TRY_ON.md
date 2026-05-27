@@ -1,5 +1,18 @@
 # API AI Try-On
 
+## Phase 2 additions
+
+- admin settings now include safe OpenAI runtime fields when `providerMode=openai`:
+  - `providerConfigured`
+  - `aiServiceReachable`
+  - `providerSafeErrorCode`
+- internal `openai` generation now returns real stored image metadata when the provider is configured
+- task polling can surface:
+  - `AI_PROVIDER_NOT_CONFIGURED`
+  - `AI_TRY_ON_IMAGE_UNSUITABLE`
+  - `AI_PROVIDER_ERROR`
+  - `AI_TIMEOUT`
+
 ## Admin
 
 ### `GET /api/admin/ai-settings`
@@ -15,6 +28,9 @@ Returns:
   "customerDailyLimit": 5,
   "requireConsent": true,
   "supportedCategories": [],
+  "providerConfigured": null,
+  "aiServiceReachable": null,
+  "providerSafeErrorCode": null,
   "createdAt": "2026-05-27T00:00:00.000Z",
   "updatedAt": "2026-05-27T00:00:00.000Z"
 }
@@ -156,6 +172,9 @@ Completed example:
 - `AI_TRY_ON_LIMIT_EXCEEDED`
 - `AI_TRY_ON_INVALID_BODY_PROFILE`
 - `AI_PROVIDER_NOT_CONFIGURED`
+- `AI_TRY_ON_IMAGE_UNSUITABLE`
+- `AI_PROVIDER_ERROR`
+- `AI_TIMEOUT`
 
 ## Internal ai-service
 
@@ -166,7 +185,7 @@ Request:
 ```json
 {
   "taskId": "task-uuid",
-  "providerMode": "mock",
+  "providerMode": "openai",
   "product": {
     "id": "product-uuid",
     "name": "Virtual Try-On Jacket",
@@ -177,7 +196,7 @@ Request:
   },
   "person": {
     "customerImageUrl": null,
-    "selectedModelImageUrl": null,
+    "selectedModelImageUrl": "http://frontend-next:3000/demo/try-on-model-female-regular.png",
     "selectedModelId": "female_regular_165",
     "heightCm": 172,
     "weightKg": 70,
@@ -196,17 +215,17 @@ Response:
 {
   "images": [
     {
-      "url": "http://localhost:8000/generated/ai-try-on/mock/task-uuid/1.svg",
-      "storageKey": "ai-try-on/mock/task-uuid/1.svg",
-      "mimeType": "image/svg+xml",
+      "url": "http://localhost:8000/generated/ai-try-on/openai/task-uuid/1.png",
+      "storageKey": "ai-try-on/openai/task-uuid/1.png",
+      "mimeType": "image/png",
       "width": 1024,
       "height": 1536
     }
   ],
-  "provider": "mock",
+  "provider": "openai",
   "metadata": {
     "promptVersion": "try_on_v1",
-    "providerMode": "mock"
+    "providerMode": "openai"
   }
 }
 ```

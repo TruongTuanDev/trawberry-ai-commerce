@@ -12,6 +12,7 @@ import { readBody } from './test-helpers';
 
 describe('AiTryOnController (e2e)', () => {
   let app: INestApplication<App>;
+  let fetchSpy: jest.SpiedFunction<typeof fetch>;
 
   const settings = {
     id: 'default',
@@ -167,6 +168,37 @@ describe('AiTryOnController (e2e)', () => {
   };
 
   beforeEach(async () => {
+    fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((input) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+
+      if (url.endsWith('/health')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              status: 'OK',
+              openaiConfigured: false,
+              safeErrorCode: 'OPENAI_UNAUTHORIZED',
+            }),
+            {
+              status: 200,
+              headers: {
+                'content-type': 'application/json',
+              },
+            },
+          ),
+        );
+      }
+
+      return Promise.reject(
+        new Error(`Unexpected fetch call in ai-try-on e2e test: ${url}`),
+      );
+    });
+
     tasks = [];
     settings.aiTryOnEnabled = false;
     settings.aiTryOnProvider = 'mock';
@@ -351,6 +383,8 @@ describe('AiTryOnController (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+    fetchSpy.mockRestore();
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 
@@ -383,6 +417,31 @@ describe('AiTryOnController (e2e)', () => {
     const body = readBody<{ enabled: boolean; providerMode: string }>(updated);
     expect(body.enabled).toBe(true);
     expect(body.providerMode).toBe('demo');
+
+    const openAiUpdated = await request(app.getHttpServer())
+      .patch('/api/admin/ai-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        enabled: true,
+        providerMode: 'openai',
+        guestDailyLimit: 2,
+        customerDailyLimit: 4,
+        requireConsent: true,
+        supportedCategories: ['jackets'],
+      })
+      .expect(200);
+
+    expect(
+      readBody<{
+        providerConfigured: boolean | null;
+        aiServiceReachable: boolean | null;
+        providerSafeErrorCode: string | null;
+      }>(openAiUpdated),
+    ).toMatchObject({
+      providerConfigured: false,
+      aiServiceReachable: true,
+      providerSafeErrorCode: 'OPENAI_UNAUTHORIZED',
+    });
   });
 
   it('public config returns the current AI settings', async () => {
@@ -476,7 +535,49 @@ describe('AiTryOnController (e2e)', () => {
 
     expect(task.status).toBe('COMPLETED');
     expect(task.resultImage?.url).toContain(createdBody.id);
+    expect(task.resultImage?.mimeType).toBe('image/svg+xml');
+    expect(task.resultImage?.width).toBe(1024);
+    expect(task.resultImage?.height).toBe(1536);
     expect(task.sizeRecommendation.recommendedRussianSize).toBe('RU 46');
+  });
+
+  it('creates a demo task and still returns completed result data', async () => {
+    settings.aiTryOnEnabled = true;
+    settings.aiTryOnProvider = 'demo';
+
+    const created = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-demo')
+      .send({
+        selectedSize: 'L',
+        selectedRussianSize: 'RU 48',
+        gender: 'female',
+        bodyType: 'regular',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    const taskResponse = await request(app.getHttpServer())
+      .get(
+        `/api/public/ai-try-on/tasks/${readBody<{ id: string }>(created).id}`,
+      )
+      .set('x-guest-session-id', 'guest-demo')
+      .expect(200);
+
+    expect(
+      readBody<{
+        providerMode: string;
+        status: string;
+        resultImage: { mimeType: string } | null;
+      }>(taskResponse),
+    ).toMatchObject({
+      providerMode: 'demo',
+      status: 'COMPLETED',
+      resultImage: {
+        mimeType: 'image/svg+xml',
+      },
+    });
   });
 
   it('blocks guest usage after the configured daily limit', async () => {

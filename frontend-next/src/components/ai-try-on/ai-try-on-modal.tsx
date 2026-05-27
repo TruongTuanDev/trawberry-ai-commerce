@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ApiError } from "@/lib/api";
 import { AiTryOnBodyForm } from "@/components/ai-try-on/ai-try-on-body-form";
 import { AiTryOnModelPicker } from "@/components/ai-try-on/ai-try-on-model-picker";
 import { AiTryOnResult } from "@/components/ai-try-on/ai-try-on-result";
@@ -24,6 +25,44 @@ type TryOnFormState = {
 };
 
 const POLLING_STATUSES = new Set<AiTryOnTask["status"]>(["PENDING", "PROCESSING"]);
+
+function resolveTryOnErrorMessage(
+  error: unknown,
+  t: (key: string) => string,
+  fallbackKey: string,
+) {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case "AI_PROVIDER_NOT_CONFIGURED":
+        return t("aiTryOn.providerNotConfigured");
+      case "AI_TRY_ON_IMAGE_UNSUITABLE":
+        return t("aiTryOn.imageUnsuitable");
+      case "AI_PROVIDER_ERROR":
+        return t("aiTryOn.providerError");
+      case "AI_TIMEOUT":
+        return t("aiTryOn.timeout");
+      default:
+        return error.message || t(fallbackKey);
+    }
+  }
+
+  return error instanceof Error ? error.message : t(fallbackKey);
+}
+
+function resolveTaskErrorMessage(task: AiTryOnTask, t: (key: string) => string) {
+  switch (task.errorCode) {
+    case "AI_PROVIDER_NOT_CONFIGURED":
+      return t("aiTryOn.providerNotConfigured");
+    case "AI_TRY_ON_IMAGE_UNSUITABLE":
+      return t("aiTryOn.imageUnsuitable");
+    case "AI_PROVIDER_ERROR":
+      return t("aiTryOn.providerError");
+    case "AI_TIMEOUT":
+      return t("aiTryOn.timeout");
+    default:
+      return task.errorMessage ?? t("aiTryOn.generateFailed");
+  }
+}
 
 function getGuestSessionId() {
   if (typeof window === "undefined") {
@@ -115,11 +154,11 @@ export function AiTryOnModal({
       try {
         const next = await getAiTryOnTask(task.id, getGuestSessionId());
         setTask(next);
-        if (next.status === "FAILED" && next.errorMessage) {
-          setError(next.errorMessage);
+        if (next.status === "FAILED") {
+          setError(resolveTaskErrorMessage(next, t));
         }
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : t("aiTryOn.genericError"));
+        setError(resolveTryOnErrorMessage(requestError, t, "aiTryOn.genericError"));
         window.clearInterval(interval);
       }
     }, 1200);
@@ -151,8 +190,7 @@ export function AiTryOnModal({
       });
       setSelectedModelId(null);
     } catch (uploadError) {
-      const message =
-        uploadError instanceof Error ? uploadError.message : t("aiTryOn.uploadFailed");
+      const message = resolveTryOnErrorMessage(uploadError, t, "aiTryOn.uploadFailed");
       setError(message);
       toast.error(message);
     } finally {
@@ -192,8 +230,7 @@ export function AiTryOnModal({
       );
       setTask(created);
     } catch (submitError) {
-      const message =
-        submitError instanceof Error ? submitError.message : t("aiTryOn.generateFailed");
+      const message = resolveTryOnErrorMessage(submitError, t, "aiTryOn.generateFailed");
       setError(message);
       toast.error(message);
     } finally {

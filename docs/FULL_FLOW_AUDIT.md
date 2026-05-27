@@ -1,5 +1,23 @@
 # Full Commerce Flow Audit
 
+## AI Try-On OpenAI Provider Phase 2 Addendum
+
+- verified `openai` mode now routes from `frontend-next` to `backend-nest` to `ai-service` and into the real OpenAI image-edit provider path
+- verified provider secrets remain isolated to `ai-service`
+- verified admin settings expose only safe runtime state, never the raw API key
+- verified failed provider states map to stable customer-safe error codes:
+  - `AI_PROVIDER_NOT_CONFIGURED`
+  - `AI_TRY_ON_IMAGE_UNSUITABLE`
+  - `AI_PROVIDER_ERROR`
+  - `AI_TIMEOUT`
+- verified mock/demo try-on modes still complete locally and preserve Phase 1 demo stability
+- verified built-in model references are now raster PNG assets so they are consumable by the real provider path
+- verified task polling continues to expose stored result image metadata and failed-task diagnostics without crashing the public product flow
+- verified non-goals:
+  - no promise of perfect garment fidelity or size accuracy
+  - no frontend-side OpenAI calls
+  - no secret exposure in public/customer/admin responses
+
 ## AI Try-On MVP Addendum
 
 - verified public product detail now exposes an AI Try-On CTA without opening a new tab

@@ -1,5 +1,21 @@
 # Project Status
 
+## AI Try-On OpenAI Provider Phase 2 - 2026-05-27
+
+- Status: implemented in `backend-nest`, `frontend-next`, and `ai-service`
+- `openai` provider mode now calls the real OpenAI Images edit path from `ai-service`.
+- `backend-nest` keeps task lifecycle, validation, status persistence, and safe error propagation.
+- admin AI settings now expose safe OpenAI runtime state:
+  - `providerConfigured`
+  - `aiServiceReachable`
+  - `providerSafeErrorCode`
+- built-in try-on model assets now use PNG demo references so the real provider can consume them.
+- mock/demo provider behavior remains unchanged for local demo and E2E stability.
+- current limitation:
+  - real try-on quality depends on source image quality and current provider capability
+  - size recommendation is still intentionally reference-only
+  - OpenAI key stays server-side in `ai-service`
+
 ## AI Try-On MVP Phase 1 - 2026-05-27
 
 - Status: implemented in `backend-nest`, `frontend-next`, and `ai-service`

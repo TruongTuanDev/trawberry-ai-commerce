@@ -1,5 +1,47 @@
 # Phase Report
 
+## 2026-05-27 AI Virtual Try-On OpenAI Provider Phase 2
+
+- completed the real `openai` provider wiring for AI try-on without changing the public Phase 1 flow shape
+- `ai-service` now:
+  - downloads and validates product/person raster images
+  - calls OpenAI Images edit with server-side prompt constraints
+  - validates generated output
+  - stores the output through the configured storage service
+- `backend-nest` now:
+  - preserves safe provider error codes on failed tasks
+  - exposes safe OpenAI runtime status in admin settings
+  - forwards built-in model image URLs to `ai-service`
+- `frontend-next` now:
+  - maps `AI_PROVIDER_NOT_CONFIGURED`, `AI_TRY_ON_IMAGE_UNSUITABLE`, `AI_PROVIDER_ERROR`, and `AI_TIMEOUT`
+  - shows admin helper messaging for `providerMode=openai`
+  - uses raster built-in model assets compatible with the real provider
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `ai-service python -m compileall app`: pass
+- `ai-service python -m pytest -q`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/ai-try-on-mvp.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/product-buying-ux.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build backend-nest frontend-next ai-service`: pass
+- runtime health checks for backend, frontend, and ai-service: pass
+
+Remaining gaps:
+
+- exact virtual try-on fidelity still depends on current OpenAI image-edit capability and source image quality
+- automated frontend E2E does not force a paid real-provider generation when `OPENAI_API_KEY` already exists; it only verifies safe runtime branching and no secret exposure
+- product-level seller UI toggle is still out of scope
+- size recommendation remains rule-based by design
+
 ## 2026-05-27 AI Virtual Try-On MVP Phase 1
 
 - Implemented a configurable AI Try-On MVP across `backend-nest`, `frontend-next`, and `ai-service`.

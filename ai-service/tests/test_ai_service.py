@@ -31,7 +31,7 @@ def test_health() -> None:
     assert body["storageDriver"] == "mock"
     assert body["openaiConfigured"] is False
     assert body["openaiSmokeEnabled"] is False
-    assert body["safeErrorCode"] is None
+    assert body["safeErrorCode"] == "OPENAI_UNAUTHORIZED"
     assert body["tryOnReady"] is True
 
 
@@ -51,7 +51,7 @@ def test_health_reports_openai_blocked_when_provider_is_openai_without_key(monke
     assert body["safeErrorCode"] == "OPENAI_UNAUTHORIZED"
 
 
-def test_health_keeps_openai_configured_false_when_mock_provider_is_active(
+def test_health_reports_openai_configuration_even_when_mock_provider_is_active(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv("AI_IMAGE_PROVIDER", "mock")
@@ -65,7 +65,7 @@ def test_health_keeps_openai_configured_false_when_mock_provider_is_active(
     assert response.status_code == 200
     body = response.json()
     assert body["aiImageProvider"] == "mock"
-    assert body["openaiConfigured"] is False
+    assert body["openaiConfigured"] is True
     assert body["safeErrorCode"] is None
 
 
@@ -223,6 +223,41 @@ def test_generate_try_on_mock() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["provider"] == "mock"
+    assert len(body["images"]) == 1
+    assert body["images"][0]["mimeType"] == "image/svg+xml"
+
+
+def test_generate_try_on_demo() -> None:
+    token = get_settings().ai_service_internal_token
+
+    response = client.post(
+        "/internal/ai-try-on/generate",
+        headers={"X-Internal-Token": token},
+        json={
+            "taskId": "try-on-task-demo",
+            "providerMode": "demo",
+            "product": {
+                "id": "prod-1",
+                "name": "Marketplace dress",
+                "imageUrl": "https://cdn.example.com/product.jpg",
+                "category": "dresses",
+                "selectedSize": "S",
+                "selectedRussianSize": "RU 44",
+            },
+            "person": {
+                "selectedModelId": "female_slim_168",
+                "gender": "female",
+                "bodyType": "slim",
+                "bodyTraits": ["long_legs"],
+            },
+            "prompt": "Create a stable marketplace virtual try-on preview for this dress.",
+            "locale": "en",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "demo"
     assert len(body["images"]) == 1
     assert body["images"][0]["mimeType"] == "image/svg+xml"
 

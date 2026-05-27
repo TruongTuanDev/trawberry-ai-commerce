@@ -246,9 +246,9 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env logs -f backend
 
 See `docs/DOCKER_BUILD_RELIABILITY.md` for troubleshooting and CI-readiness notes.
 
-## 12. AI Try-On MVP
+## 12. AI Try-On
 
-Phase 1 AI Try-On is wired end-to-end:
+Phase 1 AI Try-On is wired end-to-end and Phase 2 adds the real OpenAI provider path:
 
 - admin config UI: `/admin/ai-settings`
 - public product detail CTA: `/products/[id]`
@@ -272,12 +272,16 @@ OpenAI readiness:
 - set admin provider mode to `openai`
 - configure `OPENAI_API_KEY`
 - optionally configure `AI_TRY_ON_OPENAI_MODEL`
+- optionally configure `AI_TRY_ON_PROVIDER_TIMEOUT_SECONDS`
+- optionally configure `AI_TRY_ON_OUTPUT_SIZE`
 - rebuild/restart services
 
-Phase 1 note:
+Phase 2 note:
 
-- `openai` mode is configuration-ready but still placeholder-based
-- `mock` and `demo` are the stable local/demo modes
+- `openai` mode now calls the real OpenAI Images edit path from `ai-service`
+- `mock` and `demo` remain the stable local/demo modes
+- the API key must never be exposed to the frontend or committed to the repo
+- real try-on output quality still depends on provider capability and source image quality
 Kích thước lý tưởng nhất (Tỷ lệ 2.57 : 1):
 
 1800 × 700 px (Khuyên dùng cho độ nét cao trên màn hình Retina/4K).

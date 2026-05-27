@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -49,6 +50,7 @@ type PublicTryOnProduct = Prisma.ProductGetPayload<{
 @Injectable()
 export class AiTryOnService {
   constructor(
+    private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
     private readonly workerService: AiTryOnWorkerService,
@@ -59,7 +61,11 @@ export class AiTryOnService {
 
   async getAdminSettings() {
     const settings = await this.getOrCreateSettings();
-    return this.mapSettings(settings);
+    const runtime =
+      settings.aiTryOnProvider === 'openai'
+        ? await this.getAiServiceHealth()
+        : undefined;
+    return this.mapSettings(settings, runtime);
   }
 
   async updateAdminSettings(dto: UpdateAiTryOnSettingsDto) {
@@ -88,7 +94,11 @@ export class AiTryOnService {
       },
     });
 
-    return this.mapSettings(settings);
+    const runtime =
+      settings.aiTryOnProvider === 'openai'
+        ? await this.getAiServiceHealth()
+        : undefined;
+    return this.mapSettings(settings, runtime);
   }
 
   async getPublicConfig() {
@@ -462,6 +472,11 @@ export class AiTryOnService {
 
   private mapSettings(
     settings: Awaited<ReturnType<AiTryOnService['getOrCreateSettings']>>,
+    runtime?: {
+      reachable: boolean;
+      openAiConfigured: boolean;
+      safeErrorCode: string | null;
+    },
   ) {
     return {
       id: settings.id,
@@ -473,6 +488,18 @@ export class AiTryOnService {
       supportedCategories: this.readSupportedCategories(
         settings.supportedCategories,
       ),
+      providerConfigured:
+        settings.aiTryOnProvider === 'openai'
+          ? (runtime?.openAiConfigured ?? null)
+          : null,
+      aiServiceReachable:
+        settings.aiTryOnProvider === 'openai'
+          ? (runtime?.reachable ?? null)
+          : null,
+      providerSafeErrorCode:
+        settings.aiTryOnProvider === 'openai'
+          ? (runtime?.safeErrorCode ?? null)
+          : null,
       createdAt: settings.createdAt.toISOString(),
       updatedAt: settings.updatedAt.toISOString(),
     };
@@ -545,5 +572,48 @@ export class AiTryOnService {
       code,
       message,
     });
+  }
+
+  private async getAiServiceHealth(): Promise<{
+    reachable: boolean;
+    openAiConfigured: boolean;
+    safeErrorCode: string | null;
+  }> {
+    const baseUrl = this.configService.get<string>(
+      'AI_SERVICE_BASE_URL',
+      'http://localhost:8000',
+    );
+
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (!response.ok) {
+        return {
+          reachable: false,
+          openAiConfigured: false,
+          safeErrorCode: null,
+        };
+      }
+
+      const body = (await response.json()) as {
+        openaiConfigured?: boolean;
+        safeErrorCode?: string | null;
+      };
+
+      return {
+        reachable: true,
+        openAiConfigured: body.openaiConfigured ?? false,
+        safeErrorCode: body.safeErrorCode ?? null,
+      };
+    } catch {
+      return {
+        reachable: false,
+        openAiConfigured: false,
+        safeErrorCode: null,
+      };
+    }
   }
 }
