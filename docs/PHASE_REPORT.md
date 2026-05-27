@@ -1,5 +1,47 @@
 # Phase Report
 
+## 2026-05-27 GitHub Actions CI Foundation
+
+- updated `.github/workflows/ci.yml` to standardize CI for the active marketplace stack
+- narrowed triggers to:
+  - `push` on `main`
+  - `pull_request` targeting `main`
+- added repository safety checks to fail fast when tracked `.env`, `data.xlsx`, or Playwright/test artifacts appear
+- backend job now:
+  - provisions PostgreSQL and Redis services
+  - enables `uuid-ossp`
+  - runs Prisma generate and db push
+  - runs lint and build
+  - runs targeted backend specs only:
+    - `test/ai-try-on.e2e-spec.ts`
+    - `test/product.e2e-spec.ts`
+    - `test/orders.e2e-spec.ts`
+- frontend job remains lint/build only with safe public env defaults
+- ai-service job remains mock-safe and does not require `OPENAI_API_KEY`
+- docker config job now validates both:
+  - `infra/docker-compose.yml`
+  - `infra/docker-compose.prod.yml`
+- docker build job now builds production images only on `push main`
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `ai-service python -m compileall app`: pass
+- `ai-service python -m pytest -q`: pass
+- `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.example config`: pass
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- CI workflow could not be executed on GitHub from the local workspace and still depends on GitHub Actions account availability
+- full Playwright CI remains a later phase once the browser runtime and artifact strategy are ready
+
 ## 2026-05-27 Production Docker Deployment Foundation
 
 - added production Docker Compose foundation in `infra/docker-compose.prod.yml`

@@ -1,5 +1,26 @@
 # Trawberry AI Commerce
 
+## GitHub Actions CI
+
+GitHub Actions CI is now prepared for the active marketplace stack in `.github/workflows/ci.yml`.
+
+Workflow scope:
+
+- `push` to `main`
+- `pull_request` to `main`
+- backend targeted verification with PostgreSQL and Redis
+- frontend lint/build
+- ai-service compile/pytest with mock-safe env
+- Docker compose config validation
+- production Docker image build on `push main`
+
+CI safety defaults:
+
+- no real `.env` required
+- no paid OpenAI smoke
+- no production secrets required
+- no real Wildberries or carrier API calls in default CI
+
 ## Production Deployment Foundation
 
 Production artifacts for VPS deployment are now included:

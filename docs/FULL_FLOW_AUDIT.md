@@ -1,5 +1,27 @@
 # Full Commerce Flow Audit
 
+## GitHub Actions CI Foundation Addendum
+
+- verified the active marketplace stack now has a dedicated GitHub Actions workflow for the current delivery path only:
+  - `backend-nest`
+  - `frontend-next`
+  - `ai-service`
+  - `infra`
+- verified CI does not require production secrets or a real `.env` file
+- verified CI defaults remain mock-safe:
+  - no paid OpenAI smoke
+  - no real Wildberries API sync
+  - no real delivery provider calls
+- verified backend CI isolates to targeted specs instead of the broader unstable full suite
+- verified compose validation covers both:
+  - local compose contract
+  - production compose contract
+- verified production Docker image build is separated and runs only on `push main`
+- verified repository safety checks now fail if tracked git content includes:
+  - `.env`
+  - `data.xlsx`
+  - Playwright/test artifacts
+
 ## Production Docker Deployment Foundation Addendum
 
 - verified the active release path now has a dedicated production compose file separate from local development compose

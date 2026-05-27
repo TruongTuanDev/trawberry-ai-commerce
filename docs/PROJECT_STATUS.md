@@ -1,5 +1,30 @@
 # Project Status
 
+## GitHub Actions CI Foundation - 2026-05-27
+
+- Status: implemented in `.github/workflows/ci.yml`
+- CI now runs on:
+  - `push` to `main`
+  - `pull_request` targeting `main`
+- Workflow jobs now cover:
+  - repository safety checks for tracked `.env`, `data.xlsx`, and test artifacts
+  - backend Prisma/lint/build plus targeted e2e specs
+  - frontend lint/build
+  - ai-service compile/pytest
+  - Docker compose config validation for local and production files
+  - production image build on `push main`
+- CI defaults remain mock-safe:
+  - no paid OpenAI smoke
+  - no production secrets required
+  - backend AI worker forced to internal/mock-safe mode in CI
+  - ai-service uses `AI_IMAGE_PROVIDER=mock` and `AI_TRY_ON_PROVIDER=demo`
+
+## Current CI gaps
+
+- GitHub Actions account restrictions, if they recur, are external to the workflow definition
+- full Playwright browser coverage is still intentionally out of scope for this CI phase
+- Docker build runs only on `push main`, not on pull requests
+
 ## Production Docker Deployment Foundation - 2026-05-27
 
 - Status: implemented in `infra`, deployment env templates, and production operations docs
