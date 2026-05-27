@@ -1,5 +1,39 @@
 # Phase Report
 
+## 2026-05-27 Production Docker Deployment Foundation
+
+- added production Docker Compose foundation in `infra/docker-compose.prod.yml`
+- introduced nginx reverse proxy config and image build under `infra/nginx`
+- kept production services internal-only except the reverse proxy
+- removed production dependence on source bind mounts
+- standardized named volumes for PostgreSQL, Redis, and MinIO
+- added restart policy and health checks across production services
+- expanded env examples for production-safe deployment variables without committing secrets
+- added deployment, smoke, backup, and restore scripts under `infra/scripts`
+- updated deployment, runbook, security, and backup documentation for VPS rollout
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run prisma:db:push`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `ai-service python -m compileall app`: pass
+- `ai-service python -m pytest -q`: pass
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build backend-nest frontend-next ai-service`: pass before Docker Desktop daemon outage
+- runtime curls for backend, ai-service, frontend `/`, `/products`, `/admin/ai-settings`, `/admin/homepage-slides`: pass before Docker Desktop daemon outage
+- `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.example config`: pass
+- `backend-nest npm run smoke:ai-service-integration`: blocked by local Docker Desktop daemon outage after initial runtime verification
+
+Remaining gaps:
+
+- local Docker Desktop daemon became unhealthy during verification and blocked further runtime re-checks
+- TLS certificate issuance remains operator-managed
+- no automated offsite backup shipping yet
+
 ## 2026-05-27 AI Virtual Try-On OpenAI Provider Phase 2
 
 - completed the real `openai` provider wiring for AI try-on without changing the public Phase 1 flow shape

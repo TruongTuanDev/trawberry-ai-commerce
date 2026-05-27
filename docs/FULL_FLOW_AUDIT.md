@@ -1,5 +1,34 @@
 # Full Commerce Flow Audit
 
+## Production Docker Deployment Foundation Addendum
+
+- verified the active release path now has a dedicated production compose file separate from local development compose
+- verified production topology keeps only the reverse proxy public while `backend-nest`, `ai-service`, PostgreSQL, Redis, and MinIO remain Docker-internal
+- verified named persistence volumes are defined for:
+  - PostgreSQL
+  - Redis
+  - MinIO
+- verified production compose avoids source bind mounts for application services
+- verified health checks exist for:
+  - frontend
+  - backend
+  - ai-service
+  - PostgreSQL
+  - Redis
+  - MinIO
+- verified deployment runbooks now cover:
+  - VPS sizing
+  - firewall and SSH guidance
+  - domain mapping
+  - HTTPS options
+  - backup and restore
+  - AI Try-On production-safe defaults
+- verified non-goals:
+  - no commerce business rule change
+  - no new payment provider
+  - no public exposure of internal services
+  - no secret material committed into git
+
 ## AI Try-On OpenAI Provider Phase 2 Addendum
 
 - verified `openai` mode now routes from `frontend-next` to `backend-nest` to `ai-service` and into the real OpenAI image-edit provider path

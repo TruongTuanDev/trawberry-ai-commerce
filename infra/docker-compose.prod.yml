@@ -1,0 +1,274 @@
+services:
+  nginx:
+    image: ${NGINX_IMAGE:-strawberry/nginx:prod}
+    container_name: strawberry-nginx
+    restart: unless-stopped
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    depends_on:
+      frontend-next:
+        condition: service_healthy
+      backend-nest:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: strawberry-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-strawberry}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-postgres-password}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: strawberry-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: strawberry-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-minio-password}
+    expose:
+      - "9000"
+      - "9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: strawberry-minio-init
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-change-me-minio-password} &&
+      mc mb --ignore-existing local/${MINIO_BUCKET:-strawberry-ai-assets} &&
+      mc anonymous set public local/${MINIO_BUCKET:-strawberry-ai-assets}
+      "
+    networks:
+      - strawberry-prod-net
+
+  ai-service:
+    image: ${AI_SERVICE_IMAGE:-strawberry/ai-service:prod}
+    container_name: strawberry-ai-service
+    restart: unless-stopped
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: ${APP_ENV:-production}
+      AI_SERVICE_HOST: 0.0.0.0
+      AI_SERVICE_PORT: 8000
+      AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-change-me-internal-token}
+      AI_IMAGE_PROVIDER: ${AI_IMAGE_PROVIDER:-mock}
+      AI_TRY_ON_PROVIDER: ${AI_TRY_ON_PROVIDER:-demo}
+      AI_TRY_ON_ENABLED: ${AI_TRY_ON_ENABLED:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_IMAGE_MODEL: ${OPENAI_IMAGE_MODEL:-gpt-image-1}
+      OPENAI_IMAGE_SIZE: ${OPENAI_IMAGE_SIZE:-1024x1536}
+      OPENAI_IMAGE_QUALITY: ${OPENAI_IMAGE_QUALITY:-medium}
+      OPENAI_IMAGE_OUTPUT_FORMAT: ${OPENAI_IMAGE_OUTPUT_FORMAT:-jpeg}
+      OPENAI_IMAGE_TIMEOUT_SECONDS: ${OPENAI_IMAGE_TIMEOUT_SECONDS:-120}
+      OPENAI_IMAGE_MAX_RETRIES: ${OPENAI_IMAGE_MAX_RETRIES:-1}
+      MAX_INPUT_IMAGE_SIZE_MB: ${MAX_INPUT_IMAGE_SIZE_MB:-15}
+      RUN_OPENAI_SMOKE: ${RUN_OPENAI_SMOKE:-false}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+      STORAGE_LOCAL_ROOT: generated
+      STORAGE_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-https://storage.yourdomain.ru}
+      S3_BUCKET: ${S3_BUCKET:-strawberry-ai-assets}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-change-me-minio-password}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-https://storage.yourdomain.ru}
+      NEST_CALLBACK_AUTH_TOKEN: ${NEST_CALLBACK_AUTH_TOKEN:-}
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+  backend-nest:
+    image: ${BACKEND_IMAGE:-strawberry/backend-nest:prod}
+    container_name: strawberry-backend-nest
+    restart: unless-stopped
+    build:
+      context: ../backend-nest
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:change-me-postgres-password@postgres:5432/strawberry?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-jwt-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-jwt-refresh-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://yourdomain.ru}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://yourdomain.ru}
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-access_token}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
+      AUTH_COOKIE_SAME_SITE: ${AUTH_COOKIE_SAME_SITE:-lax}
+      AUTH_COOKIE_MAX_AGE_SECONDS: ${AUTH_COOKIE_MAX_AGE_SECONDS:-86400}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
+      FILE_STORAGE_DRIVER: ${FILE_STORAGE_DRIVER:-s3}
+      UPLOAD_ROOT: uploads
+      FILES_PUBLIC_BASE_URL: ${BACKEND_PUBLIC_URL:-https://api.yourdomain.ru}
+      S3_BUCKET: ${S3_BUCKET:-strawberry-ai-assets}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-change-me-minio-password}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-https://storage.yourdomain.ru}
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+      AI_SERVICE_BASE_URL_HOST: http://ai-service:8000
+      AI_SERVICE_INTERNAL_TOKEN: ${AI_SERVICE_INTERNAL_TOKEN:-change-me-internal-token}
+      AI_WORKER_MODE: ${AI_WORKER_MODE:-ai-service}
+      AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-45000}
+      AI_SERVICE_RETRY_ATTEMPTS: ${AI_SERVICE_RETRY_ATTEMPTS:-3}
+      AI_SERVICE_RETRY_DELAY_MS: ${AI_SERVICE_RETRY_DELAY_MS:-1000}
+      BACKEND_INTERNAL_BASE_URL: http://backend-nest:3001
+      BACKEND_PUBLIC_BASE_URL: ${BACKEND_PUBLIC_URL:-https://api.yourdomain.ru}
+      APP_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-https://api.yourdomain.ru}
+      WB_SYNC_MODE: ${WB_SYNC_MODE:-mock}
+      WB_API_BASE_URL: ${WB_API_BASE_URL:-https://content-api.wildberries.ru}
+      WB_SYNC_TIMEOUT_MS: ${WB_SYNC_TIMEOUT_MS:-30000}
+      WB_SYNC_PAGE_LIMIT: ${WB_SYNC_PAGE_LIMIT:-100}
+      WB_SYNC_MAX_PAGES: ${WB_SYNC_MAX_PAGES:-20}
+      WB_CREDENTIAL_ENCRYPTION_KEY: ${WB_CREDENTIAL_ENCRYPTION_KEY:-change-me-wb-encryption-key}
+      DELIVERY_PROVIDER_MODE: ${DELIVERY_PROVIDER_MODE:-mock}
+      DELIVERY_DEFAULT_PROVIDER: ${DELIVERY_DEFAULT_PROVIDER:-yandex}
+      DELIVERY_SAME_CITY_PREFERRED_PROVIDER: ${DELIVERY_SAME_CITY_PREFERRED_PROVIDER:-yandex}
+      DELIVERY_INTER_CITY_PREFERRED_PROVIDER: ${DELIVERY_INTER_CITY_PREFERRED_PROVIDER:-cdek}
+      DELIVERY_FALLBACK_PROVIDER: ${DELIVERY_FALLBACK_PROVIDER:-cdek}
+      CDEK_DELIVERY_ENABLED: ${CDEK_DELIVERY_ENABLED:-false}
+      CDEK_API_BASE_URL: ${CDEK_API_BASE_URL:-}
+      CDEK_ACCOUNT: ${CDEK_ACCOUNT:-}
+      CDEK_SECURE_PASSWORD: ${CDEK_SECURE_PASSWORD:-}
+      CDEK_TIMEOUT_MS: ${CDEK_TIMEOUT_MS:-30000}
+      CDEK_DEFAULT_CURRENCY: ${CDEK_DEFAULT_CURRENCY:-RUB}
+      CDEK_DEFAULT_TARIFF_CODE: ${CDEK_DEFAULT_TARIFF_CODE:-}
+      YANDEX_DELIVERY_ENABLED: ${YANDEX_DELIVERY_ENABLED:-false}
+      YANDEX_DELIVERY_BASE_URL: ${YANDEX_DELIVERY_BASE_URL:-https://b2b.taxi.yandex.net}
+      YANDEX_DELIVERY_TOKEN: ${YANDEX_DELIVERY_TOKEN:-}
+      YANDEX_DELIVERY_CLIENT_ID: ${YANDEX_DELIVERY_CLIENT_ID:-}
+      YANDEX_DELIVERY_TIMEOUT_MS: ${YANDEX_DELIVERY_TIMEOUT_MS:-30000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3001/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+  frontend-next:
+    image: ${FRONTEND_IMAGE:-strawberry/frontend-next:prod}
+    container_name: strawberry-frontend-next
+    restart: unless-stopped
+    build:
+      context: ../frontend-next
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.yourdomain.ru}
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.yourdomain.ru}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://yourdomain.ru}
+    depends_on:
+      backend-nest:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - strawberry-prod-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  strawberry-prod-net:
+    driver: bridge

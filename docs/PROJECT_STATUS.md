@@ -1,5 +1,33 @@
 # Project Status
 
+## Production Docker Deployment Foundation - 2026-05-27
+
+- Status: implemented in `infra`, deployment env templates, and production operations docs
+- Added dedicated production compose in `infra/docker-compose.prod.yml`
+- Added nginx reverse proxy foundation in `infra/nginx/nginx.conf` and `infra/nginx/Dockerfile`
+- Added production deployment scripts:
+  - `infra/scripts/deploy.sh`
+  - `infra/scripts/smoke-production.sh`
+  - `infra/scripts/backup-postgres.sh`
+  - `infra/scripts/restore-postgres.sh`
+- Updated production-ready env examples for `infra`, `backend-nest`, `frontend-next`, and `ai-service`
+- Production compose now:
+  - avoids source bind mounts for application services and nginx config
+  - keeps only the reverse proxy public
+  - uses named volumes for PostgreSQL, Redis, and MinIO
+  - applies `restart: unless-stopped`
+  - defines health checks for frontend, backend, ai-service, PostgreSQL, Redis, and MinIO
+- AI Try-On production defaults remain safe:
+  - `AI_TRY_ON_ENABLED=false`
+  - `AI_TRY_ON_PROVIDER=demo`
+  - `OPENAI_API_KEY` optional and server-side only
+
+## Current deployment gaps
+
+- HTTPS issuance is documented but still operator-managed
+- no centralized logs, metrics, or alerting stack yet
+- PostgreSQL restore must be treated as maintenance-window only
+
 ## AI Try-On OpenAI Provider Phase 2 - 2026-05-27
 
 - Status: implemented in `backend-nest`, `frontend-next`, and `ai-service`

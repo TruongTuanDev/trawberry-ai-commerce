@@ -1,5 +1,43 @@
 # Trawberry AI Commerce
 
+## Production Deployment Foundation
+
+Production artifacts for VPS deployment are now included:
+
+- `infra/docker-compose.prod.yml`
+- `infra/nginx/nginx.conf`
+- `infra/nginx/Dockerfile`
+- `infra/scripts/deploy.sh`
+- `infra/scripts/smoke-production.sh`
+- `infra/scripts/backup-postgres.sh`
+- `infra/scripts/restore-postgres.sh`
+- `docs/DEPLOYMENT.md`
+- `docs/PRODUCTION_RUNBOOK.md`
+- `docs/SECURITY_CHECKLIST.md`
+- `docs/BACKUP_RESTORE.md`
+
+Production compose guarantees:
+
+- no source bind mounts for app services or nginx config
+- named volumes for PostgreSQL, Redis, and MinIO
+- only the reverse proxy is public
+- backend, ai-service, PostgreSQL, Redis, and MinIO stay internal
+- health checks and `restart: unless-stopped` across the stack
+
+Production sizing:
+
+- Recommended: `8 vCPU`, `16 GB RAM`, `200 GB NVMe`
+- Minimum: `4 vCPU`, `8 GB RAM`, `100 GB`
+
+Basic production flow:
+
+```bash
+cd /opt/trawberry-ai-commerce
+cp infra/.env.example infra/.env.production
+vi infra/.env.production
+./infra/scripts/deploy.sh
+```
+
 ## Auth Separation Update
 
 - Public marketplace promotes only customer login/register and seller register/login.
