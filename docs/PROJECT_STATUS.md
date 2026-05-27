@@ -1,5 +1,31 @@
 # Project Status
 
+## GitHub Actions CD To VPS - 2026-05-27
+
+- Status: implemented in `.github/workflows/deploy.yml`
+- CD is now separated from CI and supports:
+  - `push` to `main`
+  - `workflow_dispatch`
+- Deploy flow now:
+  - waits for `CI` success on the same commit
+  - builds production Docker images
+  - pushes SHA and `latest` tags to GHCR
+  - SSHes into the VPS
+  - refreshes the repo to `origin/main`
+  - writes image overrides to `infra/.env.deploy`
+  - pulls and restarts the production compose stack
+  - runs smoke checks after deploy
+- Production deploy defaults remain safe:
+  - no `.env.production` overwrite
+  - no paid OpenAI smoke
+  - `AI_TRY_ON_ENABLED=false`
+  - `AI_TRY_ON_PROVIDER=demo`
+
+## Current CD gaps
+
+- successful execution still depends on GitHub Actions account availability and configured repo/package permissions
+- frontend production image should use the correct public API URL through repository variable `DEPLOY_NEXT_PUBLIC_API_URL`
+- rollback remains operator-driven and must consider database schema compatibility
 ## GitHub Actions CI Foundation - 2026-05-27
 
 - Status: implemented in `.github/workflows/ci.yml`

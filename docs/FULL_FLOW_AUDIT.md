@@ -1,5 +1,26 @@
 # Full Commerce Flow Audit
 
+## GitHub Actions CD To VPS Addendum
+
+- verified the active release path now supports a dedicated CD workflow separate from CI
+- verified deploy flow is image-based and GHCR-backed:
+  - `backend-nest`
+  - `frontend-next`
+  - `ai-service`
+  - `nginx`
+- verified deployment is gated on successful CI for the same commit
+- verified the VPS deploy path:
+  - does not overwrite `infra/.env.production`
+  - does not delete persistent volumes
+  - does not run `docker system prune -a`
+  - does not expose `ai-service` publicly
+- verified image selection is override-based through `infra/.env.deploy`, leaving the production env file stable
+- verified production smoke remains login-free and OpenAI-free after deploy
+- verified rollback guidance now exists for:
+  - previous image SHA selection
+  - compose restart using prior image tags
+  - database restore caveat when schema compatibility is broken
+
 ## GitHub Actions CI Foundation Addendum
 
 - verified the active marketplace stack now has a dedicated GitHub Actions workflow for the current delivery path only:

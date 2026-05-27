@@ -30,6 +30,7 @@ Production deployment for the active stack uses [infra/docker-compose.prod.yml](
 - Reverse proxy: [infra/nginx/nginx.conf](/c:/Users/admin/trawberry-ai-commerce/infra/nginx/nginx.conf)
 - Env template: [infra/.env.example](/c:/Users/admin/trawberry-ai-commerce/infra/.env.example)
 - Deploy script: [infra/scripts/deploy.sh](/c:/Users/admin/trawberry-ai-commerce/infra/scripts/deploy.sh)
+- CD workflow: [.github/workflows/deploy.yml](/c:/Users/admin/trawberry-ai-commerce/.github/workflows/deploy.yml)
 
 ## Server setup
 
@@ -46,6 +47,48 @@ Production deployment for the active stack uses [infra/docker-compose.prod.yml](
 cd /opt/trawberry-ai-commerce
 ./infra/scripts/deploy.sh
 ```
+
+## GitHub Actions CD
+
+Production CD is separated from CI and lives in `.github/workflows/deploy.yml`.
+
+Behavior:
+
+- trigger:
+  - `push` to `main`
+  - `workflow_dispatch`
+- waits for the `CI` workflow to succeed on the same commit before deploy
+- builds and pushes these GHCR images:
+  - `ghcr.io/<owner>/<repo>/backend-nest:<sha>`
+  - `ghcr.io/<owner>/<repo>/frontend-next:<sha>`
+  - `ghcr.io/<owner>/<repo>/ai-service:<sha>`
+  - `ghcr.io/<owner>/<repo>/nginx:<sha>`
+- also publishes `latest` tags on the default branch
+
+Required GitHub secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_APP_DIR`
+- `VPS_PORT` optional, default `22`
+- `VPS_KNOWN_HOSTS` optional but recommended for strict host verification
+- `GHCR_PAT` optional if `GITHUB_TOKEN` cannot read/write GHCR in your org
+
+Recommended GitHub repository variable:
+
+- `DEPLOY_NEXT_PUBLIC_API_URL`
+  - used as the frontend Docker build arg
+  - example: `https://api.yourdomain.ru`
+
+VPS assumptions:
+
+- repo already cloned at `$VPS_APP_DIR`
+- `infra/.env.production` already exists on the VPS
+- Docker Engine and Docker Compose plugin are installed
+- persistent named volumes already hold live data
+
+The deploy workflow does not overwrite `infra/.env.production`. It writes image-tag overrides into `infra/.env.deploy` on the VPS and runs compose with both env files.
 
 ## Domain setup
 
@@ -111,6 +154,38 @@ npx prisma db push
 ./infra/scripts/smoke-production.sh
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production ps
 ```
+
+The smoke script supports:
+
+- `SITE_URL`
+- `API_URL`
+- optional HEAD checks for admin routes
+- internal `ai-service` health via `docker exec`
+
+This keeps the production smoke path login-free and OpenAI-free.
+
+## Rollback
+
+Image-based rollback is the default production recovery path:
+
+1. Find the previous known-good image SHA tags in GHCR.
+2. Update `infra/.env.deploy` on the VPS:
+
+```bash
+FRONTEND_IMAGE=ghcr.io/<owner>/<repo>/frontend-next:<previous-sha>
+BACKEND_IMAGE=ghcr.io/<owner>/<repo>/backend-nest:<previous-sha>
+AI_SERVICE_IMAGE=ghcr.io/<owner>/<repo>/ai-service:<previous-sha>
+NGINX_IMAGE=ghcr.io/<owner>/<repo>/nginx:<previous-sha>
+```
+
+3. Re-run:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d
+```
+
+4. Re-run smoke checks.
+5. If the release included schema changes, restore from backup only if rollback cannot be made safe at the application layer.
 
 ## Local dev compose
 

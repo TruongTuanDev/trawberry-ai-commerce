@@ -38,6 +38,34 @@ git pull origin main
 ./infra/scripts/deploy.sh
 ```
 
+## GitHub Actions deploy path
+
+Automated CD uses `.github/workflows/deploy.yml`.
+
+Release flow:
+
+1. CI must pass on the same commit.
+2. GitHub Actions builds and pushes SHA-tagged images to GHCR.
+3. The workflow SSHes into the VPS.
+4. The VPS repo is updated to `origin/main`.
+5. The workflow writes `infra/.env.deploy` with image overrides only.
+6. Compose pulls the new images and runs `up -d`.
+7. Production smoke checks run on the VPS.
+
+Required GitHub secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_APP_DIR`
+- `VPS_PORT` optional
+- `VPS_KNOWN_HOSTS` optional but recommended
+- `GHCR_PAT` optional fallback if `GITHUB_TOKEN` is insufficient
+
+Recommended GitHub variable:
+
+- `DEPLOY_NEXT_PUBLIC_API_URL=https://api.yourdomain.ru`
+
 ## Health checks
 
 - Public:
@@ -52,6 +80,13 @@ git pull origin main
 ```bash
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs -f nginx
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs -f backend-nest frontend-next ai-service
+```
+
+If image overrides are active, include `infra/.env.deploy`:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy ps
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy logs -f backend-nest
 ```
 
 ## Database operations
@@ -85,10 +120,31 @@ MinIO volume backup should be scheduled separately at the volume or filesystem l
 
 ## Rollback
 
-1. Inspect current git revision and image tags.
-2. Check `docker compose ... ps` and logs.
-3. Revert the repo to the last known-good commit.
-4. Re-run `./infra/scripts/deploy.sh`.
+1. Inspect current GHCR image tags and the last known-good SHA.
+2. Update `infra/.env.deploy` with the previous image tags.
+3. Re-run:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy pull nginx backend-nest frontend-next ai-service
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d
+```
+
+4. Run [infra/scripts/smoke-production.sh](/c:/Users/admin/trawberry-ai-commerce/infra/scripts/smoke-production.sh) again.
+5. If schema drift makes rollback unsafe, restore PostgreSQL from backup during a maintenance window.
+
+## Restart one service
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy restart backend-nest
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d frontend-next
+```
+
+## GHCR image tag lookup
+
+- GitHub UI:
+  - `Packages` under the repository or owner namespace
+- CLI/API:
+  - inspect package versions in GHCR before updating `infra/.env.deploy`
 
 ## Incident notes
 

@@ -1,5 +1,32 @@
 # Trawberry AI Commerce
 
+## GitHub Actions CD
+
+GitHub Actions CD is prepared in `.github/workflows/deploy.yml`.
+
+CD scope:
+
+- `push` to `main`
+- `workflow_dispatch`
+- wait for CI success on the same commit
+- build and push production images to GHCR
+- SSH to VPS and deploy with `infra/docker-compose.prod.yml`
+- run post-deploy smoke checks
+
+Required GitHub secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_APP_DIR`
+- optional `VPS_PORT`
+- optional `VPS_KNOWN_HOSTS`
+- optional `GHCR_PAT`
+
+Recommended GitHub variable:
+
+- `DEPLOY_NEXT_PUBLIC_API_URL=https://api.yourdomain.ru`
+
 ## GitHub Actions CI
 
 GitHub Actions CI is now prepared for the active marketplace stack in `.github/workflows/ci.yml`.

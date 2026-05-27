@@ -1,5 +1,57 @@
 # Phase Report
 
+## 2026-05-27 GitHub Actions CD To VPS
+
+- added `.github/workflows/deploy.yml` for production image build, GHCR publish, and VPS deploy
+- deploy workflow triggers on:
+  - `push` to `main`
+  - `workflow_dispatch`
+- added CI gating so deployment waits for the `CI` workflow to succeed on the same commit
+- build-and-push job now publishes:
+  - `backend-nest`
+  - `frontend-next`
+  - `ai-service`
+  - `nginx`
+- each image is tagged with:
+  - commit SHA
+  - `latest`
+- deploy job now:
+  - SSHes into the VPS with key-based auth
+  - preserves `infra/.env.production`
+  - writes image overrides into `infra/.env.deploy`
+  - pulls new GHCR images
+  - runs `docker compose ... up -d`
+  - runs production smoke checks
+- updated production smoke script for CD:
+  - supports `SITE_URL`
+  - supports `API_URL`
+  - keeps login-free public smoke
+  - checks internal `ai-service` health without exposing it publicly
+- updated deployment docs with:
+  - required GitHub secrets
+  - GHCR image strategy
+  - rollback by image SHA
+  - restart/log inspection guidance
+
+Verification:
+
+- `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.example config`: pass
+- `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.example build backend-nest frontend-next ai-service nginx`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `ai-service python -m compileall app`: pass
+- `ai-service python -m pytest -q`: pass
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- workflow could not be executed against GitHub-hosted runners from the local workspace
+- real VPS deploy still depends on repository secrets, GHCR permissions, and VPS host setup
+- frontend image build should use the real production API URL through repository variable configuration
 ## 2026-05-27 GitHub Actions CI Foundation
 
 - updated `.github/workflows/ci.yml` to standardize CI for the active marketplace stack

@@ -39,3 +39,7 @@
 - Run health checks after every deploy.
 - Review `docker compose ps` and logs after every deploy.
 - Run secret scans before commit when env or deployment files change.
+- Prefer `VPS_KNOWN_HOSTS` in GitHub Actions instead of disabling SSH host verification.
+- Keep GHCR package visibility aligned with the deployment model:
+  - private packages require authenticated pulls on the VPS
+  - do not print registry tokens in workflow logs
