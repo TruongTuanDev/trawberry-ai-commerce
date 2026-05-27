@@ -26,7 +26,7 @@ export function CustomerAccountShell({
   const user = useAuthStore((state) => state.customerUser);
   const logoutRole = useAuthStore((state) => state.logoutRole);
   const { run, isRunning } = useActionFeedback();
-  const { t } = useI18n("customer");
+  const { locale, t } = useI18n("customer");
 
   const navItems = [
     { href: "/customer/account", label: t("customer.account.nav.overview") },
@@ -92,6 +92,8 @@ export function CustomerAccountShell({
                   onClick={() =>
                     void run({
                       action: () => logoutRole("customer"),
+                      role: "customer",
+                      locale,
                       successMessage: t("customer.account.logoutSuccess"),
                       onSuccess: () => {
                         router.push("/customer/login");
