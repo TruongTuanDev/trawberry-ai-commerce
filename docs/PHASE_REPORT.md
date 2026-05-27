@@ -1,5 +1,39 @@
 # Phase Report
 
+## 2026-05-28 Customer Auth I18n Audit
+
+- normalized customer auth and session error handling for EN/RU public UI
+- removed direct customer-facing fallback to raw backend and fetch messages in:
+  - customer login
+  - customer register
+  - customer protected session shell
+  - customer security password flow
+- hardened frontend API base URL normalization so customer/public calls:
+  - avoid `/api/api`
+  - avoid legacy IP leakage
+  - fall back to same-origin on HTTPS when an insecure API URL is configured
+- added targeted Playwright spec:
+  - `frontend-next/tests/e2e/customer-auth-i18n.spec.ts`
+- updated customer dictionaries and shared error translation keys for auth-specific cases
+
+Verification:
+
+- `frontend-next npm ci`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/customer-auth-i18n.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
+- `frontend-next npx playwright test tests/e2e/public-marketplace-contract.spec.ts --workers=1`: failed because local backend on `127.0.0.1:3001` was not running
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: failed in frontend-only mode because the flow expects a working backend registration/login path
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- broader customer account screens outside auth still contain some direct `error.message` usage and should be normalized in a follow-up pass
+- backend-backed Playwright coverage should be rerun in a full local stack or CI environment with backend available
+
 ## 2026-05-27 GitHub Actions CD To VPS
 
 - added `.github/workflows/deploy.yml` for production image build, GHCR publish, and VPS deploy

@@ -1,5 +1,28 @@
 # Project Status
 
+## Customer Auth I18n Audit - 2026-05-28
+
+- Status: in progress on branch `dev/bugfix/customer-auth-i18n`
+- Frontend customer auth flow now normalizes customer-facing auth/session errors through locale-aware mapping
+- Customer login/register now:
+  - keep EN text in English locale
+  - keep RU text in Russian locale
+  - block raw backend and fetch errors from reaching the public UI
+  - use safer API base URL normalization to avoid `/api/api`, localhost leakage, and HTTPS mixed-content fallback issues
+- Added targeted Playwright coverage for:
+  - customer register duplicate/network errors
+  - customer login invalid credentials/network errors
+  - expired customer session redirect and localized auth message
+- Current verification status:
+  - `frontend-next npm ci`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next tests/e2e/customer-auth-i18n.spec.ts`: pass
+  - `frontend-next tests/e2e/i18n-public-customer.spec.ts`: pass
+- Current gaps:
+  - `public-marketplace-contract.spec.ts` still requires a live backend on `127.0.0.1:3001`
+  - `action-feedback.spec.ts` still depends on backend-supported registration flow and was not green in frontend-only mode
+
 ## GitHub Actions CD To VPS - 2026-05-27
 
 - Status: implemented in `.github/workflows/deploy.yml`

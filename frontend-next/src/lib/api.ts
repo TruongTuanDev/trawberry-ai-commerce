@@ -1,9 +1,39 @@
+function normalizeApiBaseUrl(rawApiUrl: string) {
+  return rawApiUrl
+    .trim()
+    .replace("://localhost", "://127.0.0.1")
+    .replace(/\/+$/, "")
+    .replace(/\/api$/i, "");
+}
+
 const getApiUrl = () => {
   if (typeof window === "undefined") {
-    return "http://backend-nest:3001";
+    return normalizeApiBaseUrl(
+      process.env.INTERNAL_API_URL ??
+        process.env.NEXT_PUBLIC_API_URL ??
+        "http://backend-nest:3001",
+    );
   }
-  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
-  return rawApiUrl.replace("://localhost", "://127.0.0.1");
+
+  const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const sameOriginUrl = window.location.origin;
+
+  if (!configuredApiUrl) {
+    return sameOriginUrl.includes("localhost") || sameOriginUrl.includes("127.0.0.1")
+      ? "http://127.0.0.1:3001"
+      : sameOriginUrl;
+  }
+
+  const normalizedApiUrl = normalizeApiBaseUrl(configuredApiUrl);
+
+  if (
+    window.location.protocol === "https:" &&
+    normalizedApiUrl.startsWith("http://")
+  ) {
+    return sameOriginUrl;
+  }
+
+  return normalizedApiUrl;
 };
 
 const API_URL = getApiUrl();

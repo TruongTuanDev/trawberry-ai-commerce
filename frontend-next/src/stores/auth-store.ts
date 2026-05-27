@@ -224,7 +224,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
         sessionError: {
           ...state.sessionError,
-          [role]: getAuthErrorMessage(error, "session"),
+          [role]: getAuthErrorMessage(error, "session", { role }),
         },
       }));
       return false;
