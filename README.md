@@ -23,6 +23,11 @@ Required GitHub secrets:
 - optional `VPS_KNOWN_HOSTS`
 - optional `GHCR_PAT`
 
+GHCR note:
+
+- GitHub Actions uses `GITHUB_TOKEN` to push images to GHCR during `build-and-push`.
+- If GHCR packages are private, set `GHCR_PAT` with at least `read:packages` so the VPS can `docker login` and pull deploy images.
+
 Recommended GitHub variable:
 
 - `DEPLOY_NEXT_PUBLIC_API_URL=https://api.yourdomain.ru`

@@ -104,36 +104,42 @@ jobs:
           image_namespace="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
           echo "image_namespace=$image_namespace" >> "$GITHUB_OUTPUT"
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT || github.token }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image_namespace }}/${{ matrix.image_name }}
-          tags: |
-            type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
+        env:
+          IMAGE_NAME: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image_namespace }}/${{ matrix.image_name }}
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.image_namespace }}/${{ matrix.image_name }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.image_namespace }}/${{ matrix.image_name }}:latest
           build-args: ${{ matrix.build_args }}
+
+      - name: Verify pushed image tag
+        shell: bash
+        env:
+          IMAGE_NAME: ${{ env.REGISTRY }}/${{ steps.vars.outputs.image_namespace }}/${{ matrix.image_name }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "$IMAGE_NAME:${GITHUB_SHA}" >/dev/null
 
   deploy-vps:
     name: Deploy VPS
     runs-on: ubuntu-latest
     needs:
+      - verify-ci
       - build-and-push
     environment:
       name: production
@@ -179,7 +185,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT || github.token }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
           DEPLOY_SHA: ${{ github.sha }}
           FRONTEND_IMAGE: ghcr.io/${{ steps.vars.outputs.image_namespace }}/frontend-next:${{ github.sha }}
           BACKEND_IMAGE: ghcr.io/${{ steps.vars.outputs.image_namespace }}/backend-nest:${{ github.sha }}
@@ -198,6 +204,13 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
+
+          docker pull "$FRONTEND_IMAGE"
+          docker pull "$BACKEND_IMAGE"
+          docker pull "$AI_SERVICE_IMAGE"
+          docker pull "$NGINX_IMAGE"
+
           cat > infra/.env.deploy <<DEPLOY_ENV
           FRONTEND_IMAGE=$FRONTEND_IMAGE
           BACKEND_IMAGE=$BACKEND_IMAGE
@@ -205,8 +218,6 @@ jobs:
           NGINX_IMAGE=$NGINX_IMAGE
           DEPLOY_SHA=$DEPLOY_SHA
           DEPLOY_ENV
-
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
 
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy pull nginx backend-nest frontend-next ai-service
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d
