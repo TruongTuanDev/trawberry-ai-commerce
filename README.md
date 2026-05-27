@@ -27,6 +27,18 @@ Recommended GitHub variable:
 
 - `DEPLOY_NEXT_PUBLIC_API_URL=https://api.yourdomain.ru`
 
+## VPS First Deploy
+
+Operator-first first-deploy docs:
+
+- [docs/VPS_SETUP.md](/c:/Users/admin/trawberry-ai-commerce/docs/VPS_SETUP.md)
+- [docs/DEPLOYMENT.md](/c:/Users/admin/trawberry-ai-commerce/docs/DEPLOYMENT.md)
+- [docs/PRODUCTION_RUNBOOK.md](/c:/Users/admin/trawberry-ai-commerce/docs/PRODUCTION_RUNBOOK.md)
+
+Production env template:
+
+- [infra/.env.production.example](/c:/Users/admin/trawberry-ai-commerce/infra/.env.production.example)
+
 ## GitHub Actions CI
 
 GitHub Actions CI is now prepared for the active marketplace stack in `.github/workflows/ci.yml`.

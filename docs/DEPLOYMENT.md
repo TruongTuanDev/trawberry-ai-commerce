@@ -2,6 +2,8 @@
 
 Production deployment for the active stack uses [infra/docker-compose.prod.yml](/c:/Users/admin/trawberry-ai-commerce/infra/docker-compose.prod.yml) and a real `infra/.env.production` file that is never committed.
 
+For first-time server preparation, start with [docs/VPS_SETUP.md](/c:/Users/admin/trawberry-ai-commerce/docs/VPS_SETUP.md).
+
 ## VPS sizing
 
 - Recommended: `8 vCPU`, `16 GB RAM`, `200 GB NVMe`
@@ -29,19 +31,22 @@ Production deployment for the active stack uses [infra/docker-compose.prod.yml](
 - Compose: [infra/docker-compose.prod.yml](/c:/Users/admin/trawberry-ai-commerce/infra/docker-compose.prod.yml)
 - Reverse proxy: [infra/nginx/nginx.conf](/c:/Users/admin/trawberry-ai-commerce/infra/nginx/nginx.conf)
 - Env template: [infra/.env.example](/c:/Users/admin/trawberry-ai-commerce/infra/.env.example)
+- Production env template: [infra/.env.production.example](/c:/Users/admin/trawberry-ai-commerce/infra/.env.production.example)
 - Deploy script: [infra/scripts/deploy.sh](/c:/Users/admin/trawberry-ai-commerce/infra/scripts/deploy.sh)
 - CD workflow: [.github/workflows/deploy.yml](/c:/Users/admin/trawberry-ai-commerce/.github/workflows/deploy.yml)
 
 ## Server setup
 
-1. Install Docker Engine.
-2. Install the Docker Compose plugin.
-3. Open firewall ports `22`, `80`, and `443`.
-4. Keep PostgreSQL, Redis, MinIO, and `ai-service` closed to the public internet.
-5. Clone the repo on the VPS.
-6. Copy `infra/.env.example` to `infra/.env.production`.
-7. Replace every `change-me-*` value with a real secret.
-8. Start the stack:
+1. Create a dedicated deploy user.
+2. Add the deploy SSH key.
+3. Disable SSH password login when key access is verified.
+4. Install Docker Engine and the Docker Compose plugin.
+5. Open firewall ports `22`, `80`, and `443`.
+6. Keep PostgreSQL, Redis, MinIO, backend, and `ai-service` off public ports.
+7. Clone the repo into `/opt/trawberry-ai-commerce`.
+8. Copy `infra/.env.production.example` to `infra/.env.production`.
+9. Replace every `change-me-*` value with a real secret.
+10. Start the stack:
 
 ```bash
 cd /opt/trawberry-ai-commerce
@@ -90,13 +95,85 @@ VPS assumptions:
 
 The deploy workflow does not overwrite `infra/.env.production`. It writes image-tag overrides into `infra/.env.deploy` on the VPS and runs compose with both env files.
 
+GitHub UI path:
+
+1. Repository
+2. `Settings`
+3. `Secrets and variables`
+4. `Actions`
+5. `New repository secret` or `New repository variable`
+
+If GitHub account restrictions still block checkout or workflow execution, GitHub Actions CD remains blocked until GitHub restores account access.
+
+## First deploy checklist
+
+1. SSH to the VPS as the deploy user.
+2. Clone the repo:
+
+```bash
+git clone https://github.com/TruongTuanDev/trawberry-ai-commerce.git /opt/trawberry-ai-commerce
+```
+
+3. Enter the repo:
+
+```bash
+cd /opt/trawberry-ai-commerce
+```
+
+4. Create the production env:
+
+```bash
+cp infra/.env.production.example infra/.env.production
+nano infra/.env.production
+```
+
+5. Log in to GHCR if private images are used:
+
+```bash
+echo TOKEN | docker login ghcr.io -u USER --password-stdin
+```
+
+6. Validate the compose file:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production config
+```
+
+7. Start the stack:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production up -d
+```
+
+8. Initialize Prisma:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:generate
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:db:push
+```
+
+9. Run production smoke:
+
+```bash
+./infra/scripts/smoke-production.sh infra/.env.production
+```
+
 ## Domain setup
 
 Create these A records:
 
 - `@` -> `VPS_IP`
+- `www` -> `VPS_IP` optional
 - `api` -> `VPS_IP`
 - `storage` -> `VPS_IP`
+
+Verify propagation:
+
+```bash
+nslookup yourdomain.ru
+nslookup api.yourdomain.ru
+nslookup storage.yourdomain.ru
+```
 
 Default nginx host mapping:
 
@@ -109,15 +186,23 @@ Default nginx host mapping:
 Two supported approaches:
 
 1. Nginx + Certbot
-   - Keep the included nginx config.
+   - Keep the included nginx config for HTTP routing.
    - Obtain certificates with Certbot on the VPS.
-   - Add `listen 443 ssl;` and certificate paths to the server blocks.
+   - Add HTTPS termination before public launch.
+   - Mount or copy certificate material into the nginx deployment path as part of operator setup.
 2. Caddy
    - Replace nginx with Caddy if you want automatic certificate management.
    - Keep the same upstream targets:
      - `frontend-next:3000`
      - `backend-nest:3001`
      - `minio:9000`
+3. Cloudflare proxy + origin cert
+   - Optional if you already standardize TLS through Cloudflare.
+
+Current state:
+
+- the repo ships HTTP nginx routing
+- HTTPS termination still must be completed before real public production traffic
 
 ## Database and Prisma
 
@@ -125,9 +210,8 @@ Two supported approaches:
 - Before first production release, run:
 
 ```bash
-cd /opt/trawberry-ai-commerce/backend-nest
-npm run prisma:generate
-npx prisma db push
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:generate
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:db:push
 ```
 
 - Seed or bootstrap admin only with controlled production-safe data.
@@ -186,6 +270,49 @@ docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production
 
 4. Re-run smoke checks.
 5. If the release included schema changes, restore from backup only if rollback cannot be made safe at the application layer.
+
+## Operator commands
+
+Status:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production ps
+```
+
+Logs:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs -f backend-nest
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs -f frontend-next
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs -f ai-service
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs -f nginx
+```
+
+Restart one service:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production restart backend-nest
+```
+
+Manual update:
+
+```bash
+git pull
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production pull
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production up -d
+```
+
+Backup:
+
+```bash
+./infra/scripts/backup-postgres.sh infra/.env.production
+```
+
+Restore:
+
+```bash
+./infra/scripts/restore-postgres.sh infra/.env.production backups/file.sql
+```
 
 ## Local dev compose
 

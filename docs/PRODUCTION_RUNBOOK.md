@@ -25,9 +25,13 @@ This runbook covers the active production Docker stack:
 
 ```bash
 cd /opt/trawberry-ai-commerce
-cp infra/.env.example infra/.env.production
-vi infra/.env.production
-./infra/scripts/deploy.sh
+cp infra/.env.production.example infra/.env.production
+nano infra/.env.production
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production config
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production up -d
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:generate
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:db:push
+./infra/scripts/smoke-production.sh infra/.env.production
 ```
 
 ## Standard release
@@ -75,6 +79,14 @@ Recommended GitHub variable:
 - Internal:
   - `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec -T ai-service python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"`
 
+## DNS checks
+
+```bash
+nslookup yourdomain.ru
+nslookup api.yourdomain.ru
+nslookup storage.yourdomain.ru
+```
+
 ## Logs
 
 ```bash
@@ -113,10 +125,38 @@ MinIO volume backup should be scheduled separately at the volume or filesystem l
 
 1. Nginx + Certbot
    - keep the provided nginx topology
-   - add certificate directives after issuing certs
+   - the current repo nginx config is HTTP-only
+   - add certificate directives and HTTPS termination before public launch
 2. Caddy
    - replace nginx if automatic TLS is preferred
    - keep the same backend targets
+3. Cloudflare proxy + origin cert
+   - optional if you already standardize DNS and TLS there
+
+## GitHub secrets and variables
+
+GitHub UI path:
+
+1. Repository
+2. `Settings`
+3. `Secrets and variables`
+4. `Actions`
+
+Secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_APP_DIR`
+- `VPS_PORT` optional
+- `VPS_KNOWN_HOSTS` optional
+- `GHCR_PAT` optional
+
+Variable:
+
+- `DEPLOY_NEXT_PUBLIC_API_URL=https://api.yourdomain.ru`
+
+If GitHub account restrictions still block checkout or Actions runner usage, the deploy workflow cannot execute until GitHub resolves the account state.
 
 ## Rollback
 
@@ -137,6 +177,14 @@ docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production
 ```bash
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy restart backend-nest
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d frontend-next
+```
+
+## Manual first-deploy GHCR login
+
+If GHCR images are private:
+
+```bash
+echo TOKEN | docker login ghcr.io -u USER --password-stdin
 ```
 
 ## GHCR image tag lookup

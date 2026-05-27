@@ -15,6 +15,7 @@
 ## Secrets
 
 - Never commit `.env` or `.env.production`.
+- Never commit `infra/.env.production.example` with real values.
 - Rotate `JWT_SECRET` on a real production schedule.
 - Rotate `AI_SERVICE_INTERNAL_TOKEN` and keep the same value in backend and `ai-service`.
 - Keep `OPENAI_API_KEY` only on the server when used.
@@ -43,3 +44,4 @@
 - Keep GHCR package visibility aligned with the deployment model:
   - private packages require authenticated pulls on the VPS
   - do not print registry tokens in workflow logs
+- Do not cat `infra/.env.production` into shell logs during setup or deploy.
