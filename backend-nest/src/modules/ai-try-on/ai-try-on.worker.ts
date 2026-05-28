@@ -110,6 +110,10 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
         this.configService.get<string>('BACKEND_PUBLIC_BASE_URL') ??
         this.configService.get<string>('FILES_PUBLIC_BASE_URL') ??
         null;
+      const frontendPublicBaseUrl =
+        this.configService.get<string>('FRONTEND_URL') ??
+        this.configService.get<string>('PUBLIC_SITE_URL') ??
+        null;
 
       const response = await this.aiServiceClient.generateTryOn({
         taskId: task.id,
@@ -131,12 +135,11 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
             backendInternalBaseUrl,
             backendPublicBaseUrl,
           }),
-          selectedModelImageUrl: rewriteUrlForAiService(
+          selectedModelImageUrl: this.resolveSelectedModelImageUrl(
             model?.imageUrl ?? null,
-            {
-              backendInternalBaseUrl,
-              backendPublicBaseUrl,
-            },
+            frontendPublicBaseUrl,
+            backendInternalBaseUrl,
+            backendPublicBaseUrl,
           ),
           selectedModelId: model?.modelId ?? task.selectedModelId,
           heightCm: task.heightCm,
@@ -231,6 +234,38 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
     ]
       .filter(Boolean)
       .join(' ');
+  }
+
+  private resolveSelectedModelImageUrl(
+    value: string | null | undefined,
+    frontendPublicBaseUrl: string | null,
+    backendInternalBaseUrl?: string | null,
+    backendPublicBaseUrl?: string | null,
+  ) {
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.startsWith('/') && frontendPublicBaseUrl) {
+      try {
+        return new URL(trimmed, frontendPublicBaseUrl).toString();
+      } catch {
+        return rewriteUrlForAiService(trimmed, {
+          backendInternalBaseUrl,
+          backendPublicBaseUrl,
+        });
+      }
+    }
+
+    return rewriteUrlForAiService(trimmed, {
+      backendInternalBaseUrl,
+      backendPublicBaseUrl,
+    });
   }
 
   private readTraits(value: unknown) {

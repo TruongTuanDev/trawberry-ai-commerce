@@ -222,7 +222,7 @@ async function createProduct(
   return product;
 }
 
-async function fillTryOnForm(page: Page, modelId = "female_regular_165") {
+async function fillTryOnForm(page: Page, modelId = "model-3") {
   await page.getByTestId("ai-try-on-height").fill("172");
   await page.getByTestId("ai-try-on-weight").fill("70");
   await page.getByTestId("ai-try-on-gender").selectOption("female");
@@ -286,6 +286,9 @@ test("AI Try-On mock flow works from disabled state to completed result", async 
   await page.getByTestId(`product-size-${product.variants[1].id}`).click();
   await page.getByTestId("product-ai-try-on-button").click();
   await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+  await expect(page.locator('[data-testid^="ai-try-on-model-"]')).toHaveCount(10);
+  await expect(page.getByTestId("ai-try-on-model-model-1")).toBeVisible();
+  await expect(page.getByTestId("ai-try-on-model-model-10")).toBeVisible();
 
   await fillTryOnForm(page);
   await page.getByTestId("ai-try-on-generate").click();

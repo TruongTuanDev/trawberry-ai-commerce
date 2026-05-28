@@ -706,9 +706,22 @@ describe('AiTryOnController (e2e)', () => {
       .get('/api/public/ai-try-on/config')
       .expect(200);
 
-    const body = readBody<{ enabled: boolean; providerMode: string }>(response);
+    const body = readBody<{
+      enabled: boolean;
+      providerMode: string;
+      builtInModels: Array<{ modelId: string; imageUrl: string }>;
+    }>(response);
     expect(body.enabled).toBe(true);
     expect(body.providerMode).toBe('mock');
+    expect(body.builtInModels).toHaveLength(10);
+    expect(body.builtInModels[0]).toMatchObject({
+      modelId: 'model-1',
+      imageUrl: '/ai-try-on/models/model1.png',
+    });
+    expect(body.builtInModels[9]).toMatchObject({
+      modelId: 'model-10',
+      imageUrl: '/ai-try-on/models/model10.png',
+    });
   });
 
   it('reads legacy supported categories payloads without losing values', async () => {
@@ -880,7 +893,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-after-sync')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -894,7 +907,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-1')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(400);
@@ -912,7 +925,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-1')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: false,
       })
       .expect(400);
@@ -948,7 +961,7 @@ describe('AiTryOnController (e2e)', () => {
         gender: 'female',
         bodyType: 'regular',
         bodyTraits: ['wide_shoulders'],
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -984,7 +997,7 @@ describe('AiTryOnController (e2e)', () => {
         selectedRussianSize: 'RU 48',
         gender: 'female',
         bodyType: 'regular',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -1024,7 +1037,7 @@ describe('AiTryOnController (e2e)', () => {
       selectedRussianSize: 'RU 46',
       customerImageUrl: null,
       customerImageStorageKey: null,
-      selectedModelId: 'female_regular_165',
+      selectedModelId: 'model-3',
       heightCm: 170,
       weightKg: 60,
       gender: 'female',
@@ -1056,7 +1069,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-limit')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(400);
@@ -1075,7 +1088,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-openai')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'male_regular_175',
+        selectedModelId: 'model-7',
         consentAccepted: true,
       })
       .expect(201);
@@ -1109,7 +1122,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-bermuda')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -1137,7 +1150,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-shorts-id')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -1161,7 +1174,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-shorts-name')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -1189,7 +1202,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-jeans-id')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(201);
@@ -1217,7 +1230,7 @@ describe('AiTryOnController (e2e)', () => {
       .set('x-guest-session-id', 'guest-unsupported-category')
       .send({
         selectedSize: 'M',
-        selectedModelId: 'female_regular_165',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(400);

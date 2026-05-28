@@ -1,5 +1,46 @@
 # Phase Report
 
+## 2026-05-28 AI Try-On Real Demo Models
+
+- replaced the old built-in AI Try-On placeholder catalog with 10 real demo model assets under `frontend-next/public/ai-try-on/models/`
+- updated the shared built-in model config returned by the backend:
+  - new `model-1` through `model-10` ids
+  - real image paths
+  - expanded body-type vocabulary
+  - added `weightKg` metadata
+- updated the public AI Try-On model picker UI:
+  - responsive 1 / 2 / 3 column grid
+  - real model photos instead of silhouettes
+  - localized EN/RU labels
+  - localized gender/body-type meta line
+  - height/weight summary line
+  - image cards now use `object-contain` to avoid cropping heads/feet too aggressively
+- updated backend worker resolution for built-in model images:
+  - public config still returns relative frontend asset paths
+  - worker now resolves those relative model image paths against `FRONTEND_URL` / `PUBLIC_SITE_URL` before sending them to ai-service
+- updated automated coverage:
+  - public config test now asserts 10 built-in models and the new asset paths
+  - AI Try-On e2e/backend specs now use the new model ids
+  - Playwright MVP spec now asserts 10 model cards are visible
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `git diff --check`: pending rerun after docs update
+- `git ls-files | Select-String "\.env"`: pending rerun after docs update
+- `git ls-files data.xlsx`: pending rerun after docs update
+
+Remaining gaps:
+
+- Playwright was not executed because local services were not started in this phase
+- built-in model labels are fully localized for EN/RU; no additional VI AI Try-On copy was added in this phase because the public AI Try-On modal is currently scoped to EN/RU
+
 ## 2026-05-28 AI Try-On Product Availability Sync From Admin Settings
 
 - audited the admin AI settings save path and confirmed the root cause:
