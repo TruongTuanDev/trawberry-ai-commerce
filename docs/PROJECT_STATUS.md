@@ -1,5 +1,26 @@
 # Project Status
 
+## Shipping Label I18n And Print Filename - 2026-05-28
+
+- Status: implemented on branch `dev/bugfix/shipping-label-i18n-print-name`
+- Seller shipping label print page now:
+  - maps shipment and payment statuses through locale-aware label translations
+  - localizes recipient access lines like entrance/intercom/floor/apartment in RU and EN
+  - avoids showing raw backend-like status/provider fallbacks on the print label
+  - sets browser `document.title` to a localized order-code title on load
+  - sets browser `document.title` to `shipping-label-<orderCode>` immediately before print
+- Expanded targeted Playwright coverage for:
+  - RU shipping-label text assertions
+  - EN shipping-label text assertions
+  - print title / filename hint behavior
+- Current verification status:
+  - `frontend-next npm ci`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - local Playwright verification is blocked until frontend `127.0.0.1:3000` and backend `127.0.0.1:3001` are running
+  - exact print/save filename still depends on browser behavior until a dedicated PDF export flow exists
+
 ## Customer Auth I18n Audit - 2026-05-28
 
 - Status: in progress on branch `dev/bugfix/customer-auth-i18n`

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
-import { PromoSlider } from "@/components/public/promo-slider";
+import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, type PaginatedPublicProducts, type PublicProduct } from "@/lib/public-api";
+import { getPublicProducts, getPublicHomepageSlides, type PaginatedPublicProducts, type PublicProduct, type PublicHomepageSlide } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
 
@@ -81,6 +81,7 @@ function ProductsPageContent({
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [layoutCols, setLayoutCols] = useState<"3" | "4">("4");
   const [isMounted, setIsMounted] = useState(false);
+  const [slides, setSlides] = useState<PublicHomepageSlide[]>([]);
 
   const page = Number(searchParams.get("page") ?? "1");
   const hasActiveFilters = useMemo(
@@ -136,6 +137,24 @@ function ProductsPageContent({
     };
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchSlides = async () => {
+      try {
+        const data = await getPublicHomepageSlides();
+        if (mounted) {
+          setSlides(data);
+        }
+      } catch (err) {
+        console.error("Failed to load homepage slides on products page:", err);
+      }
+    };
+    void fetchSlides();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const suggestionChips = useMemo(() => {
@@ -353,7 +372,7 @@ function ProductsPageContent({
           </div>
           <div id="debug-info" className="text-[10px] text-red-500 font-mono" data-testid="e2e-debug"></div>
 
-          {!hasActiveFilters && <PromoSlider compact />}
+          {!hasActiveFilters && <PublicHomepageHeroSlider initialSlides={slides} />}
 
           <div className={showFilters ? "space-y-4" : "hidden"}>
               <section className="bg-gray-50/70 p-3.5 rounded-[1.8rem] border border-[var(--border)] shadow-sm backdrop-blur-md">

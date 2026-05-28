@@ -1,5 +1,36 @@
 # Phase Report
 
+## 2026-05-28 Shipping Label I18n And Print Filename
+
+- audited seller shipping label print flow across page client, print template, dictionaries, and E2E coverage
+- removed shipping-label status/provider fallbacks that rendered English or raw enum-like text in RU label output
+- localized shipping label address access lines and shipment/payment label text through dictionary-backed mappings
+- added locale-aware document title behavior:
+  - page title now includes order code
+  - print action temporarily switches title to `shipping-label-<orderCode>` before `window.print()`
+- expanded shipping label Playwright coverage for:
+  - RU label text expectations
+  - EN label text expectations
+  - document title and print filename hint behavior
+
+Verification:
+
+- `frontend-next npm ci`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: failed because local frontend on `127.0.0.1:3000` was not running
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: failed because local frontend on `127.0.0.1:3000` was not running
+- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: failed because local backend on `127.0.0.1:3001` was not running
+- `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: failed because Docker Desktop / daemon was not running
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- Playwright assertions for shipping label could not be exercised end-to-end in this environment because neither frontend nor backend was listening locally
+- browser print filename remains best-effort through `document.title`; exact filenames across all browsers still require a dedicated PDF export path
+
 ## 2026-05-28 Customer Auth I18n Audit
 
 - normalized customer auth and session error handling for EN/RU public UI

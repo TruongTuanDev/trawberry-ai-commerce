@@ -1426,6 +1426,7 @@
       "kicker": "Packing station",
       "title": "Shipping label",
       "pageTitle": "Printable shipping label",
+      "documentTitle": "Shipping Label - {{orderCode}}",
       "print": "Print label",
       "openPrintableLabel": "Open printable label",
       "labelSize": "Label size",
@@ -1456,13 +1457,17 @@
         "providerYandexDelivery": "Yandex Delivery",
         "providerManual": "Manual delivery",
         "deliveryTypes": {
-          "express": "EXPRESS",
-          "nextDay": "NEXT DAY"
+          "express": "Express",
+          "nextDay": "Next day"
         },
         "statuses": {
-          "created": "CREATED",
-          "readyToShip": "READY TO SHIP",
-          "readyForHandoff": "READY FOR HANDOFF"
+          "created": "Created",
+          "readyToShip": "Ready to ship",
+          "readyForHandoff": "Ready for handoff",
+          "inTransit": "In transit",
+          "delivered": "Delivered",
+          "cancelled": "Cancelled",
+          "failed": "Failed"
         },
         "paymentMethod": "Payment method",
         "paymentStatus": "Payment status",
