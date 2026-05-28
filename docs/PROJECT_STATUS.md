@@ -2092,3 +2092,16 @@ Verification:
 Current gap:
 
 - Direct seller catalog import and legacy Spring Boot services remain out of scope.
+
+# Catalog Dropdown Overlay And Category Filter Status
+
+Implemented:
+
+- public catalog dropdowns continue to render above the product grid with the shared high-z overlay treatment in the filter row
+- the public catalog now exposes a visible `Category / Категория` filter with counts, reset, and in-dropdown search on longer lists
+- public category facets now come from public-ready products only and prefer WB source category data when present, using stable slugs such as `wb-subject-<subjectId>` for synced WB subjects
+- category filtering in the public products backend now resolves against the same canonical category facet logic instead of only matching internal `category.slug`
+
+Current gap:
+
+- the focused Playwright runtime for catalog overlay/category behavior still needs follow-up because the filter trigger was not visible in the current local test environment

@@ -937,3 +937,14 @@ Future audit item: design an optional marketplace parent order for combined rece
 - **Publish Window Logic**: Public display of slides is strictly gated by `isActive = true` and current time matching the publish window (between `startsAt` and `endsAt` if set). Invalid publish windows (startsAt > endsAt) are rejected by backend validation.
 - **Graceful Fallback**: If no active slides exist within their publish windows, the homepage displays a premium styled fallback banner using localized English/Russian texts without breaking the homepage layout.
 - **Responsive Layout**: Slides are fully responsive. Mobile viewports display the `imageMobileUrl` (or fall back to `imageDesktopUrl`), and no horizontal overflow is present on either public storefront or admin console views.
+
+# Catalog Dropdown Overlay And WB Category Facet Audit Addendum
+
+- public catalog filter overlays now stay above suggestion chips and the product grid via the shared filter-row stacking treatment; the bug source was the filter bar stacking context combined with sibling grid painting below it
+- the public catalog filter row now includes a visible `Category / Категория` dropdown that reuses the same overlay behavior as sort, color, brand, price, and other filter popovers
+- public category facets are now derived from public-ready products only and prefer WB source category data when available:
+  - `sourceCategoryName` is the primary display label
+  - `subjectId` becomes the stable canonical slug as `wb-subject-<subjectId>` when present
+  - internal category name/slug and mapped `categoryName` remain fallbacks for non-WB or legacy products
+- public `categorySlug` filtering no longer depends solely on internal `category.slug`; it now matches through the same canonical category resolver and also tolerates legacy slug-style links
+- current frontend/runtime verification for the overlay flow still needs a stable Playwright-visible public catalog state before the new UI interaction test can pass end-to-end
