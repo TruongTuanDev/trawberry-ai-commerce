@@ -242,23 +242,42 @@ export function AiTryOnModal({
     }
   };
 
+  const getDisabledReason = () => {
+    if (requireConsent && !form.consentAccepted) {
+      return t("aiTryOn.consentRequired");
+    }
+    if (!uploadedReference && !selectedModelId) {
+      return t("aiTryOn.referenceRequired");
+    }
+    if (uploading) {
+      return t("aiTryOn.uploading");
+    }
+    return null;
+  };
+
+  const disabledReason = getDisabledReason();
   const busy = submitting || Boolean(task && POLLING_STATUSES.has(task.status));
+  const isGenerateDisabled = busy || !!disabledReason;
 
   return (
     <div className="fixed inset-0 z-50 overflow-x-hidden bg-slate-950/60 backdrop-blur-sm" data-testid="ai-try-on-modal">
       <div className="flex min-h-full items-end justify-center p-0 sm:items-center sm:p-6">
-        <div className="relative flex h-[100dvh] w-full min-w-0 flex-col overflow-x-hidden overflow-y-hidden rounded-none bg-[#fffdfa] sm:h-auto sm:max-h-[92vh] sm:max-w-6xl sm:rounded-[2rem]">
+        <div className="relative flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden rounded-none bg-[#fffdfa] sm:h-auto sm:max-h-[92vh] sm:max-w-6xl sm:rounded-[2rem] shadow-2xl">
+          {/* Close button */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-full border border-[var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--foreground)]"
+            className="absolute right-4 top-4 z-20 rounded-full border border-[var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--foreground)] shadow-sm hover:bg-slate-50 transition"
           >
             {t("common.close")}
           </button>
 
-          <div className="overflow-x-hidden overflow-y-auto px-4 pb-6 pt-14 sm:px-6 sm:pb-8 sm:pt-8">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_360px]">
-              <div className="min-w-0 space-y-6">
+          {/* Modal Content container - scrollable */}
+          <div className="flex-1 overflow-y-auto px-4 pb-6 pt-14 sm:px-8 sm:pb-8 sm:pt-8">
+            <div className="grid gap-8 lg:grid-cols-[1fr_360px] items-start">
+              {/* Left Panel: Steps 1, 2, 3 */}
+              <div className="min-w-0 space-y-8">
+                {/* Header */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
                     {t("aiTryOn.title")}
@@ -274,36 +293,72 @@ export function AiTryOnModal({
                 {task?.status === "COMPLETED" ? (
                   <AiTryOnResult task={task} t={t} />
                 ) : (
-                  <>
-                    <AiTryOnBodyForm
-                      values={form}
-                      requireConsent={requireConsent}
-                      t={t}
-                      onChange={setForm}
-                    />
-                    <AiTryOnModelPicker
-                      models={builtInModels}
-                      locale={locale}
-                      selectedModelId={selectedModelId}
-                      customerPreviewUrl={uploadedReference?.url ?? null}
-                      uploading={uploading}
-                      t={t}
-                      onFileChange={(file) => void handleUpload(file)}
-                      onSelectModel={(modelId) => {
-                        setSelectedModelId(modelId);
-                        setUploadedReference(null);
-                      }}
-                    />
-                  </>
+                  <div className="space-y-8">
+                    {/* Step 1: Body traits & preferences */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-[var(--foreground)] border-b pb-2">
+                        {t("aiTryOn.step1")}
+                      </h3>
+                      <AiTryOnBodyForm
+                        values={form}
+                        requireConsent={false} // Handle consent in Step 2 separately
+                        t={t}
+                        onChange={setForm}
+                      />
+                    </div>
+
+                    {/* Step 2: Consent */}
+                    {requireConsent && (
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-[var(--foreground)] border-b pb-2">
+                          {t("aiTryOn.step2")}
+                        </h3>
+                        <label className="flex items-start gap-3 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 text-sm text-[var(--foreground)] hover:bg-slate-50 cursor-pointer transition">
+                          <input
+                            type="checkbox"
+                            checked={form.consentAccepted}
+                            onChange={(event) => setForm({ ...form, consentAccepted: event.target.checked })}
+                            className="mt-1 h-4 w-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                            data-testid="ai-try-on-consent"
+                          />
+                          <span className="select-none font-medium">{t("aiTryOn.consent")}</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Step 3: Upload photo or Choose built-in model */}
+                    <div className="border-t pt-6">
+                      <AiTryOnModelPicker
+                        models={builtInModels}
+                        locale={locale}
+                        selectedModelId={selectedModelId}
+                        customerPreviewUrl={uploadedReference?.url ?? null}
+                        uploading={uploading}
+                        t={t}
+                        onFileChange={(file) => void handleUpload(file)}
+                        onSelectModel={(modelId) => {
+                          setSelectedModelId(modelId);
+                          setUploadedReference(null);
+                        }}
+                        onRemovePhoto={() => {
+                          setUploadedReference(null);
+                          setSelectedModelId(builtInModels[0]?.modelId ?? null);
+                        }}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
 
-              <aside className="min-w-0 space-y-4">
-                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    {t("aiTryOn.preview")}
-                  </p>
-                  <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)]">
+              {/* Right Panel: Step 4 (Product summary & generation) */}
+              <aside className="lg:sticky lg:top-0 space-y-4 self-start min-w-0">
+                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-sm">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] mb-4">
+                    {t("aiTryOn.step4")}
+                  </h3>
+
+                  {/* Product Preview Image */}
+                  <div className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)]">
                     {product.imageUrl ? (
                       <FallbackImage
                         src={product.imageUrl}
@@ -316,49 +371,72 @@ export function AiTryOnModal({
                       </div>
                     )}
                   </div>
+
+                  {/* Product Details */}
                   <div className="mt-4 space-y-2">
-                    <p className="text-lg font-semibold text-[var(--foreground)]">{product.name}</p>
-                    <p className="text-sm text-[var(--muted)]">
-                      {t("aiTryOn.selectedSize")}: {product.selectedSize}
+                    <p className="text-lg font-bold text-[var(--foreground)] leading-snug line-clamp-2">
+                      {product.name}
                     </p>
-                    {product.selectedRussianSize ? (
-                      <p className="text-sm text-[var(--muted)]">
-                        {t("aiTryOn.russianSize")}: {product.selectedRussianSize}
+                    <div className="text-sm space-y-1.5 pt-2 border-t text-[var(--muted)]">
+                      <p className="flex justify-between">
+                        <span>{t("aiTryOn.selectedSize")}:</span>
+                        <span className="font-semibold text-[var(--foreground)]">{product.selectedSize}</span>
                       </p>
-                    ) : null}
-                    {previewModel ? (
-                      <p className="text-sm text-[var(--muted)]">
-                        {t("aiTryOn.currentModel")}: {locale === "ru" ? previewModel.labelRu : previewModel.labelEn}
+                      {product.selectedRussianSize ? (
+                        <p className="flex justify-between">
+                          <span>{t("aiTryOn.russianSize")}:</span>
+                          <span className="font-semibold text-[var(--foreground)]">{product.selectedRussianSize}</span>
+                        </p>
+                      ) : null}
+                      <p className="flex justify-between">
+                        <span>{t("aiTryOn.currentModel")}:</span>
+                        <span className="font-semibold text-[var(--foreground)]">
+                          {previewModel
+                            ? (locale === "ru" ? previewModel.labelRu : previewModel.labelEn)
+                            : uploadedReference
+                            ? t("aiTryOn.photoSelected")
+                            : "-"}
+                        </span>
                       </p>
-                    ) : uploadedReference ? (
-                      <p className="text-sm text-[var(--muted)]">{t("aiTryOn.photoSelected")}</p>
-                    ) : null}
+                    </div>
                   </div>
                 </div>
 
+                {/* Error Box */}
                 {error ? (
-                  <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" data-testid="ai-try-on-error">
-                    {error}
+                  <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 font-medium" data-testid="ai-try-on-error">
+                    ⚠️ {error}
                   </div>
                 ) : null}
 
+                {/* Loading Box */}
                 {task && POLLING_STATUSES.has(task.status) ? (
-                  <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-4 text-sm text-[var(--accent-strong)]" data-testid="ai-try-on-loading">
+                  <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-4 text-sm text-[var(--accent-strong)] font-semibold flex items-center gap-3 animate-pulse" data-testid="ai-try-on-loading">
+                    <span className="h-2 w-2 rounded-full bg-[var(--accent)] animate-ping" />
                     {t("aiTryOn.generating")}
                   </div>
                 ) : null}
 
-                {task?.status !== "COMPLETED" ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleSubmit()}
-                    disabled={busy}
-                    className="public-button-primary w-full px-5 py-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    data-testid="ai-try-on-generate"
-                  >
-                    {busy ? t("aiTryOn.generating") : t("aiTryOn.generate")}
-                  </button>
-                ) : null}
+                {/* Generate Button with helper warnings */}
+                {task?.status !== "COMPLETED" && (
+                  <div className="space-y-2">
+                    {disabledReason && (
+                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 font-medium flex items-start gap-1.5">
+                        <span>⚠️</span>
+                        <span>{disabledReason}</span>
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleSubmit()}
+                      disabled={isGenerateDisabled}
+                      className="public-button-primary w-full px-5 py-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-50 transition duration-200 hover:scale-[1.01]"
+                      data-testid="ai-try-on-generate"
+                    >
+                      {busy ? t("aiTryOn.generating") : t("aiTryOn.generate")}
+                    </button>
+                  </div>
+                )}
               </aside>
             </div>
           </div>

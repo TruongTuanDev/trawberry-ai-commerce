@@ -499,3 +499,66 @@ test("RU AI try-on keeps unsupported messaging localized and supports bermuda al
   await page.getByTestId("ai-try-on-generate").click();
   await expect(page.getByTestId("ai-try-on-result-image")).toBeVisible();
 });
+
+test("AI Try-On photo upload preview and model switching UI flow works correctly", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180000);
+
+  const stamp = Date.now() + 55;
+  const seller = await approveSeller(request, `ai-try-on-ui-${stamp}@example.com`);
+  const product = await createProduct(request, seller.token, stamp);
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "mock",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["jackets"],
+    },
+  });
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByTestId(`product-size-${product.variants[0].id}`).click();
+  await page.getByTestId("product-ai-try-on-button").click();
+  await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+
+  // 1. Verify body form and model cards are visible
+  await page.getByTestId("ai-try-on-height").fill("165");
+  await page.getByTestId("ai-try-on-weight").fill("55");
+  await page.getByTestId("ai-try-on-gender").selectOption("female");
+  await page.getByTestId("ai-try-on-body-type").selectOption("regular");
+
+  // 2. Built-in model selection
+  const model1Card = page.getByTestId("ai-try-on-model-model-1");
+  await expect(model1Card).toBeVisible();
+  await model1Card.click();
+
+  // 3. Consent checkbox check
+  const consentCheckbox = page.getByTestId("ai-try-on-consent");
+  await expect(consentCheckbox).toBeVisible();
+  await consentCheckbox.check();
+
+  // 4. Upload photo
+  const uploadInput = page.getByTestId("ai-try-on-upload-input");
+  await expect(uploadInput).toBeVisible();
+  await uploadInput.setInputFiles({
+    name: "test-person.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=", "base64"),
+  });
+
+  // 5. Verify preview is visible
+  const uploadPreview = page.getByTestId("ai-try-on-upload-preview");
+  await expect(uploadPreview).toBeVisible();
+
+  // 6. Generate try-on
+  await page.getByTestId("ai-try-on-generate").click();
+  await expect(page.getByTestId("ai-try-on-loading")).toBeVisible();
+  await expect(page.getByTestId("ai-try-on-result-image")).toBeVisible({ timeout: 25000 });
+});
