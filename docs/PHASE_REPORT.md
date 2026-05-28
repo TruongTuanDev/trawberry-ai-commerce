@@ -1,5 +1,36 @@
 # Phase Report
 
+## 2026-05-28 Catalog Filter Dropdown Overlay
+
+- audited the public catalog filter bar in `frontend-next/src/app/products/page.tsx`
+- identified the root cause as a stacking-context conflict:
+  - the filter section uses `backdrop-blur-md`
+  - that creates a local stacking context
+  - dropdown panels were rendered with `absolute z-50`, but still stayed trapped inside that lower context
+  - the later-rendered product grid/cards could visually paint above the dropdown
+- fixed the overlay behavior at the shared catalog filter container level instead of patching individual filter logic:
+  - elevated the filter area to a controlled `relative z-30 overflow-visible` layer
+  - kept the product grid at `relative z-0`
+  - standardized dropdown wrappers to a shared `z-20` container and `z-[60]` panel class
+  - preserved sticky header priority by keeping filter overlay below the header's existing higher stack level
+- added `Escape` close handling for the active catalog dropdown without changing current outside-click behavior
+- added focused test ids for the color filter trigger and panel
+- added a targeted Playwright spec for catalog filter overlay behavior
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/catalog-filters-overlay.spec.ts --workers=1`: failed because local frontend `127.0.0.1:3000` was not running
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- focused browser verification for the overlay fix still needs a live local frontend runtime
+- the user-local stash `temp-layout-before-catalog-filter-overlay` was intentionally left untouched because `frontend-next/src/app/layout.tsx` was unrelated dirty worktree state
+
 ## 2026-05-28 AI Try-On Supported Category Selector
 
 - replaced the admin AI settings `Supported categories` free-text textarea with a predefined checkbox-chip selector

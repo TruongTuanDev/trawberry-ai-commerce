@@ -1,5 +1,21 @@
 # Full Commerce Flow Audit
 
+## Catalog Filter Dropdown Overlay Addendum
+
+- verified the catalog/search filter row renders multiple inline dropdowns from a shared page-level implementation in `frontend-next/src/app/products/page.tsx`
+- verified the overlay issue was caused by stacking context, not filter business logic:
+  - filter bar blur styling created a local stacking context
+  - dropdown panels were visually constrained below later sibling product content
+- verified the fix is UI-layer-only:
+  - no catalog filtering logic change
+  - no search param contract change
+  - no product-card data contract change
+  - no header routing/session/cart behavior change
+- verified non-goals:
+  - no backend change
+  - no portal migration required for this fix
+  - no public design-system rewrite
+
 ## AI Try-On Supported Category Selector Addendum
 
 - verified admin AI settings no longer depend on free-text category entry for the primary workflow
