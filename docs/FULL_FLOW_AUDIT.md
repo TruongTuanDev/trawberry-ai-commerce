@@ -963,3 +963,9 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Admin AI Settings now consumes a real admin category list with product counts and saves selected category ids when a category match exists, while preserving unmapped legacy values separately instead of silently dropping them
 - AI Try-On support evaluation now expands stored category ids back into related category names/slugs and still understands legacy alias strings, so a saved admin selection and a product category relation stay consistent even during legacy backfill
 - a one-time `npm run categories:sync` backfill is available to migrate historical products that still only hold denormalized category text into linked `Category` rows without deleting old data
+
+# Backend Production Start Path Audit Addendum
+
+- the production backend container failure was caused by an entrypoint mismatch, not by Prisma or database readiness
+- NestJS compiles this repository to `dist/src/main.js`, while the production container had been starting `node dist/main`
+- the production bootstrap path is now aligned in both `backend-nest/package.json` and `backend-nest/Dockerfile`, while preserving the existing `prisma db push` pre-start behavior
