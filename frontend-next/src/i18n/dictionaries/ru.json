@@ -6,10 +6,17 @@
     "logout": "Выйти",
     "signingOut": "Выход...",
     "loading": "Загрузка...",
+    "restoringSession": "Восстанавливаем {{role}} сессию...",
+    "redirectingToLogin": "Перенаправляем на страницу входа...",
     "yes": "Да",
     "no": "Нет",
     "unknown": "Неизвестно",
     "notProvided": "Не указано",
+    "roles": {
+      "admin": "администратора",
+      "seller": "продавца",
+      "customer": "покупателя"
+    },
     "pageOf": "Страница {{page}} из {{total}}",
     "actions": {
       "save": "Сохранить",
@@ -786,6 +793,8 @@
       "registeredNotice": "Аккаунт создан. Пожалуйста, войдите.",
       "emailOrPhone": "Email или телефон",
       "emailOrPhonePlaceholder": "name@example.com или +7XXXXXXXXXX",
+      "emailPlaceholder": "name@example.com",
+      "phonePlaceholder": "+7XXXXXXXXXX",
       "password": "Пароль",
       "loginButton": "Войти",
       "signingIn": "Входим...",
@@ -798,6 +807,7 @@
       "fullName": "Полное имя",
       "email": "Email",
       "phone": "Телефон",
+      "passwordLength": "Пароль должен содержать минимум 6 символов.",
       "confirmPassword": "Подтвердите пароль",
       "emailOrPhoneRequired": "Укажите email или телефон.",
       "passwordMismatch": "Подтверждение пароля не совпадает.",
@@ -1158,12 +1168,24 @@
   },
   "errors": {
     "default": "Что-то пошло не так. Повторите попытку.",
+    "NETWORK_ERROR": "Проверьте подключение к интернету и попробуйте снова.",
+    "NOT_FOUND": "Что-то пошло не так. Попробуйте позже.",
     "unauthorized": "Сессия истекла. Войдите снова.",
     "forbidden": "У вас нет прав на это действие.",
     "validation": "Некоторые данные некорректны. Проверьте их и попробуйте снова.",
     "conflict": "Данные изменились. Обновите страницу.",
     "rateLimited": "Слишком много запросов. Попробуйте позже.",
     "system": "Произошла системная ошибка. Повторите попытку.",
+    "INVALID_CREDENTIALS": "Неверный email или пароль.",
+    "EMAIL_ALREADY_EXISTS": "Этот email уже зарегистрирован.",
+    "PHONE_ALREADY_EXISTS": "Этот номер телефона уже зарегистрирован.",
+    "REFRESH_TOKEN_EXPIRED": "Сессия истекла. Войдите снова.",
+    "REFRESH_TOKEN_INVALID": "Сессия истекла. Войдите снова.",
+    "EMAIL_OR_PHONE_REQUIRED": "Укажите email или номер телефона.",
+    "PHONE_REQUIRED": "Укажите номер телефона.",
+    "PHONE_INVALID": "Укажите корректный номер телефона.",
+    "EMAIL_INVALID": "Укажите корректный email.",
+    "PASSWORD_TOO_SHORT": "Пароль должен содержать минимум 6 символов.",
     "CUSTOMER_ADDRESS_REQUIRED": "Перед оформлением нужен сохраненный адрес, готовый к доставке.",
     "CUSTOMER_ADDRESS_NOT_YANDEX_READY": "Выбранный сохраненный адрес еще не готов для доставки Yandex.",
     "SHOP_PAYMENT_METHOD_NOT_SUPPORTED": "Этот магазин не поддерживает выбранный способ оплаты для текущего заказа.",
@@ -1548,6 +1570,7 @@
       "title": "Транспортная наклейка",
       "pageTitle": "Печатная транспортная наклейка",
       "documentTitle": "{{orderCode}}",
+
       "print": "Печать наклейки",
       "openPrintableLabel": "Открыть версию для печати",
       "labelSize": "Размер этикетки",
@@ -1577,6 +1600,7 @@
         "providerManualYandex": "Яндекс Доставка",
         "providerYandexDelivery": "Яндекс Доставка",
         "providerManual": "Доставка продавцом",
+
         "deliveryTypes": {
           "express": "Экспресс",
           "nextDay": "На следующий день"
@@ -1589,6 +1613,7 @@
           "delivered": "Доставлено",
           "cancelled": "Отменено",
           "failed": "Ошибка доставки"
+
         },
         "paymentMethod": "Способ оплаты",
         "paymentStatus": "Статус оплаты",

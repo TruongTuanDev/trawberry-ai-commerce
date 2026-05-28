@@ -1,5 +1,23 @@
 # Full Commerce Flow Audit
 
+## Customer Auth I18n Addendum
+
+- verified customer login/register no longer surface mixed-language raw backend strings in the public UI
+- verified expired customer sessions now redirect through the customer login path with localized EN/RU messaging
+- verified customer auth error mapping covers:
+  - invalid credentials
+  - duplicate email
+  - duplicate phone
+  - network failure
+  - expired or invalid customer session
+  - invalid phone/email/password validation cases
+- verified frontend API base URL normalization now strips duplicated `/api` suffixes and avoids insecure client fallback on HTTPS pages
+- verified targeted browser coverage exists for customer auth i18n through:
+  - `tests/e2e/customer-auth-i18n.spec.ts`
+  - `tests/e2e/i18n-public-customer.spec.ts`
+- residual audit note:
+  - additional customer account screens still need a wider pass to remove direct `error.message` rendering outside the auth-specific scope
+
 ## GitHub Actions CD To VPS Addendum
 
 - verified the active release path now supports a dedicated CD workflow separate from CI

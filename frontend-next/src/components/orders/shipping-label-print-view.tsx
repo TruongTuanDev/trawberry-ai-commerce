@@ -9,6 +9,7 @@ import {
   normalizeShippingLabelPickupAddress,
   parseShippingLabelSystemNote,
 } from "@/lib/shipping-label";
+
 import type {
   DeliveryDetail,
   DeliverySettings,
@@ -289,6 +290,7 @@ export function ShippingLabelPrintView({
       order.dropoffComment ??
       activeShipment?.customerVisibleMessage,
   );
+
   const noEntrance = activeShipment?.dropoffNoEntrance ?? order.dropoffNoEntrance;
   const noFloor = activeShipment?.dropoffNoFloor ?? order.dropoffNoFloor;
   const noApartment = activeShipment?.dropoffNoApartment ?? order.dropoffNoApartment;

@@ -1,4 +1,6 @@
-import { ApiError, apiRequest, type AuthRoleKey } from "@/lib/api";
+import { type Locale, type LocaleRole } from "@/i18n/config";
+import { getLocalizedErrorMessage } from "@/i18n/error-messages";
+import { apiRequest, type AuthRoleKey } from "@/lib/api";
 
 export type RegisterResponse = {
   success: true;
@@ -119,75 +121,21 @@ export async function roleRegisterRequest(
   });
 }
 
-export function getAuthErrorMessage(error: unknown, mode: AuthMode): string {
-  const fallbackByMode: Record<AuthMode, string> = {
-    register: "Không thể đăng ký. Vui lòng thử lại.",
-    login: "Thông tin đăng nhập không chính xác.",
-    session: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-  };
-
-  if (error instanceof ApiError) {
-    const message = error.message.trim();
-
-    if (message === "EMAIL_ALREADY_EXISTS") {
-      return "Email đã được sử dụng.";
-    }
-
-    if (message === "PHONE_ALREADY_EXISTS") {
-      return "Số điện thoại đã được sử dụng.";
-    }
-
-    if (
-      message === "REFRESH_TOKEN_EXPIRED" ||
-      message === "REFRESH_TOKEN_INVALID"
-    ) {
-      return fallbackByMode.session;
-    }
-
-    if (mode === "session") {
-      if (error.status === 401) {
-        return fallbackByMode.session;
-      }
-      if (error.status === 403) {
-        return "Bạn không có quyền thực hiện thao tác này.";
-      }
-    }
-
-    if (mode === "register") {
-      if (error.status === 401 || error.status === 403) {
-        return fallbackByMode.register;
-      }
-    }
-
-    if (mode === "login") {
-      if (error.status === 401) {
-        return fallbackByMode.login;
-      }
-      if (error.status === 403) {
-        return "Bạn không có quyền đăng nhập vào khu vực này.";
-      }
-    }
-
-    if (error.status === 409) {
-      return message;
-    }
-
-    if (error.status === 429) {
-      return "Bạn thao tác quá nhanh. Vui lòng thử lại sau.";
-    }
-
-    if (error.status >= 500) {
-      return "Có lỗi hệ thống. Vui lòng thử lại.";
-    }
-
-    return message || fallbackByMode[mode];
-  }
-
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return fallbackByMode[mode];
+export function getAuthErrorMessage(
+  error: unknown,
+  mode: AuthMode,
+  options: {
+    role?: LocaleRole;
+    locale?: Locale;
+  } = {},
+): string {
+  return getLocalizedErrorMessage({
+    role: options.role ?? "customer",
+    locale: options.locale,
+    error,
+    authMode: mode,
+    fallbackKey: mode === "session" ? "errors.unauthorized" : "errors.default",
+  });
 }
 
 export async function refreshSession(role: AuthRoleKey) {

@@ -18,12 +18,20 @@ export function CustomerLoginPageClient() {
   const [password, setPassword] = useState("");
   const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
-  const { t } = useI18n("customer");
+  const { locale, t } = useI18n("customer");
 
   const handleSubmit = async () => {
     setError(null);
     await run({
       action: async () => {
+        if (!identifier.trim()) {
+          throw new Error(t("customer.auth.emailOrPhoneRequired"));
+        }
+
+        if (password.length < 6) {
+          throw new Error(t("customer.auth.passwordLength"));
+        }
+
         const normalizedIdentifier = identifier.includes("@")
           ? identifier.trim()
           : maybeNormalizePhone(identifier);
@@ -39,6 +47,8 @@ export function CustomerLoginPageClient() {
         return user;
       },
       authMode: "login",
+      role: "customer",
+      locale,
       successMessage: t("customer.auth.loginSuccess"),
       onSuccess: async (user) => {
         setSession({ user });
@@ -69,7 +79,13 @@ export function CustomerLoginPageClient() {
               {t("customer.auth.registeredNotice")}
             </div>
           ) : null}
-          <div className="mt-6 grid gap-4">
+          <form
+            className="mt-6 grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+          >
             <Field label={t("customer.auth.emailOrPhone")}>
               <input
                 value={identifier}
@@ -78,6 +94,7 @@ export function CustomerLoginPageClient() {
                 placeholder={t("customer.auth.emailOrPhonePlaceholder")}
                 autoComplete="username"
                 data-testid="customer-login-email"
+                disabled={isRunning}
               />
             </Field>
             <Field label={t("customer.auth.password")}>
@@ -88,19 +105,24 @@ export function CustomerLoginPageClient() {
                 className="public-input"
                 autoComplete="current-password"
                 data-testid="customer-login-password"
+                disabled={isRunning}
               />
             </Field>
             {error ? (
-              <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">
+              <div
+                className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]"
+                role="alert"
+                data-testid="customer-login-error"
+              >
                 {error}
               </div>
             ) : null}
             <button
-              type="button"
-              onClick={() => void handleSubmit()}
+              type="submit"
               disabled={isRunning}
               className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
               data-testid="customer-login-submit"
+              aria-busy={isRunning}
             >
               {isRunning ? t("customer.auth.signingIn") : t("customer.auth.loginButton")}
             </button>
@@ -118,7 +140,7 @@ export function CustomerLoginPageClient() {
                 {t("customer.auth.becomeSeller")}
               </Link>
             </div>
-          </div>
+          </form>
         </section>
       </main>
     </PublicShell>

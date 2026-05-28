@@ -18,7 +18,7 @@ export function CustomerRegisterPageClient() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
-  const { t } = useI18n("customer");
+  const { locale, t } = useI18n("customer");
 
   const handleSubmit = async () => {
     setError(null);
@@ -27,6 +27,9 @@ export function CustomerRegisterPageClient() {
       action: async () => {
         if (!email.trim() && !phone.trim()) {
           throw new Error(t("customer.auth.emailOrPhoneRequired"));
+        }
+        if (password.length < 6) {
+          throw new Error(t("customer.auth.passwordLength"));
         }
         if (password !== confirmPassword) {
           throw new Error(t("customer.auth.passwordMismatch"));
@@ -42,6 +45,8 @@ export function CustomerRegisterPageClient() {
         });
       },
       authMode: "register",
+      role: "customer",
+      locale,
       successMessage: t("customer.auth.registerSuccess"),
       errorMessage: t("customer.auth.registerFailed"),
       onSuccess: async () => {
@@ -67,29 +72,35 @@ export function CustomerRegisterPageClient() {
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
             {t("customer.auth.registerSubtitle")}
           </p>
-          <div className="mt-6 grid gap-4">
+          <form
+            className="mt-6 grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+          >
             <Field label={t("customer.auth.fullName")}>
-              <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="public-input" data-testid="customer-register-name" />
+              <input value={fullName} onChange={(event) => setFullName(event.target.value)} className="public-input" data-testid="customer-register-name" disabled={isRunning} />
             </Field>
             <Field label={t("customer.auth.email")}>
-              <input value={email} onChange={(event) => setEmail(event.target.value)} className="public-input" placeholder="name@example.com" data-testid="customer-register-email" />
+              <input value={email} onChange={(event) => setEmail(event.target.value)} className="public-input" placeholder={t("customer.auth.emailPlaceholder")} data-testid="customer-register-email" disabled={isRunning} />
             </Field>
             <Field label={t("customer.auth.phone")}>
-              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="customer-register-phone" />
+              <input value={phone} onChange={(event) => setPhone(event.target.value)} className="public-input" placeholder={t("customer.auth.phonePlaceholder")} data-testid="customer-register-phone" disabled={isRunning} />
             </Field>
             <Field label={t("customer.auth.password")}>
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="customer-register-password" />
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="customer-register-password" disabled={isRunning} />
             </Field>
             <Field label={t("customer.auth.confirmPassword")}>
-              <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="customer-register-confirm-password" />
+              <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="public-input" autoComplete="new-password" data-testid="customer-register-confirm-password" disabled={isRunning} />
             </Field>
-            {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
+            {error ? <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]" role="alert" data-testid="customer-register-error">{error}</div> : null}
             <button
-              type="button"
-              onClick={() => void handleSubmit()}
+              type="submit"
               disabled={isRunning}
               className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
               data-testid="customer-register-submit"
+              aria-busy={isRunning}
             >
               {isRunning ? t("customer.auth.creatingAccount") : t("customer.auth.createAccountButton")}
             </button>
@@ -101,7 +112,7 @@ export function CustomerRegisterPageClient() {
                 {t("customer.auth.becomeSeller")}
               </Link>
             </div>
-          </div>
+          </form>
         </section>
       </main>
     </PublicShell>

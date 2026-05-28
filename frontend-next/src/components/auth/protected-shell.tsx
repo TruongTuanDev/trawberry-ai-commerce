@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getRoleHome } from "@/lib/auth-redirect";
 import { toast } from "@/components/ui/use-toast";
+import { useI18n } from "@/i18n/use-i18n";
 import { type AuthRoleKey, useAuthStore } from "@/stores/auth-store";
 
 type ProtectedShellProps = {
@@ -36,8 +37,8 @@ export function ProtectedShell({
   const refreshRole = useAuthStore((state) => state.refreshRole);
   const [sessionChecked, setSessionChecked] = useState(false);
   const lastToastErrorRef = useRef<string | null>(null);
-  const roleLabel =
-    role === "customer" ? "customer" : role === "admin" ? "admin" : "seller";
+  const { t } = useI18n(role);
+  const roleLabel = t(`common.roles.${role}`);
   const roleAllowed = user
     ? !allowedRoles?.length || allowedRoles.includes(user.role)
     : false;
@@ -99,12 +100,12 @@ export function ProtectedShell({
         <div className="card-panel max-w-md rounded-[1.5rem] px-8 py-6 text-center">
           <p className="text-sm text-[var(--muted)]">
             {!hydrated || sessionLoading
-              ? `Restoring your ${roleLabel} session...`
-              : "Redirecting to login..."}
+              ? t("common.restoringSession", { role: roleLabel })
+              : t("common.redirectingToLogin")}
           </p>
           {sessionError ? (
             <p className="mt-3 text-sm text-[var(--accent-strong)]">
-              Session expired or missing. Please sign in again.
+              {sessionError}
             </p>
           ) : null}
         </div>

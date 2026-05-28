@@ -13,7 +13,7 @@ export function CustomerAccountSecurityPageClient() {
   const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { t } = useI18n("customer");
+  const { locale, t } = useI18n("customer");
 
   const handleSubmit = async () => {
     setError(null);
@@ -24,12 +24,17 @@ export function CustomerAccountSecurityPageClient() {
         if (newPassword !== confirmPassword) {
           throw new Error(t("customer.security.passwordMismatch"));
         }
+        if (newPassword.length < 6) {
+          throw new Error(t("customer.auth.passwordLength"));
+        }
 
         return changeCustomerPassword({
           currentPassword,
           newPassword,
         });
       },
+      role: "customer",
+      locale,
       successMessage: t("customer.security.success"),
       onSuccess: () => {
         setCurrentPassword("");
@@ -38,9 +43,10 @@ export function CustomerAccountSecurityPageClient() {
         setSuccess(t("customer.security.success"));
       },
       errorMessage: t("customer.security.failed"),
-    }).catch((issue) => {
-      setError(issue instanceof Error ? issue.message : t("customer.security.failed"));
-    });
+      onError: (_issue, message) => {
+        setError(message);
+      },
+    }).catch(() => undefined);
   };
 
   return (

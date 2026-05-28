@@ -455,6 +455,7 @@ test("seller can open and print a localized shipping label from order detail", a
   expect(ruLabelText).toContain("Экспресс");
   expect(ruLabelText).toContain("Яндекс Доставка");
   expect(ruLabelText).toContain("Забор у продавца");
+
   expect(ruLabelText).not.toContain("Entrance");
   expect(ruLabelText).not.toContain("Intercom");
   expect(ruLabelText).not.toContain("Floor");
@@ -517,12 +518,15 @@ test("seller can open and print a localized shipping label from order detail", a
   const enLabelText = await labelPage
     .getByTestId("shipping-label-print-view")
     .innerText();
+
+  expect(enLabelText).toContain("Delivered");
   expect(enLabelText).toContain("Entrance: 64");
   expect(enLabelText).toContain("Intercom: 66");
   expect(enLabelText).toContain("Floor: 646");
   expect(enLabelText).toContain("Apartment: 464");
   expect(enLabelText).toContain("Delivered");
   expect(enLabelText).toContain("Seller-managed pickup");
+
 
   await labelPage.close();
 
