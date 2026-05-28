@@ -1,5 +1,25 @@
 # Project Status
 
+## Shipping Label I18n Data Values - 2026-05-28
+
+- Status: implemented on branch `dev/bugfix/shipping-label-i18n-data-values`
+- Seller shipping label print flow now:
+  - normalizes system-generated English address access notes into locale-aware label text
+  - maps `Seller-managed pickup` before render instead of showing the raw backend string
+  - sets localized page title by order code on open
+  - sets `shipping-label-<orderCode>` immediately before browser print
+- Added targeted helper logic in `frontend-next/src/lib/shipping-label.ts` for shipping-label-specific parsing and normalization
+- Added Playwright assertions for:
+  - RU absence of raw English system labels
+  - RU localized pickup label
+  - title before print
+- Current verification status:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - local Playwright verification is blocked until frontend `127.0.0.1:3000` and backend `127.0.0.1:3001` are running
+  - guaranteed `.pdf` filename export still needs a dedicated PDF generation phase
+
 ## GitHub Actions CD To VPS - 2026-05-27
 
 - Status: implemented in `.github/workflows/deploy.yml`

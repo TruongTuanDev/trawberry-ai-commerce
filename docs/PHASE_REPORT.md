@@ -1,5 +1,32 @@
 # Phase Report
 
+## 2026-05-28 Shipping Label I18n Data Values
+
+- audited seller shipping label print flow for remaining RU data-value leaks
+- added frontend normalization so shipping labels no longer render raw English system strings for:
+  - `Entrance / Intercom / Floor / Apartment`
+  - `Seller-managed pickup`
+- localized shipping label page title and pre-print filename hint by order code
+- expanded Playwright coverage for localized shipping-label data values and title behavior
+- TODO:
+  - dedicated PDF export with guaranteed `shipping-label-<orderCode>.pdf` filename remains a follow-up phase; current filename control is still browser best-effort through `document.title`
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: failed because local backend on `127.0.0.1:3001` was not running
+- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: failed because local frontend on `127.0.0.1:3000` was not running
+- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: failed because local frontend on `127.0.0.1:3000` was not running
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- end-to-end browser verification is blocked until frontend and backend services are running locally
+- exact cross-browser PDF filename control still requires a dedicated export implementation instead of browser print/save
+
 ## 2026-05-27 GitHub Actions CD To VPS
 
 - added `.github/workflows/deploy.yml` for production image build, GHCR publish, and VPS deploy

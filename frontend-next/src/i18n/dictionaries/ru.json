@@ -1547,6 +1547,7 @@
       "kicker": "Упаковка",
       "title": "Транспортная наклейка",
       "pageTitle": "Печатная транспортная наклейка",
+      "documentTitle": "{{orderCode}}",
       "print": "Печать наклейки",
       "openPrintableLabel": "Открыть версию для печати",
       "labelSize": "Размер этикетки",
@@ -1573,9 +1574,9 @@
       "internalNotice": "Внутренняя наклейка маркетплейса.",
       "internalNote": "Внутренняя заметка",
       "notOfficialYandex": "Это не официальная наклейка Yandex.",
-        "providerManualYandex": "Yandex Delivery",
-        "providerYandexDelivery": "Yandex Delivery",
-        "providerManual": "Ручная доставка",
+        "providerManualYandex": "Яндекс Доставка",
+        "providerYandexDelivery": "Яндекс Доставка",
+        "providerManual": "Доставка продавцом",
         "deliveryTypes": {
           "express": "Экспресс",
           "nextDay": "На следующий день"
@@ -1583,7 +1584,11 @@
         "statuses": {
           "created": "Создано",
           "readyToShip": "Готово к отправке",
-          "readyForHandoff": "Готово к передаче"
+          "readyForHandoff": "Готово к передаче",
+          "inTransit": "В пути",
+          "delivered": "Доставлено",
+          "cancelled": "Отменено",
+          "failed": "Ошибка доставки"
         },
         "paymentMethod": "Способ оплаты",
         "paymentStatus": "Статус оплаты",
@@ -1615,6 +1620,9 @@
         "intercom": "Домофон",
         "floor": "Этаж",
         "apartment": "Квартира"
+      },
+      "pickupModes": {
+        "sellerManaged": "Забор у продавца"
       },
       "noEntrance": "Без подъезда",
       "noFloor": "Без этажа",
