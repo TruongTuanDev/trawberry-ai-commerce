@@ -3502,3 +3502,30 @@ Verification:
 Known gaps:
 
 - the new catalog Playwright overlay/category coverage still needs a stable local or CI runtime where the public catalog filter row is visible to automation
+
+# Phase Report: Catalog Category Filter From Product Category Names
+
+Implemented:
+
+- changed public catalog category facets to use `Product.categoryName` directly instead of preferring `sourceCategoryName` or WB subject-based slugs
+- kept category facet generation limited to public-ready products only, and ignored null/empty `categoryName` values
+- made public category filtering compare against the normalized `categoryName` value, so the category dropdown can submit the real display name such as `Шорты`
+- preserved the existing catalog overlay/dropdown UI behavior on the frontend while making the category filter consume `categoryName`-backed facet values from the API
+- updated public-products contract coverage to assert that `categoryName` appears in facets, null categories are excluded, and category filtering returns the expected products
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/public-products.e2e-spec.ts`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Known gaps:
+
+- focused Playwright catalog overlay/category checks were not rerun in this phase because no stable local public runtime was prepared for them

@@ -948,3 +948,9 @@ Future audit item: design an optional marketplace parent order for combined rece
   - internal category name/slug and mapped `categoryName` remain fallbacks for non-WB or legacy products
 - public `categorySlug` filtering no longer depends solely on internal `category.slug`; it now matches through the same canonical category resolver and also tolerates legacy slug-style links
 - current frontend/runtime verification for the overlay flow still needs a stable Playwright-visible public catalog state before the new UI interaction test can pass end-to-end
+
+# Catalog CategoryName Audit Addendum
+
+- public catalog category facets now use `Product.categoryName` as the source of truth for category labels and counts on marketplace-visible products
+- null or empty `categoryName` values are excluded from the public category dataset, so the dropdown only represents real visible catalog categories
+- category filtering now compares against the normalized `categoryName` value itself, which keeps Russian names such as `Шорты` intact instead of requiring WB-subject-derived slugs to exist in the database
