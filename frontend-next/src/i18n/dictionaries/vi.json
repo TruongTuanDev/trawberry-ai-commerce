@@ -173,6 +173,21 @@
     "cashback": "Hoàn tiền",
     "currency": "RUB"
   },
+  "publicFooter": {
+    "tagline": "Mua s\u1eafm d\u1ec5 d\u00e0ng",
+    "title": "T\u00ecm s\u1ea3n ph\u1ea9m, \u0111\u1eb7t h\u00e0ng, theo d\u00f5i giao h\u00e0ng v\u00e0 x\u00e1c nh\u1eadn thanh to\u00e1n trong c\u00f9ng m\u1ed9t n\u01a1i.",
+    "description": "trawberry k\u1ebft n\u1ed1i ng\u01b0\u1eddi mua v\u00e0 ng\u01b0\u1eddi b\u00e1n trong m\u1ed9t tr\u1ea3i nghi\u1ec7m marketplace m\u01b0\u1ee3t m\u00e0.",
+    "explore": "Kh\u00e1m ph\u00e1",
+    "shop": "Mua s\u1eafm",
+    "trackOrder": "Theo d\u00f5i \u0111\u01a1n",
+    "login": "\u0110\u0103ng nh\u1eadp",
+    "register": "\u0110\u0103ng k\u00fd",
+    "sellWithUs": "B\u00e1n h\u00e0ng c\u00f9ng trawberry",
+    "sellerLogin": "\u0110\u0103ng nh\u1eadp seller",
+    "manualPayment": "Thanh to\u00e1n th\u1ee7 c\u00f4ng",
+    "manualPaymentDesc": "V\u1edbi c\u00e1c \u0111\u01a1n h\u00e0ng chuy\u1ec3n kho\u1ea3n ng\u00e2n h\u00e0ng, kh\u00e1ch h\u00e0ng c\u00f3 th\u1ec3 t\u1ea3i l\u00ean x\u00e1c nh\u1eadn thanh to\u00e1n t\u1eeb trang theo d\u00f5i \u0111\u01a1n h\u00e0ng \u0111\u1ec3 ng\u01b0\u1eddi b\u00e1n duy\u1ec7t nhanh h\u01a1n.",
+    "disclaimer": "Tuy\u00ean b\u1ed1 mi\u1ec5n tr\u1eeb tr\u00e1ch nhi\u1ec7m: Ch\u00fang t\u00f4i l\u00e0 n\u1ec1n t\u1ea3ng trung gian k\u1ebft n\u1ed1i ng\u01b0\u1eddi mua v\u00e0 ng\u01b0\u1eddi b\u00e1n, kh\u00f4ng ph\u1ea3i l\u00e0 website ch\u00ednh th\u1ee9c hay tr\u1ef1c thu\u1ed9c t\u1eadp \u0111o\u00e0n Wildberries."
+  },
   "productDetail": {
     "backToProducts": "Quay lại sản phẩm",
     "openCart": "Mở giỏ hàng",
