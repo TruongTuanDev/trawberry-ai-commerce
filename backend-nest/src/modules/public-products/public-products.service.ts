@@ -51,20 +51,13 @@ type PublicProductRecord = {
 
 type FacetProductRecord = Pick<
   PublicProductRecord,
-  | 'brand'
-  | 'color'
-  | 'gender'
-  | 'categoryName'
-  | 'sourceCategoryName'
-  | 'subjectId'
-  | 'category'
-  | 'variants'
+  'brand' | 'color' | 'gender' | 'categoryName' | 'variants'
 >;
 
-type ResolvedPublicCategoryFacet = {
+type PublicCategoryFacet = {
   id: string;
   name: string;
-  slug: string;
+  slug: string | null;
   count: number;
 };
 
@@ -278,7 +271,7 @@ export class PublicProductsService {
     const visibleProducts = this.sortProducts(
       query.categorySlug
         ? readinessVisibleProducts.filter((product) =>
-            this.matchesResolvedCategorySlug(product, query.categorySlug!),
+            this.matchesCategoryFilter(product, query.categorySlug!),
           )
         : readinessVisibleProducts,
       query.sort ?? 'newest',
@@ -526,7 +519,7 @@ export class PublicProductsService {
   }
 
   private buildFacets(products: FacetProductRecord[]) {
-    const categories = new Map<string, ResolvedPublicCategoryFacet>();
+    const categories = new Map<string, PublicCategoryFacet>();
     const brands = new Map<string, number>();
     const colors = new Map<string, number>();
     const genders = new Map<string, number>();
@@ -534,11 +527,13 @@ export class PublicProductsService {
     let priceMax: Prisma.Decimal | null = null;
 
     for (const product of products) {
-      const resolvedCategory = this.resolvePublicCategoryFacet(product);
-      if (resolvedCategory) {
-        const existing = categories.get(resolvedCategory.slug);
-        categories.set(resolvedCategory.slug, {
-          ...resolvedCategory,
+      const categoryName = this.normalizeCategoryName(product.categoryName);
+      if (categoryName) {
+        const existing = categories.get(categoryName);
+        categories.set(categoryName, {
+          id: categoryName,
+          name: categoryName,
+          slug: categoryName,
           count: (existing?.count ?? 0) + 1,
         });
       }
@@ -572,83 +567,26 @@ export class PublicProductsService {
     };
   }
 
-  private resolvePublicCategoryFacet(
-    product: Pick<
-      PublicProductRecord,
-      'category' | 'categoryName' | 'sourceCategoryName' | 'subjectId'
-    >,
-  ): Omit<ResolvedPublicCategoryFacet, 'count'> | null {
-    const sourceCategoryName = product.sourceCategoryName?.trim() ?? null;
-    const mappedCategoryName = product.categoryName?.trim() ?? null;
-    const subjectId = product.subjectId?.toString() ?? null;
-
-    if (sourceCategoryName) {
-      return {
-        id: subjectId
-          ? `wb-subject-${subjectId}`
-          : this.slugifyCategoryValue(sourceCategoryName),
-        name: sourceCategoryName,
-        slug: subjectId
-          ? `wb-subject-${subjectId}`
-          : this.slugifyCategoryValue(sourceCategoryName),
-      };
-    }
-
-    if (product.category?.name) {
-      return {
-        id: product.category.id.toString(),
-        name: product.category.name,
-        slug:
-          product.category.slug ??
-          this.slugifyCategoryValue(product.category.name),
-      };
-    }
-
-    if (mappedCategoryName) {
-      return {
-        id: this.slugifyCategoryValue(mappedCategoryName),
-        name: mappedCategoryName,
-        slug: this.slugifyCategoryValue(mappedCategoryName),
-      };
-    }
-
-    return null;
-  }
-
-  private matchesResolvedCategorySlug(
-    product: Pick<
-      PublicProductRecord,
-      'category' | 'categoryName' | 'sourceCategoryName' | 'subjectId'
-    >,
-    categorySlug: string,
+  private matchesCategoryFilter(
+    product: Pick<PublicProductRecord, 'categoryName'>,
+    categoryFilter: string,
   ) {
-    const resolved = this.resolvePublicCategoryFacet(product);
-    const normalizedSlug = categorySlug.trim().toLowerCase();
-    const legacyCandidates = [
-      resolved?.slug,
-      product.category?.slug,
-      product.sourceCategoryName
-        ? this.slugifyCategoryValue(product.sourceCategoryName)
-        : null,
-      product.categoryName
-        ? this.slugifyCategoryValue(product.categoryName)
-        : null,
-    ]
-      .filter((value): value is string => Boolean(value))
-      .map((value) => value.toLowerCase());
+    const normalizedCategoryName = this.normalizeCategoryName(
+      product.categoryName,
+    );
+    const normalizedFilter = this.normalizeCategoryName(categoryFilter);
 
-    return legacyCandidates.includes(normalizedSlug);
+    return Boolean(
+      normalizedCategoryName &&
+      normalizedFilter &&
+      normalizedCategoryName.localeCompare(normalizedFilter, undefined, {
+        sensitivity: 'accent',
+      }) === 0,
+    );
   }
 
-  private slugifyCategoryValue(value: string) {
-    const normalized = value
-      .normalize('NFKC')
-      .trim()
-      .toLowerCase()
-      .replace(/['"`]/g, '')
-      .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
-      .replace(/^-+|-+$/g, '');
-
-    return normalized || 'category';
+  private normalizeCategoryName(value: string | null | undefined) {
+    const normalized = value?.normalize('NFKC').trim();
+    return normalized ? normalized : null;
   }
 }

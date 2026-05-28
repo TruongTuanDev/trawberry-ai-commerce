@@ -2105,3 +2105,15 @@ Implemented:
 Current gap:
 
 - the focused Playwright runtime for catalog overlay/category behavior still needs follow-up because the filter trigger was not visible in the current local test environment
+
+# Catalog Category Filter From Product Category Names Status
+
+Implemented:
+
+- public catalog category facets now come from `Product.categoryName` for public-ready products instead of preferring WB source category fields
+- empty or null `categoryName` values are excluded from the category dropdown dataset
+- public category filtering now matches the normalized `categoryName` value directly, allowing Russian category names such as `Шорты` to round-trip through the API and UI cleanly
+
+Current gap:
+
+- a live Playwright runtime for end-to-end public catalog category interaction is still pending outside this code-only verification pass

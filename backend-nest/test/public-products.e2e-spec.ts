@@ -279,21 +279,40 @@ describe('PublicProductsController contract (e2e)', () => {
         ],
       }),
       buildProduct({
-        id: 'product-wb-shorts',
-        title: 'WB Shorts Public',
-        categoryName: 'Shorts',
+        id: 'product-ru-shorts',
+        title: 'Russian Shorts Public',
+        categoryName: 'Шорты',
         sourceCategoryName: 'Шорты',
-        subjectId: 9001n,
+        category: null,
         variants: [
           buildVariant({
-            id: 'variant-wb-shorts',
-            productId: 'product-wb-shorts',
+            id: 'variant-ru-shorts',
+            productId: 'product-ru-shorts',
             sizeName: 'M',
             russianSize: '46',
             techSize: 'M',
-            sellerSku: 'WB-SHORTS-M',
+            sellerSku: 'RU-SHORTS-M',
             basePrice: decimal(1200),
             stockQuantity: 7,
+          }),
+        ],
+      }),
+      buildProduct({
+        id: 'product-no-category',
+        title: 'No Category Product',
+        categoryName: null,
+        sourceCategoryName: null,
+        category: null,
+        variants: [
+          buildVariant({
+            id: 'variant-no-category',
+            productId: 'product-no-category',
+            sizeName: 'S',
+            russianSize: '44',
+            techSize: 'S',
+            sellerSku: 'NO-CAT-S',
+            basePrice: decimal(1100),
+            stockQuantity: 2,
           }),
         ],
       }),
@@ -564,10 +583,11 @@ describe('PublicProductsController contract (e2e)', () => {
         'product-ready',
         'product-price-changed',
         'product-limited',
-        'product-wb-shorts',
+        'product-ru-shorts',
+        'product-no-category',
       ]),
     );
-    expect(body.meta.total).toBe(4);
+    expect(body.meta.total).toBe(5);
   });
 
   it('returns public detail fields and variant availability contract', async () => {
@@ -614,10 +634,10 @@ describe('PublicProductsController contract (e2e)', () => {
     );
   });
 
-  it('builds category facets from public-ready WB source categories and filters by categorySlug', async () => {
+  it('builds category facets from product.categoryName and filters by category value', async () => {
     const listResponse = await request(app.getHttpServer())
       .get('/api/public/products')
-      .query({ q: 'WB Shorts' })
+      .query({ q: 'Шорты' })
       .expect(200);
 
     const listBody = readBody<PaginatedPublicProductsResponseDto>(listResponse);
@@ -625,24 +645,35 @@ describe('PublicProductsController contract (e2e)', () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: 'Шорты',
-          slug: 'wb-subject-9001',
+          slug: 'Шорты',
           count: 1,
         }),
       ]),
     );
+    expect(
+      listBody.filters.categories.find(
+        (category) => category.name === 'Outerwear',
+      ),
+    ).toBeUndefined();
+    expect(
+      listBody.filters.categories.find((category) => category.name === ''),
+    ).toBeUndefined();
 
     const filteredResponse = await request(app.getHttpServer())
       .get('/api/public/products')
-      .query({ categorySlug: 'wb-subject-9001' })
+      .query({ categorySlug: 'Шорты' })
       .expect(200);
 
     const filteredBody =
       readBody<PaginatedPublicProductsResponseDto>(filteredResponse);
     expect(filteredBody.items.map((item) => item.id)).toContain(
-      'product-wb-shorts',
+      'product-ru-shorts',
     );
     expect(filteredBody.items.map((item) => item.id)).not.toContain(
       'product-ready',
+    );
+    expect(filteredBody.items.map((item) => item.id)).not.toContain(
+      'product-no-category',
     );
   });
 
@@ -1008,9 +1039,9 @@ function buildProduct(input: {
   color?: string;
   gender?: string;
   composition?: string;
-  categoryName?: string;
-  sourceCategoryName?: string;
-  subjectId?: bigint;
+  categoryName?: string | null;
+  sourceCategoryName?: string | null;
+  category?: StoredProduct['category'];
   catalogStatus?: string;
   visibility?: string;
   variants: StoredVariant[];
@@ -1031,10 +1062,10 @@ function buildProduct(input: {
     composition: input.composition ?? '100% cotton',
     visibility: input.visibility ?? 'ACTIVE',
     catalogStatus: input.catalogStatus ?? 'PUBLISHED',
-    categoryId: 10n,
+    categoryId: input.category === null ? null : 10n,
     categoryName: input.categoryName ?? 'Jackets',
     sourceCategoryName: input.sourceCategoryName ?? 'Outerwear',
-    subjectId: input.subjectId ?? null,
+    subjectId: null,
     averageRating: decimalValue(4.8),
     feedbackCount: 2,
     updatedAt: new Date('2026-05-17T10:00:00Z'),
@@ -1056,11 +1087,14 @@ function buildProduct(input: {
     ],
     variants: input.variants,
     shop: approvedShop,
-    category: {
-      id: 10n,
-      name: input.categoryName ?? 'Jackets',
-      slug: 'jackets',
-    },
+    category:
+      input.category === undefined
+        ? {
+            id: 10n,
+            name: input.categoryName ?? 'Jackets',
+            slug: 'jackets',
+          }
+        : input.category,
   };
 }
 
