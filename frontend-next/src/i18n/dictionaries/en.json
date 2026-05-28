@@ -324,6 +324,13 @@
       "large_belly": "Large belly"
     },
     "uploadPhoto": "Upload your photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo",
+    "uploadFullBodyHint": "Use a clear full-body front-facing photo for best results.",
+    "step1": "Step 1: Body traits & preferences",
+    "step2": "Step 2: Consent",
+    "step3": "Step 3: Upload your photo or choose a model",
+    "step4": "Step 4: Product summary & generation",
     "uploadHint": "Optional for the demo, but supported when you want to use your own reference image.",
     "uploading": "Uploading...",
     "chooseModel": "Choose a model",
