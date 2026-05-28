@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
 import JsBarcode from "jsbarcode";
 import { QRCodeSVG } from "qrcode.react";
+import type { Locale } from "@/i18n/config";
 import type {
   DeliveryDetail,
   DeliverySettings,
@@ -101,17 +102,16 @@ function compactJoin(parts: Array<string | null | undefined>) {
   return parts.filter(Boolean).join(" | ");
 }
 
-function formatReadableToken(value: string | null | undefined) {
-  if (!value) {
-    return null;
+function getIntlLocale(locale: Locale) {
+  switch (locale) {
+    case "ru":
+      return "ru-RU";
+    case "vi":
+      return "vi-VN";
+    case "en":
+    default:
+      return "en-US";
   }
-
-  return value
-    .toLowerCase()
-    .split(/[_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 function mapLabelShipmentStatus(
@@ -122,24 +122,34 @@ function mapLabelShipmentStatus(
 
   switch (normalized) {
     case "FAILED":
+      return t("seller.shippingLabel.statuses.failed");
     case "PENDING":
     case "NEW":
+    case "NOT_CREATED":
       return t("seller.shippingLabel.statuses.created");
     case "READY_TO_CREATE_YANDEX":
     case "CREATED_WITH_YANDEX_ID":
     case "YANDEX_MANUAL_CREATED":
+    case "CREATED":
+    case "CREATED_MANUALLY":
+    case "ACCEPTED":
     case "ASSEMBLING":
       return t("seller.shippingLabel.statuses.readyToShip");
+    case "READY_FOR_HANDOFF":
+      return t("seller.shippingLabel.statuses.readyForHandoff");
+    case "COURIER_ASSIGNED":
+    case "PICKED_UP":
+    case "ON_THE_WAY":
     case "SHIPPING":
     case "IN_DELIVERY":
     case "IN_TRANSIT":
-      return "IN TRANSIT";
+      return t("seller.shippingLabel.statuses.inTransit");
     case "DELIVERED":
-      return "DELIVERED";
+      return t("seller.shippingLabel.statuses.delivered");
     case "CANCELLED":
-      return "CANCELLED";
+      return t("seller.shippingLabel.statuses.cancelled");
     default:
-      return formatReadableToken(value) ?? t("common.notProvided");
+      return t("common.unknown");
   }
 }
 
@@ -151,17 +161,25 @@ function mapLabelPaymentStatus(
 
   switch (normalized) {
     case "PAID":
+    case "SELLER_CONFIRMED_DELIVERY_PAYMENT":
+    case "YANDEX_PAYMENT_ON_DELIVERY_PAID":
       return t("seller.shippingLabel.paymentStatuses.paid");
     case "APPROVED":
       return t("seller.shippingLabel.paymentStatuses.approved");
     case "PENDING":
+    case "PAY_ON_DELIVERY_SELECTED":
+    case "BUYER_MARKED_DELIVERY_PAID":
+    case "ADMIN_REVIEW":
+    case "PROOF_UPLOADED":
       return t("seller.shippingLabel.paymentStatuses.pending");
     case "UNPAID":
+    case "REJECTED":
+    case "SELLER_REJECTED":
       return t("seller.shippingLabel.paymentStatuses.unpaid");
     case "CANCELLED":
       return t("seller.shippingLabel.paymentStatuses.cancelled");
     default:
-      return formatReadableToken(value) ?? t("common.notProvided");
+      return t("common.unknown");
   }
 }
 
@@ -171,10 +189,10 @@ function isLabelPaymentConfirmed(paymentStatus: string) {
     "APPROVED",
     "SELLER_CONFIRMED_DELIVERY_PAYMENT",
     "YANDEX_PAYMENT_ON_DELIVERY_PAID",
-  ].includes(paymentStatus);
+  ].includes(paymentStatus) || isPaymentConfirmed(paymentStatus);
 }
 
-function formatLabelDate(value: string | null | undefined) {
+function formatLabelDate(locale: Locale, value: string | null | undefined) {
   if (!value) {
     return null;
   }
@@ -184,7 +202,7 @@ function formatLabelDate(value: string | null | undefined) {
     return null;
   }
 
-  return parsed.toLocaleString([], {
+  return parsed.toLocaleString(getIntlLocale(locale), {
     day: "numeric",
     month: "numeric",
     year: "numeric",
@@ -202,6 +220,24 @@ function isPaymentConfirmed(paymentStatus: string) {
   ].includes(paymentStatus);
 }
 
+function mapLabelProvider(
+  value: string | null | undefined,
+  hasYandexReference: boolean,
+  t: ReturnType<typeof useI18n>["t"],
+) {
+  const normalized = value?.toUpperCase();
+
+  if (hasYandexReference || normalized === "YANDEX") {
+    return t("seller.shippingLabel.providerYandexDelivery");
+  }
+
+  if (!normalized || normalized === "MANUAL") {
+    return t("seller.shippingLabel.providerManual");
+  }
+
+  return t("common.unknown");
+}
+
 export function ShippingLabelPrintView({
   order,
   delivery,
@@ -210,7 +246,7 @@ export function ShippingLabelPrintView({
   trackingLookupUrl,
   size,
 }: ShippingLabelPrintViewProps) {
-  const { t } = useI18n("seller");
+  const { locale, t } = useI18n("seller");
   const barcodeRef = useRef<SVGSVGElement | null>(null);
   const activeShipment = delivery?.activeShipment;
   const meta = SHIPPING_LABEL_SIZE_META[size];
@@ -228,20 +264,22 @@ export function ShippingLabelPrintView({
     activeShipment?.internalStatus ?? order.delivery?.status ?? order.status,
     t,
   );
-  const providerLabel =
-    activeShipment?.provider === "YANDEX" || activeShipment?.manualYandexOrderId
-      ? t("seller.shippingLabel.providerYandexDelivery")
-      : activeShipment?.provider ?? t("seller.shippingLabel.providerManual");
+  const providerLabel = mapLabelProvider(
+    activeShipment?.provider,
+    Boolean(activeShipment?.manualYandexOrderId),
+    t,
+  );
   const deliveryTypeLabel = t("seller.shippingLabel.deliveryTypes.express");
   const paymentMethodCode = order.paymentMethod ?? order.shippingMethodName ?? null;
   const paymentMethodLabel =
     paymentMethodCode && knownPaymentMethodKeys[paymentMethodCode]
       ? t(knownPaymentMethodKeys[paymentMethodCode])
-      : order.paymentMethodLabel ?? paymentMethodCode ?? t("common.unknown");
+      : order.paymentMethodLabel ?? t("common.unknown");
   const paymentStatusLabel = mapLabelPaymentStatus(order.paymentStatus, t);
-  const paymentConfirmed =
-    isPaymentConfirmed(order.paymentStatus) ||
-    isLabelPaymentConfirmed(order.paymentStatus);
+  const paymentConfirmed = isLabelPaymentConfirmed(order.paymentStatus);
+  const noEntrance = activeShipment?.dropoffNoEntrance ?? order.dropoffNoEntrance;
+  const noFloor = activeShipment?.dropoffNoFloor ?? order.dropoffNoFloor;
+  const noApartment = activeShipment?.dropoffNoApartment ?? order.dropoffNoApartment;
   const codSellerQr =
     order.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR" ||
     order.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
@@ -264,27 +302,27 @@ export function ShippingLabelPrintView({
   const recipientPostalCode =
     activeShipment?.dropoffPostalCode ?? order.dropoffPostalCode ?? null;
   const recipientAccess = compactJoin([
-    order.dropoffNoEntrance
+    noEntrance
       ? `${t("seller.shippingLabel.fields.entrance")}: ${t("seller.shippingLabel.noEntrance")}`
       : formatOptionalLine(
           t("seller.shippingLabel.fields.entrance"),
-          order.dropoffEntrance ?? activeShipment?.dropoffEntrance,
+          activeShipment?.dropoffEntrance ?? order.dropoffEntrance,
         ),
     formatOptionalLine(
       t("seller.shippingLabel.fields.intercom"),
-      order.dropoffIntercom ?? activeShipment?.dropoffIntercom,
+      activeShipment?.dropoffIntercom ?? order.dropoffIntercom,
     ),
-    order.dropoffNoFloor
+    noFloor
       ? `${t("seller.shippingLabel.fields.floor")}: ${t("seller.shippingLabel.noFloor")}`
       : formatOptionalLine(
           t("seller.shippingLabel.fields.floor"),
-          order.dropoffFloor ?? activeShipment?.dropoffFloor,
+          activeShipment?.dropoffFloor ?? order.dropoffFloor,
         ),
-    order.dropoffNoApartment
+    noApartment
       ? `${t("seller.shippingLabel.fields.apartment")}: ${t("seller.shippingLabel.noApartment")}`
       : formatOptionalLine(
           t("seller.shippingLabel.fields.apartment"),
-          order.dropoffApartment ?? activeShipment?.dropoffApartment,
+          activeShipment?.dropoffApartment ?? order.dropoffApartment,
         ),
   ]);
   const courierNote = order.dropoffComment ?? activeShipment?.customerVisibleMessage;
@@ -324,11 +362,11 @@ export function ShippingLabelPrintView({
   const sortingCode = `${order.shopId.slice(0, 4).toUpperCase()}-${order.id
     .slice(0, 6)
     .toUpperCase()}`;
-  const printedAt = new Date().toLocaleString();
+  const printedAt = new Date().toLocaleString(getIntlLocale(locale));
   const qrValue = trackingLookupUrl ?? trackingCode;
   const labelCreatedAtValue =
-    formatLabelDate(activeShipment?.createdAt) ??
-    formatLabelDate(order.createdAt) ??
+    formatLabelDate(locale, activeShipment?.createdAt) ??
+    formatLabelDate(locale, order.createdAt) ??
     printedAt;
   const compactCreatedAt = `${t("seller.shippingLabel.createdAt")}: ${labelCreatedAtValue}`;
   const deliveryReferenceLine = compactJoin([

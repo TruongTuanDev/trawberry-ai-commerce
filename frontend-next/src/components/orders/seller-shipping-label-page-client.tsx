@@ -28,6 +28,28 @@ type SellerShippingLabelPageClientProps = {
   initialSize?: ShippingLabelSize;
 };
 
+function triggerBrowserPrint(title: string) {
+  const previousTitle = document.title;
+  let restored = false;
+
+  const restoreTitle = () => {
+    if (restored) {
+      return;
+    }
+    restored = true;
+    document.title = previousTitle;
+    window.removeEventListener("afterprint", restoreTitle);
+  };
+
+  document.title = title;
+  window.addEventListener("afterprint", restoreTitle, { once: true });
+
+  window.setTimeout(() => {
+    window.print();
+    window.setTimeout(restoreTitle, 1500);
+  }, 50);
+}
+
 export function SellerShippingLabelPageClient({
   orderId,
   autoPrint = false,
@@ -46,6 +68,18 @@ export function SellerShippingLabelPageClient({
     useState<SellerOnboardingProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const resolvedOrderCode =
+    order?.orderNumber?.trim() ||
+    delivery?.activeShipment?.trackingNumber?.trim() ||
+    delivery?.activeShipment?.manualYandexOrderId?.trim() ||
+    delivery?.activeShipment?.providerOrderNumber?.trim() ||
+    orderId;
+  const viewDocumentTitle = resolvedOrderCode
+    ? t("seller.shippingLabel.documentTitle", { orderCode: resolvedOrderCode })
+    : t("seller.shippingLabel.pageTitle");
+  const printDocumentTitle = resolvedOrderCode
+    ? `shipping-label-${resolvedOrderCode}`
+    : "shipping-label";
   const labelSize = useMemo(() => {
     const sizeFromQuery = searchParams.get("size");
     if (sizeFromQuery) {
@@ -124,24 +158,24 @@ export function SellerShippingLabelPageClient({
     }
 
     const timer = window.setTimeout(() => {
-      window.print();
+      triggerBrowserPrint(printDocumentTitle);
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [autoPrint, error, loading, order]);
+  }, [autoPrint, error, loading, order, printDocumentTitle]);
 
   useEffect(() => {
-    if (typeof document === "undefined" || !order?.orderNumber) {
+    if (typeof document === "undefined") {
       return;
     }
 
     const previousTitle = document.title;
-    document.title = order.orderNumber;
+    document.title = viewDocumentTitle;
 
     return () => {
       document.title = previousTitle;
     };
-  }, [order?.orderNumber]);
+  }, [viewDocumentTitle]);
 
   const trackingLookupUrl = useMemo(() => {
     if (!order || typeof window === "undefined" || !order.orderNumber) {
@@ -161,6 +195,10 @@ export function SellerShippingLabelPageClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set("size", nextSize);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handlePrint = () => {
+    triggerBrowserPrint(printDocumentTitle);
   };
 
   return (
@@ -218,7 +256,7 @@ export function SellerShippingLabelPageClient({
                 </Link>
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrint}
                   className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
                   data-testid="shipping-label-print-button"
                   data-print-toolbar="true"

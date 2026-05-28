@@ -226,6 +226,19 @@ async function createPaidOrder(
         phone,
         email: `shipping-label-customer-${stamp}@example.com`,
         address: "Lenina 10, Moscow",
+        country: "Russia",
+        city: "Moscow",
+        region: "Moscow",
+        street: "Lenina",
+        building: "10",
+        entrance: "64",
+        intercom: "66",
+        floor: "646",
+        apartment: "464",
+        noEntrance: false,
+        noFloor: false,
+        noApartment: false,
+        postalCode: "101000",
         latitude: 55.751244,
         longitude: 37.618423,
         note: `Shipping label order ${stamp}`,
@@ -358,6 +371,10 @@ test("seller can open and print a localized shipping label from order detail", a
     "data-raw-status",
     /saved|updated/i,
   );
+  await page.getByTestId("manual-delivery-mark-in-transit").click();
+  await expect(page.getByTestId("seller-delivery-status")).toHaveText("IN_TRANSIT");
+  await page.getByTestId("manual-delivery-mark-delivered").click();
+  await expect(page.getByTestId("seller-delivery-status")).toHaveText("DELIVERED");
 
   const popupPromise = page.waitForEvent("popup");
   await page.getByTestId("seller-open-shipping-label").click();
@@ -365,6 +382,11 @@ test("seller can open and print a localized shipping label from order detail", a
   await labelPage.waitForURL(
     /\/seller\/orders\/.+\/shipping-label\?size=100x150/,
   );
+  const expectedRuTitle = ruDict.seller.shippingLabel.documentTitle.replace(
+    "{{orderCode}}",
+    checkout.orderCode,
+  );
+  await expect(labelPage).toHaveTitle(expectedRuTitle);
 
   await expect(labelPage.getByTestId("shipping-label-size-select")).toHaveValue(
     "100x150",
@@ -388,12 +410,14 @@ test("seller can open and print a localized shipping label from order detail", a
   );
   await expect(labelPage.getByTestId("shipping-label-delivery-type")).not.toHaveText("");
   await expect(labelPage.getByTestId("shipping-label-created-at")).not.toHaveText("");
-  await expect(labelPage.getByTestId("shipping-label-postal-code")).toContainText("—");
+  await expect(labelPage.getByTestId("shipping-label-postal-code")).toContainText(
+    "101000",
+  );
   await expect(labelPage.getByTestId("shipping-label-sender-phone")).toContainText(
     "+74950000000",
   );
-  await expect(labelPage.getByTestId("shipping-label-shipment-status")).not.toContainText(
-    "FAILED",
+  await expect(labelPage.getByTestId("shipping-label-shipment-status")).toHaveText(
+    "Доставлено",
   );
   await expect(labelPage.getByTestId("shipping-label-recipient-name")).toHaveText(
     "Shipping Label Customer",
@@ -416,6 +440,40 @@ test("seller can open and print a localized shipping label from order detail", a
     1,
   );
   await expect(labelPage.locator("[data-print-toolbar='true']")).toHaveCount(3);
+  const ruLabelText = await labelPage
+    .getByTestId("shipping-label-print-view")
+    .innerText();
+  expect(ruLabelText).toContain("Доставлено");
+  expect(ruLabelText).toContain("Подъезд: 64");
+  expect(ruLabelText).toContain("Домофон: 66");
+  expect(ruLabelText).toContain("Этаж: 646");
+  expect(ruLabelText).toContain("Квартира: 464");
+  expect(ruLabelText).toContain("Получатель");
+  expect(ruLabelText).toContain("Отправитель");
+  expect(ruLabelText).toContain("Экспресс");
+  expect(ruLabelText).toContain("Оплачено");
+  expect(ruLabelText).not.toContain("Delivered");
+  expect(ruLabelText).not.toContain("Entrance");
+  expect(ruLabelText).not.toContain("Intercom");
+  expect(ruLabelText).not.toContain("Floor");
+  expect(ruLabelText).not.toContain("Apartment");
+
+  await labelPage.evaluate(() => {
+    const state = window as typeof window & { __printTitleCalls?: string[] };
+    state.__printTitleCalls = [];
+    window.print = () => {
+      state.__printTitleCalls?.push(document.title);
+    };
+  });
+  await labelPage.getByTestId("shipping-label-print-button").click();
+  await labelPage.waitForTimeout(1700);
+  expect(
+    await labelPage.evaluate(() => {
+      const state = window as typeof window & { __printTitleCalls?: string[] };
+      return state.__printTitleCalls ?? [];
+    }),
+  ).toEqual([`shipping-label-${checkout.orderCode}`]);
+  await expect(labelPage).toHaveTitle(expectedRuTitle);
 
   await expect(
     labelPage.getByRole("heading", {
@@ -445,6 +503,20 @@ test("seller can open and print a localized shipping label from order detail", a
   await expect(
     labelPage.getByText(enDict.seller.shippingLabel.scanToTrack, { exact: true }),
   ).toBeVisible();
+  await expect(labelPage).toHaveTitle(
+    enDict.seller.shippingLabel.documentTitle.replace(
+      "{{orderCode}}",
+      checkout.orderCode,
+    ),
+  );
+  const enLabelText = await labelPage
+    .getByTestId("shipping-label-print-view")
+    .innerText();
+  expect(enLabelText).toContain("Delivered");
+  expect(enLabelText).toContain("Entrance: 64");
+  expect(enLabelText).toContain("Intercom: 66");
+  expect(enLabelText).toContain("Floor: 646");
+  expect(enLabelText).toContain("Apartment: 464");
 
   await labelPage.close();
 

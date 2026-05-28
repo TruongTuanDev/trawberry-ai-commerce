@@ -1569,6 +1569,7 @@
       "kicker": "Упаковка",
       "title": "Транспортная наклейка",
       "pageTitle": "Печатная транспортная наклейка",
+      "documentTitle": "Транспортная наклейка - {{orderCode}}",
       "print": "Печать наклейки",
       "openPrintableLabel": "Открыть версию для печати",
       "labelSize": "Размер этикетки",
@@ -1595,8 +1596,8 @@
       "internalNotice": "Внутренняя наклейка маркетплейса.",
       "internalNote": "Внутренняя заметка",
       "notOfficialYandex": "Это не официальная наклейка Yandex.",
-        "providerManualYandex": "Yandex Delivery",
-        "providerYandexDelivery": "Yandex Delivery",
+        "providerManualYandex": "Яндекс Доставка",
+        "providerYandexDelivery": "Яндекс Доставка",
         "providerManual": "Ручная доставка",
         "deliveryTypes": {
           "express": "Экспресс",
@@ -1605,7 +1606,11 @@
         "statuses": {
           "created": "Создано",
           "readyToShip": "Готово к отправке",
-          "readyForHandoff": "Готово к передаче"
+          "readyForHandoff": "Готово к передаче",
+          "inTransit": "В пути",
+          "delivered": "Доставлено",
+          "cancelled": "Отменено",
+          "failed": "Сбой"
         },
         "paymentMethod": "Способ оплаты",
         "paymentStatus": "Статус оплаты",
