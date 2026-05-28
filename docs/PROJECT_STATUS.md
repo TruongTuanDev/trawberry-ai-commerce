@@ -2132,3 +2132,15 @@ Current gap:
 
 - production still needs the one-time category backfill script after deploy if historical products have not yet been linked to `Category`
 - focused Playwright coverage for the admin selector and public category flow still depends on a live local runtime
+
+# Backend Production Start Path Status
+
+Implemented:
+
+- production backend start commands now target the actual Nest build artifact path `dist/src/main.js`
+- Docker production build still runs the same multi-stage flow and still keeps `prisma db push` before Node startup
+- local dev scripts remain unchanged except `start:prod`, which now points to the real compiled entrypoint
+
+Current gap:
+
+- production still needs a normal backend redeploy after merge for the corrected container entrypoint to take effect

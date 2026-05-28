@@ -48,4 +48,4 @@ RUN mkdir -p uploads
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma db push && node dist/main"]
+CMD ["sh", "-c", "npx prisma db push && node dist/src/main.js"]

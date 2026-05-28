@@ -3561,3 +3561,28 @@ Known gaps:
 
 - Playwright E2E for admin AI selector, public catalog category flow, and AI Try-On runtime was not rerun in this phase because the required local services/runtime were not started
 - production data will still need `npm run categories:sync` after deploy if existing products have legacy category text but no linked `categoryId`
+
+# Phase Report: Backend Production Start Path
+
+Implemented:
+
+- audited `backend-nest/Dockerfile`, `backend-nest/package.json`, `backend-nest/tsconfig*.json`, `backend-nest/nest-cli.json`, and `infra/docker-compose.prod.yml`
+- confirmed NestJS build output lands at `dist/src/main.js`, not `dist/main` or `dist/main.js`
+- corrected `backend-nest` production bootstrap commands to run `node dist/src/main.js`
+- kept the existing `npx prisma db push && ...` startup behavior unchanged in the production container
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- build artifact inspection: pass, `dist/src/main.js` exists
+- `docker build -t backend-nest-prod-test -f backend-nest/Dockerfile backend-nest`: pass
+- `docker run --rm backend-nest-prod-test sh -lc "find /app/dist -maxdepth 3 -type f | sort | grep main"`: pass
+- `docker run --rm backend-nest-prod-test node -e "console.log('node ok')"`: pass
+- `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.example config`: pass
+- `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.example build backend-nest`: pass
+
+Known gaps:
+
+- no runtime container boot against a real production database was performed in this phase; the fix is limited to the confirmed entrypoint path mismatch
