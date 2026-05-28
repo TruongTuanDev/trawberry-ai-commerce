@@ -22,6 +22,7 @@ const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 }
 function readFilters(searchParams: { get(name: string): string | null }) {
   return {
     q: searchParams.get("q") ?? searchParams.get("search") ?? "",
+    categoryId: searchParams.get("categoryId") ?? "",
     categorySlug: searchParams.get("categorySlug") ?? searchParams.get("category") ?? "",
     brand: searchParams.get("brand") ?? "",
     color: searchParams.get("color") ?? "",
@@ -87,9 +88,12 @@ function ProductsPageContent({
   const selectedCategoryOption = useMemo(
     () =>
       categoryOptions.find(
-        (category) => (category.slug ?? category.id) === filters.categorySlug,
+        (category) =>
+          category.id === filters.categoryId ||
+          (filters.categoryId === "" &&
+            (category.slug ?? category.name) === filters.categorySlug),
       ) ?? null,
-    [categoryOptions, filters.categorySlug],
+    [categoryOptions, filters.categoryId, filters.categorySlug],
   );
   const filteredCategoryOptions = useMemo(() => {
     const query = categorySearch.trim().toLowerCase();
@@ -105,6 +109,7 @@ function ProductsPageContent({
     () =>
       Boolean(
         filters.q.trim() ||
+          filters.categoryId ||
           filters.categorySlug ||
           filters.brand.trim() ||
           filters.color.trim() ||
@@ -120,8 +125,8 @@ function ProductsPageContent({
     () =>
       [
         filters.q.trim() ? `${t("catalog.filterSummary.keyword")}: ${filters.q.trim()}` : null,
-        filters.categorySlug
-          ? `${t("catalog.filterSummary.category")}: ${selectedCategoryOption?.name ?? filters.categorySlug}`
+        filters.categoryId || filters.categorySlug
+          ? `${t("catalog.filterSummary.category")}: ${selectedCategoryOption?.name ?? filters.categorySlug ?? filters.categoryId}`
           : null,
         filters.brand.trim() ? `${t("catalog.filterSummary.brand")}: ${filters.brand.trim()}` : null,
         filters.color.trim() ? `${t("catalog.filterSummary.color")}: ${filters.color.trim()}` : null,
@@ -218,6 +223,7 @@ function ProductsPageContent({
           page,
           size: meta.size,
           q: filters.q || undefined,
+          categoryId: filters.categoryId || undefined,
           categorySlug: filters.categorySlug || undefined,
           brand: filters.brand || undefined,
           color: filters.color || undefined,
@@ -253,6 +259,7 @@ function ProductsPageContent({
   const applyFilters = (targetFilters = filters) => {
     const params = new URLSearchParams();
     if (targetFilters.q.trim()) params.set("q", targetFilters.q.trim());
+    if (targetFilters.categoryId) params.set("categoryId", targetFilters.categoryId);
     if (targetFilters.categorySlug) params.set("categorySlug", targetFilters.categorySlug);
     if (targetFilters.brand.trim()) params.set("brand", targetFilters.brand.trim());
     if (targetFilters.color.trim()) params.set("color", targetFilters.color.trim());
@@ -335,16 +342,20 @@ function ProductsPageContent({
               <option value="false">Out of stock</option>
             </select>
             <select
-              value={filters.categorySlug}
+              value={filters.categoryId}
               onChange={(event) => {
-                setFilters((current) => ({ ...current, categorySlug: event.target.value }));
+                setFilters((current) => ({
+                  ...current,
+                  categoryId: event.target.value,
+                  categorySlug: "",
+                }));
               }}
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-category"
             >
               <option value="">Все категории</option>
               {categoryOptions.map((category) => (
-                <option key={category.id || category.name} value={category.slug ?? category.id}>
+                <option key={category.id || category.name} value={category.id}>
                   {category.name}
                 </option>
               ))}
@@ -384,7 +395,8 @@ function ProductsPageContent({
                 const targetFilters = {
                   q: searchInput ? searchInput.value : filters.q,
                   inStock: stockSelect ? stockSelect.value : filters.inStock,
-                  categorySlug: categorySelect ? categorySelect.value : filters.categorySlug,
+                  categoryId: categorySelect ? categorySelect.value : filters.categoryId,
+                  categorySlug: filters.categorySlug,
                   sort: sortSelect ? sortSelect.value : filters.sort,
                   brand: filters.brand,
                   color: filters.color,
@@ -525,7 +537,9 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "category" ? null : "category")}
                         data-testid="catalog-filter-category-trigger"
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
-                          activeDropdown === "category" || filters.categorySlug
+                          activeDropdown === "category" ||
+                          filters.categoryId ||
+                          filters.categorySlug
                             ? "bg-[#cb11ab]/5 border-[#cb11ab] text-[#cb11ab]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
@@ -568,8 +582,8 @@ function ProductsPageContent({
                           {filteredCategoryOptions.length > 0 ? (
                             <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto pr-1">
                               {filteredCategoryOptions.map((category) => {
-                                const categoryValue = category.slug ?? category.id;
-                                const isSelected = filters.categorySlug === categoryValue;
+                                const categoryValue = category.id;
+                                const isSelected = filters.categoryId === categoryValue;
 
                                 return (
                                   <button
@@ -578,7 +592,8 @@ function ProductsPageContent({
                                     onClick={() => {
                                       setFilters((current) => ({
                                         ...current,
-                                        categorySlug: isSelected ? "" : categoryValue,
+                                        categoryId: isSelected ? "" : categoryValue,
+                                        categorySlug: "",
                                       }));
                                       setActiveDropdown(null);
                                       submitFiltersSoon();
@@ -592,7 +607,11 @@ function ProductsPageContent({
                                     <span className="flex items-center justify-between gap-3">
                                       <span className="min-w-0">
                                         <span className="block truncate font-bold">{category.name}</span>
-                                        <span className="block truncate text-[10px] text-gray-400">{categoryValue}</span>
+                                        {category.slug ? (
+                                          <span className="block truncate text-[10px] text-gray-400">
+                                            {category.slug}
+                                          </span>
+                                        ) : null}
                                       </span>
                                       <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
                                         {category.count}
@@ -622,7 +641,11 @@ function ProductsPageContent({
                               type="button"
                               onClick={() => {
                                 setCategorySearch("");
-                                setFilters((current) => ({ ...current, categorySlug: "" }));
+                                setFilters((current) => ({
+                                  ...current,
+                                  categoryId: "",
+                                  categorySlug: "",
+                                }));
                                 setActiveDropdown(null);
                                 submitFiltersSoon();
                               }}

@@ -283,7 +283,11 @@ describe('PublicProductsController contract (e2e)', () => {
         title: 'Russian Shorts Public',
         categoryName: 'Шорты',
         sourceCategoryName: 'Шорты',
-        category: null,
+        category: {
+          id: 11n,
+          name: 'Шорты',
+          slug: 'shorts',
+        },
         variants: [
           buildVariant({
             id: 'variant-ru-shorts',
@@ -634,7 +638,7 @@ describe('PublicProductsController contract (e2e)', () => {
     );
   });
 
-  it('builds category facets from product.categoryName and filters by category value', async () => {
+  it('builds category facets from category relation and filters by category id', async () => {
     const listResponse = await request(app.getHttpServer())
       .get('/api/public/products')
       .query({ q: 'Шорты' })
@@ -645,7 +649,7 @@ describe('PublicProductsController contract (e2e)', () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: 'Шорты',
-          slug: 'Шорты',
+          slug: 'shorts',
           count: 1,
         }),
       ]),
@@ -661,7 +665,7 @@ describe('PublicProductsController contract (e2e)', () => {
 
     const filteredResponse = await request(app.getHttpServer())
       .get('/api/public/products')
-      .query({ categorySlug: 'Шорты' })
+      .query({ categoryId: '11' })
       .expect(200);
 
     const filteredBody =
@@ -1062,7 +1066,7 @@ function buildProduct(input: {
     composition: input.composition ?? '100% cotton',
     visibility: input.visibility ?? 'ACTIVE',
     catalogStatus: input.catalogStatus ?? 'PUBLISHED',
-    categoryId: input.category === null ? null : 10n,
+    categoryId: input.category === null ? null : (input.category?.id ?? 10n),
     categoryName: input.categoryName ?? 'Jackets',
     sourceCategoryName: input.sourceCategoryName ?? 'Outerwear',
     subjectId: null,
@@ -1369,6 +1373,25 @@ function matchesSearchCondition(
       product.categoryName,
       String((condition.categoryName as { contains: string }).contains),
     );
+  }
+
+  if (
+    condition.category &&
+    typeof condition.category === 'object' &&
+    condition.category !== null &&
+    'name' in condition.category
+  ) {
+    const categoryNameFilter = (
+      condition.category as {
+        name?: { contains?: string };
+      }
+    ).name;
+    if (categoryNameFilter?.contains) {
+      return stringContains(
+        product.category?.name,
+        categoryNameFilter.contains,
+      );
+    }
   }
 
   if (

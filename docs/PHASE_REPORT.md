@@ -3529,3 +3529,35 @@ Verification:
 Known gaps:
 
 - focused Playwright catalog overlay/category checks were not rerun in this phase because no stable local public runtime was prepared for them
+
+# Phase Report: Category Source Of Truth For Catalog And AI Try-On
+
+Implemented:
+
+- made `Category.name` the primary category source across active backend flows by adding reusable category lookup and assignment helpers in `backend-nest/src/modules/categories/categories.service.ts`
+- added admin `GET /api/admin/categories` so Admin AI Settings can render real database categories with product counts instead of hard-coded try-on slugs
+- changed product create/update plus WB API sync and WB Excel import flows to resolve or create a real `Category` and persist `product.categoryId` alongside the legacy mirrors
+- added idempotent `backend-nest/scripts/sync-categories.ts` and `npm run categories:sync` to backfill products that still only have legacy `categoryName` / `sourceCategoryName`
+- kept public catalog category facets relation-first via `product.category`, while preserving legacy fallback only when a product relation is still missing before sync runs
+- changed Admin AI Settings to load category options from the admin category API, parse old slug payloads into matching category ids when possible, preserve unknown legacy values, and save selected category ids
+- changed AI Try-On support checks to treat selected category ids as the stored source, then expand them back to related `Category.name` / `slug` plus canonical legacy aliases during runtime matching so legacy unsynced products still behave correctly
+- kept RU unsupported messaging localized and retained overlay-safe catalog/admin dropdown behavior
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/public-products.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Known gaps:
+
+- Playwright E2E for admin AI selector, public catalog category flow, and AI Try-On runtime was not rerun in this phase because the required local services/runtime were not started
+- production data will still need `npm run categories:sync` after deploy if existing products have legacy category text but no linked `categoryId`

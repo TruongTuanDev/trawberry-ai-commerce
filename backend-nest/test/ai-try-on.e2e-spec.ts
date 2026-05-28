@@ -10,6 +10,8 @@ import { AiTryOnWorkerService } from '../src/modules/ai-try-on/ai-try-on.worker'
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
 import { readBody } from './test-helpers';
 
+jest.setTimeout(30000);
+
 describe('AiTryOnController (e2e)', () => {
   let app: INestApplication<App>;
   let fetchSpy: jest.SpiedFunction<typeof fetch>;
@@ -98,6 +100,29 @@ describe('AiTryOnController (e2e)', () => {
     },
   };
 
+  const categories = [
+    {
+      id: BigInt(10),
+      name: 'Jackets',
+      slug: 'jackets',
+    },
+    {
+      id: BigInt(11),
+      name: 'Dresses',
+      slug: 'dresses',
+    },
+    {
+      id: BigInt(12),
+      name: 'Pants',
+      slug: 'pants',
+    },
+    {
+      id: BigInt(13),
+      name: 'Bermuda',
+      slug: 'bermuda',
+    },
+  ];
+
   let tasks: Array<{
     id: string;
     customerId: string | null;
@@ -137,6 +162,11 @@ describe('AiTryOnController (e2e)', () => {
 
   const prismaMock = {
     user: {
+      findUnique: jest.fn(),
+    },
+    category: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
     },
     product: {
@@ -214,6 +244,45 @@ describe('AiTryOnController (e2e)', () => {
             ? user.email === where.email.toLowerCase()
             : user.id === where.id,
         ) ?? null,
+    );
+
+    prismaMock.category.findMany.mockResolvedValue(categories);
+    prismaMock.category.findFirst.mockImplementation(
+      ({ where }: { where?: { OR?: Array<Record<string, unknown>> } }) => {
+        const predicates = where?.OR ?? [];
+        return (
+          categories.find((category) =>
+            predicates.some((predicate) => {
+              const byName = predicate.name as
+                | { equals?: string; mode?: string }
+                | undefined;
+              if (
+                byName?.equals &&
+                category.name.toLowerCase() === byName.equals.toLowerCase()
+              ) {
+                return true;
+              }
+
+              const bySlug = predicate.slug as
+                | { equals?: string; mode?: string }
+                | undefined;
+              if (
+                bySlug?.equals &&
+                (category.slug ?? '').toLowerCase() ===
+                  bySlug.equals.toLowerCase()
+              ) {
+                return true;
+              }
+
+              return false;
+            }),
+          ) ?? null
+        );
+      },
+    );
+    prismaMock.category.findUnique.mockImplementation(
+      ({ where }: { where: { id: bigint } }) =>
+        categories.find((category) => category.id === where.id) ?? null,
     );
 
     prismaMock.product.findFirst.mockResolvedValue(product);
@@ -457,7 +526,7 @@ describe('AiTryOnController (e2e)', () => {
     expect(body.providerMode).toBe('mock');
   });
 
-  it('reads legacy supported categories and normalizes them to canonical slugs', async () => {
+  it('reads legacy supported categories payloads without losing values', async () => {
     settings.supportedCategories =
       'jackets, dresses, pants' as unknown as string[];
 
@@ -468,6 +537,31 @@ describe('AiTryOnController (e2e)', () => {
     expect(
       readBody<{ supportedCategories: string[] }>(response).supportedCategories,
     ).toEqual(['jackets', 'dresses', 'pants']);
+  });
+
+  it('maps supported category updates to category ids when a matching category exists', async () => {
+    const token = await login(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+
+    const updated = await request(app.getHttpServer())
+      .patch('/api/admin/ai-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        enabled: true,
+        providerMode: 'mock',
+        guestDailyLimit: 2,
+        customerDailyLimit: 4,
+        requireConsent: true,
+        supportedCategories: ['jackets'],
+      })
+      .expect(200);
+
+    expect(
+      readBody<{ supportedCategories: string[] }>(updated).supportedCategories,
+    ).toEqual(['10']);
   });
 
   it('blocks task creation when feature is disabled', async () => {

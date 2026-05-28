@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  RECOMMENDED_TRY_ON_CATEGORY_SLUGS,
-  SUPPORTED_TRY_ON_CATEGORIES,
+  getRecommendedCategoryIds,
   parseSupportedCategoryValues,
 } from "@/lib/ai-try-on-supported-categories";
 import {
   getAdminAiTryOnSettings,
+  getAdminCategories,
   updateAdminAiTryOnSettings,
   type AdminAiTryOnSettings,
+  type AdminCategoryOption,
 } from "@/lib/admin-api";
 import { useI18n } from "@/i18n/use-i18n";
 
@@ -19,8 +20,9 @@ type FormState = {
   guestDailyLimit: string;
   customerDailyLimit: string;
   requireConsent: boolean;
-  selectedCategories: string[];
+  selectedCategoryIds: string[];
   unknownCategories: string[];
+  categorySearch: string;
 };
 
 function unique(values: string[]) {
@@ -35,9 +37,11 @@ export function AdminAiSettingsPageClient() {
     guestDailyLimit: "3",
     customerDailyLimit: "5",
     requireConsent: true,
-    selectedCategories: [],
+    selectedCategoryIds: [],
     unknownCategories: [],
+    categorySearch: "",
   });
+  const [categories, setCategories] = useState<AdminCategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -47,20 +51,41 @@ export function AdminAiSettingsPageClient() {
     "providerConfigured" | "aiServiceReachable" | "providerSafeErrorCode"
   > | null>(null);
 
-  const selectedCount = form.selectedCategories.length + form.unknownCategories.length;
+  const selectedCount = form.selectedCategoryIds.length + form.unknownCategories.length;
   const hasUnknownCategories = form.unknownCategories.length > 0;
+  const recommendedCategoryIds = useMemo(
+    () => getRecommendedCategoryIds(categories),
+    [categories],
+  );
+  const filteredCategories = useMemo(() => {
+    const query = form.categorySearch.trim().toLowerCase();
+    if (!query) {
+      return categories;
+    }
 
-  const hydrateForm = (settings: AdminAiTryOnSettings) => {
-    const parsed = parseSupportedCategoryValues(settings.supportedCategories);
-    setForm({
+    return categories.filter((category) =>
+      category.name.toLowerCase().includes(query),
+    );
+  }, [categories, form.categorySearch]);
+
+  const hydrateForm = (
+    settings: AdminAiTryOnSettings,
+    nextCategories: AdminCategoryOption[],
+  ) => {
+    const parsed = parseSupportedCategoryValues(
+      settings.supportedCategories,
+      nextCategories,
+    );
+    setForm((current) => ({
+      ...current,
       enabled: settings.enabled,
       providerMode: settings.providerMode,
       guestDailyLimit: String(settings.guestDailyLimit),
       customerDailyLimit: String(settings.customerDailyLimit),
       requireConsent: settings.requireConsent,
-      selectedCategories: parsed.known,
-      unknownCategories: parsed.unknown,
-    });
+      selectedCategoryIds: parsed.knownIds,
+      unknownCategories: parsed.unknownValues,
+    }));
     setRuntime({
       providerConfigured: settings.providerConfigured,
       aiServiceReachable: settings.aiServiceReachable,
@@ -73,9 +98,13 @@ export function AdminAiSettingsPageClient() {
 
     const run = async () => {
       try {
-        const settings = await getAdminAiTryOnSettings();
+        const [settings, nextCategories] = await Promise.all([
+          getAdminAiTryOnSettings(),
+          getAdminCategories(),
+        ]);
         if (!mounted) return;
-        hydrateForm(settings);
+        setCategories(nextCategories);
+        hydrateForm(settings, nextCategories);
         setError(null);
       } catch (requestError) {
         if (!mounted) return;
@@ -97,30 +126,21 @@ export function AdminAiSettingsPageClient() {
     };
   }, [t]);
 
-  const categoryOptions = useMemo(
-    () =>
-      SUPPORTED_TRY_ON_CATEGORIES.map((category) => ({
-        ...category,
-        label: t(category.labelKey),
-      })),
-    [t],
-  );
-
-  const toggleCategory = (slug: string, checked: boolean) => {
+  const toggleCategory = (categoryId: string, checked: boolean) => {
     setForm((current) => ({
       ...current,
-      selectedCategories: checked
-        ? unique([...current.selectedCategories, slug])
-        : current.selectedCategories.filter((value) => value !== slug),
+      selectedCategoryIds: checked
+        ? unique([...current.selectedCategoryIds, categoryId])
+        : current.selectedCategoryIds.filter((value) => value !== categoryId),
     }));
   };
 
-  const toggleUnknownCategory = (slug: string, checked: boolean) => {
+  const toggleUnknownCategory = (value: string, checked: boolean) => {
     setForm((current) => ({
       ...current,
       unknownCategories: checked
-        ? unique([...current.unknownCategories, slug])
-        : current.unknownCategories.filter((value) => value !== slug),
+        ? unique([...current.unknownCategories, value])
+        : current.unknownCategories.filter((entry) => entry !== value),
     }));
   };
 
@@ -136,11 +156,11 @@ export function AdminAiSettingsPageClient() {
         customerDailyLimit: Number(form.customerDailyLimit || 0),
         requireConsent: form.requireConsent,
         supportedCategories: unique([
-          ...form.selectedCategories,
+          ...form.selectedCategoryIds,
           ...form.unknownCategories,
         ]),
       });
-      hydrateForm(saved);
+      hydrateForm(saved, categories);
       setMessage(t("adminAiSettings.saved"));
     } catch (requestError) {
       setError(
@@ -278,7 +298,7 @@ export function AdminAiSettingsPageClient() {
                   onClick={() =>
                     setForm((current) => ({
                       ...current,
-                      selectedCategories: [...RECOMMENDED_TRY_ON_CATEGORY_SLUGS],
+                      selectedCategoryIds: unique(recommendedCategoryIds),
                     }))
                   }
                   className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
@@ -291,7 +311,7 @@ export function AdminAiSettingsPageClient() {
                   onClick={() =>
                     setForm((current) => ({
                       ...current,
-                      selectedCategories: [],
+                      selectedCategoryIds: [],
                       unknownCategories: [],
                     }))
                   }
@@ -303,12 +323,27 @@ export function AdminAiSettingsPageClient() {
               </div>
             </div>
 
+            {categories.length > 8 ? (
+              <input
+                value={form.categorySearch}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    categorySearch: event.target.value,
+                  }))
+                }
+                className="public-input"
+                placeholder={t("adminAiSettings.categorySearchPlaceholder")}
+                data-testid="admin-ai-settings-category-search"
+              />
+            ) : null}
+
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {categoryOptions.map((category) => {
-                const checked = form.selectedCategories.includes(category.slug);
+              {filteredCategories.map((category) => {
+                const checked = form.selectedCategoryIds.includes(category.id);
                 return (
                   <label
-                    key={category.slug}
+                    key={category.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-[1.25rem] border px-4 py-3 transition ${
                       checked
                         ? "border-[var(--accent)] bg-white shadow-sm"
@@ -318,20 +353,28 @@ export function AdminAiSettingsPageClient() {
                     <input
                       type="checkbox"
                       checked={checked}
-                      onChange={(event) => toggleCategory(category.slug, event.target.checked)}
+                      onChange={(event) => toggleCategory(category.id, event.target.checked)}
                       className="mt-1"
-                      data-testid={`admin-ai-settings-supported-category-${category.slug}`}
+                      data-testid={`admin-ai-settings-supported-category-${category.id}`}
                     />
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-[var(--foreground)]">
-                        {category.label}
+                        {category.name}
                       </span>
-                      <span className="mt-1 block text-xs text-[var(--muted)]">{category.slug}</span>
+                      <span className="mt-1 block text-xs text-[var(--muted)]">
+                        {t("adminAiSettings.categoryCount", { count: category.productCount })}
+                      </span>
                     </span>
                   </label>
                 );
               })}
             </div>
+
+            {filteredCategories.length === 0 ? (
+              <div className="rounded-[1.25rem] border border-dashed border-[var(--border)] bg-white px-4 py-4 text-sm text-[var(--muted)]">
+                {t("adminAiSettings.noCategoriesFound")}
+              </div>
+            ) : null}
 
             {hasUnknownCategories ? (
               <div className="space-y-3 rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-4">
@@ -340,18 +383,18 @@ export function AdminAiSettingsPageClient() {
                   <p className="mt-1 text-xs leading-6 text-amber-800">{t("adminAiSettings.unknownHelp")}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {form.unknownCategories.map((slug) => (
+                  {form.unknownCategories.map((value) => (
                     <label
-                      key={slug}
+                      key={value}
                       className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-2 text-xs font-medium text-amber-900"
                     >
                       <input
                         type="checkbox"
                         checked
-                        onChange={(event) => toggleUnknownCategory(slug, event.target.checked)}
-                        data-testid={`admin-ai-settings-unknown-category-${slug}`}
+                        onChange={(event) => toggleUnknownCategory(value, event.target.checked)}
+                        data-testid={`admin-ai-settings-unknown-category-${value}`}
                       />
-                      <span>{slug}</span>
+                      <span>{value}</span>
                     </label>
                   ))}
                 </div>

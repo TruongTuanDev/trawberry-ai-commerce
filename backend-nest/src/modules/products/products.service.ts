@@ -6,6 +6,7 @@ import {
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CategoriesService } from '../categories/categories.service';
 import { BulkProductActionDto } from './dto/bulk-product-action.dto';
 import { BulkUpdateProductsDto } from './dto/bulk-update-products.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -52,6 +53,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly productReadiness: ProductReadinessService,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   async listByShop(shopId: string, query: ListShopProductsQueryDto) {
@@ -203,7 +205,13 @@ export class ProductsService {
   async create(shopId: string, dto: CreateProductDto) {
     await this.ensureShopExists(shopId);
     await this.ensureUniqueWbNmId(shopId, dto.wbNmId);
-    await this.ensureCategoryExists(dto.categoryId);
+    const resolvedCategory =
+      await this.categoriesService.resolveCategoryAssignment({
+        categoryId: dto.categoryId,
+        categoryName: dto.categoryName,
+        sourceCategoryName: dto.categoryName,
+        sourceCategorySource: 'MANUAL',
+      });
 
     const lifecycle = this.resolveManualLifecycleForCreate(dto.visibility);
 
@@ -216,11 +224,10 @@ export class ProductsService {
         brand: dto.brand,
         wbTitle: dto.wbTitle,
         wbDescription: dto.wbDescription,
-        categoryId:
-          dto.categoryId !== undefined ? BigInt(dto.categoryId) : undefined,
-        categoryName: dto.categoryName,
-        sourceCategoryName: dto.categoryName,
-        sourceCategorySource: 'MANUAL',
+        categoryId: resolvedCategory.categoryId ?? undefined,
+        categoryName: resolvedCategory.categoryName,
+        sourceCategoryName: resolvedCategory.sourceCategoryName,
+        sourceCategorySource: resolvedCategory.sourceCategorySource,
         wbVendorCode: dto.wbVendorCode,
         wbVideoUrl: dto.wbVideoUrl,
         wbNeedKiz: dto.wbNeedKiz,
@@ -309,7 +316,15 @@ export class ProductsService {
       shopId,
       productId,
     );
-    await this.ensureCategoryExists(dto.categoryId);
+    const resolvedCategory =
+      dto.categoryId !== undefined || dto.categoryName !== undefined
+        ? await this.categoriesService.resolveCategoryAssignment({
+            categoryId: dto.categoryId,
+            categoryName: dto.categoryName,
+            sourceCategoryName: dto.categoryName,
+            sourceCategorySource: 'MANUAL',
+          })
+        : null;
 
     if (dto.wbNmId !== undefined) {
       const existing = await this.prisma.product.findFirst({
@@ -344,12 +359,18 @@ export class ProductsService {
           wbTitle: dto.wbTitle,
           wbDescription: dto.wbDescription,
           categoryId:
-            dto.categoryId !== undefined ? BigInt(dto.categoryId) : undefined,
-          categoryName: dto.categoryName,
-          sourceCategoryName: dto.categoryName,
+            resolvedCategory !== null ? resolvedCategory.categoryId : undefined,
+          categoryName:
+            resolvedCategory !== null
+              ? resolvedCategory.categoryName
+              : undefined,
+          sourceCategoryName:
+            resolvedCategory !== null
+              ? resolvedCategory.sourceCategoryName
+              : undefined,
           sourceCategorySource:
             dto.categoryName !== undefined || dto.categoryId !== undefined
-              ? 'MANUAL'
+              ? (resolvedCategory?.sourceCategorySource ?? 'MANUAL')
               : undefined,
           wbVendorCode: dto.wbVendorCode,
           wbVideoUrl: dto.wbVideoUrl,
@@ -756,21 +777,6 @@ export class ProductsService {
       throw new BadRequestException(
         `Product with wbNmId ${wbNmId} already exists in this shop.`,
       );
-    }
-  }
-
-  private async ensureCategoryExists(categoryId?: number) {
-    if (categoryId === undefined) {
-      return;
-    }
-
-    const category = await this.prisma.category.findUnique({
-      where: { id: BigInt(categoryId) },
-      select: { id: true },
-    });
-
-    if (!category) {
-      throw new BadRequestException(`Category ${categoryId} does not exist.`);
     }
   }
 

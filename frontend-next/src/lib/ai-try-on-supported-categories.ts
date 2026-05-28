@@ -1,127 +1,176 @@
-export type SupportedTryOnCategory = {
-  slug: string;
-  recommended: boolean;
-  aliases: string[];
-  labelKey: string;
-};
+import type { AdminCategoryOption } from "@/lib/admin-api";
 
-export const SUPPORTED_TRY_ON_CATEGORIES: SupportedTryOnCategory[] = [
+const CATEGORY_DEFINITIONS = [
   {
-    slug: "tops",
+    canonical: "tops",
     recommended: true,
     aliases: ["top", "tops", "shirt", "shirts", "tshirt", "t-shirts", "t-shirt", "футболка", "рубашка"],
-    labelKey: "adminAiSettings.categories.tops",
   },
   {
-    slug: "pants",
+    canonical: "pants",
     recommended: true,
     aliases: ["pants", "trousers", "брюки"],
-    labelKey: "adminAiSettings.categories.pants",
   },
   {
-    slug: "jeans",
+    canonical: "jeans",
     recommended: true,
     aliases: ["jeans", "denim", "джинсы"],
-    labelKey: "adminAiSettings.categories.jeans",
   },
   {
-    slug: "shorts",
+    canonical: "shorts",
     recommended: true,
     aliases: ["short", "shorts", "шорты"],
-    labelKey: "adminAiSettings.categories.shorts",
   },
   {
-    slug: "bermuda",
+    canonical: "bermuda",
     recommended: true,
     aliases: ["bermuda", "bermudas", "бермуды"],
-    labelKey: "adminAiSettings.categories.bermuda",
   },
   {
-    slug: "dresses",
+    canonical: "dresses",
     recommended: true,
     aliases: ["dress", "dresses", "платье", "платья"],
-    labelKey: "adminAiSettings.categories.dresses",
   },
   {
-    slug: "skirts",
+    canonical: "skirts",
     recommended: true,
     aliases: ["skirt", "skirts", "юбка", "юбки"],
-    labelKey: "adminAiSettings.categories.skirts",
   },
   {
-    slug: "jackets",
+    canonical: "jackets",
     recommended: true,
     aliases: ["jacket", "jackets", "coat", "outerwear", "куртка", "куртки"],
-    labelKey: "adminAiSettings.categories.jackets",
   },
   {
-    slug: "hoodies",
+    canonical: "hoodies",
     recommended: true,
     aliases: ["hoodie", "hoodies", "sweatshirt", "худи", "свитшот"],
-    labelKey: "adminAiSettings.categories.hoodies",
   },
   {
-    slug: "shoes",
+    canonical: "shoes",
     recommended: false,
     aliases: ["shoes", "footwear", "обувь"],
-    labelKey: "adminAiSettings.categories.shoes",
   },
   {
-    slug: "bags",
+    canonical: "bags",
     recommended: false,
     aliases: ["bag", "bags", "сумка", "сумки"],
-    labelKey: "adminAiSettings.categories.bags",
   },
   {
-    slug: "accessories",
+    canonical: "accessories",
     recommended: false,
     aliases: ["accessory", "accessories", "аксессуары"],
-    labelKey: "adminAiSettings.categories.accessories",
   },
-];
+] as const;
 
-export const RECOMMENDED_TRY_ON_CATEGORY_SLUGS = SUPPORTED_TRY_ON_CATEGORIES
-  .filter((category) => category.recommended)
-  .map((category) => category.slug);
-
-const aliasToSlug = new Map<string, string>();
-for (const category of SUPPORTED_TRY_ON_CATEGORIES) {
-  aliasToSlug.set(category.slug, category.slug);
-  for (const alias of category.aliases) {
-    aliasToSlug.set(alias, category.slug);
+const aliasToCanonical = new Map<string, string>();
+for (const definition of CATEGORY_DEFINITIONS) {
+  aliasToCanonical.set(definition.canonical, definition.canonical);
+  for (const alias of definition.aliases) {
+    aliasToCanonical.set(alias, definition.canonical);
   }
 }
 
-function normalizeCategoryToken(value: string) {
-  return value.trim().toLowerCase();
+function normalizeText(value: string | null | undefined) {
+  return value
+    ?.normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/[-_/(),]+/g, " ")
+    .replace(/\s+/g, " ") ?? "";
 }
 
-export function normalizeTryOnCategorySlugs(values: string[]) {
-  const known = new Set<string>();
-  const unknown = new Set<string>();
+function hasAliasMatch(normalizedText: string, alias: string) {
+  const normalizedAlias = normalizeText(alias);
+  return ` ${normalizedText} `.includes(` ${normalizedAlias} `);
+}
 
-  for (const rawValue of values) {
-    const value = normalizeCategoryToken(rawValue);
-    if (!value) {
+export function resolveTryOnCanonicalType(value: string | null | undefined) {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const exact = aliasToCanonical.get(normalized);
+  if (exact) {
+    return exact;
+  }
+
+  for (const definition of CATEGORY_DEFINITIONS) {
+    if (
+      hasAliasMatch(normalized, definition.canonical) ||
+      definition.aliases.some((alias) => hasAliasMatch(normalized, alias))
+    ) {
+      return definition.canonical;
+    }
+  }
+
+  return null;
+}
+
+export function parseSupportedCategoryValues(
+  values: string[],
+  categories: AdminCategoryOption[],
+) {
+  const knownIds = new Set<string>();
+  const unknownValues = new Set<string>();
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const byName = new Map<string, string[]>();
+  const byCanonical = new Map<string, string[]>();
+
+  for (const category of categories) {
+    const normalizedName = normalizeText(category.name);
+    if (normalizedName) {
+      byName.set(normalizedName, [...(byName.get(normalizedName) ?? []), category.id]);
+    }
+
+    const canonical = resolveTryOnCanonicalType(category.name);
+    if (canonical) {
+      byCanonical.set(canonical, [...(byCanonical.get(canonical) ?? []), category.id]);
+    }
+  }
+
+  for (const token of values.flatMap((value) => value.split(",")).map((value) => value.trim()).filter(Boolean)) {
+    if (byId.has(token)) {
+      knownIds.add(token);
       continue;
     }
 
-    const canonical = aliasToSlug.get(value);
-    if (canonical) {
-      known.add(canonical);
-    } else {
-      unknown.add(value);
+    const normalizedToken = normalizeText(token);
+    const exactNameMatches = byName.get(normalizedToken) ?? [];
+    if (exactNameMatches.length > 0) {
+      exactNameMatches.forEach((id) => knownIds.add(id));
+      continue;
     }
+
+    const canonical = resolveTryOnCanonicalType(token);
+    if (canonical) {
+      const matchedIds = byCanonical.get(canonical) ?? [];
+      if (matchedIds.length > 0) {
+        matchedIds.forEach((id) => knownIds.add(id));
+        continue;
+      }
+    }
+
+    unknownValues.add(token);
   }
 
   return {
-    known: [...known],
-    unknown: [...unknown],
+    knownIds: [...knownIds],
+    unknownValues: [...unknownValues],
   };
 }
 
-export function parseSupportedCategoryValues(values: string[]) {
-  return normalizeTryOnCategorySlugs(
-    values.flatMap((value) => value.split(",").map((entry) => entry.trim())),
-  );
+export function getRecommendedCategoryIds(categories: AdminCategoryOption[]) {
+  return categories
+    .filter((category) => {
+      const canonical = resolveTryOnCanonicalType(category.name);
+      if (!canonical) {
+        return false;
+      }
+      return CATEGORY_DEFINITIONS.find(
+        (definition) => definition.canonical === canonical,
+      )?.recommended;
+    })
+    .map((category) => category.id);
 }

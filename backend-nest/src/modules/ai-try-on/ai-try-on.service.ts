@@ -10,6 +10,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { QueueService } from '../../common/queue/queue.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { FilesService } from '../files/files.service';
+import { CategoriesService } from '../categories/categories.service';
 import { ProductReadinessService } from '../products/product-readiness.service';
 import {
   AI_TRY_ON_GUEST_HEADER,
@@ -24,9 +25,10 @@ import {
   BUILT_IN_TRY_ON_MODELS,
 } from './ai-try-on-models';
 import {
-  normalizeSupportedCategoryValues,
+  matchesSupportedCategoryValue,
+  normalizeStoredSupportedCategoryValues,
   readSupportedCategoryValues,
-  resolveProductCategorySlugs,
+  resolveCanonicalCategory,
 } from './ai-try-on-supported-categories';
 import { AiTryOnWorkerService } from './ai-try-on.worker';
 import { UpdateAiTryOnSettingsDto } from './dto/ai-try-on-settings.dto';
@@ -60,6 +62,7 @@ export class AiTryOnService {
     private readonly queueService: QueueService,
     private readonly workerService: AiTryOnWorkerService,
     private readonly filesService: FilesService,
+    private readonly categoriesService: CategoriesService,
     private readonly productReadiness: ProductReadinessService,
     private readonly sizeRecommendation: SizeRecommendationService,
   ) {}
@@ -74,6 +77,8 @@ export class AiTryOnService {
   }
 
   async updateAdminSettings(dto: UpdateAiTryOnSettingsDto) {
+    const normalizedSupportedCategories =
+      await this.normalizeSupportedCategories(dto.supportedCategories);
     const settings = await this.prisma.aiFeatureSetting.upsert({
       where: { id: AI_TRY_ON_SETTINGS_ID },
       update: {
@@ -82,9 +87,7 @@ export class AiTryOnService {
         guestDailyLimit: dto.guestDailyLimit,
         customerDailyLimit: dto.customerDailyLimit,
         requireConsent: dto.requireConsent,
-        supportedCategories: this.normalizeSupportedCategories(
-          dto.supportedCategories,
-        ),
+        supportedCategories: normalizedSupportedCategories,
       },
       create: {
         id: AI_TRY_ON_SETTINGS_ID,
@@ -93,9 +96,7 @@ export class AiTryOnService {
         guestDailyLimit: dto.guestDailyLimit,
         customerDailyLimit: dto.customerDailyLimit,
         requireConsent: dto.requireConsent,
-        supportedCategories: this.normalizeSupportedCategories(
-          dto.supportedCategories,
-        ),
+        supportedCategories: normalizedSupportedCategories,
       },
     });
 
@@ -202,7 +203,7 @@ export class AiTryOnService {
 
     if (
       !product.aiTryOnEnabled ||
-      !this.isProductSupported(product, settings.supportedCategories)
+      !(await this.isProductSupported(product, settings.supportedCategories))
     ) {
       throw this.buildCodeError(
         'AI_TRY_ON_PRODUCT_UNSUPPORTED',
@@ -387,11 +388,12 @@ export class AiTryOnService {
     }
   }
 
-  private isProductSupported(
+  private async isProductSupported(
     product: {
       categoryName: string | null;
       sourceCategoryName: string | null;
-      category?: { name: string; slug: string | null } | null;
+      categoryId?: bigint | null;
+      category?: { id: bigint; name: string; slug: string | null } | null;
     },
     rawSupportedCategories: Prisma.JsonValue | null,
   ) {
@@ -400,14 +402,33 @@ export class AiTryOnService {
       return true;
     }
 
-    const candidates = resolveProductCategorySlugs([
-      product.category?.slug,
-      product.category?.name,
-      product.categoryName,
-      product.sourceCategoryName,
-    ]);
+    const categoryLookup =
+      await this.categoriesService.listCategoryLookupRecords();
+    const categoryById = new Map(
+      categoryLookup.map((category) => [category.id, category]),
+    );
+    const enrichedSupported = new Set<string>(supported);
+    for (const value of supported) {
+      const matchedCategory = categoryById.get(value);
+      if (!matchedCategory) {
+        continue;
+      }
 
-    return candidates.some((candidate) => supported.includes(candidate));
+      enrichedSupported.add(matchedCategory.name);
+      if (matchedCategory.slug) {
+        enrichedSupported.add(matchedCategory.slug);
+      }
+    }
+
+    return matchesSupportedCategoryValue([...enrichedSupported], {
+      categoryId:
+        product.category?.id?.toString() ??
+        product.categoryId?.toString() ??
+        null,
+      categoryName: product.category?.name ?? product.categoryName,
+      categorySlug: product.category?.slug ?? null,
+      fallbackCategoryNames: [product.categoryName, product.sourceCategoryName],
+    });
   }
 
   private resolveActor(request: Request, user?: AuthenticatedUser | null) {
@@ -457,12 +478,72 @@ export class AiTryOnService {
     });
   }
 
-  private normalizeSupportedCategories(values: string[]) {
-    return normalizeSupportedCategoryValues(values);
+  private async normalizeSupportedCategories(values: string[]) {
+    const normalizedValues = normalizeStoredSupportedCategoryValues(values);
+    const categoryLookup =
+      await this.categoriesService.listCategoryLookupRecords();
+    const exactById = new Map(
+      categoryLookup.map((category) => [category.id, category.id]),
+    );
+    const exactByName = new Map(
+      categoryLookup.map((category) => [
+        this.normalizeCategoryValue(category.name),
+        category.id,
+      ]),
+    );
+    const exactBySlug = new Map(
+      categoryLookup
+        .filter((category) => category.slug)
+        .map((category) => [
+          this.normalizeCategoryValue(category.slug),
+          category.id,
+        ]),
+    );
+    const firstByCanonical = new Map<string, string>();
+    for (const category of categoryLookup) {
+      const canonical = resolveCanonicalCategory(category.name);
+      if (canonical && !firstByCanonical.has(canonical)) {
+        firstByCanonical.set(canonical, category.id);
+      }
+    }
+
+    const normalized = new Set<string>();
+    for (const value of normalizedValues) {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      if (exactById.has(trimmed)) {
+        normalized.add(trimmed);
+        continue;
+      }
+
+      const normalizedKey = this.normalizeCategoryValue(trimmed);
+      const matchedId =
+        exactByName.get(normalizedKey) ??
+        exactBySlug.get(normalizedKey) ??
+        (() => {
+          const canonical = resolveCanonicalCategory(trimmed);
+          return canonical ? firstByCanonical.get(canonical) : undefined;
+        })();
+
+      normalized.add(matchedId ?? trimmed);
+    }
+
+    return [...normalized];
   }
 
   private readSupportedCategories(value: Prisma.JsonValue | null) {
     return readSupportedCategoryValues(value);
+  }
+
+  private normalizeCategoryValue(value: string | null | undefined) {
+    return (value ?? '')
+      .normalize('NFKC')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
   }
 
   private mapSettings(
