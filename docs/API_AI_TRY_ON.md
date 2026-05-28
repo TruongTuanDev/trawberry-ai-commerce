@@ -93,6 +93,37 @@ Behavior:
 
 Returns public runtime config and built-in models.
 
+Built-in models now return 10 real demo entries, for example:
+
+```json
+{
+  "enabled": true,
+  "providerMode": "mock",
+  "guestDailyLimit": 3,
+  "customerDailyLimit": 5,
+  "requireConsent": true,
+  "supportedCategories": [],
+  "builtInModels": [
+    {
+      "modelId": "model-1",
+      "gender": "female",
+      "bodyType": "petite",
+      "heightCm": 155,
+      "weightKg": 45,
+      "imageUrl": "/ai-try-on/models/model1.png",
+      "labelRu": "Женщина, миниатюрная, 155 см",
+      "labelEn": "Female, petite, 155 cm"
+    }
+  ]
+}
+```
+
+Notes:
+
+- `imageUrl` points to frontend public assets.
+- `modelId` is the stable identifier that must be sent back in task creation.
+- Current built-in ids are `model-1` through `model-10`.
+
 ### `POST /api/public/ai-try-on/uploads`
 
 Multipart upload for a customer reference image.
@@ -128,10 +159,12 @@ Request:
   "bodyTraits": ["wide_shoulders"],
   "customerImageUrl": "http://localhost:3001/uploads/ai-try-on/guest/guest-123/photo.png",
   "customerImageStorageKey": "ai-try-on/guest/guest-123/photo.png",
-  "selectedModelId": "female_regular_165",
+  "selectedModelId": "model-3",
   "consentAccepted": true
 }
 ```
+
+`selectedModelId` must match one of the ids returned by `GET /api/public/ai-try-on/config`, such as `model-3` or `model-7`.
 
 Response:
 

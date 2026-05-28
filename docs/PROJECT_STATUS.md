@@ -1,5 +1,27 @@
 # Project Status
 
+## AI Try-On Real Demo Models - 2026-05-28
+
+- Status: implemented on branch `dev/feature/ai-tryon-real-demo-models`
+- Public AI Try-On now uses 10 real built-in demo model assets instead of silhouette placeholders.
+- Shared model contract changes:
+  - ids are now `model-1` ... `model-10`
+  - image assets are served from `/ai-try-on/models/model1.png` ... `/model10.png`
+  - metadata now includes `weightKg`
+  - frontend model cards display localized labels plus gender/body type and height/weight summary
+- Backend worker now resolves built-in model image URLs against `FRONTEND_URL` / `PUBLIC_SITE_URL` before forwarding requests to ai-service, which keeps the public asset source correct for non-mock providers.
+- Current verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - focused Playwright rerun still requires live frontend/backend runtime
+  - this phase intentionally does not touch paid OpenAI smoke
+
 ## AI Try-On Product Availability Sync From Admin Settings - 2026-05-28
 
 - Status: implemented on branch `dev/bugfix/sync-product-ai-tryon-enabled-from-admin-settings`

@@ -64,8 +64,9 @@ export type PublicProduct = {
 export type AiTryOnBuiltInModel = {
   modelId: string;
   gender: "male" | "female" | "other";
-  bodyType: "slim" | "regular" | "large";
+  bodyType: string;
   heightCm: number;
+  weightKg: number;
   imageUrl: string;
   labelRu: string;
   labelEn: string;

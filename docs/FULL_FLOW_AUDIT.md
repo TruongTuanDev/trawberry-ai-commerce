@@ -1,5 +1,19 @@
 # Full Commerce Flow Audit
 
+## AI Try-On Real Demo Models Addendum
+
+- verified the public AI Try-On modal no longer depends on silhouette placeholder model cards
+- verified the built-in model catalog is now a shared backend-to-frontend contract with 10 real assets
+- verified the backend still validates `selectedModelId` against the shared built-in model list
+- verified the worker path needed an asset-origin fix:
+  - built-in model image URLs are frontend public assets
+  - worker-side ai-service requests should not resolve those relative paths against the backend host
+  - the worker now resolves them against `FRONTEND_URL` / `PUBLIC_SITE_URL`
+- verified non-goals:
+  - no business-rule change to AI Try-On eligibility
+  - no paid OpenAI smoke
+  - no removal of the custom user photo upload path
+
 ## AI Try-On Product Availability Sync Addendum
 
 - verified the admin AI settings flow previously updated only the settings row and not the denormalized `products.ai_try_on_enabled` gate

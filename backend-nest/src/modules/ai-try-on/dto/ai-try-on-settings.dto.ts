@@ -88,6 +88,7 @@ export class PublicAiTryOnConfigResponseDto extends UpdateAiTryOnSettingsDto {
     gender: string;
     bodyType: string;
     heightCm: number;
+    weightKg: number;
     imageUrl: string;
     labelRu: string;
     labelEn: string;
