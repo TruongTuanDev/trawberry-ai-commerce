@@ -2117,3 +2117,18 @@ Implemented:
 Current gap:
 
 - a live Playwright runtime for end-to-end public catalog category interaction is still pending outside this code-only verification pass
+
+# Category Source Of Truth Status
+
+Implemented:
+
+- active backend write paths now try to attach products to a real `Category` record and keep `product.categoryId` aligned with `Category.name`
+- Admin AI Settings now reads supported categories from real DB categories with product counts instead of a hard-coded slug catalog
+- AI Try-On category checks now store selected category ids when possible and expand those ids back to `Category.name` / `slug` plus legacy alias compatibility at runtime
+- WB API sync and WB Excel import now resolve category assignments through `CategoriesService`, so imported products can land with a real category relation instead of only a denormalized text value
+- an idempotent `npm run categories:sync` script now exists for legacy backfill where products still only have `categoryName` / `sourceCategoryName`
+
+Current gap:
+
+- production still needs the one-time category backfill script after deploy if historical products have not yet been linked to `Category`
+- focused Playwright coverage for the admin selector and public category flow still depends on a live local runtime

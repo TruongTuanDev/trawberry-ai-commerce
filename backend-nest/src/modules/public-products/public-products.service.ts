@@ -51,7 +51,7 @@ type PublicProductRecord = {
 
 type FacetProductRecord = Pick<
   PublicProductRecord,
-  'brand' | 'color' | 'gender' | 'categoryName' | 'variants'
+  'brand' | 'color' | 'gender' | 'categoryName' | 'category' | 'variants'
 >;
 
 type PublicCategoryFacet = {
@@ -159,6 +159,14 @@ export class PublicProductsService {
                 categoryName: {
                   contains: search,
                   mode: 'insensitive',
+                },
+              },
+              {
+                category: {
+                  name: {
+                    contains: search,
+                    mode: 'insensitive',
+                  },
                 },
               },
               {
@@ -527,13 +535,16 @@ export class PublicProductsService {
     let priceMax: Prisma.Decimal | null = null;
 
     for (const product of products) {
-      const categoryName = this.normalizeCategoryName(product.categoryName);
+      const categoryName = this.normalizeCategoryName(
+        product.category?.name ?? product.categoryName,
+      );
       if (categoryName) {
-        const existing = categories.get(categoryName);
-        categories.set(categoryName, {
-          id: categoryName,
+        const categoryKey = product.category?.id.toString() ?? categoryName;
+        const existing = categories.get(categoryKey);
+        categories.set(categoryKey, {
+          id: product.category?.id.toString() ?? categoryName,
           name: categoryName,
-          slug: categoryName,
+          slug: product.category?.slug ?? categoryName,
           count: (existing?.count ?? 0) + 1,
         });
       }
@@ -568,20 +579,23 @@ export class PublicProductsService {
   }
 
   private matchesCategoryFilter(
-    product: Pick<PublicProductRecord, 'categoryName'>,
+    product: Pick<PublicProductRecord, 'category' | 'categoryName'>,
     categoryFilter: string,
   ) {
     const normalizedCategoryName = this.normalizeCategoryName(
-      product.categoryName,
+      product.category?.name ?? product.categoryName,
     );
     const normalizedFilter = this.normalizeCategoryName(categoryFilter);
 
     return Boolean(
       normalizedCategoryName &&
       normalizedFilter &&
-      normalizedCategoryName.localeCompare(normalizedFilter, undefined, {
-        sensitivity: 'accent',
-      }) === 0,
+      (product.category?.id.toString() === categoryFilter ||
+        normalizedCategoryName.localeCompare(normalizedFilter, undefined, {
+          sensitivity: 'accent',
+        }) === 0 ||
+        this.normalizeCategoryName(product.category?.slug) ===
+          normalizedFilter),
     );
   }
 

@@ -954,3 +954,12 @@ Future audit item: design an optional marketplace parent order for combined rece
 - public catalog category facets now use `Product.categoryName` as the source of truth for category labels and counts on marketplace-visible products
 - null or empty `categoryName` values are excluded from the public category dataset, so the dropdown only represents real visible catalog categories
 - category filtering now compares against the normalized `categoryName` value itself, which keeps Russian names such as `Шорты` intact instead of requiring WB-subject-derived slugs to exist in the database
+
+# Category Source Of Truth Audit Addendum
+
+- the active marketplace stack now treats the normalized `Category` relation as the primary category source for catalog filters, admin AI supported category selection, and AI Try-On runtime checks
+- `Product.categoryName` and `Product.sourceCategoryName` remain compatibility mirrors only; they are still read as fallback inputs when a legacy product has not yet been linked to `Category`
+- seller/manual product create-update paths and WB import/sync flows now route category assignment through `CategoriesService.resolveCategoryAssignment(...)`, which can reuse an existing category or create one safely by normalized name
+- Admin AI Settings now consumes a real admin category list with product counts and saves selected category ids when a category match exists, while preserving unmapped legacy values separately instead of silently dropping them
+- AI Try-On support evaluation now expands stored category ids back into related category names/slugs and still understands legacy alias strings, so a saved admin selection and a product category relation stay consistent even during legacy backfill
+- a one-time `npm run categories:sync` backfill is available to migrate historical products that still only hold denormalized category text into linked `Category` rows without deleting old data

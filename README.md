@@ -65,6 +65,17 @@ CI safety defaults:
 - no production secrets required
 - no real Wildberries or carrier API calls in default CI
 
+## Category Backfill Script
+
+When historical products still have `categoryName` / `sourceCategoryName` but no linked `categoryId`, run:
+
+```bash
+cd backend-nest
+npm run categories:sync
+```
+
+The script is idempotent. It creates missing `Category` rows by normalized name, links products to those categories, and refreshes the mirrored `product.categoryName` field without deleting old data.
+
 ## Production Deployment Foundation
 
 Production artifacts for VPS deployment are now included:

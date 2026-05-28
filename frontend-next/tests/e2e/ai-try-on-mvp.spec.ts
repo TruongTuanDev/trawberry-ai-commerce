@@ -4,6 +4,13 @@ const backendBaseUrl =
   process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 let cachedAdminToken: string | null = null;
 
+type AdminCategoryOption = {
+  id: string;
+  name: string;
+  slug: string | null;
+  productCount: number;
+};
+
 async function backendJson<T>(
   request: APIRequestContext,
   url: string,
@@ -15,6 +22,31 @@ async function backendJson<T>(
     `${options?.method ?? "GET"} ${url} -> ${response.status()}: ${await response.text()}`,
   ).toBeTruthy();
   return (await response.json()) as T;
+}
+
+async function getAdminCategories(
+  request: APIRequestContext,
+  adminToken: string,
+) {
+  return backendJson<AdminCategoryOption[]>(
+    request,
+    "/api/admin/categories",
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${adminToken}` },
+    },
+  );
+}
+
+function findCategoryIdByName(
+  categories: AdminCategoryOption[],
+  expectedName: string,
+) {
+  const match = categories.find(
+    (category) => category.name.toLowerCase() === expectedName.toLowerCase(),
+  );
+  expect(match, `Category ${expectedName} should exist in admin categories`).toBeTruthy();
+  return match!.id;
 }
 
 async function loginAdmin(page: Page) {
@@ -235,11 +267,13 @@ test("AI Try-On mock flow works from disabled state to completed result", async 
   await loginAdmin(page);
   await page.goto("/admin/ai-settings");
   await expect(page.getByTestId("admin-ai-settings-page")).toContainText("Marketplace AI try-on");
+  const categories = await getAdminCategories(request, seller.adminToken);
+  const jacketCategoryId = findCategoryIdByName(categories, "jackets");
   await page.getByTestId("admin-ai-settings-enabled").check();
   await page.getByTestId("admin-ai-settings-provider-mode").selectOption("mock");
   await page.getByTestId("admin-ai-settings-guest-limit").fill("3");
   await page.getByTestId("admin-ai-settings-customer-limit").fill("5");
-  await page.getByTestId("admin-ai-settings-supported-category-jackets").check();
+  await page.getByTestId(`admin-ai-settings-supported-category-${jacketCategoryId}`).check();
   await page.getByTestId("admin-ai-settings-save").click();
   await expect(page.getByTestId("admin-ai-settings-success")).toContainText("AI settings saved.");
 
@@ -349,7 +383,7 @@ test("AI Try-On openai mode surfaces provider configuration errors without expos
   );
 });
 
-test("Admin AI settings category selector parses legacy values and saves canonical slugs", async ({
+test("Admin AI settings category selector parses legacy values and saves category ids", async ({
   page,
   request,
 }) => {
@@ -357,6 +391,9 @@ test("Admin AI settings category selector parses legacy values and saves canonic
 
   const stamp = Date.now() + 33;
   const seller = await approveSeller(request, `ai-try-on-admin-${stamp}@example.com`);
+  await createProduct(request, seller.token, stamp + 1, { categoryName: "Jackets" });
+  await createProduct(request, seller.token, stamp + 2, { categoryName: "Dresses" });
+  await createProduct(request, seller.token, stamp + 3, { categoryName: "Pants" });
 
   await backendJson(request, "/api/admin/ai-settings", {
     method: "PATCH",
@@ -371,11 +408,16 @@ test("Admin AI settings category selector parses legacy values and saves canonic
     },
   });
 
+  const categories = await getAdminCategories(request, seller.adminToken);
+  const jacketCategoryId = findCategoryIdByName(categories, "Jackets");
+  const dressesCategoryId = findCategoryIdByName(categories, "Dresses");
+  const pantsCategoryId = findCategoryIdByName(categories, "Pants");
+
   await loginAdmin(page);
   await page.goto("/admin/ai-settings");
-  await expect(page.getByTestId("admin-ai-settings-supported-category-jackets")).toBeChecked();
-  await expect(page.getByTestId("admin-ai-settings-supported-category-dresses")).toBeChecked();
-  await expect(page.getByTestId("admin-ai-settings-supported-category-pants")).toBeChecked();
+  await expect(page.getByTestId(`admin-ai-settings-supported-category-${jacketCategoryId}`)).toBeChecked();
+  await expect(page.getByTestId(`admin-ai-settings-supported-category-${dressesCategoryId}`)).toBeChecked();
+  await expect(page.getByTestId(`admin-ai-settings-supported-category-${pantsCategoryId}`)).toBeChecked();
 
   await page.getByTestId("admin-ai-settings-clear-all").click();
   await page.getByTestId("admin-ai-settings-select-recommended").click();
@@ -390,17 +432,13 @@ test("Admin AI settings category selector parses legacy values and saves canonic
       headers: { Authorization: `Bearer ${seller.adminToken}` },
     },
   );
-  expect(updated.supportedCategories).toEqual([
-    "tops",
-    "pants",
-    "jeans",
-    "shorts",
-    "bermuda",
-    "dresses",
-    "skirts",
-    "jackets",
-    "hoodies",
-  ]);
+  expect(updated.supportedCategories).toEqual(
+    expect.arrayContaining([
+      jacketCategoryId,
+      dressesCategoryId,
+      pantsCategoryId,
+    ]),
+  );
 });
 
 test("RU AI try-on keeps unsupported messaging localized and supports bermuda aliases", async ({

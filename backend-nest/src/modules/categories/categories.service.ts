@@ -1,5 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+export type AdminCategorySelectorItem = {
+  id: string;
+  name: string;
+  slug: string | null;
+  productCount: number;
+};
+
+type CategoryRecord = {
+  id: bigint;
+  name: string;
+  slug: string | null;
+};
+
+export type CategoryLookupRecord = {
+  id: string;
+  name: string;
+  slug: string | null;
+};
 
 @Injectable()
 export class CategoriesService {
@@ -18,6 +38,319 @@ export class CategoriesService {
       include: { targetCategory: true },
       orderBy: [{ source: 'asc' }, { sourceCategoryName: 'asc' }],
     });
+  }
+
+  async adminListCategories() {
+    const categories = await this.prisma.category.findMany({
+      where: {
+        products: {
+          some: {},
+        },
+      },
+      orderBy: [{ name: 'asc' }],
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    return categories.map<AdminCategorySelectorItem>((category) => ({
+      id: category.id.toString(),
+      name: category.name,
+      slug: category.slug,
+      productCount: category._count.products,
+    }));
+  }
+
+  normalizeCategoryName(value: string | null | undefined) {
+    return value?.replace(/\s+/g, ' ').trim() || null;
+  }
+
+  async listCategoryLookupRecords(tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    const categories = await db.category.findMany({
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    });
+
+    return categories.map<CategoryLookupRecord>((category) => ({
+      id: category.id.toString(),
+      name: category.name,
+      slug: category.slug,
+    }));
+  }
+
+  async findCategoryByValue(
+    value: string | null | undefined,
+    tx?: Prisma.TransactionClient,
+  ): Promise<CategoryLookupRecord | null> {
+    const normalizedValue = this.normalizeCategoryName(value);
+    if (!normalizedValue) {
+      return null;
+    }
+
+    const db = tx ?? this.prisma;
+    if (/^\d+$/.test(normalizedValue)) {
+      const byId = await db.category.findUnique({
+        where: { id: BigInt(normalizedValue) },
+        select: { id: true, name: true, slug: true },
+      });
+      if (byId) {
+        return {
+          id: byId.id.toString(),
+          name: byId.name,
+          slug: byId.slug,
+        };
+      }
+    }
+
+    const matched = await db.category.findFirst({
+      where: {
+        OR: [
+          {
+            name: {
+              equals: normalizedValue,
+              mode: 'insensitive',
+            },
+          },
+          {
+            slug: {
+              equals: normalizedValue,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    if (!matched) {
+      return null;
+    }
+
+    return {
+      id: matched.id.toString(),
+      name: matched.name,
+      slug: matched.slug,
+    };
+  }
+
+  async ensureCategoryByName(
+    name: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<CategoryRecord> {
+    const db = tx ?? this.prisma;
+    const normalizedName = this.normalizeCategoryName(name);
+    if (!normalizedName) {
+      throw new NotFoundException('Category name was not provided.');
+    }
+
+    const existing = await db.category.findFirst({
+      where: {
+        name: {
+          equals: normalizedName,
+          mode: 'insensitive',
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const id = await this.nextCategoryId(tx);
+    return db.category.create({
+      data: {
+        id,
+        name: normalizedName,
+        slug: this.slugify(normalizedName),
+        sortOrder: 0,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    });
+  }
+
+  async resolveCategoryAssignment(
+    input: {
+      categoryId?: number | bigint | null;
+      categoryName?: string | null;
+      sourceCategoryName?: string | null;
+      sourceCategorySource?: string | null;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    const explicitCategoryId =
+      input.categoryId !== undefined && input.categoryId !== null
+        ? BigInt(input.categoryId)
+        : null;
+
+    if (explicitCategoryId !== null) {
+      const category = await db.category.findUnique({
+        where: { id: explicitCategoryId },
+        select: { id: true, name: true, slug: true },
+      });
+
+      if (!category) {
+        throw new NotFoundException(
+          `Category ${explicitCategoryId} was not found.`,
+        );
+      }
+
+      return {
+        categoryId: category.id,
+        categoryName: category.name,
+        sourceCategoryName:
+          this.normalizeCategoryName(input.sourceCategoryName) ??
+          this.normalizeCategoryName(input.categoryName) ??
+          category.name,
+        sourceCategorySource: input.sourceCategorySource ?? null,
+      };
+    }
+
+    const normalizedName =
+      this.normalizeCategoryName(input.categoryName) ??
+      this.normalizeCategoryName(input.sourceCategoryName);
+
+    if (!normalizedName) {
+      return {
+        categoryId: null,
+        categoryName: null,
+        sourceCategoryName: this.normalizeCategoryName(
+          input.sourceCategoryName,
+        ),
+        sourceCategorySource: input.sourceCategorySource ?? null,
+      };
+    }
+
+    const category = await this.ensureCategoryByName(normalizedName, tx);
+    return {
+      categoryId: category.id,
+      categoryName: category.name,
+      sourceCategoryName:
+        this.normalizeCategoryName(input.sourceCategoryName) ?? category.name,
+      sourceCategorySource: input.sourceCategorySource ?? null,
+    };
+  }
+
+  async syncProductsFromLegacyCategoryNames(limit = 5000) {
+    const products = await this.prisma.product.findMany({
+      where: {
+        OR: [
+          {
+            categoryId: null,
+            OR: [
+              { categoryName: { not: null } },
+              { sourceCategoryName: { not: null } },
+            ],
+          },
+          {
+            categoryId: {
+              not: null,
+            },
+          },
+        ],
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      take: limit,
+    });
+
+    let createdCategories = 0;
+    let linkedProducts = 0;
+    let updatedMirrors = 0;
+
+    for (const product of products) {
+      if (product.category) {
+        const normalizedCategoryName = this.normalizeCategoryName(
+          product.categoryName,
+        );
+        if (normalizedCategoryName !== product.category.name) {
+          await this.prisma.product.update({
+            where: { id: product.id },
+            data: {
+              categoryName: product.category.name,
+            },
+          });
+          updatedMirrors += 1;
+        }
+        continue;
+      }
+
+      const before = await this.prisma.category.findFirst({
+        where: {
+          name: {
+            equals:
+              this.normalizeCategoryName(product.categoryName) ??
+              this.normalizeCategoryName(product.sourceCategoryName) ??
+              '',
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true },
+      });
+
+      const resolved = await this.resolveCategoryAssignment({
+        categoryName: product.categoryName,
+        sourceCategoryName: product.sourceCategoryName,
+        sourceCategorySource: product.sourceCategorySource,
+      });
+
+      if (!resolved.categoryId) {
+        continue;
+      }
+
+      if (!before) {
+        createdCategories += 1;
+      }
+
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          categoryId: resolved.categoryId,
+          categoryName: resolved.categoryName,
+          sourceCategoryName: resolved.sourceCategoryName,
+        },
+      });
+      linkedProducts += 1;
+    }
+
+    return {
+      scannedProducts: products.length,
+      createdCategories,
+      linkedProducts,
+      updatedMirrors,
+    };
   }
 
   async createCategory(payload: {
@@ -119,8 +452,9 @@ export class CategoriesService {
     });
   }
 
-  private async nextCategoryId() {
-    const last = await this.prisma.category.findFirst({
+  private async nextCategoryId(tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    const last = await db.category.findFirst({
       orderBy: { id: 'desc' },
       select: { id: true },
     });
@@ -181,5 +515,15 @@ export class CategoriesService {
       }
     }
     return roots;
+  }
+
+  private slugify(value: string) {
+    return value
+      .normalize('NFKC')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0400-\u04ff]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 255);
   }
 }

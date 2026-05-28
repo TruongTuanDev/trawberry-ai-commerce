@@ -1450,6 +1450,13 @@ export type AdminAiTryOnSettings = {
   updatedAt: string;
 };
 
+export type AdminCategoryOption = {
+  id: string;
+  name: string;
+  slug: string | null;
+  productCount: number;
+};
+
 export type UpdateAdminAiTryOnSettingsPayload = {
   enabled: boolean;
   providerMode: "mock" | "demo" | "openai";
@@ -1538,6 +1545,12 @@ export async function uploadHomepageSlideImage(file: File) {
 
 export async function getAdminAiTryOnSettings() {
   return apiRequest<AdminAiTryOnSettings>("/api/admin/ai-settings", {
+    method: "GET",
+  });
+}
+
+export async function getAdminCategories() {
+  return apiRequest<AdminCategoryOption[]>("/api/admin/categories", {
     method: "GET",
   });
 }

@@ -1,6 +1,6 @@
 const CATEGORY_DEFINITIONS = [
   {
-    slug: 'tops',
+    canonical: 'tops',
     aliases: [
       'top',
       'tops',
@@ -14,141 +14,191 @@ const CATEGORY_DEFINITIONS = [
     ],
   },
   {
-    slug: 'pants',
+    canonical: 'pants',
     aliases: ['pants', 'trousers', 'брюки'],
   },
   {
-    slug: 'jeans',
+    canonical: 'jeans',
     aliases: ['jeans', 'denim', 'джинсы'],
   },
   {
-    slug: 'shorts',
+    canonical: 'shorts',
     aliases: ['short', 'shorts', 'шорты'],
   },
   {
-    slug: 'bermuda',
+    canonical: 'bermuda',
     aliases: ['bermuda', 'bermudas', 'бермуды'],
   },
   {
-    slug: 'dresses',
+    canonical: 'dresses',
     aliases: ['dress', 'dresses', 'платье', 'платья'],
   },
   {
-    slug: 'skirts',
+    canonical: 'skirts',
     aliases: ['skirt', 'skirts', 'юбка', 'юбки'],
   },
   {
-    slug: 'jackets',
+    canonical: 'jackets',
     aliases: ['jacket', 'jackets', 'coat', 'outerwear', 'куртка', 'куртки'],
   },
   {
-    slug: 'hoodies',
+    canonical: 'hoodies',
     aliases: ['hoodie', 'hoodies', 'sweatshirt', 'худи', 'свитшот'],
   },
   {
-    slug: 'shoes',
+    canonical: 'shoes',
     aliases: ['shoes', 'footwear', 'обувь'],
   },
   {
-    slug: 'bags',
+    canonical: 'bags',
     aliases: ['bag', 'bags', 'сумка', 'сумки'],
   },
   {
-    slug: 'accessories',
+    canonical: 'accessories',
     aliases: ['accessory', 'accessories', 'аксессуары'],
   },
 ] as const;
 
-const aliasToSlug = new Map<string, string>();
+const aliasToCanonical = new Map<string, string>();
 for (const category of CATEGORY_DEFINITIONS) {
-  aliasToSlug.set(category.slug, category.slug);
+  aliasToCanonical.set(category.canonical, category.canonical);
   for (const alias of category.aliases) {
-    aliasToSlug.set(alias, category.slug);
+    aliasToCanonical.set(alias, category.canonical);
   }
 }
 
-function normalizeText(value: string) {
-  return value
+function normalizeText(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFKC')
     .trim()
     .toLowerCase()
     .replace(/[-_/(),]+/g, ' ')
     .replace(/\s+/g, ' ');
 }
 
-function normalizeToken(value: string) {
-  return normalizeText(value).replace(/\s/g, ' ');
-}
-
-function resolveCanonicalSlug(value: string) {
-  const normalized = normalizeToken(value);
-  return aliasToSlug.get(normalized) ?? null;
-}
-
 function hasAliasMatch(normalizedText: string, alias: string) {
-  const normalizedAlias = normalizeToken(alias);
+  const normalizedAlias = normalizeText(alias);
   return ` ${normalizedText} `.includes(` ${normalizedAlias} `);
 }
 
-export function normalizeSupportedCategoryValues(values: string[]) {
-  const normalized = new Set<string>();
+export function resolveCanonicalCategories(value: string | null | undefined) {
+  const normalized = normalizeText(value);
+  if (!normalized) {
+    return [];
+  }
 
-  for (const rawValue of values) {
-    const canonical = resolveCanonicalSlug(rawValue);
-    if (canonical) {
-      normalized.add(canonical);
-      continue;
-    }
+  const exact = aliasToCanonical.get(normalized);
+  if (exact) {
+    return [exact];
+  }
 
-    const fallback = normalizeToken(rawValue);
-    if (fallback) {
-      normalized.add(fallback);
+  const matches = new Set<string>();
+  for (const category of CATEGORY_DEFINITIONS) {
+    if (
+      hasAliasMatch(normalized, category.canonical) ||
+      category.aliases.some((alias: string) => hasAliasMatch(normalized, alias))
+    ) {
+      matches.add(category.canonical);
     }
   }
 
-  return [...normalized];
+  return [...matches];
+}
+
+export function resolveCanonicalCategory(value: string | null | undefined) {
+  return resolveCanonicalCategories(value)[0] ?? null;
 }
 
 export function readSupportedCategoryValues(value: unknown) {
   if (Array.isArray(value)) {
-    return normalizeSupportedCategoryValues(
-      value.filter((item): item is string => typeof item === 'string'),
-    );
+    return [
+      ...new Set(
+        value
+          .filter((item): item is string => typeof item === 'string')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    ];
   }
 
   if (typeof value === 'string') {
-    return normalizeSupportedCategoryValues(value.split(','));
+    return [
+      ...new Set(
+        value
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    ];
   }
 
   return [];
 }
 
-export function resolveProductCategorySlugs(
-  values: Array<string | null | undefined>,
+export function normalizeStoredSupportedCategoryValues(values: string[]) {
+  return [
+    ...new Set(
+      values
+        .flatMap((value) => value.split(','))
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+export function matchesSupportedCategoryValue(
+  supportedValues: string[],
+  product: {
+    categoryId?: string | null;
+    categoryName?: string | null;
+    categorySlug?: string | null;
+    fallbackCategoryNames?: Array<string | null | undefined>;
+  },
 ) {
-  const matches = new Set<string>();
+  if (supportedValues.length === 0) {
+    return true;
+  }
 
-  for (const rawValue of values) {
-    if (!rawValue?.trim()) {
-      continue;
-    }
+  const exactTokens = new Set(
+    supportedValues.map((value) => normalizeText(value)).filter(Boolean),
+  );
+  const canonicalTokens = new Set(
+    supportedValues
+      .map((value) => resolveCanonicalCategory(value))
+      .filter((value): value is string => Boolean(value)),
+  );
 
-    const canonical = resolveCanonicalSlug(rawValue);
-    if (canonical) {
-      matches.add(canonical);
-    }
+  if (
+    product.categoryId &&
+    exactTokens.has(normalizeText(product.categoryId))
+  ) {
+    return true;
+  }
 
-    const normalizedText = normalizeText(rawValue);
-    for (const category of CATEGORY_DEFINITIONS) {
-      if (
-        hasAliasMatch(normalizedText, category.slug) ||
-        category.aliases.some((alias: string) =>
-          hasAliasMatch(normalizedText, alias),
-        )
-      ) {
-        matches.add(category.slug);
-      }
+  const candidates = [
+    product.categoryName,
+    product.categorySlug,
+    ...(product.fallbackCategoryNames ?? []),
+  ]
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (exactTokens.has(candidate)) {
+      return true;
     }
   }
 
-  return [...matches];
+  for (const candidate of [
+    product.categoryName,
+    product.categorySlug,
+    ...(product.fallbackCategoryNames ?? []),
+  ]) {
+    const canonicals = resolveCanonicalCategories(candidate);
+    if (canonicals.some((canonical) => canonicalTokens.has(canonical))) {
+      return true;
+    }
+  }
+
+  return false;
 }
