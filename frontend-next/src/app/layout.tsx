@@ -7,8 +7,8 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
 
 export const metadata: Metadata = {
-  title: "Strawberry AI Commerce",
-  description: "Public marketplace and seller workspace running on the new Next.js and NestJS stack.",
+ title: "Skidkaberry AI Commerce",
+  description: "Next-gen smart marketplace and automated seller workspace.",
 };
 
 export default async function RootLayout({

@@ -185,7 +185,8 @@
     "sellWithUs": "Sell with trawberry",
     "sellerLogin": "Seller login",
     "manualPayment": "Manual payment",
-    "manualPaymentDesc": "For bank transfer orders, customers can upload payment confirmation from the order tracking page so sellers can review it quickly."
+    "manualPaymentDesc": "For bank transfer orders, customers can upload payment confirmation from the order tracking page so sellers can review it quickly.",
+    "disclaimer": "Disclaimer: We are an intermediary platform that connects buyers and sellers. We are not the official Wildberries website and are not affiliated with the Wildberries group."
   },
   "public": {
     "shop": {

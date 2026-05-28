@@ -42,6 +42,13 @@ export function PublicFooter() {
           </p>
         </div>
       </div>
+      <div className="border-t border-[var(--border)]/70 bg-white/55">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+          <p className="text-xs leading-6 text-[var(--muted)]">
+            {t("publicFooter.disclaimer")}
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }
