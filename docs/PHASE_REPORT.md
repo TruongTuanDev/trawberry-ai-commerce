@@ -1,5 +1,42 @@
 # Phase Report
 
+## 2026-05-28 AI Try-On Category Id Support
+
+- audited the AI Try-On category gate and confirmed admin settings are now intended to persist category ids, not only legacy slugs
+- hardened supported-category parsing so stored JSON arrays containing numeric ids no longer get dropped during runtime reads
+- hardened AI Try-On support evaluation so it now:
+  - matches directly on `String(product.categoryId)` when the relation/id exists
+  - resolves a fallback category by exact `Category.name` match from `product.categoryName` or `product.sourceCategoryName` when `categoryId` is still null
+  - continues to enrich stored supported ids into related category names/slugs for backward compatibility
+- added a conservative idempotent script `npm run categories:link-products` that links legacy products to existing categories only:
+  - no category creation
+  - exact normalized name match only
+  - `--dry-run` support
+- expanded AI Try-On backend regression coverage for:
+  - supported ids stored as strings
+  - supported ids stored as numbers
+  - null `product.categoryId` with legacy `categoryName`
+  - still-blocked unsupported categories
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `backend-nest npm run categories:link-products -- --dry-run`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Remaining gaps:
+
+- production products that still have `categoryId = null` will still need the one-time link script after deploy
+- focused Playwright verification for the full public AI Try-On flow still depends on a live local runtime
+
 ## 2026-05-28 Catalog Filter Dropdown Overlay
 
 - audited the public catalog filter bar in `frontend-next/src/app/products/page.tsx`

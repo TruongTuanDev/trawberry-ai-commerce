@@ -121,6 +121,16 @@ describe('AiTryOnController (e2e)', () => {
       name: 'Bermuda',
       slug: 'bermuda',
     },
+    {
+      id: BigInt(1010),
+      name: 'Джинсы',
+      slug: 'jeans',
+    },
+    {
+      id: BigInt(1040),
+      name: 'Шорты',
+      slug: 'shorts',
+    },
   ];
 
   let tasks: Array<{
@@ -791,6 +801,116 @@ describe('AiTryOnController (e2e)', () => {
       .expect(201);
 
     expect(readBody<{ status: string }>(response).status).toBe('COMPLETED');
+  });
+
+  it('supports products when admin settings store matching category ids as strings', async () => {
+    settings.aiTryOnEnabled = true;
+    settings.supportedCategories = ['1040'];
+    prismaMock.product.findFirst.mockResolvedValue({
+      ...product,
+      categoryId: BigInt(1040),
+      category: {
+        id: BigInt(1040),
+        name: 'Шорты',
+        slug: 'shorts',
+      },
+      categoryName: 'Шорты',
+      sourceCategoryName: 'Шорты',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-shorts-id')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    expect(readBody<{ status: string }>(response).status).toBe('COMPLETED');
+  });
+
+  it('supports products by resolving legacy category names when category id is missing', async () => {
+    settings.aiTryOnEnabled = true;
+    settings.supportedCategories = ['1040'];
+    prismaMock.product.findFirst.mockResolvedValue({
+      ...product,
+      categoryId: null,
+      category: null,
+      categoryName: 'Шорты',
+      sourceCategoryName: 'Шорты',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-shorts-name')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    expect(readBody<{ status: string }>(response).status).toBe('COMPLETED');
+  });
+
+  it('supports numeric stored category ids without failing number string matching', async () => {
+    settings.aiTryOnEnabled = true;
+    settings.supportedCategories = [1010] as unknown as string[];
+    prismaMock.product.findFirst.mockResolvedValue({
+      ...product,
+      categoryId: BigInt(1010),
+      category: {
+        id: BigInt(1010),
+        name: 'Джинсы',
+        slug: 'jeans',
+      },
+      categoryName: 'Джинсы',
+      sourceCategoryName: 'Джинсы',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-jeans-id')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    expect(readBody<{ status: string }>(response).status).toBe('COMPLETED');
+  });
+
+  it('keeps blocking products whose categories are not selected', async () => {
+    settings.aiTryOnEnabled = true;
+    settings.supportedCategories = ['1040'];
+    prismaMock.product.findFirst.mockResolvedValue({
+      ...product,
+      categoryId: BigInt(1010),
+      category: {
+        id: BigInt(1010),
+        name: 'Джинсы',
+        slug: 'jeans',
+      },
+      categoryName: 'Джинсы',
+      sourceCategoryName: 'Джинсы',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-unsupported-category')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(400);
+
+    expect(readBody<{ code: string }>(response).code).toBe(
+      'AI_TRY_ON_PRODUCT_UNSUPPORTED',
+    );
   });
 });
 

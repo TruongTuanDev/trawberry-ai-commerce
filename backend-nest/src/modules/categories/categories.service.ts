@@ -21,6 +21,14 @@ export type CategoryLookupRecord = {
   slug: string | null;
 };
 
+export type LinkProductsToExistingCategoriesResult = {
+  scannedProducts: number;
+  linkedProducts: number;
+  dryRun: boolean;
+  unmatchedProducts: number;
+  unmatchedCategoryNames: string[];
+};
+
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -127,6 +135,42 @@ export class CategoriesService {
             },
           },
         ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    if (!matched) {
+      return null;
+    }
+
+    return {
+      id: matched.id.toString(),
+      name: matched.name,
+      slug: matched.slug,
+    };
+  }
+
+  async findExistingCategoryByName(
+    value: string | null | undefined,
+    tx?: Prisma.TransactionClient,
+  ): Promise<CategoryLookupRecord | null> {
+    const normalizedValue = this.normalizeCategoryName(value);
+    if (!normalizedValue) {
+      return null;
+    }
+
+    const db = tx ?? this.prisma;
+    const matched = await db.category.findFirst({
+      where: {
+        name: {
+          equals: normalizedValue,
+          mode: 'insensitive',
+        },
       },
       select: {
         id: true,
@@ -350,6 +394,72 @@ export class CategoriesService {
       createdCategories,
       linkedProducts,
       updatedMirrors,
+    };
+  }
+
+  async linkProductsToExistingCategoriesFromNames(options?: {
+    limit?: number;
+    dryRun?: boolean;
+  }): Promise<LinkProductsToExistingCategoriesResult> {
+    const limit = options?.limit ?? 5000;
+    const dryRun = options?.dryRun ?? false;
+    const products = await this.prisma.product.findMany({
+      where: {
+        categoryId: null,
+        OR: [
+          { categoryName: { not: null } },
+          { sourceCategoryName: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        categoryName: true,
+        sourceCategoryName: true,
+      },
+      take: limit,
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let linkedProducts = 0;
+    const unmatchedCategoryNames = new Set<string>();
+
+    for (const product of products) {
+      const matchedCategory =
+        (await this.findExistingCategoryByName(product.categoryName)) ??
+        (await this.findExistingCategoryByName(product.sourceCategoryName));
+
+      if (!matchedCategory) {
+        const unmatchedName =
+          this.normalizeCategoryName(product.categoryName) ??
+          this.normalizeCategoryName(product.sourceCategoryName);
+        if (unmatchedName) {
+          unmatchedCategoryNames.add(unmatchedName);
+        }
+        continue;
+      }
+
+      linkedProducts += 1;
+      if (dryRun) {
+        continue;
+      }
+
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          categoryId: BigInt(matchedCategory.id),
+          categoryName: matchedCategory.name,
+        },
+      });
+    }
+
+    return {
+      scannedProducts: products.length,
+      linkedProducts,
+      dryRun,
+      unmatchedProducts: products.length - linkedProducts,
+      unmatchedCategoryNames: [...unmatchedCategoryNames].sort((a, b) =>
+        a.localeCompare(b),
+      ),
     };
   }
 

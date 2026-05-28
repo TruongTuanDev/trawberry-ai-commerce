@@ -76,6 +76,16 @@ npm run categories:sync
 
 The script is idempotent. It creates missing `Category` rows by normalized name, links products to those categories, and refreshes the mirrored `product.categoryName` field without deleting old data.
 
+If production already has the correct `Category` rows and only needs to attach legacy products without creating anything new, run:
+
+```bash
+cd backend-nest
+npm run categories:link-products -- --dry-run
+npm run categories:link-products
+```
+
+This exact-match script only links products with `categoryId = null` by matching `Product.categoryName` first and `Product.sourceCategoryName` second against existing `Category.name`.
+
 ## Production Deployment Foundation
 
 Production artifacts for VPS deployment are now included:

@@ -402,6 +402,29 @@ export class AiTryOnService {
       return true;
     }
 
+    const fallbackCategory =
+      product.category?.id || product.categoryId
+        ? null
+        : ((await this.categoriesService.findExistingCategoryByName(
+            product.categoryName,
+          )) ??
+          (await this.categoriesService.findExistingCategoryByName(
+            product.sourceCategoryName,
+          )));
+
+    const resolvedCategoryId =
+      product.category?.id?.toString() ??
+      product.categoryId?.toString() ??
+      fallbackCategory?.id ??
+      null;
+    const resolvedCategoryName =
+      product.category?.name ??
+      fallbackCategory?.name ??
+      product.categoryName ??
+      product.sourceCategoryName;
+    const resolvedCategorySlug =
+      product.category?.slug ?? fallbackCategory?.slug ?? null;
+
     const categoryLookup =
       await this.categoriesService.listCategoryLookupRecords();
     const categoryById = new Map(
@@ -420,13 +443,14 @@ export class AiTryOnService {
       }
     }
 
+    if (resolvedCategoryId && enrichedSupported.has(resolvedCategoryId)) {
+      return true;
+    }
+
     return matchesSupportedCategoryValue([...enrichedSupported], {
-      categoryId:
-        product.category?.id?.toString() ??
-        product.categoryId?.toString() ??
-        null,
-      categoryName: product.category?.name ?? product.categoryName,
-      categorySlug: product.category?.slug ?? null,
+      categoryId: resolvedCategoryId,
+      categoryName: resolvedCategoryName,
+      categorySlug: resolvedCategorySlug,
       fallbackCategoryNames: [product.categoryName, product.sourceCategoryName],
     });
   }

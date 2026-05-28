@@ -1,5 +1,15 @@
 # Full Commerce Flow Audit
 
+## AI Try-On Category Id Support Addendum
+
+- verified the active AI Try-On settings contract can store category ids and not only legacy category slugs
+- verified the runtime gate must treat `product.categoryId` as the primary fast-path when admin settings already contain ids such as `1010` or `1040`
+- verified legacy unsynced products still require a bridge:
+  - if `product.categoryId` is null
+  - but `product.categoryName` or `product.sourceCategoryName` matches an existing `Category.name`
+  - runtime should still resolve that category and avoid a false unsupported result
+- added a conservative operational script `npm run categories:link-products` for exact-match linking of legacy products to existing categories without creating new categories
+
 ## Catalog Filter Dropdown Overlay Addendum
 
 - verified the catalog/search filter row renders multiple inline dropdowns from a shared page-level implementation in `frontend-next/src/app/products/page.tsx`
