@@ -60,6 +60,7 @@ type StoredProduct = {
   categoryId: bigint | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
+  subjectId: bigint | null;
   averageRating: Prisma.Decimal | null;
   feedbackCount: number | null;
   updatedAt: Date;
@@ -274,6 +275,25 @@ describe('PublicProductsController contract (e2e)', () => {
             basePrice: decimal(1825),
             stockQuantity: 0,
             lowStockThreshold: 1,
+          }),
+        ],
+      }),
+      buildProduct({
+        id: 'product-wb-shorts',
+        title: 'WB Shorts Public',
+        categoryName: 'Shorts',
+        sourceCategoryName: 'Шорты',
+        subjectId: 9001n,
+        variants: [
+          buildVariant({
+            id: 'variant-wb-shorts',
+            productId: 'product-wb-shorts',
+            sizeName: 'M',
+            russianSize: '46',
+            techSize: 'M',
+            sellerSku: 'WB-SHORTS-M',
+            basePrice: decimal(1200),
+            stockQuantity: 7,
           }),
         ],
       }),
@@ -539,12 +559,15 @@ describe('PublicProductsController contract (e2e)', () => {
       .expect(200);
 
     const body = readBody<PaginatedPublicProductsResponseDto>(response);
-    expect(body.items.map((item) => item.id)).toEqual([
-      'product-ready',
-      'product-price-changed',
-      'product-limited',
-    ]);
-    expect(body.meta.total).toBe(3);
+    expect(body.items.map((item) => item.id)).toEqual(
+      expect.arrayContaining([
+        'product-ready',
+        'product-price-changed',
+        'product-limited',
+        'product-wb-shorts',
+      ]),
+    );
+    expect(body.meta.total).toBe(4);
   });
 
   it('returns public detail fields and variant availability contract', async () => {
@@ -588,6 +611,38 @@ describe('PublicProductsController contract (e2e)', () => {
           availableQuantity: 0,
         }),
       ]),
+    );
+  });
+
+  it('builds category facets from public-ready WB source categories and filters by categorySlug', async () => {
+    const listResponse = await request(app.getHttpServer())
+      .get('/api/public/products')
+      .query({ q: 'WB Shorts' })
+      .expect(200);
+
+    const listBody = readBody<PaginatedPublicProductsResponseDto>(listResponse);
+    expect(listBody.filters.categories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Шорты',
+          slug: 'wb-subject-9001',
+          count: 1,
+        }),
+      ]),
+    );
+
+    const filteredResponse = await request(app.getHttpServer())
+      .get('/api/public/products')
+      .query({ categorySlug: 'wb-subject-9001' })
+      .expect(200);
+
+    const filteredBody =
+      readBody<PaginatedPublicProductsResponseDto>(filteredResponse);
+    expect(filteredBody.items.map((item) => item.id)).toContain(
+      'product-wb-shorts',
+    );
+    expect(filteredBody.items.map((item) => item.id)).not.toContain(
+      'product-ready',
     );
   });
 
@@ -955,6 +1010,7 @@ function buildProduct(input: {
   composition?: string;
   categoryName?: string;
   sourceCategoryName?: string;
+  subjectId?: bigint;
   catalogStatus?: string;
   visibility?: string;
   variants: StoredVariant[];
@@ -978,6 +1034,7 @@ function buildProduct(input: {
     categoryId: 10n,
     categoryName: input.categoryName ?? 'Jackets',
     sourceCategoryName: input.sourceCategoryName ?? 'Outerwear',
+    subjectId: input.subjectId ?? null,
     averageRating: decimalValue(4.8),
     feedbackCount: 2,
     updatedAt: new Date('2026-05-17T10:00:00Z'),

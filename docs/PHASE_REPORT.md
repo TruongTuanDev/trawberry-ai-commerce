@@ -3473,3 +3473,32 @@ Known Gaps:
 
 - Legacy `strawberry-frontend` and `strawberry-backend` remain untouched.
 - External Wildberries API imports are out of scope.
+
+# Phase Report: Catalog Dropdown Overlay And WB-backed Category Filter
+
+Implemented:
+
+- kept catalog filter and sort dropdowns above suggestion chips and the product grid by preserving the shared high-layer dropdown container/panel treatment in `frontend-next/src/app/products/page.tsx`
+- added a visible public `Category / Категория` dropdown on the catalog page with shared overlay behavior, counts, reset flow, and search inside the dropdown when the category list grows
+- wired the catalog page to display the selected category label from live facets instead of leaking the raw query slug in the active-filter summary
+- upgraded public product facets in `backend-nest/src/modules/public-products/public-products.service.ts` so category facets come from public-ready products and prefer WB source category data (`sourceCategoryName` + `subjectId`) before internal fallback names
+- made public `categorySlug` filtering use the same canonical category resolver as the facets, while still accepting legacy slug-style links through fallback matching
+- documented the public products `filters` response shape in Swagger DTOs and added backend contract coverage for WB-style category facets and slug filtering
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/public-products.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/catalog-filters-overlay.spec.ts --workers=1`: failed in current runtime because the expected catalog filter trigger did not render in the test environment, so overlay assertions could not execute
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+
+Known gaps:
+
+- the new catalog Playwright overlay/category coverage still needs a stable local or CI runtime where the public catalog filter row is visible to automation

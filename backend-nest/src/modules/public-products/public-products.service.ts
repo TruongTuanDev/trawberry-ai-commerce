@@ -25,6 +25,7 @@ type PublicProductRecord = {
   averageRating: Prisma.Decimal | null;
   feedbackCount: number | null;
   categoryId: bigint | null;
+  subjectId: bigint | null;
   createdAt: Date;
   publishedAt: Date | null;
   updatedAt: Date;
@@ -50,8 +51,22 @@ type PublicProductRecord = {
 
 type FacetProductRecord = Pick<
   PublicProductRecord,
-  'brand' | 'color' | 'gender' | 'categoryName' | 'category' | 'variants'
+  | 'brand'
+  | 'color'
+  | 'gender'
+  | 'categoryName'
+  | 'sourceCategoryName'
+  | 'subjectId'
+  | 'category'
+  | 'variants'
 >;
+
+type ResolvedPublicCategoryFacet = {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+};
 
 @Injectable()
 export class PublicProductsService {
@@ -116,11 +131,7 @@ export class PublicProductsService {
             },
           }
         : {}),
-      ...(query.categoryId
-        ? { categoryId: BigInt(query.categoryId) }
-        : query.categorySlug
-          ? { category: { slug: query.categorySlug, isActive: true } }
-          : {}),
+      ...(query.categoryId ? { categoryId: BigInt(query.categoryId) } : {}),
       ...(query.brand?.trim()
         ? { brand: { contains: query.brand.trim(), mode: 'insensitive' } }
         : {}),
@@ -204,6 +215,13 @@ export class PublicProductsService {
         : {}),
     };
 
+    const facetWhere: Prisma.ProductWhereInput = {
+      ...where,
+    };
+    if (query.categoryId) {
+      delete facetWhere.categoryId;
+    }
+
     const [products, facetProducts] = await Promise.all([
       this.prisma.product.findMany({
         where,
@@ -248,30 +266,25 @@ export class PublicProductsService {
         },
       }),
       this.prisma.product.findMany({
-        where: {
-          visibility: 'ACTIVE',
-          images: { some: {} },
-          shop: {
-            status: 'ACTIVE',
-            sellerProfile: { approvalStatus: 'APPROVED' },
-          },
-          variants: {
-            some: {
-              isActive: true,
-              OR: [{ discountPrice: { gt: 0 } }, { basePrice: { gt: 0 } }],
-            },
-          },
-        },
+        where: facetWhere,
         include: { category: true, variants: true },
         take: 500,
       }),
     ]);
 
+    const readinessVisibleProducts = products.filter(
+      (product) => this.productReadiness.getReadiness(product).ready,
+    );
     const visibleProducts = this.sortProducts(
-      products.filter(
-        (product) => this.productReadiness.getReadiness(product).ready,
-      ),
+      query.categorySlug
+        ? readinessVisibleProducts.filter((product) =>
+            this.matchesResolvedCategorySlug(product, query.categorySlug!),
+          )
+        : readinessVisibleProducts,
       query.sort ?? 'newest',
+    );
+    const visibleFacetProducts = facetProducts.filter(
+      (product) => this.productReadiness.getReadiness(product).ready,
     );
     const items = visibleProducts.slice(
       (query.page - 1) * query.size,
@@ -289,7 +302,7 @@ export class PublicProductsService {
             ? 0
             : Math.ceil(visibleProducts.length / query.size),
       },
-      filters: this.buildFacets(facetProducts),
+      filters: this.buildFacets(visibleFacetProducts),
     };
   }
 
@@ -513,10 +526,7 @@ export class PublicProductsService {
   }
 
   private buildFacets(products: FacetProductRecord[]) {
-    const categories = new Map<
-      string,
-      { id: string; name: string; slug: string | null; count: number }
-    >();
+    const categories = new Map<string, ResolvedPublicCategoryFacet>();
     const brands = new Map<string, number>();
     const colors = new Map<string, number>();
     const genders = new Map<string, number>();
@@ -524,15 +534,11 @@ export class PublicProductsService {
     let priceMax: Prisma.Decimal | null = null;
 
     for (const product of products) {
-      const categoryName = product.category?.name ?? product.categoryName;
-      const categoryId =
-        product.category?.id.toString() ?? product.categoryName ?? null;
-      if (categoryName && categoryId) {
-        const existing = categories.get(categoryId);
-        categories.set(categoryId, {
-          id: product.category?.id.toString() ?? '',
-          name: categoryName,
-          slug: product.category?.slug ?? null,
+      const resolvedCategory = this.resolvePublicCategoryFacet(product);
+      if (resolvedCategory) {
+        const existing = categories.get(resolvedCategory.slug);
+        categories.set(resolvedCategory.slug, {
+          ...resolvedCategory,
           count: (existing?.count ?? 0) + 1,
         });
       }
@@ -564,5 +570,85 @@ export class PublicProductsService {
       priceMin: priceMin?.toString() ?? null,
       priceMax: priceMax?.toString() ?? null,
     };
+  }
+
+  private resolvePublicCategoryFacet(
+    product: Pick<
+      PublicProductRecord,
+      'category' | 'categoryName' | 'sourceCategoryName' | 'subjectId'
+    >,
+  ): Omit<ResolvedPublicCategoryFacet, 'count'> | null {
+    const sourceCategoryName = product.sourceCategoryName?.trim() ?? null;
+    const mappedCategoryName = product.categoryName?.trim() ?? null;
+    const subjectId = product.subjectId?.toString() ?? null;
+
+    if (sourceCategoryName) {
+      return {
+        id: subjectId
+          ? `wb-subject-${subjectId}`
+          : this.slugifyCategoryValue(sourceCategoryName),
+        name: sourceCategoryName,
+        slug: subjectId
+          ? `wb-subject-${subjectId}`
+          : this.slugifyCategoryValue(sourceCategoryName),
+      };
+    }
+
+    if (product.category?.name) {
+      return {
+        id: product.category.id.toString(),
+        name: product.category.name,
+        slug:
+          product.category.slug ??
+          this.slugifyCategoryValue(product.category.name),
+      };
+    }
+
+    if (mappedCategoryName) {
+      return {
+        id: this.slugifyCategoryValue(mappedCategoryName),
+        name: mappedCategoryName,
+        slug: this.slugifyCategoryValue(mappedCategoryName),
+      };
+    }
+
+    return null;
+  }
+
+  private matchesResolvedCategorySlug(
+    product: Pick<
+      PublicProductRecord,
+      'category' | 'categoryName' | 'sourceCategoryName' | 'subjectId'
+    >,
+    categorySlug: string,
+  ) {
+    const resolved = this.resolvePublicCategoryFacet(product);
+    const normalizedSlug = categorySlug.trim().toLowerCase();
+    const legacyCandidates = [
+      resolved?.slug,
+      product.category?.slug,
+      product.sourceCategoryName
+        ? this.slugifyCategoryValue(product.sourceCategoryName)
+        : null,
+      product.categoryName
+        ? this.slugifyCategoryValue(product.categoryName)
+        : null,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.toLowerCase());
+
+    return legacyCandidates.includes(normalizedSlug);
+  }
+
+  private slugifyCategoryValue(value: string) {
+    const normalized = value
+      .normalize('NFKC')
+      .trim()
+      .toLowerCase()
+      .replace(/['"`]/g, '')
+      .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+      .replace(/^-+|-+$/g, '');
+
+    return normalized || 'category';
   }
 }
