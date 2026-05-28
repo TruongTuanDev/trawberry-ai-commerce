@@ -135,8 +135,19 @@ function ProductsPageContent({
         setActiveDropdown(null);
       }
     };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveDropdown(null);
+      }
+    };
+
     document.addEventListener("click", handleOutsideClick);
-    return () => document.removeEventListener("click", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   useEffect(() => {
@@ -267,6 +278,9 @@ function ProductsPageContent({
   };
 
   const categoryOptions = useMemo(() => facets?.categories ?? [], [facets]);
+  const dropdownContainerClass = "relative z-20 shrink-0 custom-dropdown-container";
+  const dropdownPanelClass =
+    "absolute left-0 top-full mt-2 z-[60] overflow-hidden rounded-[1.25rem] border border-gray-100 bg-white shadow-xl";
 
   const showFilters = useMemo(() => {
     if (!isMounted) return false;
@@ -374,12 +388,12 @@ function ProductsPageContent({
 
           {!hasActiveFilters && <PublicHomepageHeroSlider initialSlides={slides} />}
 
-          <div className={showFilters ? "space-y-4" : "hidden"}>
-              <section className="bg-gray-50/70 p-3.5 rounded-[1.8rem] border border-[var(--border)] shadow-sm backdrop-blur-md">
+          <div className={showFilters ? "relative z-30 space-y-4 overflow-visible" : "hidden"}>
+              <section className="relative z-30 overflow-visible rounded-[1.8rem] border border-[var(--border)] bg-gray-50/70 p-3.5 shadow-sm backdrop-blur-md">
                 <form
                   id="filter-form"
                   onSubmit={handleSearch}
-                  className="flex flex-wrap items-center justify-between gap-3 w-full"
+                  className="flex w-full flex-wrap items-center justify-between gap-3 overflow-visible"
                 >
 
                   {/* Wrapped Horizontal Filter Row */}
@@ -408,7 +422,7 @@ function ProductsPageContent({
                     </button>
 
                     {/* Custom Sort Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "sort" ? null : "sort")}
@@ -431,7 +445,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "sort" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-2.5 min-w-[200px] flex flex-col gap-1">
+                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-1 p-2.5`}>
                           {[
                             { label: t("catalog.sortOptions.newest"), value: "newest" },
                             { label: t("catalog.sortOptions.price_asc"), value: "price_asc" },
@@ -481,7 +495,7 @@ function ProductsPageContent({
                     </button>
 
                     {/* Custom Price Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "price" ? null : "price")}
@@ -506,7 +520,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "price" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[240px] flex flex-col gap-3">
+                        <div className={`${dropdownPanelClass} flex min-w-[240px] flex-col gap-3 p-4`}>
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.priceFilter")}</div>
                           <div className="flex items-center gap-2">
                             <div className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 flex flex-col">
@@ -565,7 +579,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Срок доставки Mockup */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "delivery" ? null : "delivery")}
@@ -581,7 +595,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "delivery" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
+                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-2 p-4`}>
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.deliveryTime")}</div>
                           {["Завтра", "До 2 дней", "До 3 дней", "До 5 дней"].map((d) => (
                             <label key={d} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
@@ -594,10 +608,11 @@ function ProductsPageContent({
                     </div>
 
                     {/* Custom Color Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "color" ? null : "color")}
+                        data-testid="catalog-filter-color-trigger"
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "color" || filters.color
                             ? "bg-[#cb11ab]/5 border-[#cb11ab] text-[#cb11ab]"
@@ -615,7 +630,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "color" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[220px] max-h-[300px] overflow-y-auto scrollbar-thin flex flex-col gap-3">
+                        <div className={`${dropdownPanelClass} flex max-h-[300px] min-w-[220px] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin`} data-testid="catalog-filter-color-panel">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseColor")}</div>
                           <input
                             value={filters.color}
@@ -683,7 +698,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Размеры одежды Mockup */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "sizes" ? null : "sizes")}
@@ -699,7 +714,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "sizes" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
+                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-2 p-4`}>
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.sizes")}</div>
                           <div className="grid grid-cols-3 gap-2">
                             {["42", "44", "46", "48", "50", "52"].map((s) => (
@@ -713,7 +728,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Детский рост Mockup */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "height" ? null : "height")}
@@ -729,7 +744,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "height" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
+                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-2 p-4`}>
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.childHeightTitle")}</div>
                           {["92-98", "104-110", "116-122", "128-134"].map((h) => (
                             <label key={h} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
@@ -742,7 +757,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Custom Gender Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "gender" ? null : "gender")}
@@ -763,7 +778,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "gender" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-3">
+                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-3 p-4`}>
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseGender")}</div>
                           <input
                             value={filters.gender}
@@ -831,7 +846,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Custom Brand Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "brand" ? null : "brand")}
@@ -852,7 +867,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "brand" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[240px] max-h-[300px] overflow-y-auto scrollbar-thin flex flex-col gap-3">
+                        <div className={`${dropdownPanelClass} flex max-h-[300px] min-w-[240px] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin`}>
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseBrand")}</div>
                           <input
                             value={filters.brand}
@@ -1009,7 +1024,7 @@ function ProductsPageContent({
           </div>
 
           {loading ? (
-            <section className={`grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
                   <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
@@ -1023,7 +1038,7 @@ function ProductsPageContent({
               ))}
             </section>
           ) : items.length ? (
-            <section className={`grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

@@ -1,5 +1,25 @@
 # Project Status
 
+## Catalog Filter Dropdown Overlay - 2026-05-28
+
+- Status: implemented on branch `dev/bugfix/catalog-filter-dropdown-overlay`
+- Public catalog filter dropdowns now render above the product grid and product cards.
+- Root cause was the catalog filter bar's own stacking context from `backdrop-blur-md`, which trapped the dropdown overlays below later sibling content.
+- The fix keeps overlay behavior consistent across the shared inline catalog dropdowns:
+  - filter container promoted to a higher controlled stack level
+  - dropdown panels promoted above the grid inside that context
+  - product grid normalized to `z-0`
+  - outside-click close preserved
+  - `Escape` close added
+- Added focused overlay test ids and a targeted Playwright spec:
+  - `frontend-next/tests/e2e/catalog-filters-overlay.spec.ts`
+- Current verification status:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - focused Playwright rerun still requires local frontend runtime on `127.0.0.1:3000`
+  - unrelated user-local stash for `frontend-next/src/app/layout.tsx` remains intentionally untouched
+
 ## AI Try-On Supported Category Selector - 2026-05-28
 
 - Status: implemented on branch `dev/feature/ai-settings-supported-category-selector`
