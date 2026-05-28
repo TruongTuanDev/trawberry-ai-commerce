@@ -33,6 +33,8 @@ function resolveTryOnErrorMessage(
 ) {
   if (error instanceof ApiError) {
     switch (error.code) {
+      case "AI_TRY_ON_PRODUCT_UNSUPPORTED":
+        return t("aiTryOn.productUnsupported");
       case "AI_PROVIDER_NOT_CONFIGURED":
         return t("aiTryOn.providerNotConfigured");
       case "AI_TRY_ON_IMAGE_UNSUITABLE":
@@ -51,6 +53,8 @@ function resolveTryOnErrorMessage(
 
 function resolveTaskErrorMessage(task: AiTryOnTask, t: (key: string) => string) {
   switch (task.errorCode) {
+    case "AI_TRY_ON_PRODUCT_UNSUPPORTED":
+      return t("aiTryOn.productUnsupported");
     case "AI_PROVIDER_NOT_CONFIGURED":
       return t("aiTryOn.providerNotConfigured");
     case "AI_TRY_ON_IMAGE_UNSUITABLE":

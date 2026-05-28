@@ -1,5 +1,38 @@
 # Project Status
 
+## AI Try-On Supported Category Selector - 2026-05-28
+
+- Status: implemented on branch `dev/feature/ai-settings-supported-category-selector`
+- Admin AI Settings now uses a predefined checkbox-chip selector instead of free-text category input.
+- Canonical AI try-on category slugs remain backend-compatible:
+  - `tops`
+  - `pants`
+  - `jeans`
+  - `shorts`
+  - `bermuda`
+  - `dresses`
+  - `skirts`
+  - `jackets`
+  - `hoodies`
+  - `shoes`
+  - `bags`
+  - `accessories`
+- Backward compatibility is preserved:
+  - legacy comma-separated values are parsed
+  - aliases normalize to canonical slugs
+  - unknown legacy values stay visible in a warning group until removed
+- AI try-on product support matching now recognizes canonical slugs, aliases, and phrase-style category names such as `Шорты джинсовые бермуды`.
+- RU public try-on error handling now maps unsupported-product responses to localized copy instead of exposing raw English backend text.
+- Admin locale policy for the touched flow is now `en/ru`, and the shared language switcher is visible in the admin shell.
+- Current verification status:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- Current gaps:
+  - focused Playwright rerun for `tests/e2e/ai-try-on-mvp.spec.ts` still requires live local frontend/backend services
+  - broader admin surfaces outside AI Settings remain mostly English-first and are outside this phase scope
+
 ## Shipping Label I18n Data Values - 2026-05-28
 
 - Status: implemented on branch `dev/bugfix/shipping-label-i18n-data-values`
