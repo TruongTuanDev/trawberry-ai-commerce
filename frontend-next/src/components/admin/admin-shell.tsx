@@ -3,29 +3,32 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { useAuthStore } from "@/stores/auth-store";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { useI18n } from "@/i18n/use-i18n";
 
 const navLinks = [
-  { href: "/admin/dashboard", label: "Dashboard", match: "/admin/dashboard" },
-  { href: "/admin/notifications", label: "Notifications", match: "/admin/notifications" },
-  { href: "/admin/sellers", label: "Seller approvals", match: "/admin/sellers" },
-  { href: "/admin/deliveries", label: "Delivery supervision", match: "/admin/deliveries" },
-  { href: "/admin/payments-supervision", label: "Payments supervision", match: "/admin/payments-supervision" },
-  { href: "/admin/returns", label: "Returns / disputes", match: "/admin/returns" },
-  { href: "/admin/messages", label: "Messages", match: "/admin/messages" },
-  { href: "/admin/reviews", label: "Reviews", match: "/admin/reviews" },
-  { href: "/admin/finance/seller-fees", label: "Finance / Seller fees", match: "/admin/finance" },
-  { href: "/admin/queues", label: "Operational queues", match: "/admin/queues" },
-  { href: "/admin/support-cases", label: "Support cases", match: "/admin/support-cases" },
-  { href: "/admin/reports", label: "Reports", match: "/admin/reports" },
-  { href: "/admin/homepage-slides", label: "Homepage slides", match: "/admin/homepage-slides" },
-  { href: "/admin/ai-settings", label: "AI settings", match: "/admin/ai-settings" },
+  { href: "/admin/dashboard", key: "adminShell.nav.dashboard", match: "/admin/dashboard" },
+  { href: "/admin/notifications", key: "adminShell.nav.notifications", match: "/admin/notifications" },
+  { href: "/admin/sellers", key: "adminShell.nav.sellers", match: "/admin/sellers" },
+  { href: "/admin/deliveries", key: "adminShell.nav.deliveries", match: "/admin/deliveries" },
+  { href: "/admin/payments-supervision", key: "adminShell.nav.payments", match: "/admin/payments-supervision" },
+  { href: "/admin/returns", key: "adminShell.nav.returns", match: "/admin/returns" },
+  { href: "/admin/messages", key: "adminShell.nav.messages", match: "/admin/messages" },
+  { href: "/admin/reviews", key: "adminShell.nav.reviews", match: "/admin/reviews" },
+  { href: "/admin/finance/seller-fees", key: "adminShell.nav.finance", match: "/admin/finance" },
+  { href: "/admin/queues", key: "adminShell.nav.queues", match: "/admin/queues" },
+  { href: "/admin/support-cases", key: "adminShell.nav.supportCases", match: "/admin/support-cases" },
+  { href: "/admin/reports", key: "adminShell.nav.reports", match: "/admin/reports" },
+  { href: "/admin/homepage-slides", key: "adminShell.nav.homepageSlides", match: "/admin/homepage-slides" },
+  { href: "/admin/ai-settings", key: "adminShell.nav.aiSettings", match: "/admin/ai-settings" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n("admin");
   const user = useAuthStore((state) => state.adminUser);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -39,7 +42,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="card-panel max-w-md rounded-[1.5rem] px-8 py-6 text-center">
-          <p className="text-sm text-[var(--muted)]">Checking admin access...</p>
+          <p className="text-sm text-[var(--muted)]">{t("adminShell.checkingAccess")}</p>
         </div>
       </div>
     );
@@ -50,8 +53,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex min-h-screen lg:min-h-0 lg:h-full w-full max-w-[1400px] overflow-hidden bg-[var(--panel)] lg:rounded-[2rem] lg:border lg:border-[var(--border)] lg:shadow-[var(--shadow)]">
         <aside className="hidden w-72 border-r border-slate-800 bg-slate-900 text-slate-100 lg:sticky lg:top-0 lg:block lg:h-full shrink-0">
           <div className="h-full overflow-y-auto p-6 scrollbar-thin">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
-            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t("adminShell.badge")}</p>
+            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">{t("adminShell.title")}</h1>
             <nav className="mt-8 space-y-2">
               {navLinks.map((link) => (
                 <Link
@@ -61,7 +64,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     pathname.startsWith(link.match) ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
-                  {link.label}
+                  {t(link.key)}
                 </Link>
               ))}
             </nav>
@@ -83,14 +86,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </button>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Marketplace Ops
+                  {t("adminShell.title")}
                 </p>
                 <h2 className="text-sm font-semibold text-slate-800">
-                  Logged in as {user.email}
+                  {t("adminShell.loggedInAs", { email: user.email })}
                 </h2>
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <LanguageSwitcher role="admin" compact />
               <NotificationBell role="admin" />
               <button
                 onClick={async () => {
@@ -99,7 +103,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 }}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
               >
-                Log out
+                {t("common.logout")}
               </button>
             </div>
           </header>
@@ -118,12 +122,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {/* Drawer content */}
           <aside className="relative flex w-72 max-w-xs flex-col bg-slate-900 p-6 text-slate-100 shadow-2xl transition-transform">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Admin</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t("adminShell.badge")}</p>
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
-                aria-label="Close menu"
+                aria-label={t("adminShell.closeMenu")}
                 data-testid="admin-mobile-menu-close"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,7 +135,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </svg>
               </button>
             </div>
-            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">Marketplace Ops</h1>
+            <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">{t("adminShell.title")}</h1>
             <nav className="mt-8 flex-1 space-y-2 overflow-y-auto scrollbar-thin">
               {navLinks.map((link) => (
                 <Link
@@ -142,7 +146,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     pathname.startsWith(link.match) ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
-                  {link.label}
+                  {t(link.key)}
                 </Link>
               ))}
             </nav>

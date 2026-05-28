@@ -23,6 +23,11 @@ import {
   findBuiltInTryOnModel,
   BUILT_IN_TRY_ON_MODELS,
 } from './ai-try-on-models';
+import {
+  normalizeSupportedCategoryValues,
+  readSupportedCategoryValues,
+  resolveProductCategorySlugs,
+} from './ai-try-on-supported-categories';
 import { AiTryOnWorkerService } from './ai-try-on.worker';
 import { UpdateAiTryOnSettingsDto } from './dto/ai-try-on-settings.dto';
 import { CreateAiTryOnTaskDto } from './dto/create-ai-try-on-task.dto';
@@ -395,14 +400,12 @@ export class AiTryOnService {
       return true;
     }
 
-    const candidates = [
+    const candidates = resolveProductCategorySlugs([
       product.category?.slug,
       product.category?.name,
       product.categoryName,
       product.sourceCategoryName,
-    ]
-      .filter((value): value is string => Boolean(value?.trim()))
-      .map((value) => value.trim().toLowerCase());
+    ]);
 
     return candidates.some((candidate) => supported.includes(candidate));
   }
@@ -455,19 +458,11 @@ export class AiTryOnService {
   }
 
   private normalizeSupportedCategories(values: string[]) {
-    return [
-      ...new Set(
-        values.map((value) => value.trim().toLowerCase()).filter(Boolean),
-      ),
-    ];
+    return normalizeSupportedCategoryValues(values);
   }
 
   private readSupportedCategories(value: Prisma.JsonValue | null) {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value.filter((item): item is string => typeof item === 'string');
+    return readSupportedCategoryValues(value);
   }
 
   private mapSettings(

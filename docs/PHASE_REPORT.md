@@ -1,5 +1,60 @@
 # Phase Report
 
+## 2026-05-28 AI Try-On Supported Category Selector
+
+- replaced the admin AI settings `Supported categories` free-text textarea with a predefined checkbox-chip selector
+- added canonical AI try-on product type catalog for admin selection:
+  - `tops`
+  - `pants`
+  - `jeans`
+  - `shorts`
+  - `bermuda`
+  - `dresses`
+  - `skirts`
+  - `jackets`
+  - `hoodies`
+  - `shoes`
+  - `bags`
+  - `accessories`
+- added `Select recommended` and `Clear all` actions plus selected-count feedback
+- kept backward compatibility for legacy saved values:
+  - legacy comma-separated data is parsed and normalized
+  - unknown legacy values are preserved in a dedicated `Custom / Unknown` warning group until the admin removes them
+- normalized saved values to canonical slugs while preserving current backend contract shape
+- expanded backend category matching so AI try-on support checks now recognize aliases and phrases such as:
+  - `шорты`
+  - `бермуды`
+  - `брюки`
+  - `джинсы`
+  - `платье`
+  - `юбка`
+  - mixed phrases like `Шорты джинсовые бермуды`
+- localized the unsupported product message in the public AI try-on flow so RU no longer falls back to raw English backend text
+- expanded admin locale support from English-only to `en/ru` and exposed the shared language switcher in the admin shell for this screen
+- updated focused backend and frontend AI try-on regression coverage for:
+  - legacy category parsing
+  - canonical save payload
+  - RU unsupported messaging
+  - bermuda/shorts alias support
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `backend-nest npm run lint`: pass with no errors after helper cleanup
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `frontend-next npx playwright test tests/e2e/ai-try-on-mvp.spec.ts --workers=1`: not run because local frontend/backend runtime was not started in this phase
+- `git diff --check`: pending final run after docs update
+- `git ls-files | Select-String "\.env"`: pending final run after docs update
+- `git ls-files data.xlsx`: pending final run after docs update
+
+Remaining gaps:
+
+- the admin shell still contains broader historical English-first areas outside the touched AI settings surface; this phase only added `en/ru` support needed for the current screen and shell chrome
+- focused browser E2E for the updated AI try-on flow still needs a live local frontend/backend runtime before it can be executed
+- existing unrelated dirty file `frontend-next/src/app/layout.tsx` was left untouched
+
 ## 2026-05-28 Shipping Label I18n Data Values
 
 - audited seller shipping label print flow for remaining RU data-value leaks

@@ -457,6 +457,19 @@ describe('AiTryOnController (e2e)', () => {
     expect(body.providerMode).toBe('mock');
   });
 
+  it('reads legacy supported categories and normalizes them to canonical slugs', async () => {
+    settings.supportedCategories =
+      'jackets, dresses, pants' as unknown as string[];
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/ai-try-on/config')
+      .expect(200);
+
+    expect(
+      readBody<{ supportedCategories: string[] }>(response).supportedCategories,
+    ).toEqual(['jackets', 'dresses', 'pants']);
+  });
+
   it('blocks task creation when feature is disabled', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/public/products/product-1/try-on/tasks')
@@ -659,6 +672,31 @@ describe('AiTryOnController (e2e)', () => {
     const body = readBody<{ status: string; errorCode: string | null }>(task);
     expect(body.status).toBe('FAILED');
     expect(body.errorCode).toBe('AI_PROVIDER_NOT_CONFIGURED');
+  });
+
+  it('supports alias and phrase matching for configured try-on categories', async () => {
+    settings.aiTryOnEnabled = true;
+    settings.supportedCategories = ['bermuda'];
+    prismaMock.product.findFirst.mockResolvedValue({
+      ...product,
+      localTitle: 'Шорты джинсовые бермуды',
+      wbTitle: 'Шорты джинсовые бермуды',
+      category: null,
+      categoryName: 'Шорты джинсовые бермуды',
+      sourceCategoryName: 'Шорты джинсовые бермуды',
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-bermuda')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    expect(readBody<{ status: string }>(response).status).toBe('COMPLETED');
   });
 });
 

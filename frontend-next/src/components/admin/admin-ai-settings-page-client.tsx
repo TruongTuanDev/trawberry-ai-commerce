@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  RECOMMENDED_TRY_ON_CATEGORY_SLUGS,
+  SUPPORTED_TRY_ON_CATEGORIES,
+  parseSupportedCategoryValues,
+} from "@/lib/ai-try-on-supported-categories";
 import {
   getAdminAiTryOnSettings,
   updateAdminAiTryOnSettings,
   type AdminAiTryOnSettings,
 } from "@/lib/admin-api";
+import { useI18n } from "@/i18n/use-i18n";
 
 type FormState = {
   enabled: boolean;
@@ -13,17 +19,24 @@ type FormState = {
   guestDailyLimit: string;
   customerDailyLimit: string;
   requireConsent: boolean;
-  supportedCategories: string;
+  selectedCategories: string[];
+  unknownCategories: string[];
 };
 
+function unique(values: string[]) {
+  return [...new Set(values)];
+}
+
 export function AdminAiSettingsPageClient() {
+  const { t } = useI18n("admin");
   const [form, setForm] = useState<FormState>({
     enabled: false,
     providerMode: "mock",
     guestDailyLimit: "3",
     customerDailyLimit: "5",
     requireConsent: true,
-    supportedCategories: "",
+    selectedCategories: [],
+    unknownCategories: [],
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,14 +47,19 @@ export function AdminAiSettingsPageClient() {
     "providerConfigured" | "aiServiceReachable" | "providerSafeErrorCode"
   > | null>(null);
 
+  const selectedCount = form.selectedCategories.length + form.unknownCategories.length;
+  const hasUnknownCategories = form.unknownCategories.length > 0;
+
   const hydrateForm = (settings: AdminAiTryOnSettings) => {
+    const parsed = parseSupportedCategoryValues(settings.supportedCategories);
     setForm({
       enabled: settings.enabled,
       providerMode: settings.providerMode,
       guestDailyLimit: String(settings.guestDailyLimit),
       customerDailyLimit: String(settings.customerDailyLimit),
       requireConsent: settings.requireConsent,
-      supportedCategories: settings.supportedCategories.join(", "),
+      selectedCategories: parsed.known,
+      unknownCategories: parsed.unknown,
     });
     setRuntime({
       providerConfigured: settings.providerConfigured,
@@ -64,7 +82,7 @@ export function AdminAiSettingsPageClient() {
         setError(
           requestError instanceof Error
             ? requestError.message
-            : "Unable to load AI settings.",
+            : t("adminAiSettings.loadFailed"),
         );
       } finally {
         if (mounted) {
@@ -77,7 +95,34 @@ export function AdminAiSettingsPageClient() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
+
+  const categoryOptions = useMemo(
+    () =>
+      SUPPORTED_TRY_ON_CATEGORIES.map((category) => ({
+        ...category,
+        label: t(category.labelKey),
+      })),
+    [t],
+  );
+
+  const toggleCategory = (slug: string, checked: boolean) => {
+    setForm((current) => ({
+      ...current,
+      selectedCategories: checked
+        ? unique([...current.selectedCategories, slug])
+        : current.selectedCategories.filter((value) => value !== slug),
+    }));
+  };
+
+  const toggleUnknownCategory = (slug: string, checked: boolean) => {
+    setForm((current) => ({
+      ...current,
+      unknownCategories: checked
+        ? unique([...current.unknownCategories, slug])
+        : current.unknownCategories.filter((value) => value !== slug),
+    }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -90,18 +135,18 @@ export function AdminAiSettingsPageClient() {
         guestDailyLimit: Number(form.guestDailyLimit || 0),
         customerDailyLimit: Number(form.customerDailyLimit || 0),
         requireConsent: form.requireConsent,
-        supportedCategories: form.supportedCategories
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean),
+        supportedCategories: unique([
+          ...form.selectedCategories,
+          ...form.unknownCategories,
+        ]),
       });
       hydrateForm(saved);
-      setMessage("AI settings saved.");
+      setMessage(t("adminAiSettings.saved"));
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Unable to save AI settings.",
+          : t("adminAiSettings.saveFailed"),
       );
     } finally {
       setSaving(false);
@@ -111,7 +156,7 @@ export function AdminAiSettingsPageClient() {
   if (loading) {
     return (
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-8">
-        <p className="text-sm text-[var(--muted)]">Loading AI settings...</p>
+        <p className="text-sm text-[var(--muted)]">{t("adminAiSettings.loading")}</p>
       </section>
     );
   }
@@ -120,14 +165,13 @@ export function AdminAiSettingsPageClient() {
     <div className="space-y-6" data-testid="admin-ai-settings-page">
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-          AI Settings
+          {t("adminAiSettings.eyebrow")}
         </p>
         <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-          Marketplace AI try-on
+          {t("adminAiSettings.title")}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-          Control the public AI try-on flow, provider mode, rate limits, consent,
-          and supported categories from one admin-only screen.
+          {t("adminAiSettings.description")}
         </p>
       </section>
 
@@ -135,8 +179,8 @@ export function AdminAiSettingsPageClient() {
         <div className="space-y-5 rounded-[1.75rem] border border-[var(--border)] bg-white p-6">
           <label className="flex items-center justify-between gap-4 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
             <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">Enable AI Try-On</p>
-              <p className="mt-1 text-xs text-[var(--muted)]">Keep the public button visible, but gate the full flow here.</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">{t("adminAiSettings.enableLabel")}</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">{t("adminAiSettings.enableHint")}</p>
             </div>
             <input
               type="checkbox"
@@ -148,7 +192,7 @@ export function AdminAiSettingsPageClient() {
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="space-y-2 text-sm text-[var(--foreground)]">
-              <span className="font-medium">Provider mode</span>
+              <span className="font-medium">{t("adminAiSettings.providerModeLabel")}</span>
               <select
                 value={form.providerMode}
                 onChange={(event) =>
@@ -160,14 +204,14 @@ export function AdminAiSettingsPageClient() {
                 className="public-input"
                 data-testid="admin-ai-settings-provider-mode"
               >
-                <option value="mock">Mock</option>
-                <option value="demo">Demo</option>
-                <option value="openai">OpenAI</option>
+                <option value="mock">{t("adminAiSettings.providerModes.mock")}</option>
+                <option value="demo">{t("adminAiSettings.providerModes.demo")}</option>
+                <option value="openai">{t("adminAiSettings.providerModes.openai")}</option>
               </select>
             </label>
 
             <label className="space-y-2 text-sm text-[var(--foreground)]">
-              <span className="font-medium">Require consent</span>
+              <span className="font-medium">{t("adminAiSettings.requireConsentLabel")}</span>
               <select
                 value={form.requireConsent ? "true" : "false"}
                 onChange={(event) =>
@@ -179,15 +223,15 @@ export function AdminAiSettingsPageClient() {
                 className="public-input"
                 data-testid="admin-ai-settings-require-consent"
               >
-                <option value="true">Yes</option>
-                <option value="false">No</option>
+                <option value="true">{t("common.yes")}</option>
+                <option value="false">{t("common.no")}</option>
               </select>
             </label>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="space-y-2 text-sm text-[var(--foreground)]">
-              <span className="font-medium">Guest daily limit</span>
+              <span className="font-medium">{t("adminAiSettings.guestDailyLimitLabel")}</span>
               <input
                 value={form.guestDailyLimit}
                 onChange={(event) => setForm((current) => ({ ...current, guestDailyLimit: event.target.value }))}
@@ -198,7 +242,7 @@ export function AdminAiSettingsPageClient() {
             </label>
 
             <label className="space-y-2 text-sm text-[var(--foreground)]">
-              <span className="font-medium">Customer daily limit</span>
+              <span className="font-medium">{t("adminAiSettings.customerDailyLimitLabel")}</span>
               <input
                 value={form.customerDailyLimit}
                 onChange={(event) => setForm((current) => ({ ...current, customerDailyLimit: event.target.value }))}
@@ -209,18 +253,111 @@ export function AdminAiSettingsPageClient() {
             </label>
           </div>
 
-          <label className="space-y-2 text-sm text-[var(--foreground)]">
-            <span className="font-medium">Supported categories</span>
-            <textarea
-              value={form.supportedCategories}
-              onChange={(event) => setForm((current) => ({ ...current, supportedCategories: event.target.value }))}
-              rows={5}
-              className="public-input min-h-32"
-              placeholder="jackets, dresses, pants"
-              data-testid="admin-ai-settings-supported-categories"
-            />
-            <span className="text-xs text-[var(--muted)]">Use comma-separated slugs or names. Leave empty to allow all public-ready products with images.</span>
-          </label>
+          <section
+            className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4"
+            data-testid="admin-ai-settings-supported-categories"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold text-[var(--foreground)]">
+                    {t("adminAiSettings.supportedCategoriesLabel")}
+                  </h2>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+                    {t("adminAiSettings.selectedCount", { count: selectedCount })}
+                  </span>
+                </div>
+                <p className="max-w-3xl text-xs leading-6 text-[var(--muted)]">
+                  {t("adminAiSettings.supportedCategoriesHelp")}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      selectedCategories: [...RECOMMENDED_TRY_ON_CATEGORY_SLUGS],
+                    }))
+                  }
+                  className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
+                  data-testid="admin-ai-settings-select-recommended"
+                >
+                  {t("adminAiSettings.selectRecommended")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      selectedCategories: [],
+                      unknownCategories: [],
+                    }))
+                  }
+                  className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
+                  data-testid="admin-ai-settings-clear-all"
+                >
+                  {t("adminAiSettings.clearAll")}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {categoryOptions.map((category) => {
+                const checked = form.selectedCategories.includes(category.slug);
+                return (
+                  <label
+                    key={category.slug}
+                    className={`flex cursor-pointer items-start gap-3 rounded-[1.25rem] border px-4 py-3 transition ${
+                      checked
+                        ? "border-[var(--accent)] bg-white shadow-sm"
+                        : "border-[var(--border)] bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => toggleCategory(category.slug, event.target.checked)}
+                      className="mt-1"
+                      data-testid={`admin-ai-settings-supported-category-${category.slug}`}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-[var(--foreground)]">
+                        {category.label}
+                      </span>
+                      <span className="mt-1 block text-xs text-[var(--muted)]">{category.slug}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {hasUnknownCategories ? (
+              <div className="space-y-3 rounded-[1.25rem] border border-amber-200 bg-amber-50 px-4 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">{t("adminAiSettings.unknownTitle")}</p>
+                  <p className="mt-1 text-xs leading-6 text-amber-800">{t("adminAiSettings.unknownHelp")}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {form.unknownCategories.map((slug) => (
+                    <label
+                      key={slug}
+                      className="flex cursor-pointer items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-2 text-xs font-medium text-amber-900"
+                    >
+                      <input
+                        type="checkbox"
+                        checked
+                        onChange={(event) => toggleUnknownCategory(slug, event.target.checked)}
+                        data-testid={`admin-ai-settings-unknown-category-${slug}`}
+                      />
+                      <span>{slug}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
 
           {message ? (
             <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700" data-testid="admin-ai-settings-success">
@@ -241,34 +378,38 @@ export function AdminAiSettingsPageClient() {
               className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="admin-ai-settings-save"
             >
-              {saving ? "Saving..." : "Save settings"}
+              {saving ? t("adminAiSettings.saving") : t("adminAiSettings.save")}
             </button>
           </div>
         </div>
 
         <aside className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-            Runtime notes
+            {t("adminAiSettings.runtimeNotesTitle")}
           </p>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--foreground)]">
-            <li>Mock and Demo stay fully local and deterministic for stable E2E and defense demos.</li>
-            <li>OpenAI mode stays on the same backend to ai-service provider path and never exposes API keys to the browser.</li>
-            <li>Rate limits are enforced server-side for both guests and authenticated customers.</li>
+            <li>{t("adminAiSettings.runtimeNotes.mock")}</li>
+            <li>{t("adminAiSettings.runtimeNotes.openai")}</li>
+            <li>{t("adminAiSettings.runtimeNotes.limits")}</li>
           </ul>
           {form.providerMode === "openai" ? (
             <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4 text-sm leading-6 text-[var(--foreground)]">
-              <p className="font-semibold">OpenAI provider requires OPENAI_API_KEY in the ai-service environment.</p>
+              <p className="font-semibold">{t("adminAiSettings.openAiHint")}</p>
               <p className="mt-2" data-testid="admin-ai-settings-openai-status">
-                Status:{" "}
-                {runtime?.aiServiceReachable === false
-                  ? "ai-service unreachable"
-                  : runtime?.providerConfigured
-                    ? "configured"
-                    : "not configured"}
+                {t("adminAiSettings.openAiStatus", {
+                  status:
+                    runtime?.aiServiceReachable === false
+                      ? t("adminAiSettings.runtimeStatus.unreachable")
+                      : runtime?.providerConfigured
+                        ? t("adminAiSettings.runtimeStatus.configured")
+                        : t("adminAiSettings.runtimeStatus.notConfigured"),
+                })}
               </p>
               {runtime?.providerSafeErrorCode ? (
                 <p className="mt-2 text-xs text-[var(--muted)]">
-                  Safe status code: {runtime.providerSafeErrorCode}
+                  {t("adminAiSettings.safeStatusCode", {
+                    code: runtime.providerSafeErrorCode,
+                  })}
                 </p>
               ) : null}
             </div>

@@ -110,7 +110,15 @@ async function approveSeller(request: APIRequestContext, email: string) {
   return { token: sellerLogin.accessToken, adminToken: cachedAdminToken };
 }
 
-async function createProduct(request: APIRequestContext, token: string, stamp: number) {
+async function createProduct(
+  request: APIRequestContext,
+  token: string,
+  stamp: number,
+  options?: {
+    title?: string;
+    categoryName?: string;
+  },
+) {
   const shop = await backendJson<{ id: string }>(request, "/api/shops", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, Cookie: "" },
@@ -129,10 +137,10 @@ async function createProduct(request: APIRequestContext, token: string, stamp: n
     headers: { Authorization: `Bearer ${token}`, Cookie: "" },
     data: {
       wbNmId,
-      wbTitle: `AI Try-On Jacket ${stamp}`,
-      localTitle: `AI Try-On Jacket ${stamp}`,
+      wbTitle: options?.title ?? `AI Try-On Jacket ${stamp}`,
+      localTitle: options?.title ?? `AI Try-On Jacket ${stamp}`,
       localDescription: "AI try-on public product",
-      categoryName: "jackets",
+      categoryName: options?.categoryName ?? "jackets",
       visibility: "ACTIVE",
       aiTryOnEnabled: true,
       variants: [
@@ -231,7 +239,7 @@ test("AI Try-On mock flow works from disabled state to completed result", async 
   await page.getByTestId("admin-ai-settings-provider-mode").selectOption("mock");
   await page.getByTestId("admin-ai-settings-guest-limit").fill("3");
   await page.getByTestId("admin-ai-settings-customer-limit").fill("5");
-  await page.getByTestId("admin-ai-settings-supported-categories").fill("jackets");
+  await page.getByTestId("admin-ai-settings-supported-category-jackets").check();
   await page.getByTestId("admin-ai-settings-save").click();
   await expect(page.getByTestId("admin-ai-settings-success")).toContainText("AI settings saved.");
 
@@ -339,4 +347,114 @@ test("AI Try-On openai mode surfaces provider configuration errors without expos
   await expect(page.getByTestId("ai-try-on-error")).toContainText(
     /AI provider is not configured\.|Провайдер ИИ не настроен\./,
   );
+});
+
+test("Admin AI settings category selector parses legacy values and saves canonical slugs", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180000);
+
+  const stamp = Date.now() + 33;
+  const seller = await approveSeller(request, `ai-try-on-admin-${stamp}@example.com`);
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "mock",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["jackets", "dresses", "pants"],
+    },
+  });
+
+  await loginAdmin(page);
+  await page.goto("/admin/ai-settings");
+  await expect(page.getByTestId("admin-ai-settings-supported-category-jackets")).toBeChecked();
+  await expect(page.getByTestId("admin-ai-settings-supported-category-dresses")).toBeChecked();
+  await expect(page.getByTestId("admin-ai-settings-supported-category-pants")).toBeChecked();
+
+  await page.getByTestId("admin-ai-settings-clear-all").click();
+  await page.getByTestId("admin-ai-settings-select-recommended").click();
+  await page.getByTestId("admin-ai-settings-save").click();
+  await expect(page.getByTestId("admin-ai-settings-success")).toContainText("AI settings saved.");
+
+  const updated = await backendJson<{ supportedCategories: string[] }>(
+    request,
+    "/api/admin/ai-settings",
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${seller.adminToken}` },
+    },
+  );
+  expect(updated.supportedCategories).toEqual([
+    "tops",
+    "pants",
+    "jeans",
+    "shorts",
+    "bermuda",
+    "dresses",
+    "skirts",
+    "jackets",
+    "hoodies",
+  ]);
+});
+
+test("RU AI try-on keeps unsupported messaging localized and supports bermuda aliases", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180000);
+
+  const stamp = Date.now() + 44;
+  const seller = await approveSeller(request, `ai-try-on-ru-${stamp}@example.com`);
+  const product = await createProduct(request, seller.token, stamp, {
+    title: "Шорты джинсовые бермуды",
+    categoryName: "Шорты джинсовые бермуды",
+  });
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "mock",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["jackets"],
+    },
+  });
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByTestId(`product-size-${product.variants[0].id}`).click();
+  await page.getByTestId("product-ai-try-on-button").click();
+  await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+  await fillTryOnForm(page);
+  await page.getByTestId("ai-try-on-generate").click();
+  await expect(page.getByTestId("ai-try-on-error")).toContainText("AI-примерка пока недоступна для этого товара.");
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "mock",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["bermuda"],
+    },
+  });
+
+  await page.reload();
+  await page.getByTestId(`product-size-${product.variants[0].id}`).click();
+  await page.getByTestId("product-ai-try-on-button").click();
+  await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+  await fillTryOnForm(page);
+  await page.getByTestId("ai-try-on-generate").click();
+  await expect(page.getByTestId("ai-try-on-result-image")).toBeVisible();
 });

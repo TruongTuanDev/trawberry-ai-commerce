@@ -24,7 +24,7 @@ export const roleLocalePolicy: Record<
   }
 > = {
   admin: {
-    supported: ["en"],
+    supported: ["en", "ru"],
     defaultLocale: "en",
   },
   seller: {
@@ -50,7 +50,7 @@ export const localeMetadata: Record<Locale, LocaleMetadata> = {
     shortLabel: "RU",
     nativeLabel: "Русский",
     flagKey: "ru",
-    allowedRoles: ["seller", "customer"],
+    allowedRoles: ["admin", "seller", "customer"],
   },
   vi: {
     code: "vi",

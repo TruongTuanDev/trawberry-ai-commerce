@@ -335,6 +335,7 @@
     "uploadFailed": "Не удалось загрузить референсное изображение.",
     "generateFailed": "Не удалось создать AI-примерку прямо сейчас.",
     "genericError": "Во flow AI-примерки произошла ошибка.",
+    "productUnsupported": "AI-примерка пока недоступна для этого товара.",
     "providerNotConfigured": "Провайдер ИИ не настроен.",
     "imageUnsuitable": "Загруженное изображение не подходит для примерки.",
     "providerError": "Не удалось создать AI-примерку. Попробуйте ещё раз.",
@@ -2468,6 +2469,86 @@
         "CLOSED": "Закрыт",
         "REPORTED": "Есть жалоба"
       }
+    }
+  },
+  "adminShell": {
+    "badge": "Админ",
+    "title": "Marketplace Ops",
+    "checkingAccess": "Проверяем доступ администратора...",
+    "loggedInAs": "Вы вошли как {{email}}",
+    "closeMenu": "Закрыть меню",
+    "nav": {
+      "dashboard": "Дашборд",
+      "notifications": "Уведомления",
+      "sellers": "Одобрение продавцов",
+      "deliveries": "Контроль доставки",
+      "payments": "Контроль платежей",
+      "returns": "Возвраты / споры",
+      "messages": "Сообщения",
+      "reviews": "Отзывы",
+      "finance": "Финансы / комиссии",
+      "queues": "Операционные очереди",
+      "supportCases": "Обращения в поддержку",
+      "reports": "Отчёты",
+      "homepageSlides": "Слайды главной",
+      "aiSettings": "Настройки AI"
+    }
+  },
+  "adminAiSettings": {
+    "eyebrow": "Настройки AI",
+    "title": "AI-примерка маркетплейса",
+    "description": "Управляйте публичным сценарием AI-примерки, режимом провайдера, лимитами, согласием и поддерживаемыми типами товаров в одном админском экране.",
+    "loading": "Загрузка настроек AI...",
+    "loadFailed": "Не удалось загрузить настройки AI.",
+    "saved": "Настройки AI сохранены.",
+    "saveFailed": "Не удалось сохранить настройки AI.",
+    "save": "Сохранить настройки",
+    "saving": "Сохранение...",
+    "enableLabel": "Включить AI-примерку",
+    "enableHint": "Кнопка в публичном интерфейсе остаётся видимой, но полный сценарий управляется здесь.",
+    "providerModeLabel": "Режим провайдера",
+    "requireConsentLabel": "Требовать согласие",
+    "guestDailyLimitLabel": "Дневной лимит для гостей",
+    "customerDailyLimitLabel": "Дневной лимит для покупателей",
+    "supportedCategoriesLabel": "Поддерживаемые категории",
+    "supportedCategoriesHelp": "Выберите типы товаров, для которых доступна AI-примерка. Если ничего не выбрано, будут разрешены все подходящие товары с изображениями.",
+    "selectedCount": "Выбрано: {{count}}",
+    "selectRecommended": "Выбрать рекомендованные",
+    "clearAll": "Очистить всё",
+    "unknownTitle": "Свои / неизвестные",
+    "unknownHelp": "Эти старые значения не совпадают с предопределённым списком. Оставьте их отмеченными, чтобы сохранить, или снимите отметку, чтобы удалить при сохранении.",
+    "runtimeNotesTitle": "Заметки о работе",
+    "openAiHint": "Провайдер OpenAI требует OPENAI_API_KEY в окружении ai-service.",
+    "openAiStatus": "Статус: {{status}}",
+    "safeStatusCode": "Безопасный статус-код: {{code}}",
+    "runtimeStatus": {
+      "configured": "настроен",
+      "notConfigured": "не настроен",
+      "unreachable": "ai-service недоступен"
+    },
+    "providerModes": {
+      "mock": "Mock",
+      "demo": "Demo",
+      "openai": "OpenAI"
+    },
+    "runtimeNotes": {
+      "mock": "Mock и Demo остаются полностью локальными и детерминированными для стабильных E2E и demo.",
+      "openai": "Режим OpenAI идёт по цепочке backend -> ai-service и никогда не открывает API-ключи браузеру.",
+      "limits": "Лимиты применяются на сервере и для гостей, и для авторизованных покупателей."
+    },
+    "categories": {
+      "tops": "Верх",
+      "pants": "Брюки",
+      "jeans": "Джинсы",
+      "shorts": "Шорты",
+      "bermuda": "Бермуды",
+      "dresses": "Платья",
+      "skirts": "Юбки",
+      "jackets": "Куртки / верхняя одежда",
+      "hoodies": "Худи / свитшоты",
+      "shoes": "Обувь",
+      "bags": "Сумки",
+      "accessories": "Аксессуары"
     }
   }
 }

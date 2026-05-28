@@ -335,6 +335,7 @@
     "uploadFailed": "Unable to upload the reference image.",
     "generateFailed": "Unable to create the AI try-on right now.",
     "genericError": "Something went wrong in the AI try-on flow.",
+    "productUnsupported": "This product is not currently supported by AI try-on.",
     "providerNotConfigured": "AI provider is not configured.",
     "imageUnsuitable": "The uploaded image is not suitable for try-on.",
     "providerError": "AI generation failed. Please try again.",
@@ -2401,6 +2402,86 @@
       "resultEyebrow": "WB API result",
       "resultTitle": "{{syncType}} {{mode}}",
       "runStatusDescription": "Run status: {{status}}. Imported products stay private until you review and publish them."
+    }
+  },
+  "adminShell": {
+    "badge": "Admin",
+    "title": "Marketplace Ops",
+    "checkingAccess": "Checking admin access...",
+    "loggedInAs": "Logged in as {{email}}",
+    "closeMenu": "Close menu",
+    "nav": {
+      "dashboard": "Dashboard",
+      "notifications": "Notifications",
+      "sellers": "Seller approvals",
+      "deliveries": "Delivery supervision",
+      "payments": "Payments supervision",
+      "returns": "Returns / disputes",
+      "messages": "Messages",
+      "reviews": "Reviews",
+      "finance": "Finance / Seller fees",
+      "queues": "Operational queues",
+      "supportCases": "Support cases",
+      "reports": "Reports",
+      "homepageSlides": "Homepage slides",
+      "aiSettings": "AI settings"
+    }
+  },
+  "adminAiSettings": {
+    "eyebrow": "AI Settings",
+    "title": "Marketplace AI try-on",
+    "description": "Control the public AI try-on flow, provider mode, rate limits, consent, and supported product types from one admin-only screen.",
+    "loading": "Loading AI settings...",
+    "loadFailed": "Unable to load AI settings.",
+    "saved": "AI settings saved.",
+    "saveFailed": "Unable to save AI settings.",
+    "save": "Save settings",
+    "saving": "Saving...",
+    "enableLabel": "Enable AI Try-On",
+    "enableHint": "Keep the public button visible, but gate the full flow here.",
+    "providerModeLabel": "Provider mode",
+    "requireConsentLabel": "Require consent",
+    "guestDailyLimitLabel": "Guest daily limit",
+    "customerDailyLimitLabel": "Customer daily limit",
+    "supportedCategoriesLabel": "Supported categories",
+    "supportedCategoriesHelp": "Select product types that can use AI try-on. Leave all unchecked to allow all eligible products with images.",
+    "selectedCount": "{{count}} selected",
+    "selectRecommended": "Select recommended",
+    "clearAll": "Clear all",
+    "unknownTitle": "Custom / Unknown",
+    "unknownHelp": "These legacy values do not match the predefined catalog. Keep them checked to preserve them, or uncheck to remove them on save.",
+    "runtimeNotesTitle": "Runtime notes",
+    "openAiHint": "OpenAI provider requires OPENAI_API_KEY in the ai-service environment.",
+    "openAiStatus": "Status: {{status}}",
+    "safeStatusCode": "Safe status code: {{code}}",
+    "runtimeStatus": {
+      "configured": "configured",
+      "notConfigured": "not configured",
+      "unreachable": "ai-service unreachable"
+    },
+    "providerModes": {
+      "mock": "Mock",
+      "demo": "Demo",
+      "openai": "OpenAI"
+    },
+    "runtimeNotes": {
+      "mock": "Mock and Demo stay fully local and deterministic for stable E2E and defense demos.",
+      "openai": "OpenAI mode stays on the same backend to ai-service provider path and never exposes API keys to the browser.",
+      "limits": "Rate limits are enforced server-side for both guests and authenticated customers."
+    },
+    "categories": {
+      "tops": "Tops",
+      "pants": "Pants / Trousers",
+      "jeans": "Jeans",
+      "shorts": "Shorts",
+      "bermuda": "Bermuda shorts",
+      "dresses": "Dresses",
+      "skirts": "Skirts",
+      "jackets": "Jackets / Outerwear",
+      "hoodies": "Hoodies / Sweatshirts",
+      "shoes": "Shoes",
+      "bags": "Bags",
+      "accessories": "Accessories"
     }
   },
   "errors": {

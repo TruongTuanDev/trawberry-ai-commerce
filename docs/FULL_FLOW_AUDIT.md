@@ -1,5 +1,21 @@
 # Full Commerce Flow Audit
 
+## AI Try-On Supported Category Selector Addendum
+
+- verified admin AI settings no longer depend on free-text category entry for the primary workflow
+- verified canonical supported-category slugs remain the persisted contract even after the admin UI change
+- verified backward compatibility for legacy values:
+  - comma-separated stored strings are parsed
+  - aliases normalize to canonical slugs
+  - unknown legacy values can be preserved intentionally instead of being dropped silently
+- verified backend product support checks now match category aliases and phrase-like names, including Russian apparel names
+- verified the public AI try-on unsupported-product state now maps by error code to localized EN/RU copy instead of rendering the raw backend English message
+- verified non-goals:
+  - no paid OpenAI smoke
+  - no seller catalog/category business-rule rewrite
+  - no legacy app changes
+  - no change to backend authority over public AI try-on eligibility
+
 ## Customer Auth I18n Addendum
 
 - verified customer login/register no longer surface mixed-language raw backend strings in the public UI
