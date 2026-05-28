@@ -1,5 +1,24 @@
 # Full Commerce Flow Audit
 
+## AI Try-On Product Availability Sync Addendum
+
+- verified the admin AI settings flow previously updated only the settings row and not the denormalized `products.ai_try_on_enabled` gate
+- verified this created a real false-negative path in production:
+  - admin selected category ids in AI settings
+  - `supportedCategories` persisted correctly
+  - products in those categories still had `aiTryOnEnabled = false`
+  - public AI Try-On requests remained blocked as unsupported
+- verified the active fix updates settings and product availability together in one backend transaction
+- verified the new synchronization policy:
+  - selected category ids => matching products enabled
+  - non-selected or null category ids => matching products disabled
+  - empty supported-category selection => eligible public-ready products with images enabled
+- verified the admin UI now receives a synchronization summary and can confirm the product availability refresh to the operator
+- verified non-goals:
+  - no paid OpenAI smoke
+  - no direct production SQL requirement for the main admin save path
+  - no seller/catalog business rule rewrite outside AI Try-On availability
+
 ## AI Try-On Category Id Support Addendum
 
 - verified the active AI Try-On settings contract can store category ids and not only legacy category slugs

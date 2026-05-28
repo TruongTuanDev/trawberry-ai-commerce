@@ -1446,6 +1446,11 @@ export type AdminAiTryOnSettings = {
   providerConfigured: boolean | null;
   aiServiceReachable: boolean | null;
   providerSafeErrorCode: string | null;
+  productAvailabilitySync: {
+    enabledProducts: number;
+    disabledProducts: number;
+    mode: "RESTRICTED" | "ALLOW_ALL_ELIGIBLE";
+  } | null;
   createdAt: string;
   updatedAt: string;
 };

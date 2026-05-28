@@ -2438,6 +2438,8 @@
     "loading": "Loading AI settings...",
     "loadFailed": "Unable to load AI settings.",
     "saved": "AI settings saved.",
+    "savedWithSync": "AI settings saved. Product availability updated.",
+    "savedWithSyncCounts": "Enabled for {{enabled}} products, disabled for {{disabled}} products.",
     "saveFailed": "Unable to save AI settings.",
     "save": "Save settings",
     "saving": "Saving...",

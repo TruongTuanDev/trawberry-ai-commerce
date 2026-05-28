@@ -12,6 +12,55 @@ import { readBody } from './test-helpers';
 
 jest.setTimeout(30000);
 
+type ManagedAiTryOnProduct = {
+  id: string;
+  shopId: string;
+  aiTryOnEnabled: boolean;
+  catalogStatus: string;
+  visibility: string;
+  localTitle: string;
+  wbTitle: string;
+  categoryId: bigint | null;
+  categoryName: string | null;
+  sourceCategoryName: string | null;
+  publishedAt: Date | null;
+  archivedAt: Date | null;
+  unpublishedAt: Date | null;
+  images: Array<{
+    id: string;
+    wbUrl: string;
+    localUrl: string;
+    isMain: boolean;
+    sortOrder: number;
+  }>;
+  variants: Array<{
+    id: string;
+    sizeName: string;
+    russianSize: string;
+    techSize: string;
+    wbSize: string;
+    sellerSku: string;
+    basePrice: { toString(): string };
+    discountPrice: { toString(): string } | null;
+    stockQuantity: number;
+    lowStockThreshold: number;
+    trackInventory: boolean;
+    isActive: boolean;
+  }>;
+  category: {
+    id: bigint;
+    name: string;
+    slug: string | null;
+  } | null;
+  shop: {
+    id: string;
+    status: string;
+    sellerProfile: {
+      approvalStatus: string;
+    };
+  };
+};
+
 describe('AiTryOnController (e2e)', () => {
   let app: INestApplication<App>;
   let fetchSpy: jest.SpiedFunction<typeof fetch>;
@@ -47,7 +96,7 @@ describe('AiTryOnController (e2e)', () => {
     },
   ];
 
-  const product = {
+  const product: ManagedAiTryOnProduct = {
     id: 'product-1',
     shopId: 'shop-1',
     aiTryOnEnabled: true,
@@ -169,6 +218,7 @@ describe('AiTryOnController (e2e)', () => {
     updatedAt: Date;
     completedAt: Date | null;
   }> = [];
+  let managedProducts: ManagedAiTryOnProduct[] = [];
 
   const prismaMock = {
     user: {
@@ -181,6 +231,7 @@ describe('AiTryOnController (e2e)', () => {
     },
     product: {
       findFirst: jest.fn(),
+      updateMany: jest.fn(),
     },
     aiFeatureSetting: {
       upsert: jest.fn(),
@@ -195,6 +246,7 @@ describe('AiTryOnController (e2e)', () => {
     aiTryOnUsageLog: {
       create: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const queueServiceMock = {
@@ -240,6 +292,85 @@ describe('AiTryOnController (e2e)', () => {
     });
 
     tasks = [];
+    managedProducts = [
+      {
+        ...product,
+        id: 'product-1',
+        categoryId: BigInt(10),
+        categoryName: 'jackets',
+        sourceCategoryName: 'jackets',
+        aiTryOnEnabled: true,
+        category: {
+          id: BigInt(10),
+          name: 'Jackets',
+          slug: 'jackets',
+        },
+      },
+      {
+        ...product,
+        id: 'product-2',
+        categoryId: BigInt(11),
+        categoryName: 'Dresses',
+        sourceCategoryName: 'Dresses',
+        aiTryOnEnabled: true,
+        category: {
+          id: BigInt(11),
+          name: 'Dresses',
+          slug: 'dresses',
+        },
+      },
+      {
+        ...product,
+        id: 'product-3',
+        categoryId: BigInt(1010),
+        categoryName: 'Джинсы',
+        sourceCategoryName: 'Джинсы',
+        aiTryOnEnabled: false,
+        category: {
+          id: BigInt(1010),
+          name: 'Джинсы',
+          slug: 'jeans',
+        },
+      },
+      {
+        ...product,
+        id: 'product-4',
+        categoryId: BigInt(1040),
+        categoryName: 'Шорты',
+        sourceCategoryName: 'Шорты',
+        aiTryOnEnabled: false,
+        category: {
+          id: BigInt(1040),
+          name: 'Шорты',
+          slug: 'shorts',
+        },
+      },
+      {
+        ...product,
+        id: 'product-5',
+        categoryId: null,
+        categoryName: 'Legacy category',
+        sourceCategoryName: 'Legacy category',
+        aiTryOnEnabled: true,
+        category: null,
+      },
+      {
+        ...product,
+        id: 'product-6',
+        categoryId: BigInt(10),
+        categoryName: 'jackets',
+        sourceCategoryName: 'jackets',
+        aiTryOnEnabled: true,
+        visibility: 'INACTIVE',
+        unpublishedAt: new Date('2026-05-26T00:00:00.000Z'),
+        images: [],
+        category: {
+          id: BigInt(10),
+          name: 'Jackets',
+          slug: 'jackets',
+        },
+      },
+    ];
     settings.aiTryOnEnabled = false;
     settings.aiTryOnProvider = 'mock';
     settings.guestDailyLimit = 3;
@@ -295,7 +426,34 @@ describe('AiTryOnController (e2e)', () => {
         categories.find((category) => category.id === where.id) ?? null,
     );
 
-    prismaMock.product.findFirst.mockResolvedValue(product);
+    prismaMock.product.findFirst.mockImplementation(
+      ({ where }: { where?: { id?: string } }) =>
+        managedProducts.find((entry) =>
+          where?.id ? entry.id === where.id : entry.id === 'product-1',
+        ) ?? null,
+    );
+    prismaMock.product.updateMany.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: Record<string, unknown>;
+        data: { aiTryOnEnabled: boolean };
+      }) => {
+        let count = 0;
+        managedProducts = managedProducts.map((entry) => {
+          if (!matchesAiTryOnSyncWhere(entry, where)) {
+            return entry;
+          }
+          count += 1;
+          return {
+            ...entry,
+            aiTryOnEnabled: data.aiTryOnEnabled,
+          };
+        });
+        return { count };
+      },
+    );
     prismaMock.aiFeatureSetting.upsert.mockImplementation(
       ({
         update,
@@ -408,6 +566,10 @@ describe('AiTryOnController (e2e)', () => {
       },
     );
     prismaMock.aiTryOnUsageLog.create.mockResolvedValue({});
+    prismaMock.$transaction.mockImplementation(
+      (callback: (tx: typeof prismaMock) => unknown) =>
+        Promise.resolve(callback(prismaMock)),
+    );
 
     queueServiceMock.enqueue.mockResolvedValue({
       jobId: 'simulated-job',
@@ -496,6 +658,19 @@ describe('AiTryOnController (e2e)', () => {
     const body = readBody<{ enabled: boolean; providerMode: string }>(updated);
     expect(body.enabled).toBe(true);
     expect(body.providerMode).toBe('demo');
+    expect(
+      readBody<{
+        productAvailabilitySync: {
+          enabledProducts: number;
+          disabledProducts: number;
+          mode: string;
+        } | null;
+      }>(updated).productAvailabilitySync,
+    ).toEqual({
+      enabledProducts: 2,
+      disabledProducts: 4,
+      mode: 'RESTRICTED',
+    });
 
     const openAiUpdated = await request(app.getHttpServer())
       .patch('/api/admin/ai-settings')
@@ -572,6 +747,145 @@ describe('AiTryOnController (e2e)', () => {
     expect(
       readBody<{ supportedCategories: string[] }>(updated).supportedCategories,
     ).toEqual(['10']);
+  });
+
+  it('syncs product ai try-on availability when admin changes supported categories', async () => {
+    const token = await login(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+
+    await request(app.getHttpServer())
+      .patch('/api/admin/ai-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        enabled: true,
+        providerMode: 'mock',
+        guestDailyLimit: 2,
+        customerDailyLimit: 4,
+        requireConsent: true,
+        supportedCategories: ['1010', '1040'],
+      })
+      .expect(200);
+
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-3')?.aiTryOnEnabled,
+    ).toBe(true);
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-4')?.aiTryOnEnabled,
+    ).toBe(true);
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-1')?.aiTryOnEnabled,
+    ).toBe(false);
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-5')?.aiTryOnEnabled,
+    ).toBe(false);
+
+    await request(app.getHttpServer())
+      .patch('/api/admin/ai-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        enabled: true,
+        providerMode: 'mock',
+        guestDailyLimit: 2,
+        customerDailyLimit: 4,
+        requireConsent: true,
+        supportedCategories: ['1010'],
+      })
+      .expect(200);
+
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-3')?.aiTryOnEnabled,
+    ).toBe(true);
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-4')?.aiTryOnEnabled,
+    ).toBe(false);
+  });
+
+  it('re-enables all eligible products when supported categories are cleared', async () => {
+    const token = await login(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+    managedProducts = managedProducts.map((entry) => ({
+      ...entry,
+      aiTryOnEnabled: false,
+    }));
+
+    const updated = await request(app.getHttpServer())
+      .patch('/api/admin/ai-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        enabled: true,
+        providerMode: 'mock',
+        guestDailyLimit: 2,
+        customerDailyLimit: 4,
+        requireConsent: true,
+        supportedCategories: [],
+      })
+      .expect(200);
+
+    expect(
+      readBody<{
+        productAvailabilitySync: {
+          enabledProducts: number;
+          disabledProducts: number;
+          mode: string;
+        } | null;
+      }>(updated).productAvailabilitySync,
+    ).toEqual({
+      enabledProducts: 5,
+      disabledProducts: 1,
+      mode: 'ALLOW_ALL_ELIGIBLE',
+    });
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-1')?.aiTryOnEnabled,
+    ).toBe(true);
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-4')?.aiTryOnEnabled,
+    ).toBe(true);
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-6')?.aiTryOnEnabled,
+    ).toBe(false);
+  });
+
+  it('allows try-on after admin save sync flips a supported product to enabled', async () => {
+    const token = await login(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+
+    expect(
+      managedProducts.find((entry) => entry.id === 'product-4')?.aiTryOnEnabled,
+    ).toBe(false);
+
+    await request(app.getHttpServer())
+      .patch('/api/admin/ai-settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        enabled: true,
+        providerMode: 'mock',
+        guestDailyLimit: 2,
+        customerDailyLimit: 4,
+        requireConsent: true,
+        supportedCategories: ['1040'],
+      })
+      .expect(200);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-4/try-on/tasks')
+      .set('x-guest-session-id', 'guest-after-sync')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'female_regular_165',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    expect(readBody<{ status: string }>(response).status).toBe('COMPLETED');
   });
 
   it('blocks task creation when feature is disabled', async () => {
@@ -925,4 +1239,139 @@ async function login(
     .expect(200);
 
   return readBody<AuthResponseDto>(response).accessToken;
+}
+
+function matchesAiTryOnSyncWhere(
+  productRow: ManagedAiTryOnProduct,
+  where: Record<string, unknown> | undefined,
+): boolean {
+  if (!where) {
+    return true;
+  }
+
+  if (Array.isArray(where.OR)) {
+    return where.OR.some((entry) =>
+      matchesAiTryOnSyncWhere(
+        productRow,
+        entry as Record<string, unknown> | undefined,
+      ),
+    );
+  }
+
+  if (where.NOT && typeof where.NOT === 'object') {
+    return !matchesAiTryOnSyncWhere(
+      productRow,
+      where.NOT as Record<string, unknown>,
+    );
+  }
+
+  if (where.visibility && productRow.visibility !== where.visibility) {
+    return false;
+  }
+
+  if ('archivedAt' in where && productRow.archivedAt !== where.archivedAt) {
+    return false;
+  }
+
+  if (
+    'unpublishedAt' in where &&
+    productRow.unpublishedAt !== where.unpublishedAt
+  ) {
+    return false;
+  }
+
+  if (
+    where.images &&
+    typeof where.images === 'object' &&
+    'some' in (where.images as Record<string, unknown>) &&
+    productRow.images.length < 1
+  ) {
+    return false;
+  }
+
+  if (where.shop && typeof where.shop === 'object') {
+    const shopWhere = where.shop as {
+      status?: string;
+      sellerProfile?: { approvalStatus?: string };
+    };
+    if (shopWhere.status && productRow.shop.status !== shopWhere.status) {
+      return false;
+    }
+    if (
+      shopWhere.sellerProfile?.approvalStatus &&
+      productRow.shop.sellerProfile.approvalStatus !==
+        shopWhere.sellerProfile.approvalStatus
+    ) {
+      return false;
+    }
+  }
+
+  if (where.variants && typeof where.variants === 'object') {
+    const variantsWhere = where.variants as {
+      some?: {
+        isActive?: boolean;
+        OR?: Array<{
+          discountPrice?: { gt?: number };
+          basePrice?: { gt?: number };
+        }>;
+      };
+    };
+    if (variantsWhere.some) {
+      const matched = productRow.variants.some((variant) => {
+        if (
+          variantsWhere.some?.isActive !== undefined &&
+          variant.isActive !== variantsWhere.some.isActive
+        ) {
+          return false;
+        }
+
+        if (!variantsWhere.some?.OR?.length) {
+          return true;
+        }
+
+        return variantsWhere.some.OR.some((priceWhere) => {
+          const discountPrice = Number(
+            variant.discountPrice ? variant.discountPrice.toString() : '0',
+          );
+          const basePrice = Number(variant.basePrice.toString());
+
+          return Boolean(
+            (priceWhere.discountPrice?.gt !== undefined &&
+              discountPrice > priceWhere.discountPrice.gt) ||
+            (priceWhere.basePrice?.gt !== undefined &&
+              basePrice > priceWhere.basePrice.gt),
+          );
+        });
+      });
+
+      if (!matched) {
+        return false;
+      }
+    }
+  }
+
+  if (where.categoryId === null) {
+    return productRow.categoryId === null;
+  }
+
+  if (where.categoryId && typeof where.categoryId === 'object') {
+    const categoryWhere = where.categoryId as {
+      in?: bigint[];
+      notIn?: bigint[];
+    };
+    if (
+      categoryWhere.in &&
+      !categoryWhere.in.some((value) => value === productRow.categoryId)
+    ) {
+      return false;
+    }
+    if (
+      categoryWhere.notIn &&
+      categoryWhere.notIn.some((value) => value === productRow.categoryId)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
