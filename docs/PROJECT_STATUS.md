@@ -1,48 +1,24 @@
 # Project Status
 
-## Shipping Label I18n And Print Filename - 2026-05-28
+## Shipping Label I18n Data Values - 2026-05-28
 
-- Status: implemented on branch `dev/bugfix/shipping-label-i18n-print-name`
-- Seller shipping label print page now:
-  - maps shipment and payment statuses through locale-aware label translations
-  - localizes recipient access lines like entrance/intercom/floor/apartment in RU and EN
-  - avoids showing raw backend-like status/provider fallbacks on the print label
-  - sets browser `document.title` to a localized order-code title on load
-  - sets browser `document.title` to `shipping-label-<orderCode>` immediately before print
-- Expanded targeted Playwright coverage for:
-  - RU shipping-label text assertions
-  - EN shipping-label text assertions
-  - print title / filename hint behavior
+- Status: implemented on branch `dev/bugfix/shipping-label-i18n-data-values`
+- Seller shipping label print flow now:
+  - normalizes system-generated English address access notes into locale-aware label text
+  - maps `Seller-managed pickup` before render instead of showing the raw backend string
+  - sets localized page title by order code on open
+  - sets `shipping-label-<orderCode>` immediately before browser print
+- Added targeted helper logic in `frontend-next/src/lib/shipping-label.ts` for shipping-label-specific parsing and normalization
+- Added Playwright assertions for:
+  - RU absence of raw English system labels
+  - RU localized pickup label
+  - title before print
 - Current verification status:
-  - `frontend-next npm ci`: pass
   - `frontend-next npm run lint`: pass
   - `frontend-next npm run build`: pass
 - Current gaps:
   - local Playwright verification is blocked until frontend `127.0.0.1:3000` and backend `127.0.0.1:3001` are running
-  - exact print/save filename still depends on browser behavior until a dedicated PDF export flow exists
-
-## Customer Auth I18n Audit - 2026-05-28
-
-- Status: in progress on branch `dev/bugfix/customer-auth-i18n`
-- Frontend customer auth flow now normalizes customer-facing auth/session errors through locale-aware mapping
-- Customer login/register now:
-  - keep EN text in English locale
-  - keep RU text in Russian locale
-  - block raw backend and fetch errors from reaching the public UI
-  - use safer API base URL normalization to avoid `/api/api`, localhost leakage, and HTTPS mixed-content fallback issues
-- Added targeted Playwright coverage for:
-  - customer register duplicate/network errors
-  - customer login invalid credentials/network errors
-  - expired customer session redirect and localized auth message
-- Current verification status:
-  - `frontend-next npm ci`: pass
-  - `frontend-next npm run lint`: pass
-  - `frontend-next npm run build`: pass
-  - `frontend-next tests/e2e/customer-auth-i18n.spec.ts`: pass
-  - `frontend-next tests/e2e/i18n-public-customer.spec.ts`: pass
-- Current gaps:
-  - `public-marketplace-contract.spec.ts` still requires a live backend on `127.0.0.1:3001`
-  - `action-feedback.spec.ts` still depends on backend-supported registration flow and was not green in frontend-only mode
+  - guaranteed `.pdf` filename export still needs a dedicated PDF generation phase
 
 ## GitHub Actions CD To VPS - 2026-05-27
 

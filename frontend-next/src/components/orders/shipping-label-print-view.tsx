@@ -5,6 +5,11 @@ import { useEffect, useRef } from "react";
 import JsBarcode from "jsbarcode";
 import { QRCodeSVG } from "qrcode.react";
 import type { Locale } from "@/i18n/config";
+import {
+  normalizeShippingLabelPickupAddress,
+  parseShippingLabelSystemNote,
+} from "@/lib/shipping-label";
+
 import type {
   DeliveryDetail,
   DeliverySettings,
@@ -251,6 +256,9 @@ export function ShippingLabelPrintView({
   const activeShipment = delivery?.activeShipment;
   const meta = SHIPPING_LABEL_SIZE_META[size];
   const fallbackValue = t("common.notProvided");
+  const localizedSellerManagedPickup = t(
+    "seller.shippingLabel.pickupModes.sellerManaged",
+  );
   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const trackingCode =
     activeShipment?.trackingNumber ??
@@ -277,6 +285,12 @@ export function ShippingLabelPrintView({
       : order.paymentMethodLabel ?? t("common.unknown");
   const paymentStatusLabel = mapLabelPaymentStatus(order.paymentStatus, t);
   const paymentConfirmed = isLabelPaymentConfirmed(order.paymentStatus);
+  const parsedSystemNote = parseShippingLabelSystemNote(
+    activeShipment?.dropoffComment ??
+      order.dropoffComment ??
+      activeShipment?.customerVisibleMessage,
+  );
+
   const noEntrance = activeShipment?.dropoffNoEntrance ?? order.dropoffNoEntrance;
   const noFloor = activeShipment?.dropoffNoFloor ?? order.dropoffNoFloor;
   const noApartment = activeShipment?.dropoffNoApartment ?? order.dropoffNoApartment;
@@ -302,30 +316,42 @@ export function ShippingLabelPrintView({
   const recipientPostalCode =
     activeShipment?.dropoffPostalCode ?? order.dropoffPostalCode ?? null;
   const recipientAccess = compactJoin([
-    noEntrance
+    noEntrance || parsedSystemNote.noEntrance
       ? `${t("seller.shippingLabel.fields.entrance")}: ${t("seller.shippingLabel.noEntrance")}`
       : formatOptionalLine(
           t("seller.shippingLabel.fields.entrance"),
-          activeShipment?.dropoffEntrance ?? order.dropoffEntrance,
+          activeShipment?.dropoffEntrance ??
+            order.dropoffEntrance ??
+            parsedSystemNote.entrance,
         ),
     formatOptionalLine(
       t("seller.shippingLabel.fields.intercom"),
-      activeShipment?.dropoffIntercom ?? order.dropoffIntercom,
+      activeShipment?.dropoffIntercom ??
+        order.dropoffIntercom ??
+        parsedSystemNote.intercom,
     ),
-    noFloor
+    noFloor || parsedSystemNote.noFloor
       ? `${t("seller.shippingLabel.fields.floor")}: ${t("seller.shippingLabel.noFloor")}`
       : formatOptionalLine(
           t("seller.shippingLabel.fields.floor"),
-          activeShipment?.dropoffFloor ?? order.dropoffFloor,
+          activeShipment?.dropoffFloor ??
+            order.dropoffFloor ??
+            parsedSystemNote.floor,
         ),
-    noApartment
+    noApartment || parsedSystemNote.noApartment
       ? `${t("seller.shippingLabel.fields.apartment")}: ${t("seller.shippingLabel.noApartment")}`
       : formatOptionalLine(
           t("seller.shippingLabel.fields.apartment"),
-          activeShipment?.dropoffApartment ?? order.dropoffApartment,
+          activeShipment?.dropoffApartment ??
+            order.dropoffApartment ??
+            parsedSystemNote.apartment,
         ),
   ]);
-  const courierNote = order.dropoffComment ?? activeShipment?.customerVisibleMessage;
+  const courierNote = parsedSystemNote.systemGenerated
+    ? parsedSystemNote.remainderNote
+    : activeShipment?.dropoffComment ??
+      order.dropoffComment ??
+      activeShipment?.customerVisibleMessage;
   const senderName = order.shopName;
   const senderPhone =
     deliverySettings?.pickupContactPhone ??
@@ -333,7 +359,10 @@ export function ShippingLabelPrintView({
     null;
   const senderContactName = deliverySettings?.pickupContactName ?? null;
   const pickupAddress =
-    deliverySettings?.pickupAddress ?? activeShipment?.pickupAddress ?? fallbackValue;
+    normalizeShippingLabelPickupAddress(
+      deliverySettings?.pickupAddress ?? activeShipment?.pickupAddress,
+      localizedSellerManagedPickup,
+    ) ?? fallbackValue;
   const pickupLocation = compactJoin([
     deliverySettings?.pickupCity,
     deliverySettings?.pickupPostalCode,

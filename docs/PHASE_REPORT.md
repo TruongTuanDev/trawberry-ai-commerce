@@ -1,69 +1,31 @@
 # Phase Report
 
-## 2026-05-28 Shipping Label I18n And Print Filename
+## 2026-05-28 Shipping Label I18n Data Values
 
-- audited seller shipping label print flow across page client, print template, dictionaries, and E2E coverage
-- removed shipping-label status/provider fallbacks that rendered English or raw enum-like text in RU label output
-- localized shipping label address access lines and shipment/payment label text through dictionary-backed mappings
-- added locale-aware document title behavior:
-  - page title now includes order code
-  - print action temporarily switches title to `shipping-label-<orderCode>` before `window.print()`
-- expanded shipping label Playwright coverage for:
-  - RU label text expectations
-  - EN label text expectations
-  - document title and print filename hint behavior
+- audited seller shipping label print flow for remaining RU data-value leaks
+- added frontend normalization so shipping labels no longer render raw English system strings for:
+  - `Entrance / Intercom / Floor / Apartment`
+  - `Seller-managed pickup`
+- localized shipping label page title and pre-print filename hint by order code
+- expanded Playwright coverage for localized shipping-label data values and title behavior
+- TODO:
+  - dedicated PDF export with guaranteed `shipping-label-<orderCode>.pdf` filename remains a follow-up phase; current filename control is still browser best-effort through `document.title`
 
 Verification:
 
-- `frontend-next npm ci`: pass
 - `frontend-next npm run lint`: pass
 - `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: failed because local backend on `127.0.0.1:3001` was not running
 - `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: failed because local frontend on `127.0.0.1:3000` was not running
 - `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: failed because local frontend on `127.0.0.1:3000` was not running
-- `frontend-next npx playwright test tests/e2e/seller-shipping-label.spec.ts --workers=1`: failed because local backend on `127.0.0.1:3001` was not running
-- `docker compose -f infra/docker-compose.yml --env-file infra/.env ps`: failed because Docker Desktop / daemon was not running
 - `git diff --check`: pass
 - `git ls-files | Select-String "\.env"`: pass
 - `git ls-files data.xlsx`: pass
 
 Remaining gaps:
 
-- Playwright assertions for shipping label could not be exercised end-to-end in this environment because neither frontend nor backend was listening locally
-- browser print filename remains best-effort through `document.title`; exact filenames across all browsers still require a dedicated PDF export path
-
-## 2026-05-28 Customer Auth I18n Audit
-
-- normalized customer auth and session error handling for EN/RU public UI
-- removed direct customer-facing fallback to raw backend and fetch messages in:
-  - customer login
-  - customer register
-  - customer protected session shell
-  - customer security password flow
-- hardened frontend API base URL normalization so customer/public calls:
-  - avoid `/api/api`
-  - avoid legacy IP leakage
-  - fall back to same-origin on HTTPS when an insecure API URL is configured
-- added targeted Playwright spec:
-  - `frontend-next/tests/e2e/customer-auth-i18n.spec.ts`
-- updated customer dictionaries and shared error translation keys for auth-specific cases
-
-Verification:
-
-- `frontend-next npm ci`: pass
-- `frontend-next npm run lint`: pass
-- `frontend-next npm run build`: pass
-- `frontend-next npx playwright test tests/e2e/customer-auth-i18n.spec.ts --workers=1`: pass
-- `frontend-next npx playwright test tests/e2e/i18n-public-customer.spec.ts --workers=1`: pass
-- `frontend-next npx playwright test tests/e2e/public-marketplace-contract.spec.ts --workers=1`: failed because local backend on `127.0.0.1:3001` was not running
-- `frontend-next npx playwright test tests/e2e/action-feedback.spec.ts --workers=1`: failed in frontend-only mode because the flow expects a working backend registration/login path
-- `git diff --check`: pass
-- `git ls-files | Select-String "\.env"`: pass
-- `git ls-files data.xlsx`: pass
-
-Remaining gaps:
-
-- broader customer account screens outside auth still contain some direct `error.message` usage and should be normalized in a follow-up pass
-- backend-backed Playwright coverage should be rerun in a full local stack or CI environment with backend available
+- end-to-end browser verification is blocked until frontend and backend services are running locally
+- exact cross-browser PDF filename control still requires a dedicated export implementation instead of browser print/save
 
 ## 2026-05-27 GitHub Actions CD To VPS
 

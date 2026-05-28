@@ -1426,7 +1426,9 @@
       "kicker": "Packing station",
       "title": "Shipping label",
       "pageTitle": "Printable shipping label",
-      "documentTitle": "Shipping Label - {{orderCode}}",
+
+      "documentTitle": "{{orderCode}}",
+
       "print": "Print label",
       "openPrintableLabel": "Open printable label",
       "labelSize": "Label size",
@@ -1455,7 +1457,7 @@
       "notOfficialYandex": "Not an official Yandex label.",
         "providerManualYandex": "Yandex Delivery",
         "providerYandexDelivery": "Yandex Delivery",
-        "providerManual": "Manual delivery",
+        "providerManual": "Seller-managed delivery",
         "deliveryTypes": {
           "express": "Express",
           "nextDay": "Next day"
@@ -1467,7 +1469,8 @@
           "inTransit": "In transit",
           "delivered": "Delivered",
           "cancelled": "Cancelled",
-          "failed": "Failed"
+          "failed": "Delivery failed"
+
         },
         "paymentMethod": "Payment method",
         "paymentStatus": "Payment status",
@@ -1499,6 +1502,9 @@
         "intercom": "Intercom",
         "floor": "Floor",
         "apartment": "Apartment"
+      },
+      "pickupModes": {
+        "sellerManaged": "Seller-managed pickup"
       },
       "noEntrance": "No entrance",
       "noFloor": "No floor",
