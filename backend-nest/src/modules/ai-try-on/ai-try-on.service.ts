@@ -54,6 +54,12 @@ type PublicTryOnProduct = Prisma.ProductGetPayload<{
   };
 }>;
 
+type ProductAvailabilitySyncSummary = {
+  enabledProducts: number;
+  disabledProducts: number;
+  mode: 'RESTRICTED' | 'ALLOW_ALL_ELIGIBLE';
+};
+
 @Injectable()
 export class AiTryOnService {
   constructor(
@@ -79,32 +85,48 @@ export class AiTryOnService {
   async updateAdminSettings(dto: UpdateAiTryOnSettingsDto) {
     const normalizedSupportedCategories =
       await this.normalizeSupportedCategories(dto.supportedCategories);
-    const settings = await this.prisma.aiFeatureSetting.upsert({
-      where: { id: AI_TRY_ON_SETTINGS_ID },
-      update: {
-        aiTryOnEnabled: dto.enabled,
-        aiTryOnProvider: dto.providerMode,
-        guestDailyLimit: dto.guestDailyLimit,
-        customerDailyLimit: dto.customerDailyLimit,
-        requireConsent: dto.requireConsent,
-        supportedCategories: normalizedSupportedCategories,
-      },
-      create: {
-        id: AI_TRY_ON_SETTINGS_ID,
-        aiTryOnEnabled: dto.enabled,
-        aiTryOnProvider: dto.providerMode,
-        guestDailyLimit: dto.guestDailyLimit,
-        customerDailyLimit: dto.customerDailyLimit,
-        requireConsent: dto.requireConsent,
-        supportedCategories: normalizedSupportedCategories,
-      },
+    const result = await this.prisma.$transaction(async (tx) => {
+      const settings = await tx.aiFeatureSetting.upsert({
+        where: { id: AI_TRY_ON_SETTINGS_ID },
+        update: {
+          aiTryOnEnabled: dto.enabled,
+          aiTryOnProvider: dto.providerMode,
+          guestDailyLimit: dto.guestDailyLimit,
+          customerDailyLimit: dto.customerDailyLimit,
+          requireConsent: dto.requireConsent,
+          supportedCategories: normalizedSupportedCategories,
+        },
+        create: {
+          id: AI_TRY_ON_SETTINGS_ID,
+          aiTryOnEnabled: dto.enabled,
+          aiTryOnProvider: dto.providerMode,
+          guestDailyLimit: dto.guestDailyLimit,
+          customerDailyLimit: dto.customerDailyLimit,
+          requireConsent: dto.requireConsent,
+          supportedCategories: normalizedSupportedCategories,
+        },
+      });
+      const productAvailabilitySync =
+        await this.syncProductAiTryOnEnabledFromSupportedCategories(
+          tx,
+          normalizedSupportedCategories,
+        );
+
+      return {
+        settings,
+        productAvailabilitySync,
+      };
     });
 
     const runtime =
-      settings.aiTryOnProvider === 'openai'
+      result.settings.aiTryOnProvider === 'openai'
         ? await this.getAiServiceHealth()
         : undefined;
-    return this.mapSettings(settings, runtime);
+    return this.mapSettings(
+      result.settings,
+      runtime,
+      result.productAvailabilitySync,
+    );
   }
 
   async getPublicConfig() {
@@ -455,6 +477,68 @@ export class AiTryOnService {
     });
   }
 
+  private async syncProductAiTryOnEnabledFromSupportedCategories(
+    tx: Prisma.TransactionClient,
+    supportedCategoryValues: string[],
+  ): Promise<ProductAvailabilitySyncSummary> {
+    const categoryIds = [
+      ...new Set(
+        supportedCategoryValues
+          .map((value) => value.trim())
+          .filter((value) => /^\d+$/.test(value))
+          .map((value) => BigInt(value)),
+      ),
+    ];
+
+    if (categoryIds.length === 0) {
+      const eligibleWhere = this.buildEligiblePublicTryOnProductWhere();
+      const enabled = await tx.product.updateMany({
+        where: eligibleWhere,
+        data: { aiTryOnEnabled: true },
+      });
+      const disabled = await tx.product.updateMany({
+        where: {
+          NOT: eligibleWhere,
+        },
+        data: { aiTryOnEnabled: false },
+      });
+
+      return {
+        enabledProducts: enabled.count,
+        disabledProducts: disabled.count,
+        mode: 'ALLOW_ALL_ELIGIBLE',
+      };
+    }
+
+    const enabled = await tx.product.updateMany({
+      where: {
+        categoryId: {
+          in: categoryIds,
+        },
+      },
+      data: { aiTryOnEnabled: true },
+    });
+    const disabled = await tx.product.updateMany({
+      where: {
+        OR: [
+          { categoryId: null },
+          {
+            categoryId: {
+              notIn: categoryIds,
+            },
+          },
+        ],
+      },
+      data: { aiTryOnEnabled: false },
+    });
+
+    return {
+      enabledProducts: enabled.count,
+      disabledProducts: disabled.count,
+      mode: 'RESTRICTED',
+    };
+  }
+
   private resolveActor(request: Request, user?: AuthenticatedUser | null) {
     if (user?.userId) {
       return {
@@ -577,6 +661,7 @@ export class AiTryOnService {
       openAiConfigured: boolean;
       safeErrorCode: string | null;
     },
+    productAvailabilitySync?: ProductAvailabilitySyncSummary | null,
   ) {
     return {
       id: settings.id,
@@ -600,8 +685,30 @@ export class AiTryOnService {
         settings.aiTryOnProvider === 'openai'
           ? (runtime?.safeErrorCode ?? null)
           : null,
+      productAvailabilitySync: productAvailabilitySync ?? null,
       createdAt: settings.createdAt.toISOString(),
       updatedAt: settings.updatedAt.toISOString(),
+    };
+  }
+
+  private buildEligiblePublicTryOnProductWhere(): Prisma.ProductWhereInput {
+    return {
+      visibility: 'ACTIVE',
+      archivedAt: null,
+      unpublishedAt: null,
+      images: { some: {} },
+      shop: {
+        status: 'ACTIVE',
+        sellerProfile: {
+          approvalStatus: 'APPROVED',
+        },
+      },
+      variants: {
+        some: {
+          isActive: true,
+          OR: [{ discountPrice: { gt: 0 } }, { basePrice: { gt: 0 } }],
+        },
+      },
     };
   }
 

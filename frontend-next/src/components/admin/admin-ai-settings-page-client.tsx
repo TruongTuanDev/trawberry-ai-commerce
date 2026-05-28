@@ -29,6 +29,21 @@ function unique(values: string[]) {
   return [...new Set(values)];
 }
 
+function buildSavedMessage(
+  t: ReturnType<typeof useI18n>["t"],
+  settings: AdminAiTryOnSettings,
+) {
+  const sync = settings.productAvailabilitySync;
+  if (!sync) {
+    return t("adminAiSettings.saved");
+  }
+
+  return `${t("adminAiSettings.savedWithSync")} ${t("adminAiSettings.savedWithSyncCounts", {
+    enabled: sync.enabledProducts,
+    disabled: sync.disabledProducts,
+  })}`;
+}
+
 export function AdminAiSettingsPageClient() {
   const { t } = useI18n("admin");
   const [form, setForm] = useState<FormState>({
@@ -161,7 +176,7 @@ export function AdminAiSettingsPageClient() {
         ]),
       });
       hydrateForm(saved, categories);
-      setMessage(t("adminAiSettings.saved"));
+      setMessage(buildSavedMessage(t, saved));
     } catch (requestError) {
       setError(
         requestError instanceof Error

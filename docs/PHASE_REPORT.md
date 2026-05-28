@@ -1,5 +1,42 @@
 # Phase Report
 
+## 2026-05-28 AI Try-On Product Availability Sync From Admin Settings
+
+- audited the admin AI settings save path and confirmed the root cause:
+  - `ai_feature_settings.supported_categories` could be updated to category ids such as `["1010","1040"]`
+  - but `products.ai_try_on_enabled` was left stale
+  - public AI Try-On support checks still depend on that product-level availability flag, so supported products could remain blocked
+- updated the admin AI settings write flow to save settings and sync product availability in one Prisma transaction
+- added automatic product availability synchronization policy:
+  - when supported categories are selected, products with `categoryId` in the selected ids are enabled
+  - products with other `categoryId` values, or `null`, are disabled
+  - when supported categories are empty, all eligible public-ready products with images are enabled and ineligible products are disabled
+- extended the admin settings response contract with `productAvailabilitySync` so the UI can confirm the product update result
+- updated the admin UI success toast/message to explain that product availability was refreshed and to show enabled/disabled counts when returned
+- added backend regression coverage for:
+  - category-id-based product availability sync
+  - replacing one selected category set with another
+  - empty supported-category policy re-enabling eligible products
+  - a public AI Try-On request succeeding after admin save flips a supported product back to enabled
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+- `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `git diff --check`: pending rerun after docs update
+- `git ls-files | Select-String "\.env"`: pending rerun after docs update
+- `git ls-files data.xlsx`: pending rerun after docs update
+
+Remaining gaps:
+
+- this fix removes the need for manual SQL for the main admin-settings flow, but legacy products without `categoryId` still benefit from the existing `categories:link-products` script
+- focused Playwright coverage for the admin save message still depends on a live local runtime
+
 ## 2026-05-28 AI Try-On Category Id Support
 
 - audited the AI Try-On category gate and confirmed admin settings are now intended to persist category ids, not only legacy slugs

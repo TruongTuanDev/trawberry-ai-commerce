@@ -31,6 +31,7 @@ Returns:
   "providerConfigured": null,
   "aiServiceReachable": null,
   "providerSafeErrorCode": null,
+  "productAvailabilitySync": null,
   "createdAt": "2026-05-27T00:00:00.000Z",
   "updatedAt": "2026-05-27T00:00:00.000Z"
 }
@@ -47,9 +48,44 @@ Request:
   "guestDailyLimit": 3,
   "customerDailyLimit": 5,
   "requireConsent": true,
-  "supportedCategories": ["jackets", "dresses"]
+  "supportedCategories": ["1010", "1040"]
 }
 ```
+
+Response:
+
+```json
+{
+  "id": "default",
+  "enabled": true,
+  "providerMode": "demo",
+  "guestDailyLimit": 3,
+  "customerDailyLimit": 5,
+  "requireConsent": true,
+  "supportedCategories": ["1010", "1040"],
+  "providerConfigured": null,
+  "aiServiceReachable": null,
+  "providerSafeErrorCode": null,
+  "productAvailabilitySync": {
+    "enabledProducts": 42,
+    "disabledProducts": 18,
+    "mode": "RESTRICTED"
+  },
+  "createdAt": "2026-05-27T00:00:00.000Z",
+  "updatedAt": "2026-05-28T00:00:00.000Z"
+}
+```
+
+Behavior:
+
+- `supportedCategories` is expected to contain `Category.id` values serialized as strings.
+- Saving admin AI settings now also synchronizes `products.ai_try_on_enabled`.
+- If `supportedCategories` is non-empty:
+  - products whose `categoryId` is in the selected ids are enabled
+  - products with other `categoryId` values, or `null`, are disabled
+- If `supportedCategories` is empty:
+  - all eligible public-ready products with images are enabled
+  - ineligible products are disabled
 
 ## Public
 

@@ -1,5 +1,31 @@
 # Project Status
 
+## AI Try-On Product Availability Sync From Admin Settings - 2026-05-28
+
+- Status: implemented on branch `dev/bugfix/sync-product-ai-tryon-enabled-from-admin-settings`
+- Admin AI Settings now synchronizes `products.ai_try_on_enabled` immediately after saving `supportedCategories`.
+- The backend behavior is now aligned with the real data contract:
+  - supported categories are stored as `Category.id` strings
+  - selected category ids enable matching products
+  - non-selected category ids disable matching products
+  - empty selection falls back to the "allow all eligible products" policy
+- The admin response now includes a `productAvailabilitySync` summary so the UI can confirm how many products were enabled and disabled.
+- The admin UI now shows a clearer save confirmation:
+  - settings saved
+  - product availability updated
+  - optional enabled/disabled counts when returned by the backend
+- Current verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `backend-nest npm test -- --runInBand test/product.e2e-spec.ts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - Playwright verification for the admin page still requires live local services
+  - legacy products without `categoryId` still need the existing category-link script for fully normalized data
+
 ## AI Try-On Category Id Support - 2026-05-28
 
 - Status: in progress on branch `dev/bugfix/ai-tryon-category-id-support`

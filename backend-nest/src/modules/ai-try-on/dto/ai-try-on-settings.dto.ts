@@ -64,6 +64,21 @@ export class AiTryOnSettingsResponseDto extends UpdateAiTryOnSettingsDto {
 
   @ApiProperty()
   updatedAt!: string;
+
+  @ApiProperty({
+    nullable: true,
+    type: Object,
+    example: {
+      enabledProducts: 12,
+      disabledProducts: 4,
+      mode: 'RESTRICTED',
+    },
+  })
+  productAvailabilitySync!: {
+    enabledProducts: number;
+    disabledProducts: number;
+    mode: 'RESTRICTED' | 'ALLOW_ALL_ELIGIBLE';
+  } | null;
 }
 
 export class PublicAiTryOnConfigResponseDto extends UpdateAiTryOnSettingsDto {
