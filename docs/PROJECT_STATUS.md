@@ -1,5 +1,15 @@
 # Project Status
 
+## AI Try-On Category Id Support - 2026-05-28
+
+- Status: in progress on branch `dev/bugfix/ai-tryon-category-id-support`
+- AI Try-On category gating is being hardened around the actual admin payload contract:
+  - `supportedCategories` may contain category ids
+  - matching must succeed on `product.categoryId` without string/number mismatches
+  - legacy `product.categoryName` / `sourceCategoryName` remain runtime fallback only when the product relation is still missing
+- Added a conservative backfill path `npm run categories:link-products` for production environments where `Category` rows already exist and only product linking is needed.
+- Current goal is to eliminate false unsupported responses for categories like `1010 = Джинсы` and `1040 = Шорты` without changing seller/business rules.
+
 ## Catalog Filter Dropdown Overlay - 2026-05-28
 
 - Status: implemented on branch `dev/bugfix/catalog-filter-dropdown-overlay`

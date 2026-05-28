@@ -114,8 +114,11 @@ export function readSupportedCategoryValues(value: unknown) {
     return [
       ...new Set(
         value
-          .filter((item): item is string => typeof item === 'string')
-          .map((item) => item.trim())
+          .filter(
+            (item): item is string | number =>
+              typeof item === 'string' || typeof item === 'number',
+          )
+          .map((item) => String(item).trim())
           .filter(Boolean),
       ),
     ];
