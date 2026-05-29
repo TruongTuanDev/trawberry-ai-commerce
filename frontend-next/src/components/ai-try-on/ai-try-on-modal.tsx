@@ -53,6 +53,22 @@ function resolveTryOnErrorMessage(
         return t("aiTryOn.providerError");
       case "AI_TIMEOUT":
         return t("aiTryOn.timeout");
+      case "OPENAI_BAD_REQUEST":
+        return t("aiTryOn.openaiBadRequest");
+      case "INVALID_REFERENCE_IMAGE":
+        return t("aiTryOn.invalidReferenceImage");
+      case "INVALID_PRODUCT_IMAGE":
+        return t("aiTryOn.invalidProductImage");
+      case "OPENAI_AUTH_FAILED":
+        return t("aiTryOn.openaiAuthFailed");
+      case "OPENAI_QUOTA_EXCEEDED":
+        return t("aiTryOn.openaiQuotaExceeded");
+      case "OPENAI_RATE_LIMITED":
+        return t("aiTryOn.openaiRateLimited");
+      case "OPENAI_PROVIDER_ERROR":
+        return t("aiTryOn.openaiProviderError");
+      case "DEMO_MODEL_IMAGE_NOT_FOUND":
+        return t("aiTryOn.demoModelImageNotFound");
       default:
         return t(fallbackKey);
     }
@@ -81,6 +97,22 @@ function resolveTaskErrorMessage(task: AiTryOnTask, t: (key: string) => string) 
       return t("aiTryOn.providerError");
     case "AI_TIMEOUT":
       return t("aiTryOn.timeout");
+    case "OPENAI_BAD_REQUEST":
+      return t("aiTryOn.openaiBadRequest");
+    case "INVALID_REFERENCE_IMAGE":
+      return t("aiTryOn.invalidReferenceImage");
+    case "INVALID_PRODUCT_IMAGE":
+      return t("aiTryOn.invalidProductImage");
+    case "OPENAI_AUTH_FAILED":
+      return t("aiTryOn.openaiAuthFailed");
+    case "OPENAI_QUOTA_EXCEEDED":
+      return t("aiTryOn.openaiQuotaExceeded");
+    case "OPENAI_RATE_LIMITED":
+      return t("aiTryOn.openaiRateLimited");
+    case "OPENAI_PROVIDER_ERROR":
+      return t("aiTryOn.openaiProviderError");
+    case "DEMO_MODEL_IMAGE_NOT_FOUND":
+      return t("aiTryOn.demoModelImageNotFound");
     default:
       return t("aiTryOn.generateFailed");
   }
@@ -225,6 +257,7 @@ export function AiTryOnModal({
       setSelectedModelId(null);
       setReferenceSource("photo");
       clearErrors();
+      setTask(null);
       clearUploadedValidation();
       setInfoMessage(replacingModel ? t("aiTryOn.photoOverridesModel") : null);
       return;
@@ -236,6 +269,7 @@ export function AiTryOnModal({
     setUploadedReference(null);
     setReferenceSource("model");
     clearErrors();
+    setTask(null);
     clearUploadedValidation();
     setInfoMessage(replacingPhoto ? t("aiTryOn.modelOverridesPhoto") : null);
   };
@@ -251,6 +285,7 @@ export function AiTryOnModal({
     setUploading(true);
     setReferenceSource("photo");
     clearErrors();
+    setTask(null);
     clearUploadedValidation();
     try {
       const uploaded = await uploadAiTryOnReference(file, getGuestSessionId());
@@ -290,6 +325,7 @@ export function AiTryOnModal({
     setUploadedReference(null);
     setReferenceSource("model");
     clearErrors();
+    setTask(null);
     clearUploadedValidation();
     setInfoMessage(replacingPhoto ? t("aiTryOn.modelOverridesPhoto") : null);
   };
@@ -300,6 +336,7 @@ export function AiTryOnModal({
     setUploadedReference(null);
     setReferenceSource(null);
     clearErrors();
+    setTask(null);
     clearUploadedValidation();
     setInfoMessage(null);
   };
@@ -318,6 +355,7 @@ export function AiTryOnModal({
 
     setSubmitting(true);
     clearErrors();
+    setTask(null);
     try {
       const created = await createAiTryOnTask(
         product.id,
@@ -380,8 +418,23 @@ export function AiTryOnModal({
   const disabledReason = getDisabledReason();
   const busy = submitting || Boolean(task && POLLING_STATUSES.has(task.status));
   const isGenerateDisabled = busy || !!disabledReason;
-  const visibleError =
-    isDemoModelMode && errorCode === "AI_TRY_ON_IMAGE_UNSUITABLE" ? null : error;
+  const getVisibleError = () => {
+    if (!error) {
+      return null;
+    }
+    if (
+      isDemoModelMode &&
+      (errorCode === "INVALID_REFERENCE_IMAGE" ||
+        errorCode === "AI_TRY_ON_IMAGE_UNSUITABLE")
+    ) {
+      return null;
+    }
+    if (isPhotoMode && errorCode === "DEMO_MODEL_IMAGE_NOT_FOUND") {
+      return null;
+    }
+    return error;
+  };
+  const visibleError = getVisibleError();
 
   return (
     <div className="fixed inset-0 z-50 overflow-x-hidden bg-slate-950/60 backdrop-blur-sm" data-testid="ai-try-on-modal">

@@ -114,6 +114,9 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
         this.configService.get<string>('FRONTEND_URL') ??
         this.configService.get<string>('PUBLIC_SITE_URL') ??
         null;
+      const frontendInternalBaseUrl =
+        this.configService.get<string>('FRONTEND_INTERNAL_BASE_URL') ??
+        'http://frontend-next:3000';
 
       const response = await this.aiServiceClient.generateTryOn({
         taskId: task.id,
@@ -137,6 +140,7 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
           }),
           selectedModelImageUrl: this.resolveSelectedModelImageUrl(
             model?.imageUrl ?? null,
+            frontendInternalBaseUrl,
             frontendPublicBaseUrl,
             backendInternalBaseUrl,
             backendPublicBaseUrl,
@@ -238,6 +242,7 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
 
   private resolveSelectedModelImageUrl(
     value: string | null | undefined,
+    frontendInternalBaseUrl: string,
     frontendPublicBaseUrl: string | null,
     backendInternalBaseUrl?: string | null,
     backendPublicBaseUrl?: string | null,
@@ -251,15 +256,12 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
-    if (trimmed.startsWith('/') && frontendPublicBaseUrl) {
-      try {
-        return new URL(trimmed, frontendPublicBaseUrl).toString();
-      } catch {
-        return rewriteUrlForAiService(trimmed, {
-          backendInternalBaseUrl,
-          backendPublicBaseUrl,
-        });
-      }
+    if (trimmed.startsWith('/')) {
+      const resolved = new URL(trimmed, frontendInternalBaseUrl).toString();
+      this.logger.log(
+        `Resolved model image URL: ${resolved} (input: ${trimmed}, frontendInternalBaseUrl: ${frontendInternalBaseUrl})`,
+      );
+      return resolved;
     }
 
     return rewriteUrlForAiService(trimmed, {

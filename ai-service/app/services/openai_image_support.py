@@ -63,13 +63,105 @@ class OpenAIImageSupport:
     def _is_dalle2_model(self) -> bool:
         return self.settings.ai_try_on_openai_model == "dall-e-2"
 
+    def make_square_png(self, payload: bytes, target_size: int = 1024) -> bytes:
+        try:
+            with Image.open(io.BytesIO(payload)) as img:
+                img = img.convert("RGBA")
+                w, h = img.size
+
+                aspect_ratio = w / h
+                if w > h:
+                    new_w = target_size
+                    new_h = int(target_size / aspect_ratio)
+                else:
+                    new_h = target_size
+                    new_w = int(target_size * aspect_ratio)
+
+                img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+                square_img = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+
+                offset_x = (target_size - new_w) // 2
+                offset_y = (target_size - new_h) // 2
+                square_img.paste(img_resized, (offset_x, offset_y))
+
+                out = io.BytesIO()
+                square_img.save(out, format="PNG")
+                return out.getvalue()
+        except Exception as error:
+            raise ProviderError(
+                "Failed to square the reference image.",
+                status_code=400,
+                retryable=False,
+                code="INVALID_REFERENCE_IMAGE",
+            ) from error
+
+    def generate_transparent_mask(self, payload: bytes) -> bytes:
+        try:
+            with Image.open(io.BytesIO(payload)) as img:
+                mask = Image.new("RGBA", img.size, (0, 0, 0, 0))
+                out = io.BytesIO()
+                mask.save(out, format="PNG")
+                return out.getvalue()
+        except Exception as error:
+            raise ProviderError(
+                "Failed to generate transparent mask.",
+                status_code=500,
+                retryable=False,
+                code="AI_PROVIDER_ERROR",
+            ) from error
+
+    def _extract_error_fields(
+        self,
+        error: Exception,
+    ) -> tuple[str | None, str | None, str | None]:
+        body = getattr(error, "body", None)
+        if isinstance(body, dict):
+            inner = body.get("error")
+            if isinstance(inner, dict):
+                def as_string(value: object) -> str | None:
+                    if isinstance(value, str) and value.strip():
+                        return value
+                    return None
+                return (
+                    as_string(inner.get("type")),
+                    as_string(inner.get("code")),
+                    as_string(inner.get("message")),
+                )
+
+        import re
+        message = str(error).strip()
+        type_match = re.search(r"'type': '([^']+)'", message)
+        code_match = re.search(r"'code': '([^']+)'", message)
+        message_match = re.search(r"'message': \"([^\"]+)\"", message)
+        if not message_match:
+            message_match = re.search(r"'message': '([^']+)'", message)
+        return (
+            type_match.group(1) if type_match else None,
+            code_match.group(1) if code_match else None,
+            message_match.group(1) if message_match else None,
+        )
+
     async def download_input_image(
         self,
         url: str,
         *,
         label: str,
         unsuitable_code: str,
+        is_demo_model: bool = False,
     ) -> DownloadedImage:
+        # Determine the appropriate error code dynamically based on label and is_demo_model
+        if label == "product":
+            error_code = "INVALID_PRODUCT_IMAGE"
+            user_msg = "The product image is invalid or could not be loaded."
+        elif is_demo_model:
+            error_code = "DEMO_MODEL_IMAGE_NOT_FOUND"
+            user_msg = "Demo model image is currently unavailable."
+        else:
+            error_code = "INVALID_REFERENCE_IMAGE"
+            user_msg = "The uploaded photo is invalid or could not be loaded."
+
+        status_code = 404 if error_code == "DEMO_MODEL_IMAGE_NOT_FOUND" else 400
         timeout = httpx.Timeout(self.settings.openai_input_image_timeout_seconds)
         max_bytes = self.settings.input_image_max_bytes
 
@@ -85,19 +177,19 @@ class OpenAIImageSupport:
                     )
                     if content_type not in ALLOWED_INPUT_CONTENT_TYPES:
                         raise ProviderError(
-                            f"The {label} image is not suitable for AI try-on.",
-                            status_code=400,
+                            user_msg,
+                            status_code=status_code,
                             retryable=False,
-                            code=unsuitable_code,
+                            code=error_code,
                         )
 
                     content_length = response.headers.get("content-length")
                     if content_length and int(content_length) > max_bytes:
                         raise ProviderError(
                             f"The {label} image exceeds the supported upload size.",
-                            status_code=400,
+                            status_code=status_code,
                             retryable=False,
-                            code=unsuitable_code,
+                            code=error_code,
                         )
 
                     chunks: list[bytes] = []
@@ -107,9 +199,9 @@ class OpenAIImageSupport:
                         if total > max_bytes:
                             raise ProviderError(
                                 f"The {label} image exceeds the supported upload size.",
-                                status_code=400,
+                                status_code=status_code,
                                 retryable=False,
-                                code=unsuitable_code,
+                                code=error_code,
                             )
                         chunks.append(chunk)
 
@@ -117,9 +209,9 @@ class OpenAIImageSupport:
                     if not raw_payload:
                         raise ProviderError(
                             f"The {label} image is empty.",
-                            status_code=400,
+                            status_code=status_code,
                             retryable=False,
-                            code=unsuitable_code,
+                            code=error_code,
                         )
 
                     try:
@@ -127,14 +219,14 @@ class OpenAIImageSupport:
                             image.verify()
                     except (UnidentifiedImageError, OSError) as error:
                         raise ProviderError(
-                            f"The {label} image is not suitable for AI try-on.",
-                            status_code=400,
+                            user_msg,
+                            status_code=status_code,
                             retryable=False,
-                            code=unsuitable_code,
+                            code=error_code,
                         ) from error
 
                     if self._is_dalle2_model and content_type != "image/png":
-                        raw_payload = self.convert_to_png(raw_payload, label, unsuitable_code)
+                        raw_payload = self.convert_to_png(raw_payload, label, error_code)
                         content_type = "image/png"
 
                     extension = ALLOWED_INPUT_CONTENT_TYPES[content_type]
@@ -150,21 +242,21 @@ class OpenAIImageSupport:
                     f"Timed out while downloading the {label} image.",
                     status_code=504,
                     retryable=True,
-                    code="AI_TIMEOUT",
+                    code="AI_TIMEOUT" if not is_demo_model else "DEMO_MODEL_IMAGE_NOT_FOUND",
                 ) from error
             except httpx.HTTPStatusError as error:
                 raise ProviderError(
-                    f"Failed to download the {label} image: HTTP {error.response.status_code}.",
-                    status_code=400,
+                    user_msg,
+                    status_code=status_code,
                     retryable=False,
-                    code=unsuitable_code,
+                    code=error_code,
                 ) from error
             except httpx.HTTPError as error:
                 raise ProviderError(
                     f"Failed to download the {label} image.",
                     status_code=503,
                     retryable=True,
-                    code="AI_PROVIDER_ERROR",
+                    code="AI_PROVIDER_ERROR" if not is_demo_model else "DEMO_MODEL_IMAGE_NOT_FOUND",
                 ) from error
 
     def convert_to_png(
@@ -201,27 +293,60 @@ class OpenAIImageSupport:
             self.settings.ai_try_on_provider_timeout_seconds,
         )
         with tempfile.TemporaryDirectory(prefix="strawberry-openai-try-on-") as tmp_dir:
-            files = []
-            handles = []
+            file_handles = []
             try:
-                for index, image in enumerate(images):
-                    path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
-                    path.write_bytes(image.payload)
-                    handle = path.open("rb")
-                    handles.append(handle)
-                    files.append(handle)
+                if self._is_dalle2_model:
+                    # DALL-E 2 edit flow
+                    # Get person image (index 1)
+                    person_image = images[1]
 
-                params: dict[str, Any] = {
-                    "model": self.settings.ai_try_on_openai_model,
-                    "image": files if len(files) > 1 else files[0],
-                    "prompt": self.normalize_prompt(prompt),
-                    "n": 1,
-                    "size": self.settings.ai_try_on_output_size,
-                    "timeout": self.settings.ai_try_on_provider_timeout_seconds,
-                    "response_format": "b64_json",
-                }
+                    target_size = 1024
+                    if self.settings.ai_try_on_output_size in ("256x256", "512x512", "1024x1024"):
+                        target_size = int(self.settings.ai_try_on_output_size.split("x")[0])
 
-                if not self._is_dalle2_model:
+                    squared_payload = self.make_square_png(person_image.payload, target_size)
+                    mask_payload = self.generate_transparent_mask(squared_payload)
+
+                    img_path = Path(tmp_dir) / "image.png"
+                    img_path.write_bytes(squared_payload)
+                    img_handle = img_path.open("rb")
+                    file_handles.append(img_handle)
+
+                    mask_path = Path(tmp_dir) / "mask.png"
+                    mask_path.write_bytes(mask_payload)
+                    mask_handle = mask_path.open("rb")
+                    file_handles.append(mask_handle)
+
+                    params: dict[str, Any] = {
+                        "model": self.settings.ai_try_on_openai_model,
+                        "image": img_handle,
+                        "mask": mask_handle,
+                        "prompt": self.normalize_prompt(prompt),
+                        "n": 1,
+                        "size": f"{target_size}x{target_size}",
+                        "timeout": self.settings.ai_try_on_provider_timeout_seconds,
+                        "response_format": "b64_json",
+                    }
+                else:
+                    # gpt-image-1 / other edit flow
+                    files = []
+                    for index, image in enumerate(images):
+                        path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
+                        path.write_bytes(image.payload)
+                        handle = path.open("rb")
+                        file_handles.append(handle)
+                        files.append(handle)
+
+                    params: dict[str, Any] = {
+                        "model": self.settings.ai_try_on_openai_model,
+                        "image": files if len(files) > 1 else files[0],
+                        "prompt": self.normalize_prompt(prompt),
+                        "n": 1,
+                        "size": self.settings.ai_try_on_output_size,
+                        "timeout": self.settings.ai_try_on_provider_timeout_seconds,
+                        "response_format": "b64_json",
+                    }
+
                     params["quality"] = self.settings.openai_image_quality
                     params["extra_body"] = {
                         "output_format": self.settings.openai_image_output_format,
@@ -229,7 +354,7 @@ class OpenAIImageSupport:
 
                 return client.images.edit(**params)
             finally:
-                for handle in handles:
+                for handle in file_handles:
                     handle.close()
 
     def parse_response(self, response, *, provider_name: str):

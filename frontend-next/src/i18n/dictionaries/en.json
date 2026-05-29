@@ -365,7 +365,16 @@
     "imageUnsuitable": "The uploaded image is not suitable for try-on.",
     "limitExceeded": "Daily AI try-on limit exceeded.",
     "providerError": "AI generation failed. Please try again.",
-    "timeout": "AI generation timed out. Please try again."
+    "timeout": "AI generation timed out. Please try again.",
+    "successNoImage": "AI try-on generated successfully!",
+    "openaiBadRequest": "AI try-on rejected the image edit request.",
+    "invalidReferenceImage": "The uploaded photo is invalid or could not be loaded.",
+    "invalidProductImage": "The product image is invalid or could not be loaded.",
+    "openaiAuthFailed": "AI service is currently unavailable (authentication failed).",
+    "openaiQuotaExceeded": "AI service quota has been exceeded. Please contact the administrator.",
+    "openaiRateLimited": "AI service rate limit reached. Please wait a moment.",
+    "openaiProviderError": "AI try-on generation failed. Please try again later.",
+    "demoModelImageNotFound": "Demo model image is currently unavailable."
   },
   "cart": {
     "backToProducts": "Back to products",
