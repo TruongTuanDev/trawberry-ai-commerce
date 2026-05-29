@@ -1,5 +1,33 @@
 # Phase Report
 
+## 2026-05-30 Admin User Management
+
+- Implemented a complete Admin User Management panel to view, filter, create, edit, disable, and delete users safely.
+- Added backend validation with `ListAdminUsersQueryDto`, `CreateAdminUserDto`, and `UpdateAdminUserDto`.
+- Built `AdminUsersService` and controller protectively, ensuring security constraints:
+  - Last admin deactivation, demotion, or deletion is blocked.
+  - Self-deactivation, demotion, or deletion is blocked.
+  - Hard deletion is blocked if the user has dependencies (orders, shops, checkouts, or fee ledger entries), returning `USER_HAS_DEPENDENCIES` to encourage deactivation instead.
+  - Automatically registers `sellerProfile` in `PENDING` state when a new Seller is created.
+  - Writes audit logs for user management operations (`CREATE_USER`, `UPDATE_USER`, `DELETE_USER`, `RESET_USER_PASSWORD`).
+- Added robust backend E2E tests in `test/admin-users.e2e-spec.ts`.
+- Built frontend dashboard page `/admin/users` with dynamic data rendering:
+  - Users table with full details.
+  - Live query filters (text search, role filter, status filter, and pagination).
+  - Modal drawer for user CRUD operations and reset password switches.
+  - Safe confirmation gates for disabling and deleting users.
+- Provided English and Russian translations for all UI texts and backend error codes.
+
+Verification:
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand test/admin-users.e2e-spec.ts`: pass (all 14 tests passed)
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+
+Remaining gaps:
+- None.
+
 ## 2026-05-29 AI Try-On Reference Source Selection
 
 - fixed the public AI Try-On modal so reference selection now follows an explicit one-of-two rule:

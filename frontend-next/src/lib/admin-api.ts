@@ -1568,3 +1568,87 @@ export async function updateAdminAiTryOnSettings(
     body: JSON.stringify(payload),
   });
 }
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  phone: string | null;
+  preferredLocale: string | null;
+  role: string;
+  status: string;
+  createdAt: string;
+};
+
+export type AdminUserListResponse = {
+  items: AdminUser[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type CreateAdminUserInput = {
+  fullName?: string;
+  email: string;
+  phone?: string;
+  role: string;
+  password?: string;
+  status?: string;
+};
+
+export type UpdateAdminUserInput = {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  password?: string;
+  status?: string;
+};
+
+export async function getAdminUsers(query?: {
+  search?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (query?.search) params.set("q", query.search);
+  if (query?.role) params.set("role", query.role);
+  if (query?.status) params.set("status", query.status);
+  if (query?.page) params.set("page", String(query.page));
+  if (query?.limit) params.set("limit", String(query.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<AdminUserListResponse>(`/api/admin/users${suffix}`, {
+    method: "GET",
+  });
+}
+
+export async function getAdminUser(id: string) {
+  return apiRequest<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: "GET",
+  });
+}
+
+export async function createAdminUser(input: CreateAdminUserInput) {
+  return apiRequest<AdminUser>("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateAdminUser(id: string, input: UpdateAdminUserInput) {
+  return apiRequest<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteAdminUser(id: string) {
+  return apiRequest<void>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}

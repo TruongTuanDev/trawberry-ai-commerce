@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/admin/dashboard", key: "adminShell.nav.dashboard", match: "/admin/dashboard" },
   { href: "/admin/notifications", key: "adminShell.nav.notifications", match: "/admin/notifications" },
   { href: "/admin/sellers", key: "adminShell.nav.sellers", match: "/admin/sellers" },
+  { href: "/admin/users", key: "adminShell.nav.users", match: "/admin/users" },
   { href: "/admin/deliveries", key: "adminShell.nav.deliveries", match: "/admin/deliveries" },
   { href: "/admin/payments-supervision", key: "adminShell.nav.payments", match: "/admin/payments-supervision" },
   { href: "/admin/returns", key: "adminShell.nav.returns", match: "/admin/returns" },
