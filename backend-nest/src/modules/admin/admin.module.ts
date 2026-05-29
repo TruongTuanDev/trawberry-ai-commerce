@@ -10,6 +10,8 @@ import { AdminReportsController } from './admin-reports.controller';
 import { AdminReportsService } from './admin-reports.service';
 import { AdminSellersController } from './admin-sellers.controller';
 import { AdminSellersService } from './admin-sellers.service';
+import { AdminUsersController } from './admin-users.controller';
+import { AdminUsersService } from './admin-users.service';
 
 @Module({
   imports: [SellerFinanceModule],
@@ -19,6 +21,7 @@ import { AdminSellersService } from './admin-sellers.service';
     AdminQueuesController,
     AdminQueueTasksController,
     AdminReportsController,
+    AdminUsersController,
   ],
   providers: [
     AdminSellersService,
@@ -26,6 +29,7 @@ import { AdminSellersService } from './admin-sellers.service';
     AdminQueuesService,
     AdminQueueTasksService,
     AdminReportsService,
+    AdminUsersService,
   ],
 })
 export class AdminModule {}
