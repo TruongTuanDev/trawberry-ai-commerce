@@ -323,7 +323,7 @@ export function SellerOrdersPageClient() {
             variant="outline"
             onClick={() => void load()}
           >
-            {t("sellerPayments.reloadQueue")}
+            {t("sellerOrders.refreshQueue")}
           </Button>
         </div>
       </SectionCard>
@@ -364,13 +364,20 @@ export function SellerOrdersPageClient() {
                     <p>{order.customer.phone}</p>
                     <p>{order.customer.email ?? t("sellerOrders.noEmail")}</p>
                   </div>
-                  <div className="text-sm text-[var(--muted)]">
+                  <div className="text-sm text-[var(--muted)] space-y-2">
                     {order.items.slice(0, 2).map((item) => (
-                      <p key={item.id}>
-                        {item.productTitleSnapshot} x {item.quantity}
-                      </p>
+                      <div key={item.id} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
+                        <p className="font-semibold text-[var(--foreground)]">{item.productTitleSnapshot}</p>
+                        <p className="text-xs">
+                          {t("sellerOrders.sku")}: <span className="font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{item.sellerSku || t("sellerOrders.skuNotSet")}</span>
+                        </p>
+                        {item.variantNameSnapshot && (
+                          <p className="text-xs">Size: {item.variantNameSnapshot}</p>
+                        )}
+                        <p className="text-xs">Qty: x{item.quantity}</p>
+                      </div>
                     ))}
-                    {order.items.length > 2 ? <p>{t("sellerOrders.moreProducts", { count: order.items.length - 2 })}</p> : null}
+                    {order.items.length > 2 ? <p className="text-xs font-semibold text-[var(--accent)] mt-1">{t("sellerOrders.moreProducts", { count: order.items.length - 2 })}</p> : null}
                   </div>
                   <div className="text-sm font-semibold text-[var(--foreground)]">{order.totalAmount}</div>
                   <div className="text-sm text-[var(--muted)]">

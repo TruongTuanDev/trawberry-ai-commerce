@@ -419,6 +419,7 @@ export type SellerOrderListItem = {
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
     variantNameSnapshot: string | null;
+    sellerSku: string | null;
   }>;
 };
 
@@ -2204,6 +2205,19 @@ export async function uploadShopPaymentQr(
       method: "POST",
       token,
       body: formData,
+    },
+  );
+}
+
+export async function deleteShopPaymentQr(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<ShopPaymentSettings>(
+    `/api/shops/${shopId}/payment-settings/qr-image`,
+    {
+      method: "DELETE",
+      token,
     },
   );
 }

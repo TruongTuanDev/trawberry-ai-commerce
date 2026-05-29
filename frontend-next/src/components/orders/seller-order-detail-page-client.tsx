@@ -1820,6 +1820,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 <p className="mt-1 text-sm text-[var(--muted)]">
                   {t("seller.orderDetail.slug", { value: item.productSlugSnapshot })}
                 </p>
+                <p className="mt-1.5 text-xs text-[var(--muted)]">
+                  {t("sellerOrders.sku")}: <span className="font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{item.sellerSku || t("sellerOrders.skuNotSet")}</span>
+                </p>
               </div>
               <div className="text-sm text-[var(--muted)] md:text-right">
                 <p>{t("seller.orderDetail.qty", { value: item.quantity })}</p>

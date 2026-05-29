@@ -384,7 +384,10 @@ export function ShippingLabelPrintView({
   ]);
   const itemsPreview = order.items
     .slice(0, meta.compact ? 2 : 3)
-    .map((item) => `${item.productTitleSnapshot} x ${item.quantity}`)
+    .map((item) => {
+      const skuStr = item.sellerSku ? ` [${item.sellerSku}]` : "";
+      return `${item.productTitleSnapshot}${skuStr} x ${item.quantity}`;
+    })
     .join(" / ");
   const internalNote =
     activeShipment?.deliveryNote ?? activeShipment?.lastSellerNote ?? order.customerNote;

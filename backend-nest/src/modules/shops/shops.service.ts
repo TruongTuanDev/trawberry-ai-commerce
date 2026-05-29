@@ -288,6 +288,41 @@ export class ShopsService {
     return this.toPaymentSettingsResponse(updated);
   }
 
+  async deletePaymentQr(shopId: string) {
+    const current = await this.findShopOrThrow(shopId);
+
+    if (current.staticQrStorageKey || current.staticQrImageUrl) {
+      await this.filesService.deleteStoredFile({
+        storageKey: current.staticQrStorageKey,
+        fileUrl: current.staticQrImageUrl,
+      });
+    }
+
+    const nextStatus = this.resolveDesiredPaymentConfigStatus({
+      bankName: current.bankName,
+      recipientName: current.accountHolderName,
+      recipientAccount: current.accountNumber,
+      sbpPhone: current.sbpPhone,
+      staticQrImageUrl: null,
+      paymentInstruction: current.paymentInstructions,
+      requestedStatus: current.paymentConfigStatus,
+    });
+
+    const updated = await this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        staticQrImageUrl: null,
+        staticQrStorageKey: null,
+        staticQrOriginalName: null,
+        staticQrMimeType: null,
+        staticQrSize: null,
+        paymentConfigStatus: nextStatus,
+      },
+    });
+
+    return this.toPaymentSettingsResponse(updated);
+  }
+
   private mapShops(
     shops: Array<{
       id: string;

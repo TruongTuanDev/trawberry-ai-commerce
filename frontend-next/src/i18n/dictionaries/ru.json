@@ -688,6 +688,10 @@
     "manualYandexOrderIdPlaceholder": "Ручной ID заказа Yandex",
     "trackingUrlPlaceholder": "Ссылка для отслеживания (опционально)",
     "deliveryNotePlaceholder": "Примечание к отгрузке",
+    "sku": "Артикул",
+    "skuNotSet": "Артикул не указан",
+    "refreshQueue": "Обновить очередь",
+    "noOrdersFound": "Заказы не найдены",
     "messages": {
       "archiveSuccess": "Заказ архивирован.",
       "archiveFailed": "Не удалось архивировать заказ.",
@@ -1596,7 +1600,12 @@
       "settingsSaved": "Настройки оплаты сохранены.",
       "qrUploaded": "Статический QR-код загружен.",
       "saveFailed": "Не удалось сохранить настройки оплаты.",
-      "uploadFailed": "Не удалось загрузить QR-код оплаты."
+      "uploadFailed": "Не удалось загрузить QR-код оплаты.",
+      "updateQrCode": "Обновить QR-код",
+      "removeQrCode": "Удалить QR-код",
+      "uploadQrCode": "Загрузить QR-код",
+      "qrCodeRemoved": "QR-код удалён.",
+      "confirmRemoveQr": "Вы уверены, что хотите удалить QR-код?"
     },
     "shippingLabel": {
       "kicker": "Упаковка",

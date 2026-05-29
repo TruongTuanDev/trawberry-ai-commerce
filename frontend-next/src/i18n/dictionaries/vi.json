@@ -391,6 +391,10 @@
     "manualYandexOrderIdPlaceholder": "Mã đơn Yandex thủ công",
     "trackingUrlPlaceholder": "trackingUrl (nếu có)",
     "deliveryNotePlaceholder": "Ghi chú cho vận đơn",
+    "sku": "Mã APT/SKU",
+    "skuNotSet": "Mã chưa có",
+    "refreshQueue": "Tải lại queue",
+    "noOrdersFound": "Không tìm thấy đơn hàng nào",
     "messages": {
       "archiveSuccess": "Đã lưu trữ đơn hàng.",
       "archiveFailed": "Không thể lưu trữ đơn hàng.",

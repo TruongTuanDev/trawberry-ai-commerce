@@ -6,6 +6,7 @@ import {
   getShopPaymentSettings,
   updateShopPaymentSettings,
   uploadShopPaymentQr,
+  deleteShopPaymentQr,
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
@@ -42,6 +43,53 @@ export function SellerPaymentSettingsPageClient() {
     cashCourierCollectionStatus: "NOT_AVAILABLE",
     availableMethods: [] as string[],
   });
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = (newFile: File | null) => {
+    setFile(newFile);
+    if (newFile) {
+      setPreviewUrl(URL.createObjectURL(newFile));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
+  const previewToRender = previewUrl || form.staticQrImageUrl;
+
+  const handleRemoveQr = async () => {
+    if (!currentShopId) return;
+    const confirmQuestion = t("seller.paymentSettings.confirmRemoveQr") || "Are you sure you want to remove the QR code?";
+    if (!window.confirm(confirmQuestion)) return;
+    setError(null);
+    setMessage(null);
+    await runUpload({
+      action: async () => {
+        const saved = await deleteShopPaymentQr(currentShopId, "");
+        setForm((current) => ({
+          ...current,
+          staticQrImageUrl: "",
+          status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+          isReady: saved.isReady,
+        }));
+        handleFileChange(null);
+        setMessage(t("seller.paymentSettings.qrCodeRemoved") || "QR code removed.");
+        return saved;
+      },
+      successMessage: t("seller.paymentSettings.qrCodeRemoved") || "QR code removed.",
+      errorMessage: t("seller.paymentSettings.saveFailed"),
+    }).catch((err) => {
+      setError(err.message);
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -170,7 +218,7 @@ export function SellerPaymentSettingsPageClient() {
           status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
           isReady: saved.isReady,
         }));
-        setFile(null);
+        handleFileChange(null);
         setMessage(t("seller.paymentSettings.qrUploaded"));
         return saved;
       },
@@ -283,17 +331,45 @@ export function SellerPaymentSettingsPageClient() {
 
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
             <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.paymentSettings.staticQrImage")}</p>
-            {form.staticQrImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.staticQrImageUrl} alt="Seller payment QR" className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
+            {previewToRender ? (
+              <div className="mt-4 relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewToRender} alt="Seller payment QR" className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
+                {previewUrl && (
+                  <span className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    New Preview
+                  </span>
+                )}
+              </div>
             ) : (
-              <p className="mt-3 text-sm text-[var(--muted)]">{t("seller.paymentSettings.noQr")}</p>
+              <p className="mt-3 text-sm text-[var(--muted)]" data-testid="payment-settings-no-qr-text">{t("seller.paymentSettings.noQr")}</p>
             )}
-            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="public-input" data-testid="payment-settings-qr-file" />
-              <button type="button" onClick={() => void handleUpload()} disabled={uploading || !file} className="public-button-secondary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-qr-upload">
-                {uploading ? t("seller.productDetail.uploading") : t("seller.paymentSettings.uploadQr")}
-              </button>
+            
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="public-button-secondary px-5 py-3 text-sm cursor-pointer inline-block" data-testid="payment-settings-qr-file-label">
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)} className="hidden" data-testid="payment-settings-qr-file" />
+                  {form.staticQrImageUrl ? t("seller.paymentSettings.updateQrCode") : t("seller.paymentSettings.uploadQrCode")}
+                </label>
+
+                {form.staticQrImageUrl && (
+                  <button type="button" onClick={() => void handleRemoveQr()} disabled={uploading} className="bg-rose-100 text-rose-800 hover:bg-rose-200 px-5 py-3 text-sm font-semibold rounded-full disabled:opacity-60 transition" data-testid="payment-settings-qr-remove">
+                    {uploading ? t("seller.productDetail.saving") : t("seller.paymentSettings.removeQrCode")}
+                  </button>
+                )}
+              </div>
+
+              {file && (
+                <div className="flex items-center gap-3 bg-[var(--panel)] p-3 rounded-xl border border-[var(--border)]">
+                  <p className="text-xs text-[var(--muted)] truncate max-w-[200px]">Selected: {file.name}</p>
+                  <button type="button" onClick={() => void handleUpload()} disabled={uploading} className="public-button-primary px-4 py-2 text-xs" data-testid="payment-settings-qr-upload">
+                    {uploading ? t("seller.productDetail.uploading") : t("seller.paymentSettings.uploadQr")}
+                  </button>
+                  <button type="button" onClick={() => handleFileChange(null)} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] underline">
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

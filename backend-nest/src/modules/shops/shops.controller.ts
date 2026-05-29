@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -119,5 +120,13 @@ export class ShopsController {
     file: ProductImageUploadFile,
   ) {
     return this.shopsService.uploadPaymentQr(shopId, file);
+  }
+
+  @Delete(':shopId/payment-settings/qr-image')
+  @UseGuards(ShopAccessGuard)
+  @ApiOperation({ summary: 'Delete direct seller QR image for one shop.' })
+  @ApiOkResponse({ type: ShopPaymentSettingsResponseDto })
+  deletePaymentQr(@Param('shopId', new ParseUUIDPipe()) shopId: string) {
+    return this.shopsService.deletePaymentQr(shopId);
   }
 }
