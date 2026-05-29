@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { AiTryOnBodyForm } from "@/components/ai-try-on/ai-try-on-body-form";
 import { AiTryOnModelPicker } from "@/components/ai-try-on/ai-try-on-model-picker";
@@ -144,6 +144,9 @@ export function AiTryOnModal({
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [uploadedReferenceError, setUploadedReferenceError] = useState<string | null>(null);
+  const [uploadedImageUnsuitable, setUploadedImageUnsuitable] = useState(false);
+  const uploadRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (!open) {
@@ -202,26 +205,38 @@ export function AiTryOnModal({
 
   const hasUploadedReference = Boolean(uploadedReference?.url && uploadedReference?.storageKey);
   const hasSelectedModel = Boolean(selectedModelId);
+  const isPhotoMode = referenceSource === "photo";
+  const isDemoModelMode = referenceSource === "model";
 
   const clearErrors = () => {
     setError(null);
     setErrorCode(null);
   };
 
+  const clearUploadedValidation = () => {
+    setUploadedReferenceError(null);
+    setUploadedImageUnsuitable(false);
+  };
+
   const handleSourceChange = (nextSource: Exclude<ReferenceSource, null>) => {
     if (nextSource === "photo") {
       const replacingModel = hasSelectedModel;
+      uploadRequestIdRef.current += 1;
       setSelectedModelId(null);
       setReferenceSource("photo");
       clearErrors();
+      clearUploadedValidation();
       setInfoMessage(replacingModel ? t("aiTryOn.photoOverridesModel") : null);
       return;
     }
 
     const replacingPhoto = hasUploadedReference;
+    uploadRequestIdRef.current += 1;
+    setUploading(false);
     setUploadedReference(null);
     setReferenceSource("model");
     clearErrors();
+    clearUploadedValidation();
     setInfoMessage(replacingPhoto ? t("aiTryOn.modelOverridesPhoto") : null);
   };
 
@@ -231,10 +246,17 @@ export function AiTryOnModal({
     }
 
     const replacingModel = hasSelectedModel;
+    const requestId = uploadRequestIdRef.current + 1;
+    uploadRequestIdRef.current = requestId;
     setUploading(true);
+    setReferenceSource("photo");
     clearErrors();
+    clearUploadedValidation();
     try {
       const uploaded = await uploadAiTryOnReference(file, getGuestSessionId());
+      if (uploadRequestIdRef.current !== requestId) {
+        return;
+      }
       setUploadedReference({
         url: uploaded.url,
         storageKey: uploaded.storageKey,
@@ -243,28 +265,42 @@ export function AiTryOnModal({
       setSelectedModelId(null);
       setInfoMessage(replacingModel ? t("aiTryOn.photoOverridesModel") : null);
     } catch (uploadError) {
+      if (uploadRequestIdRef.current !== requestId) {
+        return;
+      }
       const message = resolveTryOnErrorMessage(uploadError, t, "aiTryOn.uploadFailed");
-      setErrorCode(uploadError instanceof ApiError ? uploadError.code ?? null : null);
+      const nextErrorCode = uploadError instanceof ApiError ? uploadError.code ?? null : null;
+      setErrorCode(nextErrorCode);
+      setUploadedReferenceError(message);
+      setUploadedImageUnsuitable(nextErrorCode === "AI_TRY_ON_IMAGE_UNSUITABLE");
       setError(message);
       toast.error(message);
     } finally {
-      setUploading(false);
+      if (uploadRequestIdRef.current === requestId) {
+        setUploading(false);
+      }
     }
   };
 
   const handleSelectModel = (modelId: string) => {
     const replacingPhoto = hasUploadedReference;
+    uploadRequestIdRef.current += 1;
+    setUploading(false);
     setSelectedModelId(modelId);
     setUploadedReference(null);
     setReferenceSource("model");
     clearErrors();
+    clearUploadedValidation();
     setInfoMessage(replacingPhoto ? t("aiTryOn.modelOverridesPhoto") : null);
   };
 
   const handleRemovePhoto = () => {
+    uploadRequestIdRef.current += 1;
+    setUploading(false);
     setUploadedReference(null);
     setReferenceSource(null);
     clearErrors();
+    clearUploadedValidation();
     setInfoMessage(null);
   };
 
@@ -303,7 +339,12 @@ export function AiTryOnModal({
       setTask(created);
     } catch (submitError) {
       const message = resolveTryOnErrorMessage(submitError, t, "aiTryOn.generateFailed");
-      setErrorCode(submitError instanceof ApiError ? submitError.code ?? null : null);
+      const nextErrorCode = submitError instanceof ApiError ? submitError.code ?? null : null;
+      setErrorCode(nextErrorCode);
+      if (isPhotoMode && nextErrorCode === "AI_TRY_ON_IMAGE_UNSUITABLE") {
+        setUploadedReferenceError(message);
+        setUploadedImageUnsuitable(true);
+      }
       setError(message);
       toast.error(message);
     } finally {
@@ -322,11 +363,10 @@ export function AiTryOnModal({
       return t("aiTryOn.referenceRequired");
     }
     if (
-      referenceSource === "photo" &&
-      hasUploadedReference &&
-      errorCode === "AI_TRY_ON_IMAGE_UNSUITABLE"
+      isPhotoMode &&
+      (uploadedImageUnsuitable || errorCode === "AI_TRY_ON_IMAGE_UNSUITABLE")
     ) {
-      return t("aiTryOn.imageUnsuitable");
+      return uploadedReferenceError ?? t("aiTryOn.imageUnsuitable");
     }
     if (errorCode === "AI_TRY_ON_PRODUCT_UNSUPPORTED") {
       return t("aiTryOn.productUnsupported");
@@ -340,6 +380,8 @@ export function AiTryOnModal({
   const disabledReason = getDisabledReason();
   const busy = submitting || Boolean(task && POLLING_STATUSES.has(task.status));
   const isGenerateDisabled = busy || !!disabledReason;
+  const visibleError =
+    isDemoModelMode && errorCode === "AI_TRY_ON_IMAGE_UNSUITABLE" ? null : error;
 
   return (
     <div className="fixed inset-0 z-50 overflow-x-hidden bg-slate-950/60 backdrop-blur-sm" data-testid="ai-try-on-modal">
@@ -483,9 +525,9 @@ export function AiTryOnModal({
                   </div>
                 ) : null}
 
-                {error ? (
+                {visibleError ? (
                   <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" data-testid="ai-try-on-error">
-                    {error}
+                    {visibleError}
                   </div>
                 ) : null}
 
