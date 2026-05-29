@@ -1,5 +1,21 @@
 # Project Status
 
+## Seller Center Bugfixes - 2026-05-29
+
+- Status: implemented on branch `dev/bugfix/seller-orders-counts-payment-qr-sku`
+- Resolved the three priority Seller Center bugs:
+  - **Seller order counts showing 0**: Updated the status counts to ignore the status filter (using `summaryWhere`) so all buckets render correct counts on initial mount.
+  - **Payment QR Settings**: Created backend `DELETE` endpoint with ownership verification and file cleanup. Integrated frontend Remove and Update/Upload buttons. Refactored state flow to fix react-hooks lint warnings.
+  - **SKU/APT display**: Populated `sellerSkuSnapshot` during checkout and added dynamic fallback loading of variants/product SKUs in order queries. Localized and rendered the SKU/APT text inside seller order lists, details modal, and shipping label print layouts.
+- Verification status:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass (all 32 suites / 265 tests passed)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - MinIO filesystem deletion is verified; real S3 deletion depends on production storage keys.
+
 ## AI Try-On Reference Source Selection - 2026-05-29
 
 - Status: in progress on branch `dev/bugfix/ai-tryon-reference-source-selection`

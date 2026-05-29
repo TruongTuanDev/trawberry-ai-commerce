@@ -3765,3 +3765,28 @@ Verification:
 Known gaps:
 
 - no runtime container boot against a real production database was performed in this phase; the fix is limited to the confirmed entrypoint path mismatch
+
+# Phase Report: Seller Center Bugfixes
+
+Implemented fixes for three priority Seller Center issues: order counts displaying 0 initially, missing payment QR update/delete buttons, and missing SKU/APT code display for item sorting/picking.
+
+Delivered:
+
+- **Order Counts**: Updated the shop order count query to compute global status bucket counts using a status-independent `summaryWhere` filter, ensuring counts render correctly upon initial mount instead of defaulting to 0.
+- **Payment QR Controls**: Added backend `DELETE /api/shops/:shopId/payment-settings/qr-image` with seller ownership checks, storage cleanup, and readiness recalculation. Wired the frontend "Remove QR" and "Update/Upload QR" actions, utilizing immediate file change callback state tracking instead of an effect-synchronized setter to bypass React hook cascade lint errors.
+- **SKU/APT Code Display**: Populated `sellerSkuSnapshot` during checkout creation using variant/product fallback priority (`variant.sellerSku ?? product.sellerSku ?? product.wbVendorCode`). Included nested product and variant SKU fields inside order item queries and mapped fallback order-item SKU values on order retrieval DTOs. Rendered localized SKU/APT codes in the seller orders list, order detail modal, and printable logistics shipping labels.
+
+Verification:
+
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass (32/32 suites passed, 265/265 tests passed)
+- `backend-nest npm run build`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- Branch `dev/bugfix/seller-orders-counts-payment-qr-sku` pushed to remote repository.
+
+Known Gaps:
+
+- Live image asset deletion on third-party cloud S3 files is dependent on target credentials/environments; MinIO filesystem-based deletion was verified inside mock sandbox runtimes.
+- Unrelated legacy apps `strawberry-frontend` and `strawberry-backend` remain untouched.
+
