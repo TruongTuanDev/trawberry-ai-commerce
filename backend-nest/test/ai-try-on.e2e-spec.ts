@@ -1,5 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -7,6 +8,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { QueueService } from '../src/common/queue/queue.service';
 import { AiTryOnWorkerService } from '../src/modules/ai-try-on/ai-try-on.worker';
+import { AiTryOnAiServiceClientService } from '../src/modules/ai-try-on/ai-try-on-ai-service-client.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
 import { readBody } from './test-helpers';
 
@@ -1440,3 +1442,53 @@ function matchesAiTryOnSyncWhere(
 
   return true;
 }
+
+describe('AiTryOnWorkerService URL Resolution', () => {
+  it('resolves model-2 image relative URL to frontend-next:3000 and never to backend-nest:3001', async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AiTryOnWorkerService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(
+              (key: string, defaultValue?: string): string | undefined => {
+                if (key === 'FRONTEND_INTERNAL_BASE_URL') {
+                  return 'http://frontend-next:3000';
+                }
+                return defaultValue;
+              },
+            ),
+          },
+        },
+        { provide: PrismaService, useValue: {} },
+        { provide: AiTryOnAiServiceClientService, useValue: {} },
+      ],
+    }).compile();
+
+    const workerService =
+      moduleRef.get<AiTryOnWorkerService>(AiTryOnWorkerService);
+    const resolved = (
+      workerService as unknown as {
+        resolveSelectedModelImageUrl: (
+          a: string,
+          b: string,
+          c: string | null,
+          d: string,
+          e: string | null,
+        ) => string;
+      }
+    ).resolveSelectedModelImageUrl(
+      '/ai-try-on/models/model2.png',
+      'http://frontend-next:3000',
+      null,
+      'http://backend-nest:3001',
+      null,
+    );
+
+    expect(resolved).toBe(
+      'http://frontend-next:3000/ai-try-on/models/model2.png',
+    );
+    expect(resolved).not.toContain('backend-nest:3001');
+  });
+});

@@ -1,4 +1,6 @@
 from __future__ import annotations
+import logging
+import re
 
 import openai
 
@@ -11,6 +13,8 @@ from app.services.try_on_provider import (
     TryOnProviderRequest,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class OpenAITryOnProvider(TryOnProvider):
     provider_name = "openai"
@@ -18,6 +22,12 @@ class OpenAITryOnProvider(TryOnProvider):
     def __init__(self, settings: Settings):
         self.settings = settings
         self.support = OpenAIImageSupport(settings)
+
+    def _safe_message(self, error: Exception) -> str:
+        message = str(error).strip()
+        if not message:
+            return error.__class__.__name__
+        return message.replace(self.settings.openai_api_key or "", "[redacted]")
 
     async def generate(
         self, request: TryOnProviderRequest
@@ -36,18 +46,21 @@ class OpenAITryOnProvider(TryOnProvider):
                 "The uploaded image is not suitable for try-on.",
                 status_code=400,
                 retryable=False,
-                code="AI_TRY_ON_IMAGE_UNSUITABLE",
+                code="INVALID_REFERENCE_IMAGE",
             )
+
+        is_demo_model = not request.customer_image_url and bool(request.selected_model_image_url)
 
         product_image = await self.support.download_input_image(
             request.product_image_url,
             label="product",
-            unsuitable_code="AI_TRY_ON_IMAGE_UNSUITABLE",
+            unsuitable_code="INVALID_PRODUCT_IMAGE",
         )
         person_image = await self.support.download_input_image(
             person_image_url,
             label="person",
-            unsuitable_code="AI_TRY_ON_IMAGE_UNSUITABLE",
+            unsuitable_code="DEMO_MODEL_IMAGE_NOT_FOUND" if is_demo_model else "INVALID_REFERENCE_IMAGE",
+            is_demo_model=is_demo_model,
         )
 
         try:
@@ -58,57 +71,74 @@ class OpenAITryOnProvider(TryOnProvider):
         except ProviderError:
             raise
         except openai.AuthenticationError as error:
+            safe_msg = self._safe_message(error)
+            logger.error(f"OpenAI Auth Error during try-on: {safe_msg}", exc_info=True)
             raise ProviderError(
-                "AI provider is not configured.",
-                status_code=400,
+                "AI service is currently unavailable (authentication failed).",
+                status_code=401,
                 retryable=False,
-                code="AI_PROVIDER_NOT_CONFIGURED",
+                code="OPENAI_AUTH_FAILED",
             ) from error
         except openai.PermissionDeniedError as error:
+            safe_msg = self._safe_message(error)
+            logger.error(f"OpenAI Permission Error during try-on: {safe_msg}", exc_info=True)
             raise ProviderError(
-                "AI provider is not configured.",
-                status_code=400,
+                "AI service is currently unavailable (authentication failed).",
+                status_code=401,
                 retryable=False,
-                code="AI_PROVIDER_NOT_CONFIGURED",
+                code="OPENAI_AUTH_FAILED",
             ) from error
         except openai.APITimeoutError as error:
+            safe_msg = self._safe_message(error)
+            logger.error(f"OpenAI Timeout Error during try-on: {safe_msg}", exc_info=True)
             raise ProviderError(
                 "AI generation timed out. Please try again.",
                 status_code=504,
                 retryable=True,
-                code="AI_TIMEOUT",
+                code="OPENAI_PROVIDER_ERROR",
             ) from error
         except openai.RateLimitError as error:
+            safe_msg = self._safe_message(error).lower()
+            logger.error(f"OpenAI Rate Limit Error during try-on: {safe_msg}", exc_info=True)
+            if "quota" in safe_msg or "billing" in safe_msg:
+                raise ProviderError(
+                    "AI service quota has been exceeded. Please contact the administrator.",
+                    status_code=429,
+                    retryable=False,
+                    code="OPENAI_QUOTA_EXCEEDED",
+                ) from error
             raise ProviderError(
-                "AI generation failed. Please try again.",
-                status_code=503,
+                "AI service rate limit reached. Please wait a moment.",
+                status_code=429,
                 retryable=True,
-                code="AI_PROVIDER_ERROR",
+                code="OPENAI_RATE_LIMITED",
             ) from error
         except openai.BadRequestError as error:
-            message = str(error).lower()
-            code = (
-                "AI_TRY_ON_IMAGE_UNSUITABLE"
-                if "image" in message or "safety" in message
-                else "AI_PROVIDER_ERROR"
-            )
-            user_message = (
-                "The uploaded image is not suitable for try-on."
-                if code == "AI_TRY_ON_IMAGE_UNSUITABLE"
-                else "AI generation failed. Please try again."
+            error_type, error_code, body_message = self.support._extract_error_fields(error)
+            status_code = getattr(error, "status_code", 400)
+
+            sanitized_message = self._safe_message(error)
+            if body_message:
+                sanitized_message = self._safe_message(Exception(body_message))
+
+            logger.error(
+                "OpenAI Bad Request during try-on: status_code=%s, error.type=%s, error.code=%s, error.message=%s",
+                status_code, error_type, error_code, sanitized_message
             )
             raise ProviderError(
-                user_message,
-                status_code=400 if code == "AI_TRY_ON_IMAGE_UNSUITABLE" else 502,
+                "AI try-on rejected the image edit request.",
+                status_code=400,
                 retryable=False,
-                code=code,
+                code="OPENAI_BAD_REQUEST",
             ) from error
         except openai.OpenAIError as error:
+            safe_msg = self._safe_message(error)
+            logger.error(f"OpenAI General Error during try-on: {safe_msg}", exc_info=True)
             raise ProviderError(
-                "AI generation failed. Please try again.",
+                "AI try-on generation failed. Please try again later.",
                 status_code=502,
                 retryable=False,
-                code="AI_PROVIDER_ERROR",
+                code="OPENAI_PROVIDER_ERROR",
             ) from error
 
         images = self.support.parse_response(

@@ -291,7 +291,7 @@ def test_openai_provider_uses_dalle2_properly(monkeypatch) -> None:
     async def stub_download(_url: str, label: str):
         return SimpleNamespace(
             filename=f"{label}.png",
-            payload=b"reference-image",
+            payload=create_image_bytes("PNG"),
             content_type="image/png",
         )
 

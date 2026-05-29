@@ -15,7 +15,7 @@ export function AiTryOnResult({
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
-        {task.resultImage ? (
+        {task.resultImage?.url ? (
           <FallbackImage
             src={task.resultImage.url}
             alt="AI try-on result"
@@ -23,8 +23,9 @@ export function AiTryOnResult({
             testId="ai-try-on-result-image"
           />
         ) : (
-          <div className="flex min-h-[360px] items-center justify-center px-6 py-10 text-sm text-[var(--muted)]">
-            {t("aiTryOn.generating")}
+          <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 px-6 py-10 text-center text-sm text-[var(--muted)]" data-testid="ai-try-on-success-no-image">
+            <span className="text-4xl">🎉</span>
+            <span className="font-semibold text-[var(--foreground)]">{t("aiTryOn.successNoImage")}</span>
           </div>
         )}
       </div>

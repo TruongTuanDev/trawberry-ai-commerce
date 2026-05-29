@@ -94,8 +94,8 @@ def test_openai_try_on_provider_calls_image_edit(monkeypatch) -> None:
         client_factory=lambda _settings, _timeout: FakeClient(images_api),
     )
 
-    async def stub_download(url: str, *, label: str, unsuitable_code: str):
-        assert unsuitable_code == "AI_TRY_ON_IMAGE_UNSUITABLE"
+    async def stub_download(url: str, *, label: str, unsuitable_code: str, is_demo_model: bool = False):
+        assert unsuitable_code in ("INVALID_PRODUCT_IMAGE", "INVALID_REFERENCE_IMAGE", "DEMO_MODEL_IMAGE_NOT_FOUND")
         return DownloadedImage(
             filename=f"{label}.png",
             payload=create_png_bytes(),
@@ -125,7 +125,7 @@ def test_openai_try_on_provider_maps_bad_request_to_image_unsuitable(monkeypatch
         )
     )
 
-    async def stub_download(url: str, *, label: str, unsuitable_code: str):
+    async def stub_download(url: str, *, label: str, unsuitable_code: str, is_demo_model: bool = False):
         return DownloadedImage(
             filename=f"{label}.png",
             payload=create_png_bytes(),
@@ -145,7 +145,7 @@ def test_openai_try_on_provider_maps_bad_request_to_image_unsuitable(monkeypatch
     with pytest.raises(ProviderError) as error:
         asyncio.run(provider.generate(build_request()))
 
-    assert error.value.code == "AI_TRY_ON_IMAGE_UNSUITABLE"
+    assert error.value.code == "OPENAI_BAD_REQUEST"
 
 
 def test_openai_input_validation_rejects_non_raster_images(monkeypatch) -> None:
@@ -197,4 +197,4 @@ def test_openai_input_validation_rejects_non_raster_images(monkeypatch) -> None:
             )
         )
 
-    assert error.value.code == "AI_TRY_ON_IMAGE_UNSUITABLE"
+    assert error.value.code == "INVALID_REFERENCE_IMAGE"

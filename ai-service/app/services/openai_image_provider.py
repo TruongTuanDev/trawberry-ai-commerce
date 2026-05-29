@@ -306,6 +306,27 @@ class OpenAIImageProvider(ImageProvider):
         self._apply_generate_params(params)
         return client.images.generate(**params)
 
+
+    def _make_square_png(self, payload: bytes, target_size: int = 1024) -> bytes:
+        with Image.open(io.BytesIO(payload)) as img:
+            img = img.convert("RGBA")
+            w, h = img.size
+            aspect_ratio = w / h
+            if w > h:
+                new_w = target_size
+                new_h = int(target_size / aspect_ratio)
+            else:
+                new_h = target_size
+                new_w = int(target_size * aspect_ratio)
+            img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            square_img = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+            offset_x = (target_size - new_w) // 2
+            offset_y = (target_size - new_h) // 2
+            square_img.paste(img_resized, (offset_x, offset_y))
+            out = io.BytesIO()
+            square_img.save(out, format="PNG")
+            return out.getvalue()
+
     def _call_openai_edit(
         self,
         client: OpenAI,
@@ -313,22 +334,50 @@ class OpenAIImageProvider(ImageProvider):
         downloaded_images: list[DownloadedImage],
     ):
         with tempfile.TemporaryDirectory(prefix="strawberry-openai-") as tmp_dir:
-            files = []
             file_handles = []
             try:
-                for index, image in enumerate(downloaded_images):
-                    path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
-                    path.write_bytes(image.payload)
-                    handle = path.open("rb")
-                    file_handles.append(handle)
-                    files.append(handle)
+                if self._is_dalle2_model:
+                    target_size = 1024
+                    if self.settings.openai_image_size in ("256x256", "512x512", "1024x1024"):
+                        target_size = int(self.settings.openai_image_size.split("x")[0])
 
-                params: dict[str, Any] = {
-                    "model": self.settings.openai_image_model,
-                    "image": files if len(files) > 1 else files[0],
-                    "prompt": self._normalize_prompt(request.prompt),
-                    "n": request.quantity,
-                }
+                    img1 = downloaded_images[0]
+                    sq1 = self._make_square_png(img1.payload, target_size)
+                    p1 = Path(tmp_dir) / "image.png"
+                    p1.write_bytes(sq1)
+                    h1 = p1.open("rb")
+                    file_handles.append(h1)
+
+                    params: dict[str, Any] = {
+                        "model": self.settings.openai_image_model,
+                        "image": h1,
+                        "prompt": self._normalize_prompt(request.prompt),
+                        "n": request.quantity,
+                    }
+
+                    if len(downloaded_images) > 1:
+                        img2 = downloaded_images[1]
+                        sq2 = self._make_square_png(img2.payload, target_size)
+                        p2 = Path(tmp_dir) / "mask.png"
+                        p2.write_bytes(sq2)
+                        h2 = p2.open("rb")
+                        file_handles.append(h2)
+                        params["mask"] = h2
+                else:
+                    files = []
+                    for index, image in enumerate(downloaded_images):
+                        path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
+                        path.write_bytes(image.payload)
+                        handle = path.open("rb")
+                        file_handles.append(handle)
+                        files.append(handle)
+
+                    params: dict[str, Any] = {
+                        "model": self.settings.openai_image_model,
+                        "image": files if len(files) > 1 else files[0],
+                        "prompt": self._normalize_prompt(request.prompt),
+                        "n": request.quantity,
+                    }
 
                 self._apply_edit_params(params)
                 return client.images.edit(**params)

@@ -1,5 +1,27 @@
 # Phase Report
 
+## 2026-05-30 AI Try-On Real Generation Failures Fix
+
+- Status: Completed on branch `dev/bugfix/ai-tryon-real-generation-failures`
+- Implemented backend URL resolution fixes:
+  - Added support for `FRONTEND_INTERNAL_BASE_URL` (defaulting to `http://frontend-next:3000` in the docker network) in the NestJS `ConfigService`.
+  - Refactored `resolveSelectedModelImageUrl` to resolve relative demo model URLs (e.g. `/ai-try-on/models/model2.png`) directly using `frontendInternalBaseUrl` to avoid 404 download errors.
+  - Added backend unit tests confirming URL resolution.
+- Refactored Python AI Service (`ai-service`) image editing logic:
+  - Added PIL (Pillow) helper functions to square and pad images (`make_square_png`) and generate transparent mask PNGs (`generate_transparent_mask`).
+  - Separated **DALL-E 2 edit flow** (uses square image + transparent mask, ignoring product image from files parameter) from **gpt-image-1 / other edit flow** (retains original format).
+  - Sanitized logging for `openai.BadRequestError` to log only `status_code`, `error.type`, `error.code`, and sanitized `error.message` without leaking the API key, base64 payload, or raw bytes.
+  - Mapped all download and OpenAI errors to stable error codes: `OPENAI_BAD_REQUEST`, `INVALID_REFERENCE_IMAGE`, `INVALID_PRODUCT_IMAGE`, `OPENAI_AUTH_FAILED`, `OPENAI_QUOTA_EXCEEDED`, `OPENAI_RATE_LIMITED`, `OPENAI_PROVIDER_ERROR`, `DEMO_MODEL_IMAGE_NOT_FOUND`.
+- Updated Next.js Frontend (`frontend-next`) UI/UX:
+  - Added logic to clear stale errors and reset task state (`setTask(null)`) on source switches, model selections, photo uploads, and new Generate triggers in `AiTryOnModal`.
+  - Configured error visibility to suppress reference upload errors in demo model mode, and suppress model download errors in user photo mode.
+  - Refactored `AiTryOnResult` to display a clear success state card if the task is completed but the generated image URL is empty.
+  - Localized the new error codes in English and Russian translations.
+- Verification status:
+  - Backend NestJS tests: `npm test -- --runInBand test/ai-try-on.e2e-spec.ts` -> pass (all 21 tests passed)
+  - Python AI Service tests: `python -m pytest -q` -> pass (all 29 tests passed)
+  - Frontend type safety, linting and compilation: `npm run lint` -> pass; `npm run build` -> pass
+
 ## 2026-05-30 Admin User Management
 
 - Implemented a complete Admin User Management panel to view, filter, create, edit, disable, and delete users safely.

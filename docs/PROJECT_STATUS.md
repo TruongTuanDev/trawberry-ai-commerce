@@ -1,5 +1,28 @@
 # Project Status
 
+## AI Try-On Real Generation Failures - 2026-05-30
+
+- Status: Implemented on branch `dev/bugfix/ai-tryon-real-generation-failures`
+- Implemented frontend and backend adjustments to resolve the AI Try-On generation failures.
+- Backend additions:
+  - Added support for `FRONTEND_INTERNAL_BASE_URL` to NestJS backend configuration, defaulting to internal container URL `http://frontend-next:3000`.
+  - Refactored workers to resolve relative model image paths utilizing the new setting, preventing 404 download errors.
+  - Added unit test coverage for the resolution.
+- AI Service (`ai-service` in Python) additions:
+  - Created Pillow (PIL) helpers to center-pad and square reference images and generate transparent mask PNGs.
+  - Split OpenAI Images Edit API logic based on settings to separate the DALL-E 2 edit flow (square image + transparent mask) from the gpt-image-1 / other edit flow.
+  - Mapped all download and OpenAI API errors to stable codes: `OPENAI_BAD_REQUEST`, `INVALID_REFERENCE_IMAGE`, `INVALID_PRODUCT_IMAGE`, `OPENAI_AUTH_FAILED`, `OPENAI_QUOTA_EXCEEDED`, `OPENAI_RATE_LIMITED`, `OPENAI_PROVIDER_ERROR`, `DEMO_MODEL_IMAGE_NOT_FOUND`.
+  - Implemented sanitized logging catching `openai.BadRequestError` to log the `status_code`, `error.type`, `error.code`, and sanitized `error.message` without leaking the API key, base64 payload, or raw bytes.
+- Frontend (`frontend-next`) additions:
+  - Reset task and error states when changing sources, picking a model, uploading a photo, or clicking "Generate".
+  - Configured error visibility filters to prevent leaking mismatched errors (photo errors in demo model mode, model download errors in user photo mode).
+  - Modified `AiTryOnResult` to show a clear success card if task status is completed but the returned image URL is empty.
+  - Added English and Russian localizations for all new codes.
+- Verification status:
+  - Backend NestJS tests: `npm test -- --runInBand test/ai-try-on.e2e-spec.ts` -> pass (21 tests passed)
+  - Python AI Service tests: `python -m pytest -q` -> pass (29 tests passed)
+  - Frontend type safety, linting and compilation: `npm run lint` -> pass; `npm run build` -> pass
+
 ## Admin User Management - 2026-05-30
 
 - Status: implemented on branch `dev/feature/admin-user-management`
