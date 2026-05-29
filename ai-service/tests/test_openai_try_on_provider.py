@@ -95,7 +95,12 @@ def test_openai_try_on_provider_calls_image_edit(monkeypatch) -> None:
     )
 
     async def stub_download(url: str, *, label: str, unsuitable_code: str):
-        assert unsuitable_code == "AI_TRY_ON_IMAGE_UNSUITABLE"
+        expected_code = (
+            "INVALID_PRODUCT_IMAGE"
+            if label == "product"
+            else "INVALID_REFERENCE_IMAGE"
+        )
+        assert unsuitable_code == expected_code
         return DownloadedImage(
             filename=f"{label}.png",
             payload=create_png_bytes(),
@@ -145,7 +150,79 @@ def test_openai_try_on_provider_maps_bad_request_to_image_unsuitable(monkeypatch
     with pytest.raises(ProviderError) as error:
         asyncio.run(provider.generate(build_request()))
 
-    assert error.value.code == "AI_TRY_ON_IMAGE_UNSUITABLE"
+    assert error.value.code == "OPENAI_BAD_REQUEST"
+
+
+def test_openai_try_on_provider_maps_reference_bad_request(monkeypatch) -> None:
+    request = httpx.Request("POST", "https://api.openai.com/v1/images/edits")
+    response = httpx.Response(status_code=400, request=request)
+    provider = OpenAITryOnProvider(
+        Settings(
+            openai_api_key="test-key",
+        )
+    )
+
+    async def stub_download(url: str, *, label: str, unsuitable_code: str):
+        return DownloadedImage(
+            filename=f"{label}.png",
+            payload=create_png_bytes(),
+            content_type="image/png",
+        )
+
+    monkeypatch.setattr(provider.support, "download_input_image", stub_download)
+
+    async def stub_edit_images(**kwargs):
+        raise openai.BadRequestError(
+            message="reference image must be a clear full-body front-facing photo",
+            response=response,
+            body={
+                "error": {
+                    "type": "invalid_request_error",
+                    "code": "invalid_image",
+                    "message": "reference image must be a clear full-body front-facing photo",
+                }
+            },
+        )
+
+    monkeypatch.setattr(provider.support, "edit_images", stub_edit_images)
+
+    with pytest.raises(ProviderError) as error:
+        asyncio.run(provider.generate(build_request()))
+
+    assert error.value.code == "INVALID_REFERENCE_IMAGE"
+
+
+def test_openai_try_on_provider_uses_structured_model_download_error(monkeypatch) -> None:
+    provider = OpenAITryOnProvider(
+        Settings(
+            openai_api_key="test-key",
+        )
+    )
+    request = build_request()
+    request.customer_image_url = None
+    request.selected_model_image_url = "https://skidkaberry.com/ai-try-on/models/model2.png"
+    request.selected_model_id = "model-2"
+
+    async def stub_download(url: str, *, label: str, unsuitable_code: str):
+        if label == "product":
+            return DownloadedImage(
+                filename="product.png",
+                payload=create_png_bytes(),
+                content_type="image/png",
+            )
+        raise ProviderError(
+            "The demo model image could not be loaded. Please try another model.",
+            status_code=400,
+            retryable=False,
+            code=unsuitable_code,
+        )
+
+    monkeypatch.setattr(provider.support, "download_input_image", stub_download)
+
+    with pytest.raises(ProviderError) as error:
+        asyncio.run(provider.generate(request))
+
+    assert error.value.code == "AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE"
 
 
 def test_openai_input_validation_rejects_non_raster_images(monkeypatch) -> None:

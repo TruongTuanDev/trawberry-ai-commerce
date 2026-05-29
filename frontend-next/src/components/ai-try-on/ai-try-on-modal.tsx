@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { AiTryOnBodyForm } from "@/components/ai-try-on/ai-try-on-body-form";
 import { AiTryOnModelPicker } from "@/components/ai-try-on/ai-try-on-model-picker";
@@ -35,36 +35,71 @@ function resolveTryOnErrorMessage(
     switch (error.code) {
       case "AI_TRY_ON_PRODUCT_UNSUPPORTED":
         return t("aiTryOn.productUnsupported");
+      case "AI_TRY_ON_REFERENCE_REQUIRED":
+        return t("aiTryOn.referenceRequired");
+      case "AI_TRY_ON_REFERENCE_CONFLICT":
+        return t("aiTryOn.referenceConflict");
       case "AI_PROVIDER_NOT_CONFIGURED":
         return t("aiTryOn.providerNotConfigured");
+      case "AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE":
+        return t("aiTryOn.demoModelImageUnavailable");
       case "AI_TRY_ON_IMAGE_UNSUITABLE":
         return t("aiTryOn.imageUnsuitable");
+      case "INVALID_REFERENCE_IMAGE":
+        return t("aiTryOn.invalidReferenceImage");
+      case "INVALID_PRODUCT_IMAGE":
+      case "OPENAI_BAD_REQUEST":
+        return t("aiTryOn.openaiBadRequest");
+      case "OPENAI_AUTH_FAILED":
+      case "OPENAI_PROVIDER_ERROR":
+        return t("aiTryOn.aiServiceUnavailable");
+      case "OPENAI_QUOTA_EXCEEDED":
+        return t("aiTryOn.openaiQuotaExceeded");
+      case "OPENAI_RATE_LIMITED":
+        return t("aiTryOn.aiServiceUnavailable");
       case "AI_PROVIDER_ERROR":
         return t("aiTryOn.providerError");
       case "AI_TIMEOUT":
         return t("aiTryOn.timeout");
       default:
-        return error.message || t(fallbackKey);
+        return t(fallbackKey);
     }
   }
 
-  return error instanceof Error ? error.message : t(fallbackKey);
+  return t(fallbackKey);
 }
 
 function resolveTaskErrorMessage(task: AiTryOnTask, t: (key: string) => string) {
   switch (task.errorCode) {
     case "AI_TRY_ON_PRODUCT_UNSUPPORTED":
       return t("aiTryOn.productUnsupported");
+    case "AI_TRY_ON_REFERENCE_REQUIRED":
+      return t("aiTryOn.referenceRequired");
+    case "AI_TRY_ON_REFERENCE_CONFLICT":
+      return t("aiTryOn.referenceConflict");
     case "AI_PROVIDER_NOT_CONFIGURED":
       return t("aiTryOn.providerNotConfigured");
+    case "AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE":
+      return t("aiTryOn.demoModelImageUnavailable");
     case "AI_TRY_ON_IMAGE_UNSUITABLE":
       return t("aiTryOn.imageUnsuitable");
+    case "INVALID_REFERENCE_IMAGE":
+      return t("aiTryOn.invalidReferenceImage");
+    case "INVALID_PRODUCT_IMAGE":
+    case "OPENAI_BAD_REQUEST":
+      return t("aiTryOn.openaiBadRequest");
+    case "OPENAI_AUTH_FAILED":
+    case "OPENAI_PROVIDER_ERROR":
+    case "OPENAI_RATE_LIMITED":
+      return t("aiTryOn.aiServiceUnavailable");
+    case "OPENAI_QUOTA_EXCEEDED":
+      return t("aiTryOn.openaiQuotaExceeded");
     case "AI_PROVIDER_ERROR":
       return t("aiTryOn.providerError");
     case "AI_TIMEOUT":
       return t("aiTryOn.timeout");
     default:
-      return task.errorMessage ?? t("aiTryOn.generateFailed");
+      return t("aiTryOn.generateFailed");
   }
 }
 
@@ -125,6 +160,7 @@ export function AiTryOnModal({
   const [submitting, setSubmitting] = useState(false);
   const [task, setTask] = useState<AiTryOnTask | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const lastTaskStatus = useRef<AiTryOnTask["status"] | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -169,6 +205,13 @@ export function AiTryOnModal({
 
     return () => window.clearInterval(interval);
   }, [task, t]);
+
+  useEffect(() => {
+    if (task?.status === "COMPLETED" && lastTaskStatus.current !== "COMPLETED") {
+      toast.success(t("aiTryOn.generatedSuccess"));
+    }
+    lastTaskStatus.current = task?.status ?? null;
+  }, [task?.status, t]);
 
   const previewModel = useMemo(
     () => builtInModels.find((model) => model.modelId === selectedModelId) ?? null,
@@ -288,11 +331,13 @@ export function AiTryOnModal({
                       customerPreviewUrl={uploadedReference?.url ?? null}
                       uploading={uploading}
                       t={t}
-                      onFileChange={(file) => void handleUpload(file)}
-                      onSelectModel={(modelId) => {
-                        setSelectedModelId(modelId);
-                        setUploadedReference(null);
-                      }}
+      onFileChange={(file) => void handleUpload(file)}
+      onSelectModel={(modelId) => {
+        setError(null);
+        setTask(null);
+        setSelectedModelId(modelId);
+        setUploadedReference(null);
+      }}
                     />
                   </>
                 )}

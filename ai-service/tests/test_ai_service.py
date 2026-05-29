@@ -8,6 +8,9 @@ from app.dependencies import (
     get_try_on_service,
 )
 from app.main import app
+from app.services.image_provider import ProviderError
+from app.services.try_on_provider import TryOnProvider
+from app.services.try_on_service import TryOnService
 
 
 client = TestClient(app)
@@ -290,3 +293,57 @@ def test_generate_try_on_openai_missing_key_returns_configured_error(monkeypatch
 
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "AI_PROVIDER_NOT_CONFIGURED"
+
+
+def test_generate_try_on_returns_structured_model_download_error() -> None:
+    class FailingTryOnProvider(TryOnProvider):
+        provider_name = "openai"
+
+        async def generate(self, request):
+            raise ProviderError(
+                "The demo model image could not be loaded. Please try another model.",
+                status_code=400,
+                retryable=False,
+                code="AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE",
+                diagnostics={
+                    "referenceSource": "demo_model",
+                    "selectedModelId": "model-2",
+                    "safeDownloadStatus": 404,
+                },
+            )
+
+    token = get_settings().ai_service_internal_token
+    storage_service = get_try_on_service().storage_service
+    app.dependency_overrides[get_try_on_service] = lambda: TryOnService(
+        storage_service=storage_service,
+        providers={"openai": FailingTryOnProvider()},
+    )
+
+    try:
+        response = client.post(
+            "/internal/ai-try-on/generate",
+            headers={"X-Internal-Token": token},
+            json={
+                "taskId": "try-on-task-3",
+                "providerMode": "openai",
+                "product": {
+                    "id": "prod-1",
+                    "name": "Marketplace jacket",
+                    "imageUrl": "https://cdn.example.com/product.jpg",
+                },
+                "person": {
+                    "selectedModelId": "model-2",
+                    "selectedModelImageUrl": "https://skidkaberry.com/ai-try-on/models/model2.png",
+                },
+                "prompt": "Create a stable marketplace virtual try-on preview for this jacket.",
+                "locale": "ru",
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(get_try_on_service, None)
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE"
+    assert detail["referenceSource"] == "demo_model"
+    assert detail["selectedModelId"] == "model-2"

@@ -82,7 +82,7 @@ export function AiTryOnModelPicker({
             <FallbackImage
               src={customerPreviewUrl}
               alt="Try-on reference preview"
-              className="h-56 w-full object-cover"
+              className="aspect-[3/4] w-full bg-[var(--panel)] object-contain p-3"
               testId="ai-try-on-upload-preview"
             />
           </div>

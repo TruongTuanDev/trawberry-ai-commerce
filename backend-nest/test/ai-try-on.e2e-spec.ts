@@ -718,6 +718,10 @@ describe('AiTryOnController (e2e)', () => {
       modelId: 'model-1',
       imageUrl: '/ai-try-on/models/model1.png',
     });
+    expect(body.builtInModels[1]).toMatchObject({
+      modelId: 'model-2',
+      imageUrl: '/ai-try-on/models/model2.png',
+    });
     expect(body.builtInModels[9]).toMatchObject({
       modelId: 'model-10',
       imageUrl: '/ai-try-on/models/model10.png',
@@ -943,6 +947,20 @@ describe('AiTryOnController (e2e)', () => {
       .expect(400);
     expect(readBody<{ code: string }>(referenceResponse).code).toBe(
       'AI_TRY_ON_REFERENCE_REQUIRED',
+    );
+
+    const conflictResponse = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-1')
+      .send({
+        selectedSize: 'M',
+        customerImageUrl: 'https://cdn.example.com/customer.png',
+        selectedModelId: 'model-2',
+        consentAccepted: true,
+      })
+      .expect(400);
+    expect(readBody<{ code: string }>(conflictResponse).code).toBe(
+      'AI_TRY_ON_REFERENCE_CONFLICT',
     );
   });
 

@@ -289,6 +289,9 @@ test("AI Try-On mock flow works from disabled state to completed result", async 
   await expect(page.locator('[data-testid^="ai-try-on-model-"]')).toHaveCount(10);
   await expect(page.getByTestId("ai-try-on-model-model-1")).toBeVisible();
   await expect(page.getByTestId("ai-try-on-model-model-10")).toBeVisible();
+  await expect(
+    page.getByTestId("ai-try-on-model-model-2").locator("img").first(),
+  ).toHaveAttribute("src", /\/ai-try-on\/models\/model2\.png/);
 
   await fillTryOnForm(page);
   await page.getByTestId("ai-try-on-generate").click();

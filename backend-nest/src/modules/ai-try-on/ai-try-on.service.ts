@@ -198,6 +198,13 @@ export class AiTryOnService {
       );
     }
 
+    if (dto.customerImageUrl && dto.selectedModelId) {
+      throw this.buildCodeError(
+        'AI_TRY_ON_REFERENCE_CONFLICT',
+        'Use either an uploaded photo or a built-in model, not both at the same time.',
+      );
+    }
+
     if (dto.selectedModelId && !findBuiltInTryOnModel(dto.selectedModelId)) {
       throw this.buildCodeError(
         'AI_TRY_ON_REFERENCE_REQUIRED',

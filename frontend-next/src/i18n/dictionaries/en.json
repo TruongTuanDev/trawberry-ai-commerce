@@ -346,6 +346,13 @@
     "productUnsupported": "This product is not currently supported by AI try-on.",
     "providerNotConfigured": "AI provider is not configured.",
     "imageUnsuitable": "The uploaded image is not suitable for try-on.",
+    "referenceConflict": "You can use either your own photo or a demo model, not both.",
+    "demoModelImageUnavailable": "The demo model image could not be loaded. Please try another model.",
+    "invalidReferenceImage": "The reference image is not suitable for try-on. Use a clear full-body front-facing photo.",
+    "openaiBadRequest": "OpenAI rejected the image request. Please try another photo or model.",
+    "openaiQuotaExceeded": "OpenAI quota is exceeded or billing is not active.",
+    "aiServiceUnavailable": "AI service is temporarily unavailable. Please try again later.",
+    "generatedSuccess": "AI try-on generated successfully.",
     "providerError": "AI generation failed. Please try again.",
     "timeout": "AI generation timed out. Please try again."
   },

@@ -1,5 +1,28 @@
 # Project Status
 
+## AI Try-On Generation URL And Provider Error Hardening - 2026-05-29
+
+- Status: in progress on branch `dev/bugfix/ai-tryon-generation-url-and-openai-errors`
+- Demo model generation no longer relies on backend upload URL rewriting for frontend public assets.
+- Backend now prefers `FRONTEND_INTERNAL_BASE_URL` when converting built-in model assets like `/ai-try-on/models/model2.png` into ai-service-downloadable URLs.
+- AI Try-On request validation again enforces exactly one reference source:
+  - `selectedModelId` only
+  - uploaded customer image only
+  - both rejected with `AI_TRY_ON_REFERENCE_CONFLICT`
+- ai-service now returns stable provider codes for try-on runtime failures instead of collapsing most OpenAI issues into a generic provider error:
+  - `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE`
+  - `INVALID_REFERENCE_IMAGE`
+  - `INVALID_PRODUCT_IMAGE`
+  - `OPENAI_BAD_REQUEST`
+  - `OPENAI_AUTH_FAILED`
+  - `OPENAI_QUOTA_EXCEEDED`
+  - `OPENAI_RATE_LIMITED`
+  - `OPENAI_PROVIDER_ERROR`
+- Frontend AI Try-On messaging now maps those codes to localized EN/RU user-facing copy.
+- Current gaps:
+  - focused Playwright verification still requires local frontend/backend services
+  - production env must expose a frontend-reachable base URL for demo-model asset downloads
+
 ## AI Try-On Real Demo Models - 2026-05-28
 
 - Status: implemented on branch `dev/feature/ai-tryon-real-demo-models`

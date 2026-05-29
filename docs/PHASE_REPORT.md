@@ -1,5 +1,43 @@
 # Phase Report
 
+## 2026-05-29 AI Try-On Generation URL And Provider Errors
+
+- audited the production failure path and confirmed two root causes:
+  - backend worker could rewrite relative built-in model assets to `backend-nest:3001` when no frontend base URL was configured
+  - ai-service collapsed OpenAI `400` responses into generic provider failures, which hid the real cause from backend and frontend
+- hardened built-in model asset resolution:
+  - added explicit frontend asset resolution with `FRONTEND_INTERNAL_BASE_URL`
+  - fallback order is now `FRONTEND_INTERNAL_BASE_URL -> FRONTEND_URL -> PUBLIC_SITE_URL`
+  - relative model assets such as `/ai-try-on/models/model2.png` no longer fall back to backend upload URL rewriting
+  - if a selected demo model cannot be resolved, the task fails with `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE`
+- restored API-side reference-source enforcement:
+  - exactly one of `customerImageUrl` or `selectedModelId` is allowed
+  - conflict now returns `AI_TRY_ON_REFERENCE_CONFLICT`
+- expanded ai-service try-on provider error mapping:
+  - `INVALID_REFERENCE_IMAGE`
+  - `INVALID_PRODUCT_IMAGE`
+  - `OPENAI_BAD_REQUEST`
+  - `OPENAI_AUTH_FAILED`
+  - `OPENAI_QUOTA_EXCEEDED`
+  - `OPENAI_RATE_LIMITED`
+  - `OPENAI_PROVIDER_ERROR`
+- frontend AI Try-On modal now maps these codes to localized EN/RU copy instead of falling back to a generic failure string
+- upload preview keeps portrait framing with `object-contain`
+- updated backend, ai-service, and public API docs/tests for:
+  - frontend asset URL resolution
+  - model-2 asset mapping
+  - structured model-download failure
+  - stable OpenAI bad-request classification
+
+Verification:
+
+- pending current branch verification run
+
+Remaining gaps:
+
+- focused Playwright rerun still depends on live local frontend/backend services
+- production deploy must set `FRONTEND_INTERNAL_BASE_URL=http://frontend-next:3000` or an equivalent frontend-reachable base URL
+
 ## 2026-05-28 AI Try-On Real Demo Models
 
 - replaced the old built-in AI Try-On placeholder catalog with 10 real demo model assets under `frontend-next/public/ai-try-on/models/`
