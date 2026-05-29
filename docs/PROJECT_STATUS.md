@@ -1,5 +1,29 @@
 # Project Status
 
+## Admin User Management - 2026-05-30
+
+- Status: implemented on branch `dev/feature/admin-user-management`
+- Implemented a complete Admin User Management panel to view, filter, create, edit, disable, and delete users safely.
+- Backend additions:
+  - Created query, create, and update DTOs for user data validation.
+  - Implemented `AdminUsersService` with pagination, search, role/status filtering, password hashing, and audit logging.
+  - Added security guards protecting the last active admin, self-demotion, self-deactivation, and self-deletion.
+  - Implemented dependency checks preventing hard deletion of users with related checkouts, shops, orders, or fee ledger entries (returning `USER_HAS_DEPENDENCIES`).
+  - Added E2E tests covering all endpoints and edge cases.
+- Frontend additions:
+  - Added user API CRUD client helpers.
+  - Integrated "Users" navigation link in `AdminShell`.
+  - Built full client dashboard `<AdminUsersPageClient />` with table list, filters, search, modal form drawer, and confirmation dialogs.
+  - Added English and Russian localizations for all UI labels and backend error messages.
+- Verification status:
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand test/admin-users.e2e-spec.ts`: pass (all 14 tests passed)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Current gaps:
+  - None. Full test suite and lint/build checks are passing.
+
 ## Seller Center Bugfixes - 2026-05-29
 
 - Status: implemented on branch `dev/bugfix/seller-orders-counts-payment-qr-sku`
