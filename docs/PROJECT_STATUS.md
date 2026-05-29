@@ -1,5 +1,35 @@
 # Project Status
 
+## AI Try-On Reference Source Selection - 2026-05-29
+
+- Status: in progress on branch `dev/bugfix/ai-tryon-reference-source-selection`
+- Public AI Try-On reference selection is being normalized to an explicit single-source contract:
+  - upload photo only
+  - demo model only
+  - never both at once
+- Frontend changes in progress:
+  - no default selected demo model
+  - Step 3 copy and helper text updated for `en/ru`
+  - source toggle added for `Use my photo` / `Use demo model`
+  - uploading clears selected model
+  - selecting a model clears uploaded preview
+  - product summary now reflects the active source correctly
+  - AI Try-On error mapping now prefers localized fallback instead of raw backend English text in RU
+- Backend changes in progress:
+  - task creation now rejects both-source payloads with a stable code
+  - task creation still accepts either photo-only or model-only requests
+- Current verification target for this phase:
+  - `frontend-next npm run lint`
+  - `frontend-next npm run build`
+  - `backend-nest npm run prisma:generate`
+  - `backend-nest npm run lint`
+  - `backend-nest npm run build`
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`
+  - optional Playwright rerun if local services are active
+- Current gaps:
+  - verification is still pending in this branch state
+  - the user-local pre-branch stash `codex-temp-ai-tryon-pre-branch` was preserved and left untouched
+
 ## AI Try-On Real Demo Models - 2026-05-28
 
 - Status: implemented on branch `dev/feature/ai-tryon-real-demo-models`

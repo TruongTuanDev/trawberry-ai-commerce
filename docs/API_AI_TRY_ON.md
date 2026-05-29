@@ -157,14 +157,22 @@ Request:
   "gender": "female",
   "bodyType": "regular",
   "bodyTraits": ["wide_shoulders"],
-  "customerImageUrl": "http://localhost:3001/uploads/ai-try-on/guest/guest-123/photo.png",
-  "customerImageStorageKey": "ai-try-on/guest/guest-123/photo.png",
   "selectedModelId": "model-3",
   "consentAccepted": true
 }
 ```
 
 `selectedModelId` must match one of the ids returned by `GET /api/public/ai-try-on/config`, such as `model-3` or `model-7`.
+
+Reference source contract:
+
+- exactly one reference source is required
+- accepted:
+  - `selectedModelId` only
+  - `customerImageUrl` with optional `customerImageStorageKey`
+- rejected:
+  - neither source
+  - both source types in the same request
 
 Response:
 
@@ -236,6 +244,7 @@ Completed example:
 - `AI_TRY_ON_SIZE_REQUIRED`
 - `AI_TRY_ON_CONSENT_REQUIRED`
 - `AI_TRY_ON_REFERENCE_REQUIRED`
+- `AI_TRY_ON_REFERENCE_CONFLICT`
 - `AI_TRY_ON_PRODUCT_UNSUPPORTED`
 - `AI_TRY_ON_PRODUCT_IMAGE_REQUIRED`
 - `AI_TRY_ON_LIMIT_EXCEEDED`
@@ -265,8 +274,8 @@ Request:
   },
   "person": {
     "customerImageUrl": null,
-    "selectedModelImageUrl": "http://frontend-next:3000/demo/try-on-model-female-regular.png",
-    "selectedModelId": "female_regular_165",
+    "selectedModelImageUrl": "http://frontend-next:3000/ai-try-on/models/model3.png",
+    "selectedModelId": "model-3",
     "heightCm": 172,
     "weightKg": 70,
     "gender": "female",
