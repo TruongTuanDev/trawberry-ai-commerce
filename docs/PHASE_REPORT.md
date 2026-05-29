@@ -1,5 +1,41 @@
 # Phase Report
 
+## 2026-05-29 AI Try-On Reference Source Selection
+
+- fixed the public AI Try-On modal so reference selection now follows an explicit one-of-two rule:
+  - upload your own photo
+  - choose a built-in demo model
+- removed the implicit default built-in model selection; users now must choose one source before generation
+- added a segmented source selector and updated Step 3 copy in `en/ru`
+- updated frontend reference-state behavior:
+  - uploading a photo clears the selected demo model
+  - selecting a demo model clears the uploaded photo preview
+  - product summary now shows either the selected model label or `Reference: Your uploaded photo`
+  - source-switch info messages are shown in `en/ru`
+- hardened frontend error handling so RU no longer falls back to raw English API messages for AI Try-On task/create failures
+- hardened frontend generate gating:
+  - disabled when consent is missing
+  - disabled when no reference source is chosen
+  - disabled with the correct uploaded-photo reason only when a photo source exists and the backend marked it unsuitable
+- hardened backend validation for task creation:
+  - accepts `selectedModelId` only
+  - accepts uploaded photo only
+  - rejects neither source with `AI_TRY_ON_REFERENCE_REQUIRED`
+  - rejects both sources with `AI_TRY_ON_REFERENCE_CONFLICT`
+- expanded regression coverage:
+  - backend e2e now covers photo-only success and both-source rejection
+  - Playwright AI Try-On MVP spec now covers missing-source messaging, built-in-only enablement, upload/model clearing behavior, and RU localization for the new Step 3 flow
+
+Verification:
+
+- pending
+
+Remaining gaps:
+
+- focused Playwright execution still depends on live local frontend/backend services
+- no paid OpenAI smoke was run in this phase by design
+- the pre-branch stash `codex-temp-ai-tryon-pre-branch` was intentionally preserved and not reapplied
+
 ## 2026-05-28 AI Try-On Real Demo Models
 
 - replaced the old built-in AI Try-On placeholder catalog with 10 real demo model assets under `frontend-next/public/ai-try-on/models/`

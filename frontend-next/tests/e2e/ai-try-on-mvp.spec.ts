@@ -228,6 +228,7 @@ async function fillTryOnForm(page: Page, modelId = "model-3") {
   await page.getByTestId("ai-try-on-gender").selectOption("female");
   await page.getByTestId("ai-try-on-body-type").selectOption("regular");
   await page.getByTestId("ai-try-on-trait-wide_shoulders").click();
+  await page.getByTestId("ai-try-on-source-model").click();
   await page.getByTestId(`ai-try-on-model-${modelId}`).click();
   await page.getByTestId("ai-try-on-consent").check();
 }
@@ -286,6 +287,7 @@ test("AI Try-On mock flow works from disabled state to completed result", async 
   await page.getByTestId(`product-size-${product.variants[1].id}`).click();
   await page.getByTestId("product-ai-try-on-button").click();
   await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+  await page.getByTestId("ai-try-on-source-model").click();
   await expect(page.locator('[data-testid^="ai-try-on-model-"]')).toHaveCount(10);
   await expect(page.getByTestId("ai-try-on-model-model-1")).toBeVisible();
   await expect(page.getByTestId("ai-try-on-model-model-10")).toBeVisible();
@@ -527,24 +529,32 @@ test("AI Try-On photo upload preview and model switching UI flow works correctly
   await page.getByTestId(`product-size-${product.variants[0].id}`).click();
   await page.getByTestId("product-ai-try-on-button").click();
   await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+  await expect(page.getByText("Step 3: Choose your reference")).toBeVisible();
+  await expect(
+    page.getByText("Choose one option: your photo or a demo model."),
+  ).toBeVisible();
 
   // 1. Verify body form and model cards are visible
   await page.getByTestId("ai-try-on-height").fill("165");
   await page.getByTestId("ai-try-on-weight").fill("55");
   await page.getByTestId("ai-try-on-gender").selectOption("female");
   await page.getByTestId("ai-try-on-body-type").selectOption("regular");
+  await page.getByTestId("ai-try-on-consent").check();
 
-  // 2. Built-in model selection
+  await expect(page.getByTestId("ai-try-on-generate")).toBeDisabled();
+  await expect(page.getByText("Choose one option: upload your own photo or select a demo model.")).toBeVisible();
+
+  // 2. Built-in model only should be allowed
+  await page.getByTestId("ai-try-on-source-model").click();
   const model1Card = page.getByTestId("ai-try-on-model-model-1");
   await expect(model1Card).toBeVisible();
   await model1Card.click();
+  await expect(page.getByTestId("ai-try-on-generate")).toBeEnabled();
+  await expect(page.getByText(/Female, petite, 155 cm|Женщина, миниатюрная, 155 см/)).toBeVisible();
+  await expect(page.getByTestId("ai-try-on-error")).toHaveCount(0);
 
-  // 3. Consent checkbox check
-  const consentCheckbox = page.getByTestId("ai-try-on-consent");
-  await expect(consentCheckbox).toBeVisible();
-  await consentCheckbox.check();
-
-  // 4. Upload photo
+  // 3. Upload photo clears the selected model
+  await page.getByTestId("ai-try-on-source-photo").click();
   const uploadInput = page.getByTestId("ai-try-on-upload-input");
   await expect(uploadInput).toBeVisible();
   await uploadInput.setInputFiles({
@@ -552,13 +562,68 @@ test("AI Try-On photo upload preview and model switching UI flow works correctly
     mimeType: "image/png",
     buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oNn14kAAAAASUVORK5CYII=", "base64"),
   });
+  await expect(page.getByText("Your uploaded photo will be used instead of the demo model.")).toBeVisible();
 
-  // 5. Verify preview is visible
+  // 4. Verify preview is visible and summary no longer shows old model
   const uploadPreview = page.getByTestId("ai-try-on-upload-preview");
   await expect(uploadPreview).toBeVisible();
+  await expect(page.getByText("Your uploaded photo")).toBeVisible();
+
+  // 5. Selecting a model again clears the uploaded preview
+  await page.getByTestId("ai-try-on-source-model").click();
+  const model2Card = page.getByTestId("ai-try-on-model-model-2");
+  await model2Card.click();
+  await expect(page.getByText("The demo model will be used instead of your uploaded photo.")).toBeVisible();
+  await expect(uploadPreview).toHaveCount(0);
+  await expect(page.getByTestId("ai-try-on-generate")).toBeEnabled();
 
   // 6. Generate try-on
   await page.getByTestId("ai-try-on-generate").click();
   await expect(page.getByTestId("ai-try-on-loading")).toBeVisible();
   await expect(page.getByTestId("ai-try-on-result-image")).toBeVisible({ timeout: 25000 });
+});
+
+test("RU AI Try-On reference selection messages stay localized", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180000);
+
+  const stamp = Date.now() + 66;
+  const seller = await approveSeller(request, `ai-try-on-ru-reference-${stamp}@example.com`);
+  const product = await createProduct(request, seller.token, stamp);
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "mock",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["jackets"],
+    },
+  });
+
+  await page.goto("/products");
+  await page.getByTestId("language-switcher-trigger").click();
+  await page.getByTestId("language-option-ru").click();
+  await page.goto(`/products/${product.id}`);
+  await page.getByTestId(`product-size-${product.variants[0].id}`).click();
+  await page.getByTestId("product-ai-try-on-button").click();
+  await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+  await expect(
+    page.getByText("Шаг 3: Выберите источник для примерки"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Выберите один вариант: своё фото или демонстрационная модель."),
+  ).toBeVisible();
+  await page.getByTestId("ai-try-on-consent").check();
+  await expect(
+    page.getByText(
+      "Выберите один вариант: загрузите своё фото или выберите демонстрационную модель.",
+    ),
+  ).toBeVisible();
+  await expect(page.locator("text=The uploaded image is not suitable for try-on.")).toHaveCount(0);
 });

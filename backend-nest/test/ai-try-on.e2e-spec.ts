@@ -946,6 +946,50 @@ describe('AiTryOnController (e2e)', () => {
     );
   });
 
+  it('accepts an uploaded photo without requiring a demo model', async () => {
+    settings.aiTryOnEnabled = true;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-photo-only')
+      .send({
+        selectedSize: 'M',
+        customerImageUrl: 'https://cdn.example.com/customer-reference.png',
+        customerImageStorageKey:
+          'ai-try-on/guest/guest-photo-only/customer-reference.png',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    const body = readBody<{
+      status: string;
+      selectedSize: string | null;
+    }>(response);
+    expect(body.status).toBe('COMPLETED');
+    expect(body.selectedSize).toBe('M');
+  });
+
+  it('rejects requests that send both uploaded photo and demo model', async () => {
+    settings.aiTryOnEnabled = true;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-reference-conflict')
+      .send({
+        selectedSize: 'M',
+        customerImageUrl: 'https://cdn.example.com/customer-reference.png',
+        customerImageStorageKey:
+          'ai-try-on/guest/guest-reference-conflict/customer-reference.png',
+        selectedModelId: 'model-3',
+        consentAccepted: true,
+      })
+      .expect(400);
+
+    expect(readBody<{ code: string }>(response).code).toBe(
+      'AI_TRY_ON_REFERENCE_CONFLICT',
+    );
+  });
+
   it('creates a mock task and returns completed result data', async () => {
     settings.aiTryOnEnabled = true;
     settings.aiTryOnProvider = 'mock';

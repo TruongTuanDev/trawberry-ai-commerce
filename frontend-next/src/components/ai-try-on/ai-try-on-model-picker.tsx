@@ -7,20 +7,24 @@ import type { AiTryOnBuiltInModel } from "@/lib/public-api";
 export function AiTryOnModelPicker({
   models,
   locale,
+  referenceSource,
   selectedModelId,
   customerPreviewUrl,
   uploading,
   t,
+  onSourceChange,
   onFileChange,
   onSelectModel,
   onRemovePhoto,
 }: {
   models: AiTryOnBuiltInModel[];
   locale: "ru" | "en";
+  referenceSource: "photo" | "model" | null;
   selectedModelId: string | null;
   customerPreviewUrl: string | null;
   uploading: boolean;
   t: (key: string) => string;
+  onSourceChange: (source: "photo" | "model") => void;
   onFileChange: (file: File | null) => void;
   onSelectModel: (modelId: string) => void;
   onRemovePhoto: () => void;
@@ -63,39 +67,73 @@ export function AiTryOnModelPicker({
     }
   };
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setIsDragActive(e.type === "dragenter" || e.type === "dragover");
-    } else if (e.type === "dragleave") {
-      setIsDragActive(false);
+  const handleDrag = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.type === "dragenter" || event.type === "dragover") {
+      setIsDragActive(true);
+      return;
+    }
+
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(false);
+    if (event.dataTransfer.files && event.dataTransfer.files[0]) {
+      onFileChange(event.dataTransfer.files[0]);
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFileChange(e.dataTransfer.files[0]);
-    }
-  };
+  const showPhotoPanel = referenceSource === "photo";
+  const showModelPanel = referenceSource === "model";
 
   return (
     <section className="space-y-6">
-      {/* Step 3: Photo Upload or Built-in Model Selection */}
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold text-[var(--foreground)]">
             {t("aiTryOn.step3")}
           </h3>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {t("aiTryOn.chooseModelHint")}
+          <p className="mt-1 text-sm text-[var(--muted)]">{t("aiTryOn.chooseModelHint")}</p>
+          <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
+            {t("aiTryOn.referenceChoiceHint")}
           </p>
         </div>
 
-        {/* Upload Dropzone & Portrait Preview */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => onSourceChange("photo")}
+            className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${
+              showPhotoPanel
+                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[var(--border-hover)]"
+            }`}
+            data-testid="ai-try-on-source-photo"
+          >
+            <p className="text-sm font-semibold">{t("aiTryOn.useMyPhoto")}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">{t("aiTryOn.uploadHint")}</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onSourceChange("model")}
+            className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${
+              showModelPanel
+                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                : "border-[var(--border)] bg-white text-[var(--foreground)] hover:border-[var(--border-hover)]"
+            }`}
+            data-testid="ai-try-on-source-model"
+          >
+            <p className="text-sm font-semibold">{t("aiTryOn.useDemoModel")}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">{t("aiTryOn.chooseDemoModelHint")}</p>
+          </button>
+        </div>
+      </div>
+
+      {showPhotoPanel ? (
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5 shadow-sm">
           {!customerPreviewUrl ? (
             <div
@@ -133,9 +171,7 @@ export function AiTryOnModelPicker({
               <p className="mt-3 text-sm font-semibold text-[var(--foreground)]">
                 {uploading ? t("aiTryOn.uploading") : t("aiTryOn.uploadPhoto")}
               </p>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                {t("aiTryOn.uploadHint")}
-              </p>
+              <p className="mt-1 text-xs text-[var(--muted)]">{t("aiTryOn.uploadHint")}</p>
               <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
                 {t("aiTryOn.uploadFullBodyHint")}
               </p>
@@ -171,49 +207,48 @@ export function AiTryOnModelPicker({
             </div>
           )}
         </div>
-      </div>
+      ) : null}
 
-      {/* Built-in Models Grid */}
-      <div className="space-y-3">
-        <p className="text-sm font-semibold text-[var(--foreground)]">
-          {t("aiTryOn.chooseModel")}
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {models.map((model) => {
-            const active = selectedModelId === model.modelId;
-            return (
-              <button
-                key={model.modelId}
-                type="button"
-                onClick={() => onSelectModel(model.modelId)}
-                className={`overflow-hidden rounded-[1.5rem] border text-left transition duration-200 ${
-                  active
-                    ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_10px_30px_rgba(203,17,171,0.16)] ring-2 ring-[var(--accent)]/30"
-                    : "border-[var(--border)] bg-white hover:border-[var(--border-hover)] hover:shadow-sm"
-                }`}
-                data-testid={`ai-try-on-model-${model.modelId}`}
-              >
-                <FallbackImage
-                  src={model.imageUrl}
-                  alt={locale === "ru" ? model.labelRu : model.labelEn}
-                  className="h-72 w-full bg-[linear-gradient(180deg,#fff7f8_0%,#f8efe8_100%)] object-contain p-3"
-                />
-                <div className="space-y-1 px-4 py-4">
-                  <p className="text-sm font-semibold text-[var(--foreground)] line-clamp-1">
-                    {locale === "ru" ? model.labelRu : model.labelEn}
-                  </p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {resolveGenderLabel(model.gender)} • {resolveBodyTypeLabel(model.bodyType)}
-                  </p>
-                  <p className="text-xs text-[var(--muted)]/80">
-                    {model.heightCm} cm • {model.weightKg} kg
-                  </p>
-                </div>
-              </button>
-            );
-          })}
+      {showModelPanel ? (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-[var(--foreground)]">{t("aiTryOn.chooseModel")}</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {models.map((model) => {
+              const active = selectedModelId === model.modelId;
+              return (
+                <button
+                  key={model.modelId}
+                  type="button"
+                  onClick={() => onSelectModel(model.modelId)}
+                  className={`overflow-hidden rounded-[1.5rem] border text-left transition duration-200 ${
+                    active
+                      ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_10px_30px_rgba(203,17,171,0.16)] ring-2 ring-[var(--accent)]/30"
+                      : "border-[var(--border)] bg-white hover:border-[var(--border-hover)] hover:shadow-sm"
+                  }`}
+                  data-testid={`ai-try-on-model-${model.modelId}`}
+                >
+                  <FallbackImage
+                    src={model.imageUrl}
+                    alt={locale === "ru" ? model.labelRu : model.labelEn}
+                    className="h-72 w-full bg-[linear-gradient(180deg,#fff7f8_0%,#f8efe8_100%)] object-contain p-3"
+                  />
+                  <div className="space-y-1 px-4 py-4">
+                    <p className="line-clamp-1 text-sm font-semibold text-[var(--foreground)]">
+                      {locale === "ru" ? model.labelRu : model.labelEn}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {resolveGenderLabel(model.gender)} • {resolveBodyTypeLabel(model.bodyType)}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]/80">
+                      {model.heightCm} cm • {model.weightKg} kg
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }
