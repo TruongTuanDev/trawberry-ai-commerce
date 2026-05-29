@@ -30,6 +30,22 @@
   - verification is still pending in this branch state
   - the user-local pre-branch stash `codex-temp-ai-tryon-pre-branch` was preserved and left untouched
 
+## AI Try-On Real Models Restore Audit - 2026-05-29
+
+- Status: implemented on branch `dev/bugfix/ai-tryon-reference-source-selection`
+- Git audit confirmed the current branch already contains both prior UI phases that production was expected to keep:
+  - `771a90c feat: replace ai try-on placeholders with real demo models`
+  - `09c628b fix: improve ai try-on upload preview layout`
+- Current branch state still includes:
+  - 10 tracked PNG assets under `frontend-next/public/ai-try-on/models`
+  - backend built-in model config using `/ai-try-on/models/model1.png` ... `model10.png`
+  - upload preview portrait layout with `object-contain`
+  - latest one-of-two reference selection logic
+- Added regression coverage so future deploys catch a fallback to placeholder `.svg` paths earlier.
+- Current assessment:
+  - the reported regression is consistent with a deploy/ref selection issue
+  - it is not consistent with missing AI Try-On model assets in the current branch contents
+
 ## AI Try-On Real Demo Models - 2026-05-28
 
 - Status: implemented on branch `dev/feature/ai-tryon-real-demo-models`
