@@ -7,6 +7,8 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
 import { ShopResponseDto } from '../src/modules/shops/dto/shop-response.dto';
+import { ShopPaymentSettingsResponseDto } from '../src/modules/shops/dto/shop-payment-settings-response.dto';
+import { FilesService } from '../src/modules/files/files.service';
 import { readBody } from './test-helpers';
 
 type StoredSellerProfile = {
@@ -42,6 +44,12 @@ type StoredShop = {
   correspondentAccount: string | null;
   paymentInstructions: string | null;
   status: string;
+  staticQrImageUrl?: string | null;
+  staticQrStorageKey?: string | null;
+  staticQrOriginalName?: string | null;
+  staticQrMimeType?: string | null;
+  staticQrSize?: number | null;
+  paymentConfigStatus?: string;
   sellerProfile: {
     userId: string;
   };
@@ -68,6 +76,7 @@ describe('ShopsController (e2e)', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -330,6 +339,15 @@ describe('ShopsController (e2e)', () => {
       },
     );
 
+    prismaMock.shop.update.mockImplementation(
+      ({ where, data }: { where: { id: string }; data: any }) => {
+        const shop = shops.find((s) => s.id === where.id);
+        if (!shop) throw new Error('Shop not found');
+        Object.assign(shop, data);
+        return Promise.resolve(shop);
+      },
+    );
+
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
         Promise.resolve(callback(prismaMock)),
@@ -340,6 +358,10 @@ describe('ShopsController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(FilesService)
+      .useValue({
+        deleteStoredFile: jest.fn().mockResolvedValue(undefined),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -415,6 +437,23 @@ describe('ShopsController (e2e)', () => {
       .get(`/api/shops/${shopTwoId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
+  });
+
+  it('allows seller to delete static QR code and clears fields', async () => {
+    shops[0].staticQrImageUrl = 'https://s3.local/qr.png';
+    shops[0].staticQrStorageKey = 'qr-storage-key-1';
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .delete(`/api/shops/${shopOneId}/payment-settings/qr-image`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const body = readBody<ShopPaymentSettingsResponseDto>(response);
+    expect(body.staticQrImageUrl).toBeNull();
+    expect(shops[0].staticQrImageUrl).toBeNull();
+    expect(shops[0].staticQrStorageKey).toBeNull();
   });
 });
 

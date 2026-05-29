@@ -23,6 +23,7 @@ export type CartValidationProductRecord = {
   localTitle: string | null;
   seoSlug: string | null;
   sellerSku: string | null;
+  wbVendorCode: string | null;
   visibility: string | null;
   catalogStatus: string;
   categoryId: bigint | null;

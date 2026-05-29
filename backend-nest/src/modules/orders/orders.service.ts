@@ -32,6 +32,10 @@ export class OrdersService {
     const size = query.size ?? 20;
     const skip = (page - 1) * size;
     const where = this.buildWhere(shopId, query);
+    const summaryWhere = this.buildWhere(shopId, {
+      ...query,
+      status: undefined,
+    });
     const orderBy =
       query.sort === 'createdAt_asc'
         ? { createdAt: 'asc' as const }
@@ -47,7 +51,7 @@ export class OrdersService {
       }),
       this.prisma.order.count({ where }),
       this.prisma.order.findMany({
-        where,
+        where: summaryWhere,
         select: {
           status: true,
           paymentStatus: true,
@@ -66,7 +70,7 @@ export class OrdersService {
     ]);
 
     const summary = {
-      ALL: total,
+      ALL: summaryRows.length,
       NEW: 0,
       ASSEMBLING: 0,
       IN_TRANSIT: 0,
@@ -826,6 +830,12 @@ export class OrdersService {
       productSlugSnapshot: string;
       productImageSnapshot: string | null;
       variantNameSnapshot: string | null;
+      sellerSkuSnapshot?: string | null;
+      product?: {
+        sellerSku: string | null;
+        wbVendorCode: string | null;
+      } | null;
+      variant?: { sellerSku: string | null } | null;
     }>;
     supportCases?: Array<{
       id: string;
@@ -970,6 +980,12 @@ export class OrdersService {
         productSlugSnapshot: item.productSlugSnapshot,
         productImageSnapshot: item.productImageSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
+        sellerSku:
+          item.sellerSkuSnapshot ||
+          item.variant?.sellerSku ||
+          item.product?.sellerSku ||
+          item.product?.wbVendorCode ||
+          null,
       })),
       supportCases:
         order.supportCases?.map((supportCase) => ({
@@ -1273,6 +1289,19 @@ export class OrdersService {
       },
       items: {
         orderBy: { productTitleSnapshot: 'asc' as const },
+        include: {
+          product: {
+            select: {
+              sellerSku: true,
+              wbVendorCode: true,
+            },
+          },
+          variant: {
+            select: {
+              sellerSku: true,
+            },
+          },
+        },
       },
       supportCases: {
         orderBy: { createdAt: 'desc' as const },

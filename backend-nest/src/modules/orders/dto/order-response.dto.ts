@@ -33,6 +33,9 @@ class OrderItemResponseDto {
 
   @ApiProperty({ nullable: true })
   variantNameSnapshot!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sellerSku!: string | null;
 }
 
 class OrderCustomerResponseDto {

@@ -688,6 +688,10 @@
     "manualYandexOrderIdPlaceholder": "Manual Yandex order ID",
     "trackingUrlPlaceholder": "Tracking URL (optional)",
     "deliveryNotePlaceholder": "Delivery note",
+    "sku": "SKU",
+    "skuNotSet": "SKU not set",
+    "refreshQueue": "Refresh queue",
+    "noOrdersFound": "No orders found",
     "messages": {
       "archiveSuccess": "Order archived.",
       "archiveFailed": "Failed to archive order.",
@@ -1451,7 +1455,12 @@
       "settingsSaved": "Payment settings saved.",
       "qrUploaded": "Static QR uploaded.",
       "saveFailed": "Unable to save payment settings.",
-      "uploadFailed": "Unable to upload payment QR."
+      "uploadFailed": "Unable to upload payment QR.",
+      "updateQrCode": "Update QR code",
+      "removeQrCode": "Remove QR code",
+      "uploadQrCode": "Upload QR code",
+      "qrCodeRemoved": "QR code removed.",
+      "confirmRemoveQr": "Are you sure you want to remove the QR code?"
     },
     "shippingLabel": {
       "kicker": "Packing station",

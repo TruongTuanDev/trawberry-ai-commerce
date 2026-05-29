@@ -728,7 +728,10 @@ export class CheckoutService {
         item.product.images[0]?.wbUrl ??
         null,
       sellerSkuSnapshot:
-        item.variant.sellerSku ?? item.product.sellerSku ?? null,
+        item.variant.sellerSku ??
+        item.product.sellerSku ??
+        item.product.wbVendorCode ??
+        null,
       barcodeSnapshot: item.variant.wbBarcode ?? null,
       wbNmIdSnapshot: item.product.wbNmId,
     };
