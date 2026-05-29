@@ -36,6 +36,34 @@ Remaining gaps:
 - no paid OpenAI smoke was run in this phase by design
 - the pre-branch stash `codex-temp-ai-tryon-pre-branch` was intentionally preserved and not reapplied
 
+## 2026-05-29 AI Try-On Real Models Restore Audit
+
+- audited git history after the reported production regression and confirmed the original UI work still exists in git:
+  - `771a90c feat: replace ai try-on placeholders with real demo models`
+  - `09c628b fix: improve ai try-on upload preview layout`
+- confirmed the current branch already inherits both commits through:
+  - `c7d2196` merge of the real-model branch
+  - `81c1805` merge of the upload-preview branch
+- confirmed `HEAD` still tracks:
+  - `frontend-next/public/ai-try-on/models/model1.png` ... `model10.png`
+  - backend built-in model config pointing to `/ai-try-on/models/model*.png`
+  - upload preview rendered with portrait aspect and `object-contain`
+  - reference-source toggle logic from the latest fix
+- added regression guards so future deploys fail faster if the UI falls back to legacy placeholder paths:
+  - backend AI Try-On config e2e now asserts model image URLs stay on `/ai-try-on/models/model*.png`
+  - backend AI Try-On config e2e now asserts no built-in model uses `.svg`
+  - Playwright AI Try-On MVP spec now asserts model card image `src` uses the real PNG assets
+  - Playwright AI Try-On MVP spec now asserts uploaded preview keeps `object-contain`
+
+Verification:
+
+- pending
+
+Remaining gaps:
+
+- production regression root cause points to deploy/ref selection rather than missing files in the current branch
+- focused Playwright execution still requires live local frontend/backend services
+
 ## 2026-05-28 AI Try-On Real Demo Models
 
 - replaced the old built-in AI Try-On placeholder catalog with 10 real demo model assets under `frontend-next/public/ai-try-on/models/`

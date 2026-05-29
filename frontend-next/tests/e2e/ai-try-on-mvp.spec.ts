@@ -291,6 +291,9 @@ test("AI Try-On mock flow works from disabled state to completed result", async 
   await expect(page.locator('[data-testid^="ai-try-on-model-"]')).toHaveCount(10);
   await expect(page.getByTestId("ai-try-on-model-model-1")).toBeVisible();
   await expect(page.getByTestId("ai-try-on-model-model-10")).toBeVisible();
+  await expect(
+    page.getByTestId("ai-try-on-model-model-1").locator("img").first(),
+  ).toHaveAttribute("src", /\/ai-try-on\/models\/model1\.png/);
 
   await fillTryOnForm(page);
   await page.getByTestId("ai-try-on-generate").click();
@@ -548,6 +551,10 @@ test("AI Try-On photo upload preview and model switching UI flow works correctly
   await page.getByTestId("ai-try-on-source-model").click();
   const model1Card = page.getByTestId("ai-try-on-model-model-1");
   await expect(model1Card).toBeVisible();
+  await expect(model1Card.locator("img").first()).toHaveAttribute(
+    "src",
+    /\/ai-try-on\/models\/model1\.png/,
+  );
   await model1Card.click();
   await expect(page.getByTestId("ai-try-on-generate")).toBeEnabled();
   await expect(page.getByText(/Female, petite, 155 cm|Женщина, миниатюрная, 155 см/)).toBeVisible();
@@ -567,6 +574,7 @@ test("AI Try-On photo upload preview and model switching UI flow works correctly
   // 4. Verify preview is visible and summary no longer shows old model
   const uploadPreview = page.getByTestId("ai-try-on-upload-preview");
   await expect(uploadPreview).toBeVisible();
+  await expect(uploadPreview).toHaveClass(/object-contain/);
   await expect(page.getByText("Your uploaded photo")).toBeVisible();
 
   // 5. Selecting a model again clears the uploaded preview

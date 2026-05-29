@@ -722,6 +722,14 @@ describe('AiTryOnController (e2e)', () => {
       modelId: 'model-10',
       imageUrl: '/ai-try-on/models/model10.png',
     });
+    expect(
+      body.builtInModels.every((model) =>
+        model.imageUrl.startsWith('/ai-try-on/models/model'),
+      ),
+    ).toBe(true);
+    expect(
+      body.builtInModels.some((model) => model.imageUrl.endsWith('.svg')),
+    ).toBe(false);
   });
 
   it('reads legacy supported categories payloads without losing values', async () => {
