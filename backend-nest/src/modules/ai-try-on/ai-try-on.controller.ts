@@ -70,6 +70,12 @@ export class PublicAiTryOnController {
     return this.aiTryOnService.getPublicConfig();
   }
 
+  @Get('ai-try-on/models')
+  @ApiOperation({ summary: 'Get public AI try-on demo models.' })
+  getModels() {
+    return this.aiTryOnService.getPublicModels();
+  }
+
   @Post('ai-try-on/uploads')
   @UseGuards(OptionalJwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))

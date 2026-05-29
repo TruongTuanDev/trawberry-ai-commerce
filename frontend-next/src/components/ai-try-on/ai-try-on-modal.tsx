@@ -11,6 +11,7 @@ import {
   createAiTryOnTask,
   getAiTryOnTask,
   uploadAiTryOnReference,
+  getPublicAiTryOnModels,
   type AiTryOnBuiltInModel,
   type AiTryOnTask,
 } from "@/lib/public-api";
@@ -69,6 +70,10 @@ function resolveTryOnErrorMessage(
         return t("aiTryOn.openaiProviderError");
       case "DEMO_MODEL_IMAGE_NOT_FOUND":
         return t("aiTryOn.demoModelImageNotFound");
+      case "DEMO_MODEL_NOT_FOUND":
+        return t("aiTryOn.demoModelNotFound");
+      case "DEMO_MODEL_OUTDATED":
+        return t("aiTryOn.demoModelOutdated");
       default:
         return t(fallbackKey);
     }
@@ -113,6 +118,10 @@ function resolveTaskErrorMessage(task: AiTryOnTask, t: (key: string) => string) 
       return t("aiTryOn.openaiProviderError");
     case "DEMO_MODEL_IMAGE_NOT_FOUND":
       return t("aiTryOn.demoModelImageNotFound");
+    case "DEMO_MODEL_NOT_FOUND":
+      return t("aiTryOn.demoModelNotFound");
+    case "DEMO_MODEL_OUTDATED":
+      return t("aiTryOn.demoModelOutdated");
     default:
       return t("aiTryOn.generateFailed");
   }
@@ -137,7 +146,6 @@ export function AiTryOnModal({
   open,
   locale,
   requireConsent,
-  builtInModels,
   product,
   t,
   onClose,
@@ -145,7 +153,6 @@ export function AiTryOnModal({
   open: boolean;
   locale: "ru" | "en";
   requireConsent: boolean;
-  builtInModels: AiTryOnBuiltInModel[];
   product: {
     id: string;
     name: string;
@@ -156,6 +163,39 @@ export function AiTryOnModal({
   t: (key: string) => string;
   onClose: () => void;
 }) {
+  const [models, setModels] = useState<AiTryOnBuiltInModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!open) return;
+
+    const loadModels = async () => {
+      try {
+        setModelsLoading(true);
+        setModelsError(null);
+        const data = await getPublicAiTryOnModels();
+        if (mounted) {
+          setModels(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setModelsError(err instanceof Error ? err.message : "Failed to load models");
+        }
+      } finally {
+        if (mounted) {
+          setModelsLoading(false);
+        }
+      }
+    };
+
+    void loadModels();
+    return () => {
+      mounted = false;
+    };
+  }, [open]);
+
   const [form, setForm] = useState<TryOnFormState>({
     heightCm: "",
     weightKg: "",
@@ -227,8 +267,8 @@ export function AiTryOnModal({
   }, [task, t]);
 
   const previewModel = useMemo(
-    () => builtInModels.find((model) => model.modelId === selectedModelId) ?? null,
-    [builtInModels, selectedModelId],
+    () => models.find((model) => model.modelId === selectedModelId) ?? null,
+    [models, selectedModelId],
   );
 
   if (!open) {
@@ -501,7 +541,7 @@ export function AiTryOnModal({
 
                     <div className="border-t pt-6">
                       <AiTryOnModelPicker
-                        models={builtInModels}
+                        models={models}
                         locale={locale}
                         referenceSource={referenceSource}
                         selectedModelId={selectedModelId}
@@ -512,6 +552,8 @@ export function AiTryOnModal({
                         onFileChange={(file) => void handleUpload(file)}
                         onSelectModel={handleSelectModel}
                         onRemovePhoto={handleRemovePhoto}
+                        loading={modelsLoading}
+                        error={modelsError}
                       />
                     </div>
                   </div>

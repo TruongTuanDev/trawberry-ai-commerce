@@ -622,7 +622,6 @@ export function PublicProductDetailPageClient({
           open={aiTryOnOpen}
           locale={locale === "ru" ? "ru" : "en"}
           requireConsent={aiTryOnConfig.requireConsent}
-          builtInModels={aiTryOnConfig.builtInModels}
           product={{
             id: product.id,
             name: product.name,

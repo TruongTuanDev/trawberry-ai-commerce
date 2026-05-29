@@ -248,6 +248,10 @@ describe('AiTryOnController (e2e)', () => {
     aiTryOnUsageLog: {
       create: jest.fn(),
     },
+    aiTryOnModel: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -568,6 +572,42 @@ describe('AiTryOnController (e2e)', () => {
       },
     );
     prismaMock.aiTryOnUsageLog.create.mockResolvedValue({});
+
+    const mockModels = Array.from({ length: 10 }, (_, i) => ({
+      id: `model-${i + 1}`,
+      labelEn: `Model ${i + 1} En`,
+      labelRu: `Model ${i + 1} Ru`,
+      gender: i < 5 ? 'female' : 'male',
+      bodyType: 'regular',
+      heightCm: 170 + i,
+      weightKg: 60 + i,
+      imageUrl: `/ai-try-on/models/model${i + 1}.png`,
+      sortOrder: (i + 1) * 10,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    prismaMock.aiTryOnModel.findMany.mockImplementation(
+      ({ where }: { where?: { isActive?: boolean } }) => {
+        if (where?.isActive === true) {
+          return Promise.resolve(mockModels.filter((m) => m.isActive));
+        }
+        return Promise.resolve(mockModels);
+      },
+    );
+
+    prismaMock.aiTryOnModel.findFirst.mockImplementation(
+      ({ where }: { where?: { id?: string; isActive?: boolean } }) => {
+        const found = mockModels.find(
+          (m) =>
+            (!where?.id || m.id === where.id) &&
+            (where?.isActive === undefined || m.isActive === where.isActive),
+        );
+        return Promise.resolve(found ?? null);
+      },
+    );
+
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
         Promise.resolve(callback(prismaMock)),
@@ -711,27 +751,33 @@ describe('AiTryOnController (e2e)', () => {
     const body = readBody<{
       enabled: boolean;
       providerMode: string;
-      builtInModels: Array<{ modelId: string; imageUrl: string }>;
     }>(response);
     expect(body.enabled).toBe(true);
     expect(body.providerMode).toBe('mock');
-    expect(body.builtInModels).toHaveLength(10);
-    expect(body.builtInModels[0]).toMatchObject({
+  });
+
+  it('public models endpoint returns active models from database', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/public/ai-try-on/models')
+      .expect(200);
+
+    const body =
+      readBody<Array<{ modelId: string; imageUrl: string }>>(response);
+    expect(body).toHaveLength(10);
+    expect(body[0]).toMatchObject({
       modelId: 'model-1',
       imageUrl: '/ai-try-on/models/model1.png',
     });
-    expect(body.builtInModels[9]).toMatchObject({
+    expect(body[9]).toMatchObject({
       modelId: 'model-10',
       imageUrl: '/ai-try-on/models/model10.png',
     });
     expect(
-      body.builtInModels.every((model) =>
+      body.every((model) =>
         model.imageUrl.startsWith('/ai-try-on/models/model'),
       ),
     ).toBe(true);
-    expect(
-      body.builtInModels.some((model) => model.imageUrl.endsWith('.svg')),
-    ).toBe(false);
+    expect(body.some((model) => model.imageUrl.endsWith('.svg'))).toBe(false);
   });
 
   it('reads legacy supported categories payloads without losing values', async () => {
@@ -1291,6 +1337,42 @@ describe('AiTryOnController (e2e)', () => {
 
     expect(readBody<{ code: string }>(response).code).toBe(
       'AI_TRY_ON_PRODUCT_UNSUPPORTED',
+    );
+  });
+
+  it('rejects task creation with outdated legacy model IDs', async () => {
+    settings.aiTryOnEnabled = true;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-legacy-model')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'try-on-model-female-regular',
+        consentAccepted: true,
+      })
+      .expect(400);
+
+    expect(readBody<{ code: string }>(response).code).toBe(
+      'DEMO_MODEL_OUTDATED',
+    );
+  });
+
+  it('rejects task creation with non-existent model IDs', async () => {
+    settings.aiTryOnEnabled = true;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-invalid-model')
+      .send({
+        selectedSize: 'M',
+        selectedModelId: 'non-existent-model-id',
+        consentAccepted: true,
+      })
+      .expect(400);
+
+    expect(readBody<{ code: string }>(response).code).toBe(
+      'DEMO_MODEL_NOT_FOUND',
     );
   });
 });

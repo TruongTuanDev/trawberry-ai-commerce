@@ -17,7 +17,7 @@ import {
   AiTryOnAiServiceClientService,
   AiTryOnAiServiceError,
 } from './ai-try-on-ai-service-client.service';
-import { findBuiltInTryOnModel } from './ai-try-on-models';
+// Loaded dynamically from database
 
 @Injectable()
 export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -102,7 +102,18 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
         );
       }
 
-      const model = findBuiltInTryOnModel(task.selectedModelId);
+      const model = task.selectedModelId
+        ? await this.prisma.aiTryOnModel.findFirst({
+            where: { id: task.selectedModelId, isActive: true },
+          })
+        : null;
+
+      if (task.selectedModelId && !model) {
+        throw new Error(
+          'DEMO_MODEL_NOT_FOUND: The selected demo model is not available.',
+        );
+      }
+
       const backendInternalBaseUrl = this.configService.get<string>(
         'BACKEND_INTERNAL_BASE_URL',
       );
@@ -145,7 +156,7 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
             backendInternalBaseUrl,
             backendPublicBaseUrl,
           ),
-          selectedModelId: model?.modelId ?? task.selectedModelId,
+          selectedModelId: model?.id ?? task.selectedModelId,
           heightCm: task.heightCm,
           weightKg: task.weightKg,
           gender: task.gender,

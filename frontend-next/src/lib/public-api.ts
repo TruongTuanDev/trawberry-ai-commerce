@@ -79,7 +79,6 @@ export type PublicAiTryOnConfig = {
   customerDailyLimit: number;
   requireConsent: boolean;
   supportedCategories: string[];
-  builtInModels: AiTryOnBuiltInModel[];
 };
 
 export type CreateAiTryOnTaskPayload = {
@@ -679,5 +678,11 @@ export async function getAiTryOnTask(taskId: string, guestSessionId?: string) {
   return apiRequest<AiTryOnTask>(`/api/public/ai-try-on/tasks/${taskId}`, {
     method: "GET",
     headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function getPublicAiTryOnModels() {
+  return apiRequest<AiTryOnBuiltInModel[]>("/api/public/ai-try-on/models", {
+    method: "GET",
   });
 }

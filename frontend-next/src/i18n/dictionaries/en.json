@@ -374,7 +374,11 @@
     "openaiQuotaExceeded": "AI service quota has been exceeded. Please contact the administrator.",
     "openaiRateLimited": "AI service rate limit reached. Please wait a moment.",
     "openaiProviderError": "AI try-on generation failed. Please try again later.",
-    "demoModelImageNotFound": "Demo model image is currently unavailable."
+    "demoModelImageNotFound": "Demo model image is currently unavailable.",
+    "loadingModels": "Loading demo models...",
+    "demoModelsUnavailable": "Demo models are not available.",
+    "demoModelNotFound": "The selected demo model could not be found.",
+    "demoModelOutdated": "The selected demo model is outdated. Please refresh the page."
   },
   "cart": {
     "backToProducts": "Back to products",
