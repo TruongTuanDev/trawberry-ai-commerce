@@ -718,14 +718,18 @@ describe('AiTryOnController (e2e)', () => {
       modelId: 'model-1',
       imageUrl: '/ai-try-on/models/model1.png',
     });
-    expect(body.builtInModels[1]).toMatchObject({
-      modelId: 'model-2',
-      imageUrl: '/ai-try-on/models/model2.png',
-    });
     expect(body.builtInModels[9]).toMatchObject({
       modelId: 'model-10',
       imageUrl: '/ai-try-on/models/model10.png',
     });
+    expect(
+      body.builtInModels.every((model) =>
+        model.imageUrl.startsWith('/ai-try-on/models/model'),
+      ),
+    ).toBe(true);
+    expect(
+      body.builtInModels.some((model) => model.imageUrl.endsWith('.svg')),
+    ).toBe(false);
   });
 
   it('reads legacy supported categories payloads without losing values', async () => {
@@ -948,18 +952,48 @@ describe('AiTryOnController (e2e)', () => {
     expect(readBody<{ code: string }>(referenceResponse).code).toBe(
       'AI_TRY_ON_REFERENCE_REQUIRED',
     );
+  });
 
-    const conflictResponse = await request(app.getHttpServer())
+  it('accepts an uploaded photo without requiring a demo model', async () => {
+    settings.aiTryOnEnabled = true;
+
+    const response = await request(app.getHttpServer())
       .post('/api/public/products/product-1/try-on/tasks')
-      .set('x-guest-session-id', 'guest-1')
+      .set('x-guest-session-id', 'guest-photo-only')
       .send({
         selectedSize: 'M',
-        customerImageUrl: 'https://cdn.example.com/customer.png',
-        selectedModelId: 'model-2',
+        customerImageUrl: 'https://cdn.example.com/customer-reference.png',
+        customerImageStorageKey:
+          'ai-try-on/guest/guest-photo-only/customer-reference.png',
+        consentAccepted: true,
+      })
+      .expect(201);
+
+    const body = readBody<{
+      status: string;
+      selectedSize: string | null;
+    }>(response);
+    expect(body.status).toBe('COMPLETED');
+    expect(body.selectedSize).toBe('M');
+  });
+
+  it('rejects requests that send both uploaded photo and demo model', async () => {
+    settings.aiTryOnEnabled = true;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/products/product-1/try-on/tasks')
+      .set('x-guest-session-id', 'guest-reference-conflict')
+      .send({
+        selectedSize: 'M',
+        customerImageUrl: 'https://cdn.example.com/customer-reference.png',
+        customerImageStorageKey:
+          'ai-try-on/guest/guest-reference-conflict/customer-reference.png',
+        selectedModelId: 'model-3',
         consentAccepted: true,
       })
       .expect(400);
-    expect(readBody<{ code: string }>(conflictResponse).code).toBe(
+
+    expect(readBody<{ code: string }>(response).code).toBe(
       'AI_TRY_ON_REFERENCE_CONFLICT',
     );
   });

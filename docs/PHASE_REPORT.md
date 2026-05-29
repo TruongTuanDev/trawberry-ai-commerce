@@ -1,42 +1,68 @@
 # Phase Report
 
-## 2026-05-29 AI Try-On Generation URL And Provider Errors
+## 2026-05-29 AI Try-On Reference Source Selection
 
-- audited the production failure path and confirmed two root causes:
-  - backend worker could rewrite relative built-in model assets to `backend-nest:3001` when no frontend base URL was configured
-  - ai-service collapsed OpenAI `400` responses into generic provider failures, which hid the real cause from backend and frontend
-- hardened built-in model asset resolution:
-  - added explicit frontend asset resolution with `FRONTEND_INTERNAL_BASE_URL`
-  - fallback order is now `FRONTEND_INTERNAL_BASE_URL -> FRONTEND_URL -> PUBLIC_SITE_URL`
-  - relative model assets such as `/ai-try-on/models/model2.png` no longer fall back to backend upload URL rewriting
-  - if a selected demo model cannot be resolved, the task fails with `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE`
-- restored API-side reference-source enforcement:
-  - exactly one of `customerImageUrl` or `selectedModelId` is allowed
-  - conflict now returns `AI_TRY_ON_REFERENCE_CONFLICT`
-- expanded ai-service try-on provider error mapping:
-  - `INVALID_REFERENCE_IMAGE`
-  - `INVALID_PRODUCT_IMAGE`
-  - `OPENAI_BAD_REQUEST`
-  - `OPENAI_AUTH_FAILED`
-  - `OPENAI_QUOTA_EXCEEDED`
-  - `OPENAI_RATE_LIMITED`
-  - `OPENAI_PROVIDER_ERROR`
-- frontend AI Try-On modal now maps these codes to localized EN/RU copy instead of falling back to a generic failure string
-- upload preview keeps portrait framing with `object-contain`
-- updated backend, ai-service, and public API docs/tests for:
-  - frontend asset URL resolution
-  - model-2 asset mapping
-  - structured model-download failure
-  - stable OpenAI bad-request classification
+- fixed the public AI Try-On modal so reference selection now follows an explicit one-of-two rule:
+  - upload your own photo
+  - choose a built-in demo model
+- removed the implicit default built-in model selection; users now must choose one source before generation
+- added a segmented source selector and updated Step 3 copy in `en/ru`
+- updated frontend reference-state behavior:
+  - uploading a photo clears the selected demo model
+  - selecting a demo model clears the uploaded photo preview
+  - product summary now shows either the selected model label or `Reference: Your uploaded photo`
+  - source-switch info messages are shown in `en/ru`
+- hardened frontend error handling so RU no longer falls back to raw English API messages for AI Try-On task/create failures
+- hardened frontend generate gating:
+  - disabled when consent is missing
+  - disabled when no reference source is chosen
+  - disabled with the correct uploaded-photo reason only when a photo source exists and the backend marked it unsuitable
+- hardened backend validation for task creation:
+  - accepts `selectedModelId` only
+  - accepts uploaded photo only
+  - rejects neither source with `AI_TRY_ON_REFERENCE_REQUIRED`
+  - rejects both sources with `AI_TRY_ON_REFERENCE_CONFLICT`
+- expanded regression coverage:
+  - backend e2e now covers photo-only success and both-source rejection
+  - Playwright AI Try-On MVP spec now covers missing-source messaging, built-in-only enablement, upload/model clearing behavior, and RU localization for the new Step 3 flow
 
 Verification:
 
-- pending current branch verification run
+- pending
 
 Remaining gaps:
 
-- focused Playwright rerun still depends on live local frontend/backend services
-- production deploy must set `FRONTEND_INTERNAL_BASE_URL=http://frontend-next:3000` or an equivalent frontend-reachable base URL
+- focused Playwright execution still depends on live local frontend/backend services
+- no paid OpenAI smoke was run in this phase by design
+- the pre-branch stash `codex-temp-ai-tryon-pre-branch` was intentionally preserved and not reapplied
+
+## 2026-05-29 AI Try-On Real Models Restore Audit
+
+- audited git history after the reported production regression and confirmed the original UI work still exists in git:
+  - `771a90c feat: replace ai try-on placeholders with real demo models`
+  - `09c628b fix: improve ai try-on upload preview layout`
+- confirmed the current branch already inherits both commits through:
+  - `c7d2196` merge of the real-model branch
+  - `81c1805` merge of the upload-preview branch
+- confirmed `HEAD` still tracks:
+  - `frontend-next/public/ai-try-on/models/model1.png` ... `model10.png`
+  - backend built-in model config pointing to `/ai-try-on/models/model*.png`
+  - upload preview rendered with portrait aspect and `object-contain`
+  - reference-source toggle logic from the latest fix
+- added regression guards so future deploys fail faster if the UI falls back to legacy placeholder paths:
+  - backend AI Try-On config e2e now asserts model image URLs stay on `/ai-try-on/models/model*.png`
+  - backend AI Try-On config e2e now asserts no built-in model uses `.svg`
+  - Playwright AI Try-On MVP spec now asserts model card image `src` uses the real PNG assets
+  - Playwright AI Try-On MVP spec now asserts uploaded preview keeps `object-contain`
+
+Verification:
+
+- pending
+
+Remaining gaps:
+
+- production regression root cause points to deploy/ref selection rather than missing files in the current branch
+- focused Playwright execution still requires live local frontend/backend services
 
 ## 2026-05-28 AI Try-On Real Demo Models
 

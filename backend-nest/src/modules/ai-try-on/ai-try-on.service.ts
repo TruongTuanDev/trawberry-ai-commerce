@@ -191,17 +191,20 @@ export class AiTryOnService {
       );
     }
 
-    if (!dto.customerImageUrl && !dto.selectedModelId) {
+    const hasUploadedReference = Boolean(dto.customerImageUrl?.trim());
+    const hasSelectedModel = Boolean(dto.selectedModelId?.trim());
+
+    if (!hasUploadedReference && !hasSelectedModel) {
       throw this.buildCodeError(
         'AI_TRY_ON_REFERENCE_REQUIRED',
-        'Upload a customer photo or choose a built-in model first.',
+        'Choose one option: upload your own photo or select a demo model.',
       );
     }
 
-    if (dto.customerImageUrl && dto.selectedModelId) {
+    if (hasUploadedReference && hasSelectedModel) {
       throw this.buildCodeError(
         'AI_TRY_ON_REFERENCE_CONFLICT',
-        'Use either an uploaded photo or a built-in model, not both at the same time.',
+        'You can use either your own photo or a demo model, not both.',
       );
     }
 

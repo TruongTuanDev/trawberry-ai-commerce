@@ -1,26 +1,5 @@
 # API AI Try-On
 
-## Phase 3 additions
-
-- demo model asset URLs must resolve against frontend/public origins, not backend uploads:
-  - prefer `FRONTEND_INTERNAL_BASE_URL=http://frontend-next:3000`
-  - fallback to `FRONTEND_URL` or `PUBLIC_SITE_URL`
-- relative built-in model assets such as `/ai-try-on/models/model2.png` must never be rewritten to `http://backend-nest:3001/...`
-- public task creation enforces exactly one reference source:
-  - accepted: `selectedModelId` only
-  - accepted: `customerImageUrl` only
-  - rejected: neither
-  - rejected: both
-- OpenAI / provider failures now surface stable task and API codes:
-  - `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE`
-  - `INVALID_REFERENCE_IMAGE`
-  - `INVALID_PRODUCT_IMAGE`
-  - `OPENAI_BAD_REQUEST`
-  - `OPENAI_AUTH_FAILED`
-  - `OPENAI_QUOTA_EXCEEDED`
-  - `OPENAI_RATE_LIMITED`
-  - `OPENAI_PROVIDER_ERROR`
-
 ## Phase 2 additions
 
 - admin settings now include safe OpenAI runtime fields when `providerMode=openai`:
@@ -178,14 +157,22 @@ Request:
   "gender": "female",
   "bodyType": "regular",
   "bodyTraits": ["wide_shoulders"],
-  "customerImageUrl": "http://localhost:3001/uploads/ai-try-on/guest/guest-123/photo.png",
-  "customerImageStorageKey": "ai-try-on/guest/guest-123/photo.png",
   "selectedModelId": "model-3",
   "consentAccepted": true
 }
 ```
 
 `selectedModelId` must match one of the ids returned by `GET /api/public/ai-try-on/config`, such as `model-3` or `model-7`.
+
+Reference source contract:
+
+- exactly one reference source is required
+- accepted:
+  - `selectedModelId` only
+  - `customerImageUrl` with optional `customerImageStorageKey`
+- rejected:
+  - neither source
+  - both source types in the same request
 
 Response:
 
@@ -262,16 +249,8 @@ Completed example:
 - `AI_TRY_ON_PRODUCT_IMAGE_REQUIRED`
 - `AI_TRY_ON_LIMIT_EXCEEDED`
 - `AI_TRY_ON_INVALID_BODY_PROFILE`
-- `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE`
 - `AI_PROVIDER_NOT_CONFIGURED`
 - `AI_TRY_ON_IMAGE_UNSUITABLE`
-- `INVALID_REFERENCE_IMAGE`
-- `INVALID_PRODUCT_IMAGE`
-- `OPENAI_BAD_REQUEST`
-- `OPENAI_AUTH_FAILED`
-- `OPENAI_QUOTA_EXCEEDED`
-- `OPENAI_RATE_LIMITED`
-- `OPENAI_PROVIDER_ERROR`
 - `AI_PROVIDER_ERROR`
 - `AI_TIMEOUT`
 
@@ -295,8 +274,8 @@ Request:
   },
   "person": {
     "customerImageUrl": null,
-    "selectedModelImageUrl": "http://frontend-next:3000/ai-try-on/models/model2.png",
-    "selectedModelId": "model-2",
+    "selectedModelImageUrl": "http://frontend-next:3000/ai-try-on/models/model3.png",
+    "selectedModelId": "model-3",
     "heightCm": 172,
     "weightKg": 70,
     "gender": "female",
@@ -307,17 +286,6 @@ Request:
   "locale": "ru"
 }
 ```
-
-## Production diagnostics
-
-- Check safe env presence without printing secrets:
-  - `env | grep -E "AI_|FRONTEND_INTERNAL_BASE_URL|PUBLIC_SITE_URL" | sed 's/OPENAI_API_KEY=.*/OPENAI_API_KEY=[redacted]/'`
-- Tail recent service logs:
-  - `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production logs --tail=150 backend-nest ai-service`
-- Known signatures:
-  - demo model 404: `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE` or `GET ... /ai-try-on/models/modelN.png -> 404`
-  - OpenAI bad request: `OPENAI_BAD_REQUEST`, `INVALID_REFERENCE_IMAGE`, `INVALID_PRODUCT_IMAGE`
-  - auth/quota/rate: `OPENAI_AUTH_FAILED`, `OPENAI_QUOTA_EXCEEDED`, `OPENAI_RATE_LIMITED`
 
 Response:
 

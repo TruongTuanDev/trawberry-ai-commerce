@@ -1,27 +1,50 @@
 # Project Status
 
-## AI Try-On Generation URL And Provider Error Hardening - 2026-05-29
+## AI Try-On Reference Source Selection - 2026-05-29
 
-- Status: in progress on branch `dev/bugfix/ai-tryon-generation-url-and-openai-errors`
-- Demo model generation no longer relies on backend upload URL rewriting for frontend public assets.
-- Backend now prefers `FRONTEND_INTERNAL_BASE_URL` when converting built-in model assets like `/ai-try-on/models/model2.png` into ai-service-downloadable URLs.
-- AI Try-On request validation again enforces exactly one reference source:
-  - `selectedModelId` only
-  - uploaded customer image only
-  - both rejected with `AI_TRY_ON_REFERENCE_CONFLICT`
-- ai-service now returns stable provider codes for try-on runtime failures instead of collapsing most OpenAI issues into a generic provider error:
-  - `AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE`
-  - `INVALID_REFERENCE_IMAGE`
-  - `INVALID_PRODUCT_IMAGE`
-  - `OPENAI_BAD_REQUEST`
-  - `OPENAI_AUTH_FAILED`
-  - `OPENAI_QUOTA_EXCEEDED`
-  - `OPENAI_RATE_LIMITED`
-  - `OPENAI_PROVIDER_ERROR`
-- Frontend AI Try-On messaging now maps those codes to localized EN/RU user-facing copy.
+- Status: in progress on branch `dev/bugfix/ai-tryon-reference-source-selection`
+- Public AI Try-On reference selection is being normalized to an explicit single-source contract:
+  - upload photo only
+  - demo model only
+  - never both at once
+- Frontend changes in progress:
+  - no default selected demo model
+  - Step 3 copy and helper text updated for `en/ru`
+  - source toggle added for `Use my photo` / `Use demo model`
+  - uploading clears selected model
+  - selecting a model clears uploaded preview
+  - product summary now reflects the active source correctly
+  - AI Try-On error mapping now prefers localized fallback instead of raw backend English text in RU
+- Backend changes in progress:
+  - task creation now rejects both-source payloads with a stable code
+  - task creation still accepts either photo-only or model-only requests
+- Current verification target for this phase:
+  - `frontend-next npm run lint`
+  - `frontend-next npm run build`
+  - `backend-nest npm run prisma:generate`
+  - `backend-nest npm run lint`
+  - `backend-nest npm run build`
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`
+  - optional Playwright rerun if local services are active
 - Current gaps:
-  - focused Playwright verification still requires local frontend/backend services
-  - production env must expose a frontend-reachable base URL for demo-model asset downloads
+  - verification is still pending in this branch state
+  - the user-local pre-branch stash `codex-temp-ai-tryon-pre-branch` was preserved and left untouched
+
+## AI Try-On Real Models Restore Audit - 2026-05-29
+
+- Status: implemented on branch `dev/bugfix/ai-tryon-reference-source-selection`
+- Git audit confirmed the current branch already contains both prior UI phases that production was expected to keep:
+  - `771a90c feat: replace ai try-on placeholders with real demo models`
+  - `09c628b fix: improve ai try-on upload preview layout`
+- Current branch state still includes:
+  - 10 tracked PNG assets under `frontend-next/public/ai-try-on/models`
+  - backend built-in model config using `/ai-try-on/models/model1.png` ... `model10.png`
+  - upload preview portrait layout with `object-contain`
+  - latest one-of-two reference selection logic
+- Added regression coverage so future deploys catch a fallback to placeholder `.svg` paths earlier.
+- Current assessment:
+  - the reported regression is consistent with a deploy/ref selection issue
+  - it is not consistent with missing AI Try-On model assets in the current branch contents
 
 ## AI Try-On Real Demo Models - 2026-05-28
 

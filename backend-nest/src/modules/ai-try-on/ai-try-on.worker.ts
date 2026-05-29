@@ -7,10 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Worker, type Job } from 'bullmq';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import {
-  resolveFrontendAssetUrlForAiService,
-  rewriteUrlForAiService,
-} from '../ai-images/ai-service-url.util';
+import { rewriteUrlForAiService } from '../ai-images/ai-service-url.util';
 import {
   AI_TRY_ON_JOB_GENERATE,
   AI_TRY_ON_QUEUE,
@@ -113,23 +110,10 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
         this.configService.get<string>('BACKEND_PUBLIC_BASE_URL') ??
         this.configService.get<string>('FILES_PUBLIC_BASE_URL') ??
         null;
-      const frontendInternalBaseUrl =
-        this.configService.get<string>('FRONTEND_INTERNAL_BASE_URL') ?? null;
       const frontendPublicBaseUrl =
         this.configService.get<string>('FRONTEND_URL') ??
         this.configService.get<string>('PUBLIC_SITE_URL') ??
         null;
-      const selectedModelImageUrl = this.resolveSelectedModelImageUrl(
-        model?.imageUrl ?? null,
-        frontendInternalBaseUrl,
-        frontendPublicBaseUrl,
-      );
-
-      if (task.selectedModelId && !selectedModelImageUrl) {
-        throw new Error(
-          'AI_TRY_ON_MODEL_IMAGE_UNAVAILABLE: The demo model image could not be loaded.',
-        );
-      }
 
       const response = await this.aiServiceClient.generateTryOn({
         taskId: task.id,
@@ -151,7 +135,12 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
             backendInternalBaseUrl,
             backendPublicBaseUrl,
           }),
-          selectedModelImageUrl,
+          selectedModelImageUrl: this.resolveSelectedModelImageUrl(
+            model?.imageUrl ?? null,
+            frontendPublicBaseUrl,
+            backendInternalBaseUrl,
+            backendPublicBaseUrl,
+          ),
           selectedModelId: model?.modelId ?? task.selectedModelId,
           heightCm: task.heightCm,
           weightKg: task.weightKg,
@@ -249,12 +238,33 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
 
   private resolveSelectedModelImageUrl(
     value: string | null | undefined,
-    frontendInternalBaseUrl: string | null,
     frontendPublicBaseUrl: string | null,
+    backendInternalBaseUrl?: string | null,
+    backendPublicBaseUrl?: string | null,
   ) {
-    return resolveFrontendAssetUrlForAiService(value, {
-      frontendInternalBaseUrl,
-      frontendPublicBaseUrl,
+    if (!value) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    if (trimmed.startsWith('/') && frontendPublicBaseUrl) {
+      try {
+        return new URL(trimmed, frontendPublicBaseUrl).toString();
+      } catch {
+        return rewriteUrlForAiService(trimmed, {
+          backendInternalBaseUrl,
+          backendPublicBaseUrl,
+        });
+      }
+    }
+
+    return rewriteUrlForAiService(trimmed, {
+      backendInternalBaseUrl,
+      backendPublicBaseUrl,
     });
   }
 
