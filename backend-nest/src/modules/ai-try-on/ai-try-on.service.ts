@@ -20,10 +20,7 @@ import {
   AI_TRY_ON_SETTINGS_ID,
   AI_TRY_ON_STATUSES,
 } from './ai-try-on.constants';
-import {
-  findBuiltInTryOnModel,
-  BUILT_IN_TRY_ON_MODELS,
-} from './ai-try-on-models';
+// Loaded dynamically from database
 import {
   matchesSupportedCategoryValue,
   normalizeStoredSupportedCategoryValues,
@@ -140,8 +137,25 @@ export class AiTryOnService {
       supportedCategories: this.readSupportedCategories(
         settings.supportedCategories,
       ),
-      builtInModels: BUILT_IN_TRY_ON_MODELS,
     };
+  }
+
+  async getPublicModels() {
+    const dbModels = await this.prisma.aiTryOnModel.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    return dbModels.map((m) => ({
+      modelId: m.id,
+      gender: m.gender,
+      bodyType: m.bodyType,
+      heightCm: m.heightCm,
+      weightKg: m.weightKg,
+      imageUrl: m.imageUrl,
+      labelRu: m.labelRu,
+      labelEn: m.labelEn,
+    }));
   }
 
   async uploadReferenceImage(
@@ -208,11 +222,34 @@ export class AiTryOnService {
       );
     }
 
-    if (dto.selectedModelId && !findBuiltInTryOnModel(dto.selectedModelId)) {
-      throw this.buildCodeError(
-        'AI_TRY_ON_REFERENCE_REQUIRED',
-        'The selected built-in model is not available.',
-      );
+    if (dto.selectedModelId) {
+      const isLegacyModelId = [
+        'female-slim',
+        'female-regular',
+        'male-regular',
+        'male-large',
+        'try-on-model-female-slim',
+        'try-on-model-female-regular',
+        'try-on-model-male-regular',
+        'try-on-model-male-large',
+      ].some((legacyId) => dto.selectedModelId?.includes(legacyId));
+
+      if (isLegacyModelId) {
+        throw this.buildCodeError(
+          'DEMO_MODEL_OUTDATED',
+          'The selected demo model is outdated. Please refresh the page.',
+        );
+      }
+
+      const dbModel = await this.prisma.aiTryOnModel.findFirst({
+        where: { id: dto.selectedModelId, isActive: true },
+      });
+      if (!dbModel) {
+        throw this.buildCodeError(
+          'DEMO_MODEL_NOT_FOUND',
+          'The selected demo model is not available.',
+        );
+      }
     }
 
     if (

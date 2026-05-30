@@ -16,6 +16,8 @@ export function AiTryOnModelPicker({
   onFileChange,
   onSelectModel,
   onRemovePhoto,
+  loading = false,
+  error = null,
 }: {
   models: AiTryOnBuiltInModel[];
   locale: "ru" | "en";
@@ -28,6 +30,8 @@ export function AiTryOnModelPicker({
   onFileChange: (file: File | null) => void;
   onSelectModel: (modelId: string) => void;
   onRemovePhoto: () => void;
+  loading?: boolean;
+  error?: string | null;
 }) {
   const [isDragActive, setIsDragActive] = useState(false);
 
@@ -212,8 +216,21 @@ export function AiTryOnModelPicker({
       {showModelPanel ? (
         <div className="space-y-3">
           <p className="text-sm font-semibold text-[var(--foreground)]">{t("aiTryOn.chooseModel")}</p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {models.map((model) => {
+          {loading ? (
+            <div className="py-8 text-center text-sm text-[var(--muted)]">
+              {t("aiTryOn.loadingModels") || "Loading demo models..."}
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium text-rose-700">
+              {error}
+            </div>
+          ) : models.length === 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-medium text-amber-800">
+              {t("aiTryOn.demoModelsUnavailable")}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {models.map((model) => {
               const active = selectedModelId === model.modelId;
               return (
                 <button
@@ -247,6 +264,7 @@ export function AiTryOnModelPicker({
               );
             })}
           </div>
+          )}
         </div>
       ) : null}
     </section>

@@ -1,5 +1,26 @@
 # Project Status
 
+## Database-backed AI Try-On Demo Models - 2026-05-30
+
+- Status: Implemented on branch `dev/bugfix/ai-tryon-real-generation-failures`
+- Refactored the demo models architecture to use the database as the single source of truth.
+- Backend additions:
+  - Added the `AiTryOnModel` table to the Prisma schema mapping dynamic demo models.
+  - Implemented `seed-ai-tryon-models.ts` and registered `"ai-tryon:seed-models"` script to populate 10 default models.
+  - Integrated Try-On models seed inside `seed-demo.js`.
+  - Added `GET /api/public/ai-try-on/models` returning active models sorted by `sortOrder`.
+  - Removed hardcoded models from `/api/public/ai-try-on/config`.
+  - Added outdated legacy model ID validation in `createTask` returning `DEMO_MODEL_OUTDATED`.
+  - Refactored worker and task validators to query Prisma database instead of deprecated hardcoded helper.
+  - Mocked `prismaMock.aiTryOnModel` in E2E tests and added spec tests asserting the dynamic `/models` endpoint and legacy deactivation.
+- Frontend (`frontend-next`) additions:
+  - Added `getPublicAiTryOnModels` client helper.
+  - Refactored `AiTryOnModal` to fetch models dynamically from the backend on open, handling loading, error, and empty warning states localized in `en` and `ru`.
+- Verification status:
+  - Backend NestJS tests: `npm test -- --runInBand test/ai-try-on.e2e-spec.ts` -> pass (all 24 tests passed)
+  - Python AI Service tests: `python -m pytest -q` -> pass (all 29 tests passed)
+  - Frontend type safety, linting and compilation: `npm run lint` -> pass; `npm run build` -> pass
+
 ## AI Try-On Real Generation Failures - 2026-05-30
 
 - Status: Implemented on branch `dev/bugfix/ai-tryon-real-generation-failures`

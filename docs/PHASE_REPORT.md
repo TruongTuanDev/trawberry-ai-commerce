@@ -1,5 +1,26 @@
 # Phase Report
 
+## 2026-05-30 Database-backed AI Try-On Demo Models
+
+- Status: Completed on branch `dev/bugfix/ai-tryon-real-generation-failures`
+- Unified AI Try-On demo models to load dynamically from the Postgres database:
+  - Added `AiTryOnModel` model to [schema.prisma](file:///c:/Users/admin/trawberry-ai-commerce/backend-nest/prisma/schema.prisma).
+  - Created a seed script `backend-nest/scripts/seed-ai-tryon-models.ts` and registered it in `package.json` under `"ai-tryon:seed-models"`.
+  - Integrated Try-On models database upsert in `backend-nest/scripts/seed-demo.js`.
+  - Exposed public models list on backend endpoint `GET /api/public/ai-try-on/models` sorted by `sortOrder`.
+  - Deprecated the hardcoded `BUILT_IN_TRY_ON_MODELS` array.
+  - Added validation checking for legacy model IDs in `createTask` throwing `DEMO_MODEL_OUTDATED`, and unknown model IDs throwing `DEMO_MODEL_NOT_FOUND`.
+  - Updated worker thread model lookup to use Prisma queries.
+  - Mocked `prismaMock.aiTryOnModel` in Jest specs to assert the new models endpoint and legacy validation.
+- Updated Next.js Frontend:
+  - Added `getPublicAiTryOnModels` to [public-api.ts](file:///c:/Users/admin/trawberry-ai-commerce/frontend-next/src/lib/public-api.ts).
+  - Modified [ai-try-on-modal.tsx](file:///c:/Users/admin/trawberry-ai-commerce/frontend-next/src/components/ai-try-on/ai-try-on-modal.tsx) to fetch models dynamically, rendering loading indicators, error boxes, or empty-state warnings.
+  - Localized new error codes in English and Russian translation files.
+- Verification status:
+  - Backend NestJS tests: `npm test -- --runInBand test/ai-try-on.e2e-spec.ts` -> pass (all 24 tests passed)
+  - Python AI Service tests: `python -m pytest -q` -> pass (all 29 tests passed)
+  - Frontend type safety, linting and compilation: `npm run lint` -> pass; `npm run build` -> pass
+
 ## 2026-05-30 AI Try-On Real Generation Failures Fix
 
 - Status: Completed on branch `dev/bugfix/ai-tryon-real-generation-failures`
