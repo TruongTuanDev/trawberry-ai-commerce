@@ -158,6 +158,22 @@ export class FilesService {
     return this.storeAiTryOnReferenceInS3(file, context);
   }
 
+  async storeAiTryOnResult(
+    file: ProductImageUploadFile,
+    context: {
+      providerMode: string;
+      taskId: string;
+      sequence: number;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeAiTryOnResultLocally(file, context);
+    }
+
+    return this.storeAiTryOnResultInS3(file, context);
+  }
+
   async deleteProductImageFile(params: {
     storageKey?: string | null;
     fileUrl?: string | null;
@@ -736,6 +752,79 @@ export class FilesService {
     };
   }
 
+  private async storeAiTryOnResultLocally(
+    file: ProductImageUploadFile,
+    context: {
+      providerMode: string;
+      taskId: string;
+      sequence: number;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const extension = this.resolveExtension(file.mimetype, file.originalname);
+    const storageKey = [
+      context.providerMode,
+      context.taskId,
+      `${context.sequence}.${extension}`,
+    ].join('/');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'ai-try-on',
+      context.providerMode,
+      context.taskId,
+    );
+    const absolutePath = join(
+      targetDirectory,
+      `${context.sequence}.${extension}`,
+    );
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(['ai-try-on', storageKey].join('/')),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnResultInS3(
+    file: ProductImageUploadFile,
+    context: {
+      providerMode: string;
+      taskId: string;
+      sequence: number;
+    },
+  ): Promise<StoredFileResult> {
+    const storageKey = [
+      context.providerMode,
+      context.taskId,
+      `${context.sequence}.${this.resolveExtension(file.mimetype, file.originalname)}`,
+    ].join('/');
+    const bucket = this.getAiTryOnBucket();
+    const client = this.createS3Client();
+
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey, bucket),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
   private async deleteStoredFileLocally(
     storageKey?: string | null,
     fileUrl?: string | null,
@@ -773,13 +862,22 @@ export class FilesService {
     return `${publicBaseUrl.replace(/\/$/, '')}/uploads/${relativePath}`;
   }
 
-  private buildS3PublicUrl(storageKey: string) {
+  private buildS3PublicUrl(storageKey: string, bucket = this.getS3Bucket()) {
     const publicBaseUrl =
       this.configService.get<string>('S3_PUBLIC_BASE_URL') ??
       this.configService.get<string>('S3_ENDPOINT') ??
       'http://localhost:9000';
+    const normalizedBaseUrl = publicBaseUrl.replace(/\/$/, '');
+    const bucketSuffix = `/${bucket}`;
 
-    return `${publicBaseUrl.replace(/\/$/, '')}/${this.getS3Bucket()}/${storageKey}`;
+    if (
+      normalizedBaseUrl === bucket ||
+      normalizedBaseUrl.endsWith(bucketSuffix)
+    ) {
+      return `${normalizedBaseUrl}/${storageKey}`;
+    }
+
+    return `${normalizedBaseUrl}/${bucket}/${storageKey}`;
   }
 
   private extractRelativePath(fileUrl: string, uploadsPrefix: string) {
@@ -824,10 +922,32 @@ export class FilesService {
     return this.configService.get<string>('S3_BUCKET', 'strawberry-assets');
   }
 
+  private getAiTryOnBucket() {
+    return this.configService.get<string>('AI_TRY_ON_BUCKET', 'ai-try-on');
+  }
+
   private getStorageDriver() {
     return this.configService.get<string>(
       'STORAGE_DRIVER',
       this.configService.get<string>('FILE_STORAGE_DRIVER', 'local'),
     );
+  }
+
+  private resolveExtension(mimeType: string, originalName: string) {
+    const normalizedMimeType = mimeType.toLowerCase();
+    switch (normalizedMimeType) {
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/png':
+        return 'png';
+      case 'image/webp':
+        return 'webp';
+      case 'image/svg+xml':
+        return 'svg';
+      default: {
+        const originalExtension = extname(originalName).replace(/^\./, '');
+        return originalExtension || 'bin';
+      }
+    }
   }
 }

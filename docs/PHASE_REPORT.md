@@ -1,5 +1,20 @@
 # Phase Report
 
+## 2026-05-30 AI Try-On Backend Result Upload Ordering Fix
+
+- Status: Completed on current branch
+- Root cause:
+  - `backend-nest` trusted the AI service response URL and marked `AiTryOnTask` as `COMPLETED` before backend-owned object persistence was verified.
+  - production tasks could therefore contain `result_image_url` values under `https://skidkaberry.com/storage/ai-try-on/openai/<taskId>/1.png` while the MinIO object did not exist.
+- Implemented fix:
+  - added backend result-image persistence in [backend-nest/src/modules/files/files.service.ts](/c:/Users/admin/trawberry-ai-commerce/backend-nest/src/modules/files/files.service.ts)
+  - `ai-try-on.worker.ts` now downloads the generated image, uploads it to bucket `ai-try-on` with object key `openai/<taskId>/1.png` for OpenAI tasks, logs safe upload metadata, and only then marks the task `COMPLETED`
+  - upload failures now leave the task in `FAILED` with code `RESULT_IMAGE_UPLOAD_FAILED`
+  - added regression tests covering canonical bucket/key/url generation and the worker completion/failure ordering
+- Verification:
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `git diff --check`: pass
+
 ## 2026-05-30 AI Try-On Public MinIO Bucket Policy Fix
 
 - Status: Completed on current branch

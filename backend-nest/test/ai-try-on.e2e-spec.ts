@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { QueueService } from '../src/common/queue/queue.service';
+import { FilesService } from '../src/modules/files/files.service';
 import { AiTryOnWorkerService } from '../src/modules/ai-try-on/ai-try-on.worker';
 import { AiTryOnAiServiceClientService } from '../src/modules/ai-try-on/ai-try-on-ai-service-client.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
@@ -1545,6 +1546,7 @@ describe('AiTryOnWorkerService URL Resolution', () => {
         },
         { provide: PrismaService, useValue: {} },
         { provide: AiTryOnAiServiceClientService, useValue: {} },
+        { provide: FilesService, useValue: {} },
       ],
     }).compile();
 
@@ -1575,7 +1577,316 @@ describe('AiTryOnWorkerService URL Resolution', () => {
   });
 });
 
+describe('FilesService AI Try-On Result Storage', () => {
+  it('stores generated result images in the ai-try-on bucket with the canonical key and URL', async () => {
+    const sendMock = jest.fn().mockResolvedValue({});
+    const service = new FilesService({
+      get: jest.fn((key: string, defaultValue?: string) => {
+        if (key === 'STORAGE_DRIVER') {
+          return 's3';
+        }
+        if (key === 'S3_PUBLIC_BASE_URL') {
+          return 'https://skidkaberry.com/storage';
+        }
+        if (key === 'AI_TRY_ON_BUCKET') {
+          return 'ai-try-on';
+        }
+        return defaultValue;
+      }),
+    } as unknown as ConfigService);
+
+    (
+      service as unknown as {
+        createS3Client: () => { send: typeof sendMock };
+      }
+    ).createS3Client = () => ({
+      send: sendMock,
+    });
+
+    const stored = await service.storeAiTryOnResult(
+      {
+        originalname: 'generated.png',
+        mimetype: 'image/png',
+        size: 4,
+        buffer: Buffer.from('png!'),
+      },
+      {
+        providerMode: 'openai',
+        taskId: 'task-123',
+        sequence: 1,
+      },
+    );
+
+    const [command] = sendMock.mock.calls[0] as [
+      { input: Record<string, unknown> },
+    ];
+    expect(command.input).toMatchObject({
+      Bucket: 'ai-try-on',
+      Key: 'openai/task-123/1.png',
+      ContentType: 'image/png',
+    });
+    expect(stored.storageKey).toBe('openai/task-123/1.png');
+    expect(stored.publicUrl).toBe(
+      'https://skidkaberry.com/storage/ai-try-on/openai/task-123/1.png',
+    );
+  });
+});
+
 describe('AiTryOnWorkerService Task Persistence', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('uploads the generated result before marking the task completed', async () => {
+    const prismaUpdateMock = jest.fn();
+    const prismaCreateMock = jest.fn();
+    const storeAiTryOnResultMock = jest.fn().mockResolvedValue({
+      publicUrl:
+        'https://skidkaberry.com/storage/ai-try-on/openai/task-123/1.png',
+      storageKey: 'openai/task-123/1.png',
+      originalName: 'generated.png',
+      mimeType: 'image/png',
+      size: 4,
+    });
+
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(Buffer.from('png!'), {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+        },
+      }),
+    );
+
+    const mockTask = {
+      id: 'task-123',
+      customerId: 'customer-1',
+      guestSessionId: null,
+      shopId: 'shop-1',
+      productId: 'product-123',
+      providerMode: 'openai',
+      customerImageUrl: 'http://example.com/customer.jpg',
+      selectedModelId: null,
+      heightCm: null,
+      weightKg: null,
+      gender: null,
+      bodyType: null,
+      bodyTraits: [],
+      selectedSize: 'M',
+      selectedRussianSize: '46',
+      product: {
+        id: 'product-123',
+        localTitle: 'Jacket',
+        wbTitle: 'Jacket',
+        categoryName: 'Jackets',
+        sourceCategoryName: 'Jackets',
+        images: [
+          {
+            localUrl: 'http://example.com/product.jpg',
+            isMain: true,
+            sortOrder: 1,
+          },
+        ],
+      },
+    };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AiTryOnWorkerService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string, defaultValue?: unknown): unknown => {
+              if (key === 'BULLMQ_DISABLED') return 'true';
+              return defaultValue;
+            }),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            aiTryOnTask: {
+              findUnique: jest.fn().mockResolvedValue(mockTask),
+              update: prismaUpdateMock,
+            },
+            aiTryOnModel: {
+              findFirst: jest.fn().mockResolvedValue(null),
+            },
+            aiTryOnUsageLog: {
+              create: prismaCreateMock,
+            },
+          },
+        },
+        {
+          provide: AiTryOnAiServiceClientService,
+          useValue: {
+            generateTryOn: jest.fn().mockResolvedValue({
+              images: [
+                {
+                  url: 'http://ai-service.local/generated.png',
+                  mimeType: 'image/png',
+                  width: 1024,
+                  height: 1536,
+                },
+              ],
+              provider: 'openai',
+            }),
+          },
+        },
+        {
+          provide: FilesService,
+          useValue: {
+            storeAiTryOnResult: storeAiTryOnResultMock,
+          },
+        },
+      ],
+    }).compile();
+
+    const workerService =
+      moduleRef.get<AiTryOnWorkerService>(AiTryOnWorkerService);
+    await workerService.processTask('task-123');
+
+    expect(storeAiTryOnResultMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mimetype: 'image/png',
+        size: 4,
+      }),
+      {
+        providerMode: 'openai',
+        taskId: 'task-123',
+        sequence: 1,
+      },
+    );
+    expect(prismaUpdateMock).toHaveBeenLastCalledWith({
+      where: { id: 'task-123' },
+      data: expect.objectContaining({
+        status: 'COMPLETED',
+        resultImageUrl:
+          'https://skidkaberry.com/storage/ai-try-on/openai/task-123/1.png',
+        resultImageStorageKey: 'openai/task-123/1.png',
+        resultMimeType: 'image/png',
+        resultWidth: 1024,
+        resultHeight: 1536,
+      }) as unknown,
+    });
+  });
+
+  it('marks the task failed when result image upload fails', async () => {
+    const prismaUpdateMock = jest.fn();
+    const prismaCreateMock = jest.fn();
+
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(Buffer.from('png!'), {
+        status: 200,
+        headers: {
+          'content-type': 'image/png',
+        },
+      }),
+    );
+
+    const mockTask = {
+      id: 'task-123',
+      customerId: 'customer-1',
+      guestSessionId: null,
+      shopId: 'shop-1',
+      productId: 'product-123',
+      providerMode: 'openai',
+      customerImageUrl: 'http://example.com/customer.jpg',
+      selectedModelId: null,
+      heightCm: null,
+      weightKg: null,
+      gender: null,
+      bodyType: null,
+      bodyTraits: [],
+      selectedSize: 'M',
+      selectedRussianSize: '46',
+      product: {
+        id: 'product-123',
+        localTitle: 'Jacket',
+        wbTitle: 'Jacket',
+        categoryName: 'Jackets',
+        sourceCategoryName: 'Jackets',
+        images: [
+          {
+            localUrl: 'http://example.com/product.jpg',
+            isMain: true,
+            sortOrder: 1,
+          },
+        ],
+      },
+    };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AiTryOnWorkerService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string, defaultValue?: unknown): unknown => {
+              if (key === 'BULLMQ_DISABLED') return 'true';
+              return defaultValue;
+            }),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            aiTryOnTask: {
+              findUnique: jest.fn().mockResolvedValue(mockTask),
+              update: prismaUpdateMock,
+            },
+            aiTryOnModel: {
+              findFirst: jest.fn().mockResolvedValue(null),
+            },
+            aiTryOnUsageLog: {
+              create: prismaCreateMock,
+            },
+          },
+        },
+        {
+          provide: AiTryOnAiServiceClientService,
+          useValue: {
+            generateTryOn: jest.fn().mockResolvedValue({
+              images: [
+                {
+                  url: 'http://ai-service.local/generated.png',
+                  mimeType: 'image/png',
+                },
+              ],
+              provider: 'openai',
+            }),
+          },
+        },
+        {
+          provide: FilesService,
+          useValue: {
+            storeAiTryOnResult: jest
+              .fn()
+              .mockRejectedValue(new Error('minio unavailable')),
+          },
+        },
+      ],
+    }).compile();
+
+    const workerService =
+      moduleRef.get<AiTryOnWorkerService>(AiTryOnWorkerService);
+    await workerService.processTask('task-123');
+
+    expect(prismaUpdateMock).toHaveBeenLastCalledWith({
+      where: { id: 'task-123' },
+      data: expect.objectContaining({
+        status: 'FAILED',
+        errorCode: 'RESULT_IMAGE_UPLOAD_FAILED',
+      }) as unknown,
+    });
+    expect(prismaUpdateMock).not.toHaveBeenCalledWith({
+      where: { id: 'task-123' },
+      data: expect.objectContaining({
+        status: 'COMPLETED',
+      }) as unknown,
+    });
+  });
+
   it('does not mark task completed with null resultImageUrl', async () => {
     const prismaUpdateMock = jest.fn();
     const prismaCreateMock = jest.fn();
@@ -1643,6 +1954,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
             }),
           },
         },
+        { provide: FilesService, useValue: {} },
       ],
     }).compile();
 
