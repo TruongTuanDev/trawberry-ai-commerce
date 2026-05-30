@@ -1574,3 +1574,88 @@ describe('AiTryOnWorkerService URL Resolution', () => {
     expect(resolved).not.toContain('backend-nest:3001');
   });
 });
+
+describe('AiTryOnWorkerService Task Persistence', () => {
+  it('does not mark task completed with null resultImageUrl', async () => {
+    const prismaUpdateMock = jest.fn();
+    const prismaCreateMock = jest.fn();
+
+    const mockTask = {
+      id: 'task-123',
+      productId: 'product-123',
+      providerMode: 'openai',
+      customerImageUrl: 'http://example.com/customer.jpg',
+      selectedModelId: null,
+      heightCm: null,
+      weightKg: null,
+      gender: null,
+      bodyType: null,
+      bodyTraits: [],
+      selectedSize: 'M',
+      selectedRussianSize: '46',
+      product: {
+        id: 'product-123',
+        localTitle: 'Jacket',
+        wbTitle: 'Jacket',
+        images: [
+          {
+            localUrl: 'http://example.com/product.jpg',
+            isMain: true,
+            sortOrder: 1,
+          },
+        ],
+      },
+    };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AiTryOnWorkerService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string, defaultValue?: unknown): unknown => {
+              if (key === 'BULLMQ_DISABLED') return 'true';
+              return defaultValue;
+            }),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            aiTryOnTask: {
+              findUnique: jest.fn().mockResolvedValue(mockTask),
+              update: prismaUpdateMock,
+            },
+            aiTryOnModel: {
+              findFirst: jest.fn().mockResolvedValue(null),
+            },
+            aiTryOnUsageLog: {
+              create: prismaCreateMock,
+            },
+          },
+        },
+        {
+          provide: AiTryOnAiServiceClientService,
+          useValue: {
+            generateTryOn: jest.fn().mockResolvedValue({
+              images: [{ url: null }],
+              provider: 'openai',
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    const workerService =
+      moduleRef.get<AiTryOnWorkerService>(AiTryOnWorkerService);
+    await workerService.processTask('task-123');
+
+    expect(prismaUpdateMock).toHaveBeenLastCalledWith({
+      where: { id: 'task-123' },
+      data: expect.objectContaining({
+        status: 'FAILED',
+        errorCode: 'RESULT_IMAGE_URL_MISSING',
+      }) as unknown,
+    });
+  });
+});

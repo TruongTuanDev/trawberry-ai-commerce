@@ -1,5 +1,31 @@
 # Phase Report
 
+## 2026-05-30 AI Try-On Result Pipeline and Image Persistence Fix
+
+- Status: Completed on branch `dev/bugfix/ai-tryon-real-generation-failures`
+- Root cause:
+  - OpenAI images.edit API response can return either `b64_json` or `url` values. The previous AI service parser only parsed `b64_json`, causing generation requests returning `url` format to fail or lose the image data.
+  - When the AI service returned a successful response, the NestJS backend worker marked tasks `COMPLETED` even if the generated image URL was empty, resulting in the frontend showing a success state with a default "No image available" placeholder.
+- Implemented fix:
+  - **AI Service:** Modified `openai_image_support.py` and `openai_image_provider.py` to be asynchronous, retrieve and parse both `b64_json` and `url` values from the OpenAI API response, fetch/download the URL image bytes when returned using an async client (`httpx.AsyncClient`), and write them to the configured object storage (MinIO/S3 or local).
+  - **AI Service:** Added safe logging of image parsing metadata (presence of base64/url, byte length, MIME type) without leaking raw image bytes or secrets.
+  - **Backend:** Updated `ai-try-on.worker.ts` to assert the presence of `image.url` in the AI service response, transitioning the task to `FAILED` with code `RESULT_IMAGE_URL_MISSING` otherwise.
+  - **Backend:** Standardized the API contract by returning the direct unified field `resultImageUrl` in `mapTask()` under `ai-try-on.service.ts`.
+  - **Frontend:** Updated client interfaces in `public-api.ts` to expose `resultImageUrl` and updated `ai-try-on-result.tsx` to read the unified URL field.
+  - **Frontend:** Modified `ai-try-on-result.tsx` to display a styled, clear error message `"AI generated a recommendation but no image was returned."` instead of the success screen if the image URL is missing.
+  - **Frontend:** Mapped stable error codes (`RESULT_IMAGE_MISSING`, `OPENAI_RESULT_IMAGE_MISSING`, `RESULT_IMAGE_UPLOAD_FAILED`, `RESULT_IMAGE_URL_MISSING`, `TASK_COMPLETED_WITHOUT_IMAGE`) in `resolveTryOnErrorMessage` and `resolveTaskErrorMessage` under `ai-try-on-modal.tsx`.
+- Verification:
+  - `ai-service python -m pytest -q`: pass (33 tests passed, including new test cases for URL response downloading and missing payload errors)
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass (25 tests passed, including new task persistence validation spec)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `git diff --check`: pass
+  - `git status --short`: pass (modified files only in scope before commit)
+  - `git ls-files | Select-String "\.env"`: pass (`*.example` files only)
+  - `git ls-files data.xlsx`: pass
+
 ## 2026-05-30 OpenAI Image Edit MIME Type Fix
 
 - Status: Completed on current branch

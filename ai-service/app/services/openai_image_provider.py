@@ -172,7 +172,7 @@ class OpenAIImageProvider(ImageProvider):
                 diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
 
-        return self._parse_response(response)
+        return await self._parse_response(response)
 
     async def _download_reference_images(
         self,
@@ -400,7 +400,7 @@ class OpenAIImageProvider(ImageProvider):
             "output_format": self.settings.openai_image_output_format,
         }
 
-    def _parse_response(self, response) -> list[ProviderImageResult]:
+    async def _parse_response(self, response) -> list[ProviderImageResult]:
         data = getattr(response, "data", None)
         if not data:
                 raise ProviderError(
@@ -418,23 +418,49 @@ class OpenAIImageProvider(ImageProvider):
         results: list[ProviderImageResult] = []
         for image in data:
             image_b64 = getattr(image, "b64_json", None)
-            if not image_b64:
+            image_url = getattr(image, "url", None)
+            has_b64_json = bool(image_b64)
+            has_url = bool(image_url)
+
+            if image_b64:
+                try:
+                    image_bytes = base64.b64decode(image_b64)
+                except ValueError as error:
+                    raise ProviderError(
+                        "OpenAI returned malformed base64 image output.",
+                        status_code=502,
+                        retryable=False,
+                        code="AI_SERVICE_INVALID_RESPONSE",
+                    ) from error
+            elif image_url:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(image_url, timeout=30.0)
+                        resp.raise_for_status()
+                        image_bytes = resp.content
+                except Exception as error:
+                    LOGGER.error("Failed to download generated image from OpenAI URL: %s", image_url, exc_info=True)
+                    raise ProviderError(
+                        "Failed to retrieve generated image from URL.",
+                        status_code=502,
+                        retryable=False,
+                        code="RESULT_IMAGE_UPLOAD_FAILED",
+                    ) from error
+            else:
                 raise ProviderError(
-                    "OpenAI returned an image response without b64_json output.",
+                    "OpenAI returned no valid image payload (missing b64_json and url).",
                     status_code=502,
                     retryable=False,
-                    code="AI_SERVICE_INVALID_RESPONSE",
+                    code="RESULT_IMAGE_MISSING",
                 )
 
-            try:
-                image_bytes = base64.b64decode(image_b64)
-            except ValueError as error:
-                raise ProviderError(
-                    "OpenAI returned malformed base64 image output.",
-                    status_code=502,
-                    retryable=False,
-                    code="AI_SERVICE_INVALID_RESPONSE",
-                ) from error
+            LOGGER.info(
+                "OpenAI image parsing: has_b64_json=%s, has_url=%s, generated_image_byte_length=%d, output_mime=%s",
+                has_b64_json,
+                has_url,
+                len(image_bytes),
+                mime_type,
+            )
 
             quality = validate_generated_image(
                 image_bytes,

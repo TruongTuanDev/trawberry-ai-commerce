@@ -67,6 +67,11 @@ function resolveTryOnErrorMessage(
       case "OPENAI_RATE_LIMITED":
         return t("aiTryOn.openaiRateLimited");
       case "OPENAI_PROVIDER_ERROR":
+      case "RESULT_IMAGE_MISSING":
+      case "OPENAI_RESULT_IMAGE_MISSING":
+      case "RESULT_IMAGE_UPLOAD_FAILED":
+      case "RESULT_IMAGE_URL_MISSING":
+      case "TASK_COMPLETED_WITHOUT_IMAGE":
         return t("aiTryOn.openaiProviderError");
       case "DEMO_MODEL_IMAGE_NOT_FOUND":
         return t("aiTryOn.demoModelImageNotFound");
@@ -115,6 +120,11 @@ function resolveTaskErrorMessage(task: AiTryOnTask, t: (key: string) => string) 
     case "OPENAI_RATE_LIMITED":
       return t("aiTryOn.openaiRateLimited");
     case "OPENAI_PROVIDER_ERROR":
+    case "RESULT_IMAGE_MISSING":
+    case "OPENAI_RESULT_IMAGE_MISSING":
+    case "RESULT_IMAGE_UPLOAD_FAILED":
+    case "RESULT_IMAGE_URL_MISSING":
+    case "TASK_COMPLETED_WITHOUT_IMAGE":
       return t("aiTryOn.openaiProviderError");
     case "DEMO_MODEL_IMAGE_NOT_FOUND":
       return t("aiTryOn.demoModelImageNotFound");

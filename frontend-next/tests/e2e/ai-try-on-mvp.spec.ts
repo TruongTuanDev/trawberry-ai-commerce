@@ -635,3 +635,50 @@ test("RU AI Try-On reference selection messages stay localized", async ({
   ).toBeVisible();
   await expect(page.locator("text=The uploaded image is not suitable for try-on.")).toHaveCount(0);
 });
+
+test("AI Try-On completed task without resultImageUrl displays clear error", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(180000);
+
+  const stamp = Date.now() + 77;
+  const seller = await approveSeller(request, `ai-try-on-no-image-${stamp}@example.com`);
+  const product = await createProduct(request, seller.token, stamp);
+
+  await backendJson(request, "/api/admin/ai-settings", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${seller.adminToken}` },
+    data: {
+      enabled: true,
+      providerMode: "mock",
+      guestDailyLimit: 3,
+      customerDailyLimit: 5,
+      requireConsent: true,
+      supportedCategories: ["jackets"],
+    },
+  });
+
+  await page.route("**/api/public/ai-try-on/tasks/*", async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    if (json.status === "COMPLETED") {
+      json.resultImageUrl = null;
+      json.resultImage = null;
+    }
+    await route.fulfill({
+      json,
+    });
+  });
+
+  await page.goto(`/products/${product.id}`);
+  await page.getByTestId(`product-size-${product.variants[0].id}`).click();
+  await page.getByTestId("product-ai-try-on-button").click();
+  await expect(page.getByTestId("ai-try-on-modal")).toBeVisible();
+
+  await fillTryOnForm(page);
+  await page.getByTestId("ai-try-on-generate").click();
+
+  await expect(page.getByTestId("ai-try-on-success-no-image")).toBeVisible({ timeout: 25000 });
+  await expect(page.getByTestId("ai-try-on-success-no-image")).toContainText("AI generated a recommendation but no image was returned.");
+});

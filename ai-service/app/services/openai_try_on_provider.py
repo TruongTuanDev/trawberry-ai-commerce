@@ -141,7 +141,7 @@ class OpenAITryOnProvider(TryOnProvider):
                 code="OPENAI_PROVIDER_ERROR",
             ) from error
 
-        images = self.support.parse_response(
+        images = await self.support.parse_response(
             response,
             provider_name=self.provider_name,
         )

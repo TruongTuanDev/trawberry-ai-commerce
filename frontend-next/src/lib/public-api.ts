@@ -107,6 +107,7 @@ export type AiTryOnTask = {
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
   errorCode: string | null;
   errorMessage: string | null;
+  resultImageUrl: string | null;
   resultImage: {
     url: string;
     storageKey: string | null;
