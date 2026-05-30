@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Worker, type Job } from 'bullmq';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { rewriteUrlForAiService } from '../ai-images/ai-service-url.util';
+import { FilesService } from '../files/files.service';
 import {
   AI_TRY_ON_JOB_GENERATE,
   AI_TRY_ON_QUEUE,
@@ -28,6 +29,7 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly aiServiceClient: AiTryOnAiServiceClientService,
+    private readonly filesService: FilesService,
   ) {}
 
   onModuleInit() {
@@ -176,13 +178,23 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
           'RESULT_IMAGE_URL_MISSING: The try-on task generated a recommendation but no result image URL was returned.',
         );
       }
+      const storedResult = await this.uploadResultImage(
+        task.id,
+        task.providerMode,
+        {
+          sourceUrl: image.url,
+          mimeType: image.mimeType ?? null,
+          sequence: 1,
+        },
+      );
+
       await this.prisma.aiTryOnTask.update({
         where: { id: task.id },
         data: {
           status: AI_TRY_ON_STATUSES.COMPLETED,
-          resultImageUrl: image.url,
-          resultImageStorageKey: image.storageKey ?? null,
-          resultMimeType: image.mimeType ?? null,
+          resultImageUrl: storedResult.publicUrl,
+          resultImageStorageKey: storedResult.storageKey,
+          resultMimeType: storedResult.mimeType,
           resultWidth: image.width ?? null,
           resultHeight: image.height ?? null,
           completedAt: new Date(),
@@ -313,5 +325,78 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
       code: 'AI_TRY_ON_GENERATION_FAILED',
       message: rawMessage,
     };
+  }
+
+  private resolveResultImageExtension(mimeType: string) {
+    switch (mimeType.toLowerCase()) {
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/png':
+        return 'png';
+      case 'image/webp':
+        return 'webp';
+      case 'image/svg+xml':
+        return 'svg';
+      default:
+        return 'bin';
+    }
+  }
+
+  private async uploadResultImage(
+    taskId: string,
+    providerMode: string,
+    input: {
+      sourceUrl: string;
+      mimeType: string | null;
+      sequence: number;
+    },
+  ) {
+    const response = await fetch(input.sourceUrl);
+    if (!response.ok) {
+      throw new Error(
+        'RESULT_IMAGE_UPLOAD_FAILED: The generated try-on image could not be downloaded for storage.',
+      );
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const mimeType =
+      input.mimeType ??
+      response.headers.get('content-type')?.split(';', 1)[0]?.trim() ??
+      'application/octet-stream';
+    const storageKey = [
+      providerMode,
+      taskId,
+      `${input.sequence}.${this.resolveResultImageExtension(mimeType)}`,
+    ].join('/');
+
+    this.logger.log(
+      `Uploading result image bucket=ai-try-on key=${storageKey} bytes=${buffer.byteLength} mime=${mimeType}`,
+    );
+
+    try {
+      const stored = await this.filesService.storeAiTryOnResult(
+        {
+          originalname: `result-${input.sequence}`,
+          mimetype: mimeType,
+          size: buffer.byteLength,
+          buffer,
+        },
+        {
+          providerMode,
+          taskId,
+          sequence: input.sequence,
+        },
+      );
+
+      this.logger.log(`Uploaded result image publicUrl=${stored.publicUrl}`);
+      return stored;
+    } catch (error) {
+      this.logger.error(
+        `Failed result image upload for task ${taskId}: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+      throw new Error(
+        'RESULT_IMAGE_UPLOAD_FAILED: The generated try-on image could not be stored.',
+      );
+    }
   }
 }

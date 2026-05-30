@@ -1,5 +1,19 @@
 # Project Status
 
+## AI Try-On Backend Result Upload Ordering Fix - 2026-05-30
+
+- Status: Implemented on current branch
+- Root cause in `backend-nest`: the AI try-on worker persisted `COMPLETED` state from the AI service response URL before backend-owned storage was confirmed, so production could expose `result_image_url` values whose MinIO object did not exist.
+- Fix applied:
+  - added explicit generated-result upload support in `FilesService` using bucket `ai-try-on`
+  - AI try-on worker now downloads the generated image bytes, uploads them to `ai-try-on/openai/<taskId>/1.png` for OpenAI tasks, and only then writes `resultImageUrl`, `resultImageStorageKey`, mime type, and dimensions
+  - upload failures now transition the task to `FAILED` with `RESULT_IMAGE_UPLOAD_FAILED`
+  - added regression coverage for canonical bucket/key/public URL generation and upload-before-complete behavior
+- Verification status:
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+
 ## AI Try-On Public MinIO Bucket Policy Fix - 2026-05-30
 
 - Status: Implemented on current branch
