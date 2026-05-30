@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import io
 import logging
 import re
-import tempfile
 from dataclasses import dataclass
 from hashlib import sha256
-from pathlib import Path
 from typing import Any, Callable
 
 import httpx
 import openai
 from openai import OpenAI
 from PIL import Image, UnidentifiedImageError
-import io
 
 from app.config import Settings
 from app.services.image_provider import (
@@ -24,6 +22,7 @@ from app.services.image_provider import (
     ProviderImageResult,
 )
 from app.services.image_quality_guard import validate_generated_image
+from app.services.openai_image_support import build_image_edit_upload
 
 
 LOGGER = logging.getLogger(__name__)
@@ -333,57 +332,52 @@ class OpenAIImageProvider(ImageProvider):
         request: ProviderGenerateRequest,
         downloaded_images: list[DownloadedImage],
     ):
-        with tempfile.TemporaryDirectory(prefix="strawberry-openai-") as tmp_dir:
-            file_handles = []
-            try:
-                if self._is_dalle2_model:
-                    target_size = 1024
-                    if self.settings.openai_image_size in ("256x256", "512x512", "1024x1024"):
-                        target_size = int(self.settings.openai_image_size.split("x")[0])
+        if self._is_dalle2_model:
+            target_size = 1024
+            if self.settings.openai_image_size in ("256x256", "512x512", "1024x1024"):
+                target_size = int(self.settings.openai_image_size.split("x")[0])
 
-                    img1 = downloaded_images[0]
-                    sq1 = self._make_square_png(img1.payload, target_size)
-                    p1 = Path(tmp_dir) / "image.png"
-                    p1.write_bytes(sq1)
-                    h1 = p1.open("rb")
-                    file_handles.append(h1)
+            img1 = downloaded_images[0]
+            sq1 = self._make_square_png(img1.payload, target_size)
 
-                    params: dict[str, Any] = {
-                        "model": self.settings.openai_image_model,
-                        "image": h1,
-                        "prompt": self._normalize_prompt(request.prompt),
-                        "n": request.quantity,
-                    }
+            params: dict[str, Any] = {
+                "model": self.settings.openai_image_model,
+                "image": build_image_edit_upload(
+                    filename=img1.filename,
+                    payload=sq1,
+                    content_type="image/png",
+                ),
+                "prompt": self._normalize_prompt(request.prompt),
+                "n": request.quantity,
+            }
 
-                    if len(downloaded_images) > 1:
-                        img2 = downloaded_images[1]
-                        sq2 = self._make_square_png(img2.payload, target_size)
-                        p2 = Path(tmp_dir) / "mask.png"
-                        p2.write_bytes(sq2)
-                        h2 = p2.open("rb")
-                        file_handles.append(h2)
-                        params["mask"] = h2
-                else:
-                    files = []
-                    for index, image in enumerate(downloaded_images):
-                        path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
-                        path.write_bytes(image.payload)
-                        handle = path.open("rb")
-                        file_handles.append(handle)
-                        files.append(handle)
+            if len(downloaded_images) > 1:
+                img2 = downloaded_images[1]
+                sq2 = self._make_square_png(img2.payload, target_size)
+                params["mask"] = build_image_edit_upload(
+                    filename="mask.png",
+                    payload=sq2,
+                    content_type="image/png",
+                )
+        else:
+            files = [
+                build_image_edit_upload(
+                    filename=image.filename,
+                    payload=image.payload,
+                    content_type=image.content_type,
+                )
+                for image in downloaded_images
+            ]
 
-                    params: dict[str, Any] = {
-                        "model": self.settings.openai_image_model,
-                        "image": files if len(files) > 1 else files[0],
-                        "prompt": self._normalize_prompt(request.prompt),
-                        "n": request.quantity,
-                    }
+            params = {
+                "model": self.settings.openai_image_model,
+                "image": files if len(files) > 1 else files[0],
+                "prompt": self._normalize_prompt(request.prompt),
+                "n": request.quantity,
+            }
 
-                self._apply_edit_params(params)
-                return client.images.edit(**params)
-            finally:
-                for handle in file_handles:
-                    handle.close()
+        self._apply_edit_params(params)
+        return client.images.edit(**params)
 
     def _apply_generate_params(self, params: dict[str, Any]) -> None:
         params["size"] = self.settings.openai_image_size

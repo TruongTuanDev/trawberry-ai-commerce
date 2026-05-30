@@ -40,6 +40,17 @@ def create_png_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def assert_named_upload(upload, *, expected_content_type: str, allowed_extensions: tuple[str, ...]) -> None:
+    assert isinstance(upload, tuple)
+    assert len(upload) == 3
+    filename, fileobj, content_type = upload
+    assert isinstance(filename, str)
+    assert filename.endswith(allowed_extensions)
+    assert getattr(fileobj, "name", None) == filename
+    assert content_type == expected_content_type
+    assert content_type != "application/octet-stream"
+
+
 def build_request() -> TryOnProviderRequest:
     return TryOnProviderRequest(
         task_id="task-try-on-1",
@@ -116,6 +127,38 @@ def test_openai_try_on_provider_calls_image_edit(monkeypatch) -> None:
     assert "response_format" not in images_api.edit_calls[0]
     assert "exact garment from the product image" in images_api.edit_calls[0]["prompt"]
     assert "wide_shoulders" in images_api.edit_calls[0]["prompt"]
+    uploads = images_api.edit_calls[0]["image"]
+    assert isinstance(uploads, list)
+    assert len(uploads) == 2
+    assert_named_upload(uploads[0], expected_content_type="image/png", allowed_extensions=(".png", ".webp", ".jpg", ".jpeg"))
+    assert_named_upload(uploads[1], expected_content_type="image/png", allowed_extensions=(".png", ".webp", ".jpg", ".jpeg"))
+
+
+def test_openai_try_on_support_uses_png_named_uploads_for_dalle2() -> None:
+    images_api = FakeImagesApi(response=SimpleNamespace(data=[SimpleNamespace(b64_json=base64.b64encode(create_png_bytes()).decode("utf-8"))]))
+    settings = Settings(
+        openai_api_key="test-key",
+        ai_try_on_output_size="1024x1024",
+    )
+    settings.ai_try_on_openai_model = "dall-e-2"
+    support = OpenAIImageSupport(
+        settings,
+        client_factory=lambda _settings, _timeout: FakeClient(images_api),
+    )
+
+    support._call_openai_edit(
+        "prompt",
+        [
+            DownloadedImage(filename="product.png", payload=create_png_bytes(), content_type="image/png"),
+            DownloadedImage(filename="person.png", payload=create_png_bytes(), content_type="image/png"),
+        ],
+    )
+
+    call = images_api.edit_calls[0]
+    assert_named_upload(call["image"], expected_content_type="image/png", allowed_extensions=(".png",))
+    assert call["image"][0] == "person.png"
+    assert_named_upload(call["mask"], expected_content_type="image/png", allowed_extensions=(".png",))
+    assert call["mask"][0] == "mask.png"
 
 
 def test_openai_try_on_provider_maps_bad_request_to_image_unsuitable(monkeypatch) -> None:

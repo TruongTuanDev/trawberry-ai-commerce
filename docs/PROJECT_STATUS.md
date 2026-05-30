@@ -1,5 +1,23 @@
 # Project Status
 
+## OpenAI Image Edit MIME Type Fix - 2026-05-30
+
+- Status: Implemented on current branch
+- Root cause in `ai-service`: OpenAI `images.edit(...)` uploads were being passed through file handles without explicit MIME metadata, allowing the SDK request to fall back to `application/octet-stream` and production to fail with `400 invalid_request_error` / `unsupported_file_mimetype`.
+- Fix applied:
+  - added a shared OpenAI upload wrapper that always sends `(filename, BytesIO, content_type)` tuples
+  - GPT edit flows now send valid named image uploads with `.png`, `.jpg`, `.jpeg`, or `.webp` extensions and matching MIME types
+  - PNG-converted assets such as try-on `person.png` and `mask.png` are now explicitly sent as `image/png`
+  - sanitized OpenAI error logging remains unchanged, with no API key, raw bytes, or base64 leakage
+- Verification status:
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+
 ## AI Try-On OpenAI Edit Payload Fix - 2026-05-30
 
 - Status: Implemented on current branch
