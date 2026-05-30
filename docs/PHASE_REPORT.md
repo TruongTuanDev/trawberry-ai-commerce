@@ -1,5 +1,36 @@
 # Phase Report
 
+## 2026-05-30 OpenAI Image Edit MIME Type Fix
+
+- Status: Completed on current branch
+- Confirmed the production root cause in `ai-service`:
+  - image downloads succeeded for both product and demo/person inputs
+  - the failing request was `POST /v1/images/edits`
+  - OpenAI rejected at least one uploaded file as `unsupported_file_mimetype`
+  - the request payload reached OpenAI with `application/octet-stream` instead of `image/png`, `image/jpeg`, or `image/webp`
+- Implemented fix:
+  - added a shared `build_image_edit_upload(...)` helper in `app/services/openai_image_support.py`
+  - all `images.edit(...)` calls now send named uploads as `(filename, BytesIO, content_type)` tuples
+  - GPT edit flows now preserve valid source extensions and MIME types from downloaded images
+  - PNG-converted edit assets are now sent with explicit names and MIME types such as `person.png` / `image/png` and `mask.png` / `image/png`
+  - removed the old temp-file `rb` upload path that allowed SDK fallback to `application/octet-stream`
+  - kept sanitized OpenAI bad-request logging unchanged
+- Added regression coverage:
+  - `tests/test_openai_try_on_provider.py` now asserts `image[0]`/`image[1]` uploads carry non-octet-stream MIME metadata and that DALL-E 2 try-on sends `person.png` and `mask.png` as `image/png`
+  - `tests/test_openai_provider.py` now asserts GPT edit uploads carry valid extensions and MIME types and that DALL-E 2 mask uploads are `image/png`
+- Verification:
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `git diff --check`: pass
+  - `git status --short`: pass (modified files only in scope before commit)
+  - `git ls-files | Select-String "\.env"`: pass (`*.example` files only)
+  - `git ls-files data.xlsx`: pass
+
 ## 2026-05-30 AI Try-On OpenAI Edit Payload Fix
 
 - Status: Completed on current branch

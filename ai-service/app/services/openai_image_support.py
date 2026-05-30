@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -47,6 +46,29 @@ class DownloadedImage:
     filename: str
     payload: bytes
     content_type: str
+
+
+def build_image_edit_upload(
+    *,
+    filename: str,
+    payload: bytes,
+    content_type: str,
+) -> tuple[str, io.BytesIO, str]:
+    normalized_content_type = content_type.strip().lower()
+    extension = ALLOWED_INPUT_CONTENT_TYPES.get(normalized_content_type)
+    if extension is None:
+        raise ProviderError(
+            f"Unsupported OpenAI image edit content type: {content_type or 'unknown'}.",
+            status_code=400,
+            retryable=False,
+            code="AI_PROVIDER_ERROR",
+        )
+
+    stem = Path(filename).stem or "image"
+    normalized_filename = f"{stem}{extension}"
+    stream = io.BytesIO(payload)
+    stream.name = normalized_filename
+    return (normalized_filename, stream, normalized_content_type)
 
 
 class OpenAIImageSupport:
@@ -292,68 +314,58 @@ class OpenAIImageSupport:
             self.settings,
             self.settings.ai_try_on_provider_timeout_seconds,
         )
-        with tempfile.TemporaryDirectory(prefix="strawberry-openai-try-on-") as tmp_dir:
-            file_handles = []
-            try:
-                if self._is_dalle2_model:
-                    # DALL-E 2 edit flow
-                    # Get person image (index 1)
-                    person_image = images[1]
+        if self._is_dalle2_model:
+            person_image = images[1]
 
-                    target_size = 1024
-                    if self.settings.ai_try_on_output_size in ("256x256", "512x512", "1024x1024"):
-                        target_size = int(self.settings.ai_try_on_output_size.split("x")[0])
+            target_size = 1024
+            if self.settings.ai_try_on_output_size in ("256x256", "512x512", "1024x1024"):
+                target_size = int(self.settings.ai_try_on_output_size.split("x")[0])
 
-                    squared_payload = self.make_square_png(person_image.payload, target_size)
-                    mask_payload = self.generate_transparent_mask(squared_payload)
+            squared_payload = self.make_square_png(person_image.payload, target_size)
+            mask_payload = self.generate_transparent_mask(squared_payload)
 
-                    img_path = Path(tmp_dir) / "image.png"
-                    img_path.write_bytes(squared_payload)
-                    img_handle = img_path.open("rb")
-                    file_handles.append(img_handle)
+            params: dict[str, Any] = {
+                "model": self.settings.ai_try_on_openai_model,
+                "image": build_image_edit_upload(
+                    filename="person.png",
+                    payload=squared_payload,
+                    content_type="image/png",
+                ),
+                "mask": build_image_edit_upload(
+                    filename="mask.png",
+                    payload=mask_payload,
+                    content_type="image/png",
+                ),
+                "prompt": self.normalize_prompt(prompt),
+                "n": 1,
+                "size": f"{target_size}x{target_size}",
+                "timeout": self.settings.ai_try_on_provider_timeout_seconds,
+            }
+        else:
+            files = [
+                build_image_edit_upload(
+                    filename=image.filename,
+                    payload=image.payload,
+                    content_type=image.content_type,
+                )
+                for image in images
+            ]
 
-                    mask_path = Path(tmp_dir) / "mask.png"
-                    mask_path.write_bytes(mask_payload)
-                    mask_handle = mask_path.open("rb")
-                    file_handles.append(mask_handle)
+            params = {
+                "model": self.settings.ai_try_on_openai_model,
+                "image": files if len(files) > 1 else files[0],
+                "prompt": self.normalize_prompt(prompt),
+                "n": 1,
+                "size": self.settings.ai_try_on_output_size,
+                "timeout": self.settings.ai_try_on_provider_timeout_seconds,
+            }
 
-                    params: dict[str, Any] = {
-                        "model": self.settings.ai_try_on_openai_model,
-                        "image": img_handle,
-                        "mask": mask_handle,
-                        "prompt": self.normalize_prompt(prompt),
-                        "n": 1,
-                        "size": f"{target_size}x{target_size}",
-                        "timeout": self.settings.ai_try_on_provider_timeout_seconds,
-                    }
-                else:
-                    # gpt-image-1 / other edit flow
-                    files = []
-                    for index, image in enumerate(images):
-                        path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
-                        path.write_bytes(image.payload)
-                        handle = path.open("rb")
-                        file_handles.append(handle)
-                        files.append(handle)
+            params["quality"] = self.settings.openai_image_quality
+            params["extra_body"] = {
+                "output_format": self.settings.openai_image_output_format,
+            }
 
-                    params: dict[str, Any] = {
-                        "model": self.settings.ai_try_on_openai_model,
-                        "image": files if len(files) > 1 else files[0],
-                        "prompt": self.normalize_prompt(prompt),
-                        "n": 1,
-                        "size": self.settings.ai_try_on_output_size,
-                        "timeout": self.settings.ai_try_on_provider_timeout_seconds,
-                    }
-
-                    params["quality"] = self.settings.openai_image_quality
-                    params["extra_body"] = {
-                        "output_format": self.settings.openai_image_output_format,
-                    }
-
-                return client.images.edit(**params)
-            finally:
-                for handle in file_handles:
-                    handle.close()
+        return client.images.edit(**params)
 
     def parse_response(self, response, *, provider_name: str):
         data = getattr(response, "data", None)

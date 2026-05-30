@@ -46,6 +46,17 @@ def create_image_bytes(format_name: str) -> bytes:
     return buffer.getvalue()
 
 
+def assert_named_upload(upload, *, expected_content_type: str, allowed_extensions: tuple[str, ...]) -> None:
+    assert isinstance(upload, tuple)
+    assert len(upload) == 3
+    filename, fileobj, content_type = upload
+    assert isinstance(filename, str)
+    assert filename.endswith(allowed_extensions)
+    assert getattr(fileobj, "name", None) == filename
+    assert content_type == expected_content_type
+    assert content_type != "application/octet-stream"
+
+
 def build_request(front_image_url: str | None = None) -> ProviderGenerateRequest:
     return ProviderGenerateRequest(
         task_id="task-1",
@@ -125,6 +136,8 @@ def test_openai_provider_uses_edit_when_input_images_are_present(monkeypatch) ->
     assert images_api.edit_calls[0]["extra_body"]["output_format"] == "png"
     assert images_api.edit_calls[0]["quality"] == "medium"
     assert "response_format" not in images_api.edit_calls[0]
+    upload = images_api.edit_calls[0]["image"]
+    assert_named_upload(upload, expected_content_type="image/png", allowed_extensions=(".png",))
 
 
 def test_provider_selection_respects_env(monkeypatch) -> None:
@@ -270,6 +283,7 @@ def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:
     assert images_api.edit_calls[-1]["quality"] == "medium"
     assert images_api.edit_calls[-1]["extra_body"]["output_format"] == "jpeg"
     assert "response_format" not in images_api.edit_calls[-1]
+    assert_named_upload(images_api.edit_calls[-1]["image"], expected_content_type="image/jpeg", allowed_extensions=(".jpg",))
     
     provider_15 = OpenAIImageProvider(
         Settings(ai_image_provider="openai", openai_api_key="test", openai_image_model="gpt-image-1.5", openai_image_output_format="jpeg"),
@@ -279,7 +293,7 @@ def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:
     asyncio.run(provider_15.generate(build_request(front_image_url="https://cdn.example.com/front.jpg")))
     
     assert images_api.edit_calls[-1]["model"] == "gpt-image-1.5"
-    assert images_api.edit_calls[-1]["image"]
+    assert_named_upload(images_api.edit_calls[-1]["image"], expected_content_type="image/jpeg", allowed_extensions=(".jpg",))
     assert "response_format" not in images_api.edit_calls[-1]
 
 
@@ -305,5 +319,38 @@ def test_openai_provider_uses_dalle2_properly(monkeypatch) -> None:
     asyncio.run(provider.generate(build_request(front_image_url="https://cdn.example.com/front.png")))
     
     assert images_api.edit_calls[-1]["model"] == "dall-e-2"
+    assert_named_upload(images_api.edit_calls[-1]["image"], expected_content_type="image/png", allowed_extensions=(".png",))
     assert "response_format" not in images_api.edit_calls[-1]
     assert "quality" not in images_api.edit_calls[-1]
+
+
+def test_openai_provider_uses_png_mask_upload_for_dalle2() -> None:
+    image_bytes = create_image_bytes("PNG")
+    response = SimpleNamespace(
+        data=[SimpleNamespace(b64_json=base64.b64encode(image_bytes).decode("utf-8"))]
+    )
+    images_api = FakeImagesApi(response=response)
+    provider = OpenAIImageProvider(
+        Settings(
+            ai_image_provider="openai",
+            openai_api_key="test",
+            openai_image_model="dall-e-2",
+            openai_image_output_format="png",
+        ),
+        client_factory=lambda _settings: FakeClient(images_api),
+    )
+
+    provider._call_openai_edit(
+        FakeClient(images_api),
+        build_request(front_image_url="https://cdn.example.com/front.png"),
+        [
+            SimpleNamespace(filename="front.png", payload=create_image_bytes("PNG"), content_type="image/png"),
+            SimpleNamespace(filename="back.png", payload=create_image_bytes("PNG"), content_type="image/png"),
+        ],
+    )
+
+    call = images_api.edit_calls[-1]
+    assert_named_upload(call["image"], expected_content_type="image/png", allowed_extensions=(".png",))
+    assert call["image"][0] == "front.png"
+    assert_named_upload(call["mask"], expected_content_type="image/png", allowed_extensions=(".png",))
+    assert call["mask"][0] == "mask.png"
