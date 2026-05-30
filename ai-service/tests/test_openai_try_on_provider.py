@@ -243,3 +243,61 @@ def test_openai_input_validation_rejects_non_raster_images(monkeypatch) -> None:
         )
 
     assert error.value.code == "INVALID_REFERENCE_IMAGE"
+
+
+def test_openai_try_on_support_url_response(monkeypatch) -> None:
+    image_bytes = create_png_bytes()
+    settings = Settings(
+        openai_api_key="test-key",
+        ai_try_on_output_size="1024x1024",
+        openai_image_output_format="png",
+    )
+    support = OpenAIImageSupport(settings)
+
+    class FakeResponse:
+        def __init__(self, content):
+            self.content = content
+            self.status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+    class FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+        async def get(self, url: str, **kwargs):
+            assert url == "https://cdn.example.com/generated.png"
+            return FakeResponse(image_bytes)
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+
+    api_response = SimpleNamespace(
+        data=[SimpleNamespace(url="https://cdn.example.com/generated.png")]
+    )
+
+    results = asyncio.run(support.parse_response(api_response, provider_name="openai"))
+    assert len(results) == 1
+    assert results[0]["image_bytes"] == image_bytes
+    assert results[0]["mime_type"] == "image/png"
+
+
+def test_openai_try_on_support_missing_payload_raises_error() -> None:
+    settings = Settings(
+        openai_api_key="test-key",
+        ai_try_on_output_size="1024x1024",
+        openai_image_output_format="png",
+    )
+    support = OpenAIImageSupport(settings)
+
+    api_response = SimpleNamespace(
+        data=[SimpleNamespace()]
+    )
+
+    with pytest.raises(ProviderError) as error:
+        asyncio.run(support.parse_response(api_response, provider_name="openai"))
+
+    assert error.value.code == "RESULT_IMAGE_MISSING"

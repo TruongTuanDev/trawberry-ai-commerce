@@ -170,7 +170,12 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
         locale: 'ru',
       });
 
-      const image = response.images[0];
+      const image = response.images?.[0];
+      if (!image || !image.url) {
+        throw new Error(
+          'RESULT_IMAGE_URL_MISSING: The try-on task generated a recommendation but no result image URL was returned.',
+        );
+      }
       await this.prisma.aiTryOnTask.update({
         where: { id: task.id },
         data: {

@@ -15,17 +15,17 @@ export function AiTryOnResult({
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="overflow-hidden rounded-[1.75rem] border border-[var(--border)] bg-white">
-        {task.resultImage?.url ? (
+        {task.resultImageUrl || task.resultImage?.url ? (
           <FallbackImage
-            src={task.resultImage.url}
+            src={task.resultImageUrl || task.resultImage?.url}
             alt="AI try-on result"
             className="h-full min-h-[360px] w-full object-cover"
             testId="ai-try-on-result-image"
           />
         ) : (
-          <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 px-6 py-10 text-center text-sm text-[var(--muted)]" data-testid="ai-try-on-success-no-image">
-            <span className="text-4xl">🎉</span>
-            <span className="font-semibold text-[var(--foreground)]">{t("aiTryOn.successNoImage")}</span>
+          <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 px-6 py-10 text-center text-sm text-rose-600" data-testid="ai-try-on-success-no-image">
+            <span className="text-4xl">❌</span>
+            <span className="font-semibold text-rose-600">AI generated a recommendation but no image was returned.</span>
           </div>
         )}
       </div>

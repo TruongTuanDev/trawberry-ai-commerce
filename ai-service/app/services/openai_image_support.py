@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -15,6 +16,8 @@ from PIL import Image, UnidentifiedImageError
 from app.config import Settings
 from app.services.image_provider import ProviderError
 from app.services.image_quality_guard import validate_generated_image
+
+logger = logging.getLogger(__name__)
 
 
 ALLOWED_INPUT_CONTENT_TYPES = {
@@ -367,7 +370,7 @@ class OpenAIImageSupport:
 
         return client.images.edit(**params)
 
-    def parse_response(self, response, *, provider_name: str):
+    async def parse_response(self, response, *, provider_name: str):
         data = getattr(response, "data", None)
         if not data:
             raise ProviderError(
@@ -385,23 +388,49 @@ class OpenAIImageSupport:
         results = []
         for image in data:
             image_b64 = getattr(image, "b64_json", None)
-            if not image_b64:
+            image_url = getattr(image, "url", None)
+            has_b64_json = bool(image_b64)
+            has_url = bool(image_url)
+
+            if image_b64:
+                try:
+                    image_bytes = base64.b64decode(image_b64)
+                except ValueError as error:
+                    raise ProviderError(
+                        "OpenAI returned malformed try-on image data.",
+                        status_code=502,
+                        retryable=False,
+                        code="AI_PROVIDER_ERROR",
+                    ) from error
+            elif image_url:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(image_url, timeout=30.0)
+                        resp.raise_for_status()
+                        image_bytes = resp.content
+                except Exception as error:
+                    logger.error("Failed to download generated image from OpenAI URL: %s", image_url, exc_info=True)
+                    raise ProviderError(
+                        "Failed to retrieve generated image from URL.",
+                        status_code=502,
+                        retryable=False,
+                        code="RESULT_IMAGE_UPLOAD_FAILED",
+                    ) from error
+            else:
                 raise ProviderError(
-                    "OpenAI returned an invalid try-on image payload.",
+                    "OpenAI returned no valid image payload (missing b64_json and url).",
                     status_code=502,
                     retryable=False,
-                    code="AI_PROVIDER_ERROR",
+                    code="RESULT_IMAGE_MISSING",
                 )
 
-            try:
-                image_bytes = base64.b64decode(image_b64)
-            except ValueError as error:
-                raise ProviderError(
-                    "OpenAI returned malformed try-on image data.",
-                    status_code=502,
-                    retryable=False,
-                    code="AI_PROVIDER_ERROR",
-                ) from error
+            logger.info(
+                "OpenAI image parsing: has_b64_json=%s, has_url=%s, generated_image_byte_length=%d, output_mime=%s",
+                has_b64_json,
+                has_url,
+                len(image_bytes),
+                mime_type,
+            )
 
             quality = validate_generated_image(
                 image_bytes,

@@ -798,6 +798,7 @@ export class AiTryOnService {
       status: task.status,
       errorCode: task.errorCode,
       errorMessage: task.errorMessage,
+      resultImageUrl: task.resultImageUrl,
       resultImage: task.resultImageUrl
         ? {
             url: task.resultImageUrl,
