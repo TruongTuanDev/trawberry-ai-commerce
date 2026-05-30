@@ -269,6 +269,7 @@ def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:
     assert images_api.edit_calls[-1]["model"] == "gpt-image-1"
     assert images_api.edit_calls[-1]["quality"] == "medium"
     assert images_api.edit_calls[-1]["extra_body"]["output_format"] == "jpeg"
+    assert "response_format" not in images_api.edit_calls[-1]
     
     provider_15 = OpenAIImageProvider(
         Settings(ai_image_provider="openai", openai_api_key="test", openai_image_model="gpt-image-1.5", openai_image_output_format="jpeg"),
@@ -279,6 +280,7 @@ def test_openai_provider_uses_gpt_image_models_properly(monkeypatch) -> None:
     
     assert images_api.edit_calls[-1]["model"] == "gpt-image-1.5"
     assert images_api.edit_calls[-1]["image"]
+    assert "response_format" not in images_api.edit_calls[-1]
 
 
 def test_openai_provider_uses_dalle2_properly(monkeypatch) -> None:
@@ -303,5 +305,5 @@ def test_openai_provider_uses_dalle2_properly(monkeypatch) -> None:
     asyncio.run(provider.generate(build_request(front_image_url="https://cdn.example.com/front.png")))
     
     assert images_api.edit_calls[-1]["model"] == "dall-e-2"
-    assert images_api.edit_calls[-1]["response_format"] == "b64_json"
+    assert "response_format" not in images_api.edit_calls[-1]
     assert "quality" not in images_api.edit_calls[-1]
