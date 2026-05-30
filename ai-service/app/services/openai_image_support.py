@@ -325,7 +325,6 @@ class OpenAIImageSupport:
                         "n": 1,
                         "size": f"{target_size}x{target_size}",
                         "timeout": self.settings.ai_try_on_provider_timeout_seconds,
-                        "response_format": "b64_json",
                     }
                 else:
                     # gpt-image-1 / other edit flow
@@ -344,7 +343,6 @@ class OpenAIImageSupport:
                         "n": 1,
                         "size": self.settings.ai_try_on_output_size,
                         "timeout": self.settings.ai_try_on_provider_timeout_seconds,
-                        "response_format": "b64_json",
                     }
 
                     params["quality"] = self.settings.openai_image_quality

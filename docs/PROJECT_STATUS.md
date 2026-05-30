@@ -1,5 +1,23 @@
 # Project Status
 
+## AI Try-On OpenAI Edit Payload Fix - 2026-05-30
+
+- Status: Implemented on current branch
+- Root cause in `ai-service`: the OpenAI Images Edit request payload for the active `gpt-image-1` try-on flow included `response_format`, which production rejected with `400 invalid_request_error` and `Unknown parameter: 'response_format'`.
+- Fix applied:
+  - removed `response_format` from OpenAI `images.edit(...)` calls in the try-on support and shared image provider paths
+  - kept `extra_body.output_format` for the GPT image edit flow
+  - preserved sanitized OpenAI error logging with no API key or raw image bytes leakage
+  - added regression assertions so tests fail if `response_format` is reintroduced into `images.edit(...)` for the active GPT image path
+- Verification status:
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+
 ## Database-backed AI Try-On Demo Models - 2026-05-30
 
 - Status: Implemented on branch `dev/bugfix/ai-tryon-real-generation-failures`

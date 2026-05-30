@@ -399,7 +399,6 @@ class OpenAIImageProvider(ImageProvider):
         params["size"] = self.settings.openai_image_size
         params["timeout"] = self.settings.openai_image_timeout_seconds
         if self._is_dalle2_model:
-            params["response_format"] = "b64_json"
             return
 
         params["quality"] = self.settings.openai_image_quality

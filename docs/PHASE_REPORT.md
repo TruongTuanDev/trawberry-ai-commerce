@@ -1,5 +1,34 @@
 # Phase Report
 
+## 2026-05-30 AI Try-On OpenAI Edit Payload Fix
+
+- Status: Completed on current branch
+- Confirmed the production root cause in `ai-service`:
+  - product and demo model downloads succeeded
+  - the failing request was `POST /v1/images/edits`
+  - the rejected payload parameter was `response_format`
+  - production error shape was `400 invalid_request_error` with `Unknown parameter: 'response_format'`
+- Implemented fix:
+  - removed `response_format` from `client.images.edit(...)` in `app/services/openai_image_support.py`
+  - removed `response_format` from the shared edit parameter builder in `app/services/openai_image_provider.py`
+  - kept GPT image edit `extra_body.output_format` unchanged
+  - kept sanitized OpenAI bad-request logging unchanged
+- Added regression coverage:
+  - `tests/test_openai_provider.py` now asserts the GPT edit paths do not send `response_format`
+  - `tests/test_openai_try_on_provider.py` now asserts the active try-on edit path does not send `response_format`
+- Verification:
+  - `ai-service python -m compileall app`: pass
+  - `ai-service python -m pytest -q`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm run build`: pass
+  - `backend-nest npm test -- --runInBand test/ai-try-on.e2e-spec.ts`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `git diff --check`: pending final rerun after docs update
+  - `git status --short`: pending final rerun after docs update
+  - `git ls-files | Select-String "\.env"`: pending final rerun after docs update
+  - `git ls-files data.xlsx`: pending final rerun after docs update
+
 ## 2026-05-30 Database-backed AI Try-On Demo Models
 
 - Status: Completed on branch `dev/bugfix/ai-tryon-real-generation-failures`
