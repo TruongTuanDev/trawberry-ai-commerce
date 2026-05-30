@@ -93,12 +93,16 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-change-me-minio-password} &&
-      mc mb --ignore-existing local/${MINIO_BUCKET:-strawberry-ai-assets} &&
-      mc anonymous set public local/${MINIO_BUCKET:-strawberry-ai-assets}
-      "
+    entrypoint: ["/bin/sh", "/minio-init/init-buckets.sh"]
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-minio-password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-strawberry-ai-assets}
+      S3_BUCKET: ${S3_BUCKET:-strawberry-ai-assets}
+      AI_TRY_ON_BUCKET: ${AI_TRY_ON_BUCKET:-ai-try-on}
+    volumes:
+      - ./minio-init:/minio-init:ro
     networks:
       - strawberry-prod-net
 

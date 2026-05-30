@@ -109,6 +109,7 @@ Production compose guarantees:
 - only the reverse proxy is public
 - backend, ai-service, PostgreSQL, Redis, and MinIO stay internal
 - health checks and `restart: unless-stopped` across the stack
+- MinIO bucket bootstrap is handled by `infra/minio-init/init-buckets.sh`, including public-read bootstrap for the AI Try-On bucket
 
 Production sizing:
 

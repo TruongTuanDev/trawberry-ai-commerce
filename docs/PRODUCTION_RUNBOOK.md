@@ -79,6 +79,22 @@ Recommended GitHub variable:
 - Internal:
   - `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec -T ai-service python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"`
 
+## Storage bucket checks
+
+- After deploy, verify the MinIO init job completed and the AI Try-On bucket is anonymously readable:
+
+```bash
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production ps minio-init
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production run --rm minio-init mc anonymous get local/${AI_TRY_ON_BUCKET:-ai-try-on}
+```
+
+- Expected result for the AI Try-On bucket is anonymous download or equivalent public read.
+- If a real generated image exists, verify the public URL no longer returns `AccessDenied`:
+
+```bash
+curl -I https://storage.yourdomain.ru/${AI_TRY_ON_BUCKET:-ai-try-on}/openai/<taskId>/1.png
+```
+
 ## DNS checks
 
 ```bash

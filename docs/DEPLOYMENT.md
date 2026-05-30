@@ -220,7 +220,11 @@ docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production
 ## Storage
 
 - Production default is `STORAGE_DRIVER=s3` backed by MinIO.
-- Create or verify bucket `S3_BUCKET`.
+- `minio-init` now bootstraps:
+  - `MINIO_BUCKET` with the existing public policy
+  - `S3_BUCKET` if it differs from `MINIO_BUCKET`
+  - `AI_TRY_ON_BUCKET` with anonymous download enabled
+- If AI Try-On images are stored in a dedicated bucket, set `AI_TRY_ON_BUCKET=ai-try-on` and keep it aligned with the bucket used by production AI Try-On writes.
 - Public image URLs should resolve through `https://storage.yourdomain.ru/<bucket>/<key>`.
 - Back up both PostgreSQL dumps and the `minio_data` volume.
 
