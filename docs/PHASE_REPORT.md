@@ -1,5 +1,29 @@
 # Phase Report
 
+## 2026-05-30 AI Try-On Public MinIO Bucket Policy Fix
+
+- Status: Completed on current branch
+- Confirmed the production root cause in infra:
+  - AI Try-On result objects were saved successfully to MinIO
+  - public reads failed with `AccessDenied` on bucket `ai-try-on`
+  - production `minio-init` only created and published `MINIO_BUCKET`
+  - app/runtime storage could point at `S3_BUCKET=ai-try-on`, so the real AI Try-On bucket was left without anonymous download policy
+- Implemented fix:
+  - added [infra/minio-init/init-buckets.sh](/c:/Users/admin/trawberry-ai-commerce/infra/minio-init/init-buckets.sh) as the shared MinIO bootstrap script
+  - updated production compose to mount and run the shared init script instead of inline `mc` commands
+  - kept the existing default/public bucket bootstrap in place
+  - added explicit bootstrap for `S3_BUCKET` when it differs from `MINIO_BUCKET`
+  - added explicit bootstrap for `AI_TRY_ON_BUCKET` with `mc anonymous set download`
+- Documentation:
+  - updated [docs/DEPLOYMENT.md](/c:/Users/admin/trawberry-ai-commerce/docs/DEPLOYMENT.md)
+  - updated [docs/PRODUCTION_RUNBOOK.md](/c:/Users/admin/trawberry-ai-commerce/docs/PRODUCTION_RUNBOOK.md)
+  - updated [README.md](/c:/Users/admin/trawberry-ai-commerce/README.md)
+- Verification:
+  - `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production.example config`: pass
+  - post-deploy operator verification required:
+    - `mc anonymous get local/ai-try-on`
+    - `curl -I https://skidkaberry.com/storage/ai-try-on/openai/<taskId>/1.png`
+
 ## 2026-05-30 AI Try-On Result Pipeline and Image Persistence Fix
 
 - Status: Completed on branch `dev/bugfix/ai-tryon-real-generation-failures`

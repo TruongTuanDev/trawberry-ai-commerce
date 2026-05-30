@@ -1,5 +1,17 @@
 # Project Status
 
+## AI Try-On Public MinIO Bucket Policy Fix - 2026-05-30
+
+- Status: Implemented on current branch
+- Root cause in infra: production MinIO bootstrap only published `MINIO_BUCKET`, while AI Try-On output could be written to bucket `ai-try-on` via runtime `S3_BUCKET` configuration. The object write succeeded, but public reads failed with `AccessDenied`.
+- Fix applied:
+  - added a shared MinIO bootstrap script at `infra/minio-init/init-buckets.sh`
+  - production compose now bootstraps `MINIO_BUCKET`, `S3_BUCKET` when different, and `AI_TRY_ON_BUCKET`
+  - `AI_TRY_ON_BUCKET` now receives anonymous download policy during bootstrap
+- Verification status:
+  - `docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production.example config`: pass
+  - production post-deploy verification still required against a real generated AI Try-On URL
+
 ## AI Try-On Result Pipeline and Image Persistence Fix - 2026-05-30
 
 - Status: Implemented on current branch
