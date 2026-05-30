@@ -28,8 +28,9 @@ export type AiTryOnAiServiceRequest = {
 
 export type AiTryOnAiServiceResponse = {
   images: Array<{
-    url: string;
+    url?: string | null;
     storageKey?: string | null;
+    imageBase64?: string | null;
     mimeType?: string | null;
     width?: number | null;
     height?: number | null;

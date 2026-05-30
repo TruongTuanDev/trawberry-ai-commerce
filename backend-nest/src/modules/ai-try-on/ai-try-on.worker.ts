@@ -173,20 +173,19 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
       });
 
       const image = response.images?.[0];
-      if (!image || !image.url) {
+      if (!image) {
         throw new Error(
-          'RESULT_IMAGE_URL_MISSING: The try-on task generated a recommendation but no result image URL was returned.',
+          'OPENAI_RESULT_IMAGE_MISSING: The try-on task generated no result image payload.',
         );
       }
-      const storedResult = await this.uploadResultImage(
-        task.id,
-        task.providerMode,
-        {
-          sourceUrl: image.url,
-          mimeType: image.mimeType ?? null,
-          sequence: 1,
-        },
-      );
+      const resultPayload = await this.readResultImagePayload(image);
+      const storedResult = await this.uploadResultImage({
+        taskId: task.id,
+        providerMode: task.providerMode,
+        bytes: resultPayload.bytes,
+        mimeType: resultPayload.mimeType,
+        sequence: 1,
+      });
 
       await this.prisma.aiTryOnTask.update({
         where: { id: task.id },
@@ -342,35 +341,22 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async uploadResultImage(
-    taskId: string,
-    providerMode: string,
-    input: {
-      sourceUrl: string;
-      mimeType: string | null;
-      sequence: number;
-    },
-  ) {
-    const response = await fetch(input.sourceUrl);
-    if (!response.ok) {
-      throw new Error(
-        'RESULT_IMAGE_UPLOAD_FAILED: The generated try-on image could not be downloaded for storage.',
-      );
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const mimeType =
-      input.mimeType ??
-      response.headers.get('content-type')?.split(';', 1)[0]?.trim() ??
-      'application/octet-stream';
+  private async uploadResultImage(input: {
+    taskId: string;
+    providerMode: string;
+    bytes: Buffer;
+    mimeType: string | null;
+    sequence: number;
+  }) {
+    const mimeType = input.mimeType ?? 'application/octet-stream';
     const storageKey = [
-      providerMode,
-      taskId,
+      input.providerMode,
+      input.taskId,
       `${input.sequence}.${this.resolveResultImageExtension(mimeType)}`,
     ].join('/');
 
     this.logger.log(
-      `Uploading result image bucket=ai-try-on key=${storageKey} bytes=${buffer.byteLength} mime=${mimeType}`,
+      `Uploading result image bucket=ai-try-on key=${storageKey} bytes=${input.bytes.byteLength} mime=${mimeType}`,
     );
 
     try {
@@ -378,12 +364,12 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
         {
           originalname: `result-${input.sequence}`,
           mimetype: mimeType,
-          size: buffer.byteLength,
-          buffer,
+          size: input.bytes.byteLength,
+          buffer: input.bytes,
         },
         {
-          providerMode,
-          taskId,
+          providerMode: input.providerMode,
+          taskId: input.taskId,
           sequence: input.sequence,
         },
       );
@@ -392,11 +378,79 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
       return stored;
     } catch (error) {
       this.logger.error(
-        `Failed result image upload for task ${taskId}: ${error instanceof Error ? error.message : 'unknown error'}`,
+        `Failed result image upload for task ${input.taskId}: ${error instanceof Error ? error.message : 'unknown error'}`,
       );
       throw new Error(
         'RESULT_IMAGE_UPLOAD_FAILED: The generated try-on image could not be stored.',
       );
     }
+  }
+
+  private async readResultImagePayload(image: {
+    imageBase64?: string | null;
+    url?: string | null;
+    mimeType?: string | null;
+  }) {
+    if (image.imageBase64) {
+      try {
+        if (!this.isBase64Payload(image.imageBase64)) {
+          throw new Error('invalid base64');
+        }
+        const bytes = Buffer.from(image.imageBase64, 'base64');
+        if (bytes.byteLength < 1) {
+          throw new Error('empty image payload');
+        }
+        this.logger.log(
+          `Received result image bytes length=${bytes.byteLength} mime=${image.mimeType ?? 'unknown'} source=base64`,
+        );
+        return {
+          bytes,
+          mimeType: image.mimeType ?? 'application/octet-stream',
+        };
+      } catch {
+        throw new Error(
+          'OPENAI_RESULT_IMAGE_MISSING: The try-on task returned an invalid image payload.',
+        );
+      }
+    }
+
+    if (image.url) {
+      const response = await fetch(image.url);
+      if (!response.ok) {
+        throw new Error(
+          'RESULT_IMAGE_UPLOAD_FAILED: The generated try-on image could not be downloaded for storage.',
+        );
+      }
+
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (bytes.byteLength < 1) {
+        throw new Error(
+          'OPENAI_RESULT_IMAGE_MISSING: The try-on task returned an empty image payload.',
+        );
+      }
+
+      this.logger.log(
+        `Received result image bytes length=${bytes.byteLength} mime=${image.mimeType ?? response.headers.get('content-type') ?? 'unknown'} source=url publicUrl=${image.url}`,
+      );
+      return {
+        bytes,
+        mimeType:
+          image.mimeType ??
+          response.headers.get('content-type')?.split(';', 1)[0]?.trim() ??
+          'application/octet-stream',
+      };
+    }
+
+    throw new Error(
+      'OPENAI_RESULT_IMAGE_MISSING: The try-on task generated no result image payload.',
+    );
+  }
+
+  private isBase64Payload(value: string) {
+    if (!value || value.length % 4 !== 0) {
+      return false;
+    }
+
+    return /^[A-Za-z0-9+/]+={0,2}$/.test(value);
   }
 }

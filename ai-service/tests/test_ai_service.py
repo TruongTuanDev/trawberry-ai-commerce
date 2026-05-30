@@ -225,6 +225,8 @@ def test_generate_try_on_mock() -> None:
     assert body["provider"] == "mock"
     assert len(body["images"]) == 1
     assert body["images"][0]["mimeType"] == "image/svg+xml"
+    assert body["images"][0]["imageBase64"]
+    assert body["images"][0]["url"] is None
 
 
 def test_generate_try_on_demo() -> None:
@@ -260,6 +262,8 @@ def test_generate_try_on_demo() -> None:
     assert body["provider"] == "demo"
     assert len(body["images"]) == 1
     assert body["images"][0]["mimeType"] == "image/svg+xml"
+    assert body["images"][0]["imageBase64"]
+    assert body["images"][0]["url"] is None
 
 
 def test_generate_try_on_openai_missing_key_returns_configured_error(monkeypatch) -> None:

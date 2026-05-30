@@ -48,9 +48,7 @@ def get_try_on_providers() -> dict[str, TryOnProvider]:
 
 @lru_cache
 def get_try_on_service() -> TryOnService:
-    settings: Settings = get_settings()
     return TryOnService(
-        storage_service=build_storage_service(settings),
         providers=get_try_on_providers(),
     )
 
