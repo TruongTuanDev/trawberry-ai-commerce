@@ -35,8 +35,9 @@ class TryOnGenerateRequest(ApiModel):
 
 
 class TryOnGeneratedImage(ApiModel):
-    url: str
+    url: str | None = None
     storage_key: str | None = None
+    image_base64: str | None = None
     mime_type: str
     width: int | None = None
     height: int | None = None

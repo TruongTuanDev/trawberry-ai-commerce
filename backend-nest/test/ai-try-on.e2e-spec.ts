@@ -1648,15 +1648,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
       mimeType: 'image/png',
       size: 4,
     });
-
-    jest.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(Buffer.from('png!'), {
-        status: 200,
-        headers: {
-          'content-type': 'image/png',
-        },
-      }),
-    );
+    const fetchMock = jest.spyOn(global, 'fetch');
 
     const mockTask = {
       id: 'task-123',
@@ -1723,7 +1715,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
             generateTryOn: jest.fn().mockResolvedValue({
               images: [
                 {
-                  url: 'http://ai-service.local/generated.png',
+                  imageBase64: Buffer.from('png!').toString('base64'),
                   mimeType: 'image/png',
                   width: 1024,
                   height: 1536,
@@ -1757,6 +1749,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
         sequence: 1,
       },
     );
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(prismaUpdateMock).toHaveBeenLastCalledWith({
       where: { id: 'task-123' },
       data: expect.objectContaining({
@@ -1774,15 +1767,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
   it('marks the task failed when result image upload fails', async () => {
     const prismaUpdateMock = jest.fn();
     const prismaCreateMock = jest.fn();
-
-    jest.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(Buffer.from('png!'), {
-        status: 200,
-        headers: {
-          'content-type': 'image/png',
-        },
-      }),
-    );
+    const fetchMock = jest.spyOn(global, 'fetch');
 
     const mockTask = {
       id: 'task-123',
@@ -1849,7 +1834,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
             generateTryOn: jest.fn().mockResolvedValue({
               images: [
                 {
-                  url: 'http://ai-service.local/generated.png',
+                  imageBase64: Buffer.from('png!').toString('base64'),
                   mimeType: 'image/png',
                 },
               ],
@@ -1872,6 +1857,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
       moduleRef.get<AiTryOnWorkerService>(AiTryOnWorkerService);
     await workerService.processTask('task-123');
 
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(prismaUpdateMock).toHaveBeenLastCalledWith({
       where: { id: 'task-123' },
       data: expect.objectContaining({
@@ -1887,7 +1873,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
     });
   });
 
-  it('does not mark task completed with null resultImageUrl', async () => {
+  it('fails when the ai-service returns neither bytes nor a URL', async () => {
     const prismaUpdateMock = jest.fn();
     const prismaCreateMock = jest.fn();
 
@@ -1949,7 +1935,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
           provide: AiTryOnAiServiceClientService,
           useValue: {
             generateTryOn: jest.fn().mockResolvedValue({
-              images: [{ url: null }],
+              images: [{ imageBase64: null, url: null }],
               provider: 'openai',
             }),
           },
@@ -1966,7 +1952,7 @@ describe('AiTryOnWorkerService Task Persistence', () => {
       where: { id: 'task-123' },
       data: expect.objectContaining({
         status: 'FAILED',
-        errorCode: 'RESULT_IMAGE_URL_MISSING',
+        errorCode: 'OPENAI_RESULT_IMAGE_MISSING',
       }) as unknown,
     });
   });
