@@ -1,5 +1,18 @@
 # Project Status
 
+## Seller Fulfillment Count Mismatch & Thermal Print Improvements - 2026-06-04
+
+- Status: Implemented on current branch (`fix/seller-orders-count-mismatch`)
+- What shipped:
+  - Excluded unpaid and pending-review orders from the seller fulfillment counts and lists by modifying `buildWhere()` and `resolveSellerStatusWhere('NEW')` in backend `orders.service.ts`.
+  - Resolved shipping label print layout overflow generating blank pages by adjusting page boundaries and outer component heights in print mode.
+  - Improved print clarity/sharpness of shipping labels for monochrome thermal printers by forcing solid black (`#000000`) for text/borders, converting dashed borders to solid, and disabling anti-aliasing on barcodes/QRs (`shape-rendering: crispEdges`).
+- Verification status:
+  - `backend-nest` E2E orders and checkout tests: pass
+  - `backend-nest` build & lint: pass
+  - `frontend-next` lint: pass
+  - `frontend-next` build: pass
+
 ## Recommendation Tracking and Rule-Based Discovery Phase 1 - 2026-06-03
 
 - Status: Implemented on current branch
