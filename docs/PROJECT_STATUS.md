@@ -2473,3 +2473,23 @@ Implemented:
 Current gap:
 
 - production still needs a normal backend redeploy after merge for the corrected container entrypoint to take effect
+
+# Simplify Seller Delivery Actions UI Status
+
+Implemented:
+
+- Simplified the seller delivery creation and actions panel layout inside the seller order details page.
+- Grouped copy actions (sender, recipient, address, courier, full Yandex block) into a custom "Copy ▼" dropdown menu.
+- Grouped manual delivery status updates (Save delivery, Courier assigned, Picked up, On the way, Mark delivered) into an "Update status ▼" dropdown menu.
+- Grouped advanced delivery actions (Calculate offers, Accept claim, Maps) into an "Advanced actions ▼" dropdown menu.
+- Replaced multiple readiness warning badges with a single compact warning block explaining that coordinates are missing.
+- Hid pickup/dropoff map buttons when coordinates are missing, and displayed a coordinates missing warning inside the dropdown instead.
+- Collapsed the "Report delivery problem" section by default, toggleable via a header chevron button.
+- Reorganized sender, recipient, and package details into 3 small visual cards.
+- Wired up click-outside listeners to close active dropdowns automatically.
+
+Verification:
+
+- frontend lint/build: pass
+- backend lint/build: pass
+- branch `fix/seller-orders-count-mismatch` pushed to remote repository
