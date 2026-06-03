@@ -30,7 +30,7 @@ nano infra/.env.production
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production config
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production up -d
 docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:generate
-docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npm run prisma:db:push
+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npx prisma migrate deploy
 ./infra/scripts/smoke-production.sh infra/.env.production
 ```
 
@@ -120,7 +120,12 @@ docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production
 ## Database operations
 
 - `uuid-ossp` is enabled by container init script.
-- Run Prisma generate and db push before the first production bootstrap if the schema changed.
+- Run Prisma generate and migrate deploy on the running container if the schema changed:
+  ```bash
+  docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production exec backend-nest npx prisma migrate deploy
+  ```
+- > [!WARNING]
+  > Never use `npx prisma db push --accept-data-loss` in production without a verified database backup. It can result in irreversible data loss.
 - Keep seed/admin bootstrap explicit and controlled.
 
 ## Backups
