@@ -988,6 +988,8 @@ export function ShippingLabelPrintView({
             background: #ffffff !important;
             height: ${meta.heightMm}mm !important;
             overflow: hidden !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           [data-testid="seller-shell"],
@@ -1022,7 +1024,7 @@ export function ShippingLabelPrintView({
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;
-            background: transparent !important;
+            background: #ffffff !important;
             overflow: hidden !important;
           }
 
@@ -1030,7 +1032,41 @@ export function ShippingLabelPrintView({
             width: ${meta.widthMm}mm !important;
             height: ${meta.heightMm}mm !important;
             margin: 0 !important;
+            border-color: #000000 !important;
+            background: #ffffff !important;
             box-shadow: none !important;
+          }
+
+          .shipping-label-sheet * {
+            color: #000000 !important;
+            text-shadow: none !important;
+          }
+
+          .shipping-label-sheet svg,
+          .shipping-label-sheet rect,
+          .shipping-label-sheet path {
+            shape-rendering: crispEdges !important;
+          }
+
+          .label-header,
+          .label-qr-frame,
+          .label-barcode,
+          .label-section,
+          .label-token,
+          .label-footer {
+            border-color: #000000 !important;
+          }
+
+          .label-meta-strip {
+            border-top: 1px solid #000000 !important;
+          }
+
+          .label-kicker,
+          .label-qr-caption,
+          .label-muted,
+          .label-footer {
+            color: #000000 !important;
+            font-weight: 500 !important;
           }
 
           .no-print,
