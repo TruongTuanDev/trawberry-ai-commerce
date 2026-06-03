@@ -141,6 +141,22 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
   const isPayOnDeliverySellerQr =
     order?.shippingMethodName === "PAY_ON_DELIVERY_SELLER_QR";
 
+  const [activeDropdown, setActiveDropdown] = useState<"copy" | "status" | "advanced" | null>(null);
+  const [isExceptionOpen, setIsExceptionOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".custom-dropdown-container")) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+    };
+  }, []);
+
   useEffect(() => {
     hydrateWorkspace();
   }, [hydrateWorkspace]);
@@ -774,12 +790,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
       order.dropoffGeoReadiness?.hasCoordinates ??
       (dropoffLat !== null && dropoffLng !== null),
   );
-  const yandexManualReady = Boolean(
-    activeShipment?.yandexManualReady ?? order.yandexManualReady ?? true,
-  );
-  const yandexApiReady = Boolean(
-    activeShipment?.yandexApiReady ?? order.yandexApiReady ?? false,
-  );
+
   const senderText = [
     t("seller.orderDetail.senderSummary.pickup", {
       value: activeShipment?.pickupAddressFullName ?? pickupAddress,
@@ -1286,24 +1297,17 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 </Field>
               </div>
 
-              <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${pickupReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {pickupReady ? t("seller.orderDetail.pickupReady") : t("seller.orderDetail.missingPickupCoordinates")}
-                  </span>
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${dropoffReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    {dropoffReady ? t("seller.orderDetail.dropoffReady") : t("seller.orderDetail.missingDropoffCoordinates")}
-                  </span>
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${yandexApiReady ? "bg-emerald-100 text-emerald-700" : "bg-sky-100 text-sky-700"}`}>
-                    {yandexApiReady ? t("seller.orderDetail.apiReady") : yandexManualReady ? t("seller.orderDetail.manualOnly") : t("seller.orderDetail.needsAddressFixes")}
-                  </span>
-                  {!pickupReady || !dropoffReady ? (
-                    <span className="text-xs text-amber-700">
-                      {t("seller.orderDetail.verifyCoordinatesWarning")}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2">
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4 space-y-4">
+                {/* 6. Compact Alert */}
+                {!pickupReady || !dropoffReady ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {t("seller.orderDetail.verifyCoordinatesWarning")}
+                  </div>
+                ) : null}
+
+                {/* 7. Printing controls & Dropdowns */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Printing Controls */}
                   <label className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
                     <span>{t("seller.shippingLabel.labelSize")}</span>
                     <select
@@ -1313,7 +1317,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                           normalizeShippingLabelSize(event.target.value),
                         )
                       }
-                      className="bg-transparent text-sm outline-none"
+                      className="bg-transparent text-sm outline-none cursor-pointer"
                       data-testid="seller-shipping-label-size-select"
                     >
                       {SHIPPING_LABEL_SIZE_OPTIONS.map((option) => (
@@ -1334,86 +1338,239 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   <button
                     type="button"
                     onClick={() => openShippingLabel("preview")}
-                    className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold"
+                    className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold transition hover:bg-[var(--panel)]"
                     data-testid="seller-open-shipping-label"
                   >
                     {t("seller.shippingLabel.openPrintableLabel")}
                   </button>
-                  <button type="button" onClick={() => void copyToClipboard(senderText, t("seller.orderDetail.sender"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    {t("seller.orderDetail.copySender")}
-                  </button>
-                  <button type="button" onClick={() => void copyToClipboard(recipientText, t("seller.orderDetail.recipient"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    {t("seller.orderDetail.copyRecipient")}
-                  </button>
-                  <button type="button" onClick={() => void copyToClipboard(dropoffAddressFullName, t("seller.orderDetail.address"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    {t("seller.orderDetail.copyAddress")}
-                  </button>
-                  <button type="button" onClick={() => void copyToClipboard(dropoffComment || t("seller.orderDetail.noExtraCourierDetails"), t("seller.orderDetail.courierDetails"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold">
-                    {t("seller.orderDetail.copyCourierDetails")}
-                  </button>
-                  <button type="button" onClick={() => void copyToClipboard(fullYandexBlock, t("seller.orderDetail.fullYandexBlock"))} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold" data-testid="copy-full-delivery-block">
-                    {t("seller.orderDetail.copyFullYandexBlock")}
-                  </button>
-                  <button type="button" onClick={() => openMaps(pickupLat, pickupLng)} disabled={pickupLat === null || pickupLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
-                    {t("seller.orderDetail.openPickupMap")}
-                  </button>
-                  <button type="button" onClick={() => openMaps(dropoffLat, dropoffLng)} disabled={dropoffLat === null || dropoffLng === null} className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50">
-                    {t("seller.orderDetail.openDropoffMap")}
-                  </button>
+
+                  <div className="h-6 w-px bg-[var(--border)] hidden sm:block" />
+
+                  {/* Copy Dropdown */}
+                  <div className="relative inline-block text-left custom-dropdown-container">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdown(activeDropdown === "copy" ? null : "copy")}
+                      className="inline-flex justify-center items-center rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--panel)] transition"
+                    >
+                      <span>{t("seller.orderDetail.copyDropdown")}</span>
+                      <svg className="ml-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {activeDropdown === "copy" && (
+                      <div className="absolute left-0 mt-2 w-56 origin-top-left rounded-xl border border-[var(--border)] bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 p-1 flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { void copyToClipboard(senderText, t("seller.orderDetail.sender")); setActiveDropdown(null); }}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                        >
+                          {t("seller.orderDetail.copySender")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void copyToClipboard(recipientText, t("seller.orderDetail.recipient")); setActiveDropdown(null); }}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                        >
+                          {t("seller.orderDetail.copyRecipient")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void copyToClipboard(dropoffAddressFullName, t("seller.orderDetail.address")); setActiveDropdown(null); }}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                        >
+                          {t("seller.orderDetail.copyAddress")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void copyToClipboard(dropoffComment || t("seller.orderDetail.noExtraCourierDetails"), t("seller.orderDetail.courierDetails")); setActiveDropdown(null); }}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                        >
+                          {t("seller.orderDetail.copyCourierDetails")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void copyToClipboard(fullYandexBlock, t("seller.orderDetail.fullYandexBlock")); setActiveDropdown(null); }}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                          data-testid="copy-full-delivery-block"
+                        >
+                          {t("seller.orderDetail.copyFullYandexBlock")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Update Status Dropdown */}
+                  <div className="relative inline-block text-left custom-dropdown-container">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdown(activeDropdown === "status" ? null : "status")}
+                      className="inline-flex justify-center items-center rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--panel)] transition"
+                    >
+                      <span>{t("seller.orderDetail.updateStatusDropdown")}</span>
+                      <svg className="ml-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {activeDropdown === "status" && (
+                      <div className="absolute left-0 mt-2 w-56 origin-top-right rounded-xl border border-[var(--border)] bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 p-1 flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { void handleManualDeliveryAction("save"); setActiveDropdown(null); }}
+                          disabled={deliveryLoading || !canCreateDelivery}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                          data-testid="manual-delivery-save"
+                        >
+                          {deliveryLoading ? t("seller.orderDetail.actions.saving") : t("seller.orderDetail.actions.saveDelivery")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void handleManualDeliveryAction("courier-assigned"); setActiveDropdown(null); }}
+                          disabled={deliveryLoading || !activeShipment}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                          data-testid="manual-delivery-mark-courier-assigned"
+                        >
+                          {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.courierAssigned")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void handleManualDeliveryAction("picked-up"); setActiveDropdown(null); }}
+                          disabled={deliveryLoading || !activeShipment}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                          data-testid="manual-delivery-mark-picked-up"
+                        >
+                          {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.pickedUp")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void handleManualDeliveryAction("in-transit"); setActiveDropdown(null); }}
+                          disabled={deliveryLoading || !activeShipment}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                          data-testid="manual-delivery-mark-in-transit"
+                        >
+                          {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.onTheWay")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void handleManualDeliveryAction("delivered"); setActiveDropdown(null); }}
+                          disabled={deliveryLoading || !activeShipment}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                          data-testid="manual-delivery-mark-delivered"
+                        >
+                          {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.markDelivered")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Advanced Actions Dropdown */}
+                  <div className="relative inline-block text-left custom-dropdown-container">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdown(activeDropdown === "advanced" ? null : "advanced")}
+                      className="inline-flex justify-center items-center rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--panel)] transition"
+                    >
+                      <span>{t("seller.orderDetail.advancedActionsDropdown")}</span>
+                      <svg className="ml-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {activeDropdown === "advanced" && (
+                      <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-[var(--border)] bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 p-1 flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { void handleDeliveryAction("calculate"); setActiveDropdown(null); }}
+                          disabled={deliveryLoading}
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                          data-testid="delivery-calculate-offers"
+                        >
+                          {deliveryLoading ? t("seller.orderDetail.actions.calculating") : t("seller.orderDetail.actions.calculateOffers")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { void handleDeliveryAction("accept"); setActiveDropdown(null); }}
+                          disabled={
+                            deliveryLoading ||
+                            !activeShipment ||
+                            activeShipment.provider !== "YANDEX"
+                          }
+                          className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] disabled:opacity-50 font-medium transition"
+                        >
+                          {t("seller.orderDetail.acceptClaim")}
+                        </button>
+                        {pickupLat !== null && pickupLng !== null ? (
+                          <button
+                            type="button"
+                            onClick={() => { openMaps(pickupLat, pickupLng); setActiveDropdown(null); }}
+                            className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                          >
+                            {t("seller.orderDetail.openPickupMap")}
+                          </button>
+                        ) : null}
+                        {dropoffLat !== null && dropoffLng !== null ? (
+                          <button
+                            type="button"
+                            onClick={() => { openMaps(dropoffLat, dropoffLng); setActiveDropdown(null); }}
+                            className="w-full text-left rounded-lg px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--panel)] font-medium transition"
+                          >
+                            {t("seller.orderDetail.openDropoffMap")}
+                          </button>
+                        ) : null}
+                        {(pickupLat === null || pickupLng === null || dropoffLat === null || dropoffLng === null) ? (
+                          <div className="px-4 py-2 text-xs text-amber-700 font-medium border-t border-gray-100 mt-1">
+                            {t("seller.orderDetail.coordinatesMissingMapUnavailable")}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm text-[var(--muted)]">
-                  <p>{senderText}</p>
-                  <p>{recipientText}</p>
-                  <p>{packageText}</p>
+
+                {/* 8. Delivery Info Cards */}
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl border border-[var(--border)] bg-white p-3 text-sm">
+                    <p className="font-semibold text-[var(--foreground)] mb-1">{t("seller.orderDetail.pickupPoint")}</p>
+                    <p className="text-xs text-[var(--muted)] leading-5 whitespace-pre-line">{senderText}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-white p-3 text-sm">
+                    <p className="font-semibold text-[var(--foreground)] mb-1">{t("seller.orderDetail.recipient")}</p>
+                    <p className="text-xs text-[var(--muted)] leading-5 whitespace-pre-line">{recipientText}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-white p-3 text-sm">
+                    <p className="font-semibold text-[var(--foreground)] mb-1">{t("seller.orderDetail.package")}</p>
+                    <p className="text-xs text-[var(--muted)] leading-5 whitespace-pre-line">{packageText}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+              {/* 1. Main Action buttons */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Create Shipment */}
                 <button
                   type="button"
-                  onClick={() => void handleManualDeliveryAction("save")}
+                  onClick={() => void handleDeliveryAction("create")}
                   disabled={deliveryLoading || !canCreateDelivery}
-                  className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                  data-testid="manual-delivery-save"
+                  className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                  data-testid="delivery-create-shipment"
                 >
-                  {deliveryLoading ? t("seller.orderDetail.actions.saving") : t("seller.orderDetail.actions.saveDelivery")}
+                  {deliveryLoading ? t("seller.orderDetail.actions.saving") : (deliveryOffers.find((offer) => offer.id === selectedOfferId)
+                    ?.provider === "YANDEX"
+                    ? t("seller.orderDetail.createClaim")
+                    : t("seller.orderDetail.createShipment"))}
                 </button>
+
+                {/* Refresh Shipment */}
                 <button
                   type="button"
-                  onClick={() => void handleManualDeliveryAction("courier-assigned")}
+                  onClick={() => void handleDeliveryAction("refresh")}
                   disabled={deliveryLoading || !activeShipment}
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="manual-delivery-mark-courier-assigned"
+                  className="rounded-full border border-[var(--border)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="delivery-refresh-shipment"
                 >
-                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.courierAssigned")}
+                  {t("seller.orderDetail.refreshShipment")}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleManualDeliveryAction("picked-up")}
-                  disabled={deliveryLoading || !activeShipment}
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="manual-delivery-mark-picked-up"
-                >
-                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.pickedUp")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleManualDeliveryAction("in-transit")}
-                  disabled={deliveryLoading || !activeShipment}
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="manual-delivery-mark-in-transit"
-                >
-                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.onTheWay")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleManualDeliveryAction("delivered")}
-                  disabled={deliveryLoading || !activeShipment}
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="manual-delivery-mark-delivered"
-                >
-                  {deliveryLoading ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.markDelivered")}
-                </button>
+
+                {/* Manual Cancel */}
                 <button
                   type="button"
                   onClick={() => void handleManualDeliveryAction("cancel")}
@@ -1422,61 +1579,18 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                     !activeShipment ||
                     activeShipment.internalStatus === "DELIVERED"
                   }
-                  className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="manual-delivery-cancel"
                 >
                   {deliveryLoading ? t("seller.orderDetail.actions.cancelling") : t("seller.orderDetail.actions.cancelDelivery")}
                 </button>
-              </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <button
-                  type="button"
-                  onClick={() => void handleDeliveryAction("calculate")}
-                  disabled={deliveryLoading}
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="delivery-calculate-offers"
-                >
-                  {deliveryLoading ? t("seller.orderDetail.actions.calculating") : t("seller.orderDetail.actions.calculateOffers")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDeliveryAction("create")}
-                  disabled={deliveryLoading || !canCreateDelivery}
-                  className="rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                  data-testid="delivery-create-shipment"
-                >
-                  {deliveryOffers.find((offer) => offer.id === selectedOfferId)
-                    ?.provider === "YANDEX"
-                    ? t("seller.orderDetail.createClaim")
-                    : t("seller.orderDetail.createShipment")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDeliveryAction("accept")}
-                  disabled={
-                    deliveryLoading ||
-                    !activeShipment ||
-                    activeShipment.provider !== "YANDEX"
-                  }
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {t("seller.orderDetail.acceptClaim")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDeliveryAction("refresh")}
-                  disabled={deliveryLoading || !activeShipment}
-                  className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                  data-testid="delivery-refresh-shipment"
-                >
-                  {t("seller.orderDetail.refreshShipment")}
-                </button>
+                {/* Standard Cancel */}
                 <button
                   type="button"
                   onClick={() => void handleDeliveryAction("cancel")}
                   disabled={deliveryLoading || !activeShipment}
-                  className="rounded-full bg-rose-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {deliveryLoading ? t("seller.orderDetail.actions.cancelling") : t("seller.orderDetail.actions.cancel")}
                 </button>
@@ -1486,90 +1600,108 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4"
                 data-testid="delivery-exception-panel"
               >
-                <p className="text-sm font-semibold text-[var(--foreground)]">
-                  {t("seller.orderDetail.reportProblem")}
-                </p>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <Field label={t("seller.orderDetail.reasonCode")}>
-                    <select
-                      value={exceptionReasonCode}
-                      onChange={(event) =>
-                        setExceptionReasonCode(
-                          event.target.value as DeliveryExceptionReasonCode,
-                        )
-                      }
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                      data-testid="delivery-exception-reason"
-                    >
-                      {exceptionReasons.map((reason) => (
-                        <option key={reason} value={reason}>
-                          {formatExceptionReason(reason, t)}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label={t("seller.orderDetail.customerMessage")}>
-                    <textarea
-                      value={exceptionCustomerMessage}
-                      onChange={(event) =>
-                        setExceptionCustomerMessage(event.target.value)
-                      }
-                      rows={3}
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                      data-testid="delivery-exception-customer-message"
-                    />
-                  </Field>
-                  <Field label={t("seller.orderDetail.reasonNote")}>
-                    <textarea
-                      value={exceptionReasonText}
-                      onChange={(event) =>
-                        setExceptionReasonText(event.target.value)
-                      }
-                      rows={3}
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                      data-testid="delivery-exception-note"
-                    />
-                  </Field>
-                  <Field label={t("seller.orderDetail.internalComment")}>
-                    <textarea
-                      value={internalComment}
-                      onChange={(event) =>
-                        setInternalComment(event.target.value)
-                      }
-                      rows={3}
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                      data-testid="delivery-internal-comment"
-                    />
-                  </Field>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleReportProblem()}
-                    disabled={
-                      deliveryLoading ||
-                      !activeShipment ||
-                      activeShipment.internalStatus === "DELIVERED"
-                    }
-                    className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-                    data-testid="delivery-report-problem"
+                <button
+                  type="button"
+                  onClick={() => setIsExceptionOpen(!isExceptionOpen)}
+                  className="w-full flex items-center justify-between text-left focus:outline-none"
+                >
+                  <span className="text-sm font-semibold text-[var(--foreground)]">
+                    {t("seller.orderDetail.reportProblem")}
+                  </span>
+                  <svg
+                    className={`h-5 w-5 text-gray-500 transition-transform ${isExceptionOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    {deliveryLoading ? t("seller.orderDetail.actions.sending") : t("seller.orderDetail.actions.submitProblem")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleAddInternalComment()}
-                    disabled={
-                      deliveryLoading ||
-                      !activeShipment ||
-                      !internalComment.trim()
-                    }
-                    className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                    data-testid="delivery-add-internal-comment"
-                  >
-                    {deliveryLoading ? t("seller.orderDetail.actions.sending") : t("seller.orderDetail.actions.addInternalComment")}
-                  </button>
-                </div>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isExceptionOpen && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field label={t("seller.orderDetail.reasonCode")}>
+                        <select
+                          value={exceptionReasonCode}
+                          onChange={(event) =>
+                            setExceptionReasonCode(
+                              event.target.value as DeliveryExceptionReasonCode,
+                            )
+                          }
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                          data-testid="delivery-exception-reason"
+                        >
+                          {exceptionReasons.map((reason) => (
+                            <option key={reason} value={reason}>
+                              {formatExceptionReason(reason, t)}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label={t("seller.orderDetail.customerMessage")}>
+                        <textarea
+                          value={exceptionCustomerMessage}
+                          onChange={(event) =>
+                            setExceptionCustomerMessage(event.target.value)
+                          }
+                          rows={3}
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                          data-testid="delivery-exception-customer-message"
+                        />
+                      </Field>
+                      <Field label={t("seller.orderDetail.reasonNote")}>
+                        <textarea
+                          value={exceptionReasonText}
+                          onChange={(event) =>
+                            setExceptionReasonText(event.target.value)
+                          }
+                          rows={3}
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                          data-testid="delivery-exception-note"
+                        />
+                      </Field>
+                      <Field label={t("seller.orderDetail.internalComment")}>
+                        <textarea
+                          value={internalComment}
+                          onChange={(event) =>
+                            setInternalComment(event.target.value)
+                          }
+                          rows={3}
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+                          data-testid="delivery-internal-comment"
+                        />
+                      </Field>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => void handleReportProblem()}
+                        disabled={
+                          deliveryLoading ||
+                          !activeShipment ||
+                          activeShipment.internalStatus === "DELIVERED"
+                        }
+                        className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        data-testid="delivery-report-problem"
+                      >
+                        {deliveryLoading ? t("seller.orderDetail.actions.sending") : t("seller.orderDetail.actions.submitProblem")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleAddInternalComment()}
+                        disabled={
+                          deliveryLoading ||
+                          !activeShipment ||
+                          !internalComment.trim()
+                        }
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                        data-testid="delivery-add-internal-comment"
+                      >
+                        {deliveryLoading ? t("seller.orderDetail.actions.sending") : t("seller.orderDetail.actions.addInternalComment")}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {deliveryMessage ? (
