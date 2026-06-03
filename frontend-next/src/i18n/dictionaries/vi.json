@@ -213,6 +213,12 @@
     "reviews": "{{rating}} · {{count}} đánh giá",
     "quantityExceeded": "Số lượng vượt quá tồn kho hiện có."
   },
+  "recommendations": {
+    "kicker": "Khám phá thông minh",
+    "similarProducts": "Sản phẩm tương tự",
+    "recommendedForYou": "Gợi ý cho bạn",
+    "sponsored": "Tài trợ"
+  },
   "cart": {
     "backToProducts": "Quay lại sản phẩm",
     "clearCart": "Xóa giỏ hàng",

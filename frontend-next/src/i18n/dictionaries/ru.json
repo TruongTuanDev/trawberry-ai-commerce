@@ -294,6 +294,12 @@
     "readyForCheckout": "Выбор маркетплейса готов к оформлению",
     "mobileQty": "Кол-во"
   },
+  "recommendations": {
+    "kicker": "Умный подбор",
+    "similarProducts": "Похожие товары",
+    "recommendedForYou": "Рекомендуем для вас",
+    "sponsored": "Спонсируемое"
+  },
   "aiTryOn": {
     "title": "Виртуальная примерочная",
     "heading": "Посмотрите, как товар может выглядеть на вас",

@@ -61,6 +61,13 @@ export type PublicProduct = {
   };
 };
 
+export type RecommendationPlacement = "home" | "product_detail" | "cart" | "search";
+
+export type RecommendationProductsResponse = {
+  algorithm: string;
+  items: PublicProduct[];
+};
+
 export type AiTryOnBuiltInModel = {
   modelId: string;
   gender: "male" | "female" | "other";
@@ -532,6 +539,109 @@ export async function getPublicProduct(productId: string) {
   return apiRequest<PublicProduct>(`/api/public/products/${productId}`, {
     method: "GET",
   });
+}
+
+export async function getHomeRecommendations(limit = 12) {
+  return apiRequest<RecommendationProductsResponse>(
+    `/api/public/recommendations/home?limit=${limit}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getSimilarProductRecommendations(
+  productId: string,
+  limit = 12,
+) {
+  return apiRequest<RecommendationProductsResponse>(
+    `/api/public/recommendations/products/${productId}/similar?limit=${limit}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+type TrackProductViewPayload = {
+  productId: string;
+  source?: string;
+  referrer?: string;
+  guestSessionId?: string;
+};
+
+type TrackSearchPayload = {
+  query: string;
+  resultCount?: number;
+  locale?: string;
+  guestSessionId?: string;
+};
+
+type TrackRecommendationEventPayload = {
+  type: "impression" | "click";
+  placement: RecommendationPlacement;
+  productId: string;
+  sourceProductId?: string;
+  algorithm?: string;
+  rank?: number;
+  score?: number;
+  guestSessionId?: string;
+};
+
+const GUEST_SESSION_STORAGE_KEY = "trawberry_guest_session_id";
+
+function createGuestSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `guest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function getGuestSessionId() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const existing = window.localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+
+  const nextValue = createGuestSessionId();
+  window.localStorage.setItem(GUEST_SESSION_STORAGE_KEY, nextValue);
+  return nextValue;
+}
+
+async function swallowTrackingRequest(path: string, payload: unknown) {
+  const guestSessionId = getGuestSessionId();
+
+  try {
+    await apiRequest<void>(path, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: guestSessionId
+        ? {
+            "x-guest-session-id": guestSessionId,
+          }
+        : undefined,
+    });
+  } catch {
+    return;
+  }
+}
+
+export async function trackProductView(payload: TrackProductViewPayload) {
+  await swallowTrackingRequest("/api/public/tracking/product-view", payload);
+}
+
+export async function trackSearch(payload: TrackSearchPayload) {
+  await swallowTrackingRequest("/api/public/tracking/search", payload);
+}
+
+export async function trackRecommendationEvent(
+  payload: TrackRecommendationEventPayload,
+) {
+  await swallowTrackingRequest("/api/public/recommendations/events", payload);
 }
 
 export async function getPublicProductReviews(

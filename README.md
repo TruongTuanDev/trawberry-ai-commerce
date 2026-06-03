@@ -132,6 +132,21 @@ vi infra/.env.production
 - Public pages do not show admin login links.
 - Customer and seller registration accept email/password or phone/password.
 
+## Recommendation Flags
+
+Recommendation Phase 1 is additive and can be disabled safely with:
+
+- `RECOMMENDATIONS_ENABLED`
+- `PUBLIC_RECOMMENDATIONS_ENABLED`
+- `RECOMMENDATION_TRACKING_ENABLED`
+
+Expected behavior when flags are off:
+
+- no storefront recommendation sections
+- no client tracking calls
+- backend tracking endpoints no-op safely
+- backend recommendation endpoints return empty lists
+
 Marketplace/e-commerce stack đang được migrate sang kiến trúc mới:
 
 - `frontend-next`: Next.js frontend

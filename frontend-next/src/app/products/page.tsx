@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
 import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, getPublicHomepageSlides, type PaginatedPublicProducts, type PublicProduct, type PublicHomepageSlide } from "@/lib/public-api";
+import {
+  getGuestSessionId,
+  getPublicHomepageSlides,
+  getPublicProducts,
+  trackSearch,
+  type PaginatedPublicProducts,
+  type PublicHomepageSlide,
+  type PublicProduct,
+} from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
+import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 
 type ProductsMeta = {
   page: number;
@@ -84,6 +93,7 @@ function ProductsPageContent({
   const [layoutCols, setLayoutCols] = useState<"3" | "4">("4");
   const [isMounted, setIsMounted] = useState(false);
   const [slides, setSlides] = useState<PublicHomepageSlide[]>([]);
+  const trackedSearchKeyRef = useRef<string>("");
   const categoryOptions = useMemo(() => facets?.categories ?? [], [facets]);
   const selectedCategoryOption = useMemo(
     () =>
@@ -255,6 +265,31 @@ function ProductsPageContent({
       mounted = false;
     };
   }, [filters, meta.size, page, requestKey]);
+
+  useEffect(() => {
+    const query = filters.q.trim();
+    if (!query || loading || error) {
+      return;
+    }
+
+    const { recommendationTrackingEnabled } = readRecommendationFlagsFromDocument();
+    if (!recommendationTrackingEnabled) {
+      return;
+    }
+
+    const trackingKey = `${query}:${meta.total}:${page}`;
+    if (trackedSearchKeyRef.current === trackingKey) {
+      return;
+    }
+    trackedSearchKeyRef.current = trackingKey;
+
+    void trackSearch({
+      query,
+      resultCount: meta.total,
+      locale: typeof document === "undefined" ? undefined : document.documentElement.lang,
+      guestSessionId: getGuestSessionId(),
+    });
+  }, [error, filters.q, loading, meta.total, page]);
 
   const applyFilters = (targetFilters = filters) => {
     const params = new URLSearchParams();

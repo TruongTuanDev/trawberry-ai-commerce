@@ -381,6 +381,62 @@ model Product {
   @@map("products")
 }
 
+model ProductViewLog {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId      String?  @map("product_id") @db.Uuid
+  customerId     String?  @map("customer_id") @db.Uuid
+  guestSessionId String?  @map("guest_session_id") @db.VarChar(255)
+  shopId         String?  @map("shop_id") @db.Uuid
+  source         String?  @db.VarChar(100)
+  referrer       String?  @db.VarChar(1000)
+  userAgent      String?  @map("user_agent") @db.VarChar(1000)
+  ipHash         String?  @map("ip_hash") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([shopId, createdAt])
+  @@map("product_view_logs")
+}
+
+model SearchLog {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  query          String   @db.VarChar(500)
+  normalizedQuery String? @map("normalized_query") @db.VarChar(500)
+  customerId     String?  @map("customer_id") @db.Uuid
+  guestSessionId String?  @map("guest_session_id") @db.VarChar(255)
+  resultCount    Int      @default(0) @map("result_count")
+  locale         String?  @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([normalizedQuery, createdAt])
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@map("search_logs")
+}
+
+model RecommendationEvent {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  type            String   @db.VarChar(50)
+  placement       String   @db.VarChar(100)
+  productId       String   @map("product_id") @db.Uuid
+  sourceProductId String?  @map("source_product_id") @db.Uuid
+  customerId      String?  @map("customer_id") @db.Uuid
+  guestSessionId  String?  @map("guest_session_id") @db.VarChar(255)
+  algorithm       String   @default("rule_based_v1") @db.VarChar(100)
+  rank            Int?
+  score           Decimal? @db.Decimal(10, 4)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productId, createdAt])
+  @@index([sourceProductId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([placement, type, createdAt])
+  @@map("recommendation_events")
+}
+
 model ProductImage {
   id                     String             @id @db.Uuid
   productId              String             @map("product_id") @db.Uuid

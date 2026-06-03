@@ -2,8 +2,16 @@ export const dynamic = "force-dynamic";
 
 import { HomeCatalogSectionClient } from "@/components/public/home-catalog-section-client";
 import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
+import { PublicRecommendationSection } from "@/components/public/public-recommendation-section";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, getPublicHomepageSlides, type PublicProduct, type PublicHomepageSlide } from "@/lib/public-api";
+import {
+  getHomeRecommendations,
+  getPublicHomepageSlides,
+  getPublicProducts,
+  type PublicProduct,
+  type PublicHomepageSlide,
+} from "@/lib/public-api";
+import { getRecommendationFlags } from "@/lib/recommendation-flags";
 
 async function loadHomepageCatalog() {
   try {
@@ -38,7 +46,11 @@ async function loadHomepageCatalog() {
 }
 
 export default async function HomePage() {
+  const recommendationFlags = getRecommendationFlags();
   const { items, total } = await loadHomepageCatalog();
+  const recommendations = recommendationFlags.publicRecommendationsEnabled
+    ? await getHomeRecommendations(8).catch(() => ({ algorithm: "rule_based_v1", items: [] }))
+    : { algorithm: "rule_based_v1", items: [] };
 
   let slides: PublicHomepageSlide[] = [];
   try {
@@ -52,6 +64,12 @@ export default async function HomePage() {
       <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-7xl space-y-8">
           <PublicHomepageHeroSlider initialSlides={slides} />
+          <PublicRecommendationSection
+            titleKey="recommendedForYou"
+            items={recommendations.items}
+            placement="home"
+            trackingEnabled={recommendationFlags.recommendationTrackingEnabled}
+          />
           <HomeCatalogSectionClient items={items} total={total} />
         </div>
       </main>

@@ -18,7 +18,13 @@ import { StockBadge } from "@/components/public/stock-badge";
 import type { PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
-export function ProductCard({ product }: { product: PublicProduct }) {
+export function ProductCard({
+  product,
+  onProductNavigate,
+}: {
+  product: PublicProduct;
+  onProductNavigate?: () => void;
+}) {
   const { t } = useI18n("customer");
   const router = useRouter();
   const items = useCartStore((state) => state.items);
@@ -50,7 +56,11 @@ export function ProductCard({ product }: { product: PublicProduct }) {
       className="card-panel hover-card-effect group flex h-full flex-col overflow-hidden rounded-[1.85rem] border-white/70 bg-white"
       data-testid="product-card"
     >
-      <Link href={`/products/${product.id}`} className="relative block overflow-hidden">
+      <Link
+        href={`/products/${product.id}`}
+        className="relative block overflow-hidden"
+        onClick={onProductNavigate}
+      >
         <div className="absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <StockBadge label={stockState.label} tone={stockState.tone} />
@@ -107,6 +117,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
                 href={`/products/${product.id}`}
                 className="mt-2 line-clamp-2 block text-base font-semibold text-[var(--foreground)]"
                 data-testid={`product-view-${product.id}`}
+                onClick={onProductNavigate}
               >
                 {product.name}
               </Link>
@@ -180,6 +191,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
           <Link
             href={`/products/${product.id}`}
             className="public-button-secondary inline-flex w-full justify-center px-4 py-3 text-sm"
+            onClick={onProductNavigate}
           >
             {t("productDetail.view")}
           </Link>

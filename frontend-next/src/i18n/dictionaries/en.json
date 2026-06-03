@@ -294,6 +294,12 @@
     "readyForCheckout": "Marketplace selection ready for checkout",
     "mobileQty": "Qty"
   },
+  "recommendations": {
+    "kicker": "Smart discovery",
+    "similarProducts": "Similar products",
+    "recommendedForYou": "Recommended for you",
+    "sponsored": "Sponsored"
+  },
   "aiTryOn": {
     "title": "Virtual fitting room",
     "heading": "See how this item may look on you",
