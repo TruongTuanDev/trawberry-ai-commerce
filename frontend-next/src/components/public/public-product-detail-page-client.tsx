@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AiTryOnModal } from "@/components/ai-try-on/ai-try-on-modal";
 import { ProductGallery } from "@/components/public/product-gallery";
 import { MessageShopButton } from "@/components/public/message-shop-button";
+import { PublicRecommendationSection } from "@/components/public/public-recommendation-section";
 import { PublicProductReviewsSection } from "@/components/public/public-product-reviews-section";
 import {
   formatCount,
@@ -21,8 +22,11 @@ import { toast } from "@/components/ui/use-toast";
 import { FallbackImage } from "@/components/ui/fallback-image";
 import { useI18n } from "@/i18n/use-i18n";
 import {
+  getGuestSessionId,
   getPublicAiTryOnConfig,
   getPublicProduct,
+  getSimilarProductRecommendations,
+  trackProductView,
   type PublicAiTryOnConfig,
   type PublicProduct,
 } from "@/lib/public-api";
@@ -30,12 +34,17 @@ import { useCartStore } from "@/stores/cart-store";
 
 export function PublicProductDetailPageClient({
   productId,
+  recommendationsEnabled,
+  recommendationTrackingEnabled,
 }: {
   productId: string;
+  recommendationsEnabled: boolean;
+  recommendationTrackingEnabled: boolean;
 }) {
   const { locale, t } = useI18n("customer");
   const router = useRouter();
   const [product, setProduct] = useState<PublicProduct | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<PublicProduct[]>([]);
   const [aiTryOnConfig, setAiTryOnConfig] = useState<PublicAiTryOnConfig | null>(null);
   const [aiTryOnOpen, setAiTryOnOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
@@ -98,6 +107,7 @@ export function PublicProductDetailPageClient({
         const result = await getPublicProduct(productId);
         if (!mounted) return;
         setProduct(result);
+        setSimilarProducts([]);
         setHasChosenSize(false);
         setSelectedVariantId(
           result.variants.find((variant) => variant.inStock)?.id ??
@@ -124,6 +134,49 @@ export function PublicProductDetailPageClient({
       mounted = false;
     };
   }, [productId, requestKey]);
+
+  useEffect(() => {
+    if (!product || !recommendationsEnabled) {
+      return;
+    }
+
+    let mounted = true;
+
+    const run = async () => {
+      try {
+        const response = await getSimilarProductRecommendations(product.id, 8);
+        if (mounted) {
+          setSimilarProducts(
+            response.items.filter((item) => item.id !== product.id),
+          );
+        }
+      } catch {
+        if (mounted) {
+          setSimilarProducts([]);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [product, recommendationsEnabled]);
+
+  useEffect(() => {
+    if (!product || !recommendationTrackingEnabled) {
+      return;
+    }
+
+    void trackProductView({
+      productId: product.id,
+      source: "product_page",
+      referrer:
+        typeof document === "undefined" ? undefined : document.referrer || undefined,
+      guestSessionId: getGuestSessionId(),
+    });
+  }, [product, recommendationTrackingEnabled]);
 
   useEffect(() => {
     let mounted = true;
@@ -550,6 +603,13 @@ export function PublicProductDetailPageClient({
               </section>
 
               <PublicProductReviewsSection product={product} />
+              <PublicRecommendationSection
+                titleKey="similarProducts"
+                items={similarProducts}
+                placement="product_detail"
+                sourceProductId={product.id}
+                trackingEnabled={recommendationTrackingEnabled}
+              />
 
               <div
                 className="fixed inset-x-3 bottom-3 z-40 lg:hidden"
