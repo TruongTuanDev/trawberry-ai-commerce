@@ -4045,3 +4045,33 @@ Known Gaps:
 - Live image asset deletion on third-party cloud S3 files is dependent on target credentials/environments; MinIO filesystem-based deletion was verified inside mock sandbox runtimes.
 - Unrelated legacy apps `strawberry-frontend` and `strawberry-backend` remain untouched.
 
+# Phase Report: Simplify Seller Delivery Actions UI
+
+Implemented:
+
+- **Dropdown Organization**:
+  - Grouped copy action buttons (sender, recipient, address, courier/driver details, full Yandex block) into a custom "Copy ▼" dropdown menu.
+  - Grouped manual delivery status updates (Save delivery, Courier assigned, Picked up, On the way, Mark delivered) into an "Update status ▼" dropdown menu.
+  - Grouped advanced delivery actions (Calculate offers, Accept claim, Maps) into an "Advanced actions ▼" dropdown menu.
+- **Map & Warning Improvements**:
+  - Hid pickup/dropoff map buttons when coordinates are missing, displaying a warning message in the advanced dropdown instead.
+  - Replaced multiple separate readiness warning badges with a single compact warning block explaining that coordinates are missing.
+- **Collapsible Exception Panel**:
+  - Collapsed the "Report delivery problem" section by default, toggleable via a header chevron button.
+- **Clean Structure**:
+  - Placed primary actions (Create shipment, Refresh shipment, Cancel delivery) as directly visible.
+  - Reorganized sender, recipient, and package details into 3 small visual cards.
+  - Cleaned up styles to support both desktop and mobile viewports.
+  - Wired up click-outside listeners to close active dropdowns automatically.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- Branch `fix/seller-orders-count-mismatch` pushed to remote repository.
+- Commited with message: `fix: simplify seller delivery action panel`
+
+Known Gaps:
+
+- Live map integration requires active API keys and coordinate data; mock visual placeholders are used.
+- Unrelated legacy apps `strawberry-frontend` and `strawberry-backend` remain untouched.
