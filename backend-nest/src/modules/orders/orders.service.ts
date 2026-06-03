@@ -395,6 +395,17 @@ export class OrdersService {
   ): Prisma.OrderWhereInput {
     const where: Prisma.OrderWhereInput = {
       shopId,
+      NOT: {
+        status: { in: ['NEW', 'PENDING'] },
+        paymentStatus: {
+          in: [
+            'PENDING',
+            'UNPAID',
+            'PAY_ON_DELIVERY_SELECTED',
+            'YANDEX_PAYMENT_ON_DELIVERY_PENDING',
+          ],
+        },
+      },
     };
 
     if (query.status) {
@@ -458,7 +469,12 @@ export class OrdersService {
         return {
           sellerArchivedAt: null,
           paymentStatus: {
-            in: ['PAID', 'APPROVED', 'SELLER_CONFIRMED_DELIVERY_PAYMENT'],
+            notIn: [
+              'PENDING',
+              'UNPAID',
+              'PAY_ON_DELIVERY_SELECTED',
+              'YANDEX_PAYMENT_ON_DELIVERY_PENDING',
+            ],
           },
           status: { in: ['NEW', 'PENDING'] },
           deliveryShipments: {
