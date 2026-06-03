@@ -2493,3 +2493,18 @@ Verification:
 - frontend lint/build: pass
 - backend lint/build: pass
 - branch `fix/seller-orders-count-mismatch` pushed to remote repository
+
+# Remove Prisma DB Push from Production Startup Status
+
+Implemented:
+
+- Removed the automatic `npx prisma db push` command from the production container `CMD` startup sequence in the Dockerfile.
+- Replaced the automatic schema push behavior in staging and production deployment steps with the safe, documented database migration command `npx prisma migrate deploy`.
+- Added clear documentation warnings in the operator runbook highlighting that `npx prisma db push --accept-data-loss` must never be run in production without a verified backup.
+- Audited recommendation logs models (`ProductViewLog`, `SearchLog`, `RecommendationEvent`) and confirmed they correctly map to the database tables (`product_view_logs`, `search_logs`, `recommendation_events`) and indexes.
+- Verified that the migration is strictly additive and doesn't drop any existing ecommerce tables.
+
+Verification:
+
+- backend prisma:generate, lint, build: pass
+- backend test suite: pass (34 suites, 290 tests)

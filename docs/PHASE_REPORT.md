@@ -4075,3 +4075,34 @@ Known Gaps:
 
 - Live map integration requires active API keys and coordinate data; mock visual placeholders are used.
 - Unrelated legacy apps `strawberry-frontend` and `strawberry-backend` remain untouched.
+
+# Phase Report: Remove Prisma DB Push from Production Startup
+
+Implemented:
+
+- **Production Startup CMD Refactor**:
+  - Removed `npx prisma db push` from the `CMD` startup command in [Dockerfile](file:///c:/Users/admin/trawberry-ai-commerce/backend-nest/Dockerfile).
+  - Production backend CMD now boots the NestJS application directly: `CMD ["node", "dist/src/main.js"]`.
+- **Database Migrations and Warnings Documentation**:
+  - Modified [PRODUCTION_RUNBOOK.md](file:///c:/Users/admin/trawberry-ai-commerce/docs/PRODUCTION_RUNBOOK.md) to replace `npm run prisma:db:push` with `npx prisma migrate deploy` for staging/production deployments.
+  - Added warning notices explaining that `npx prisma db push --accept-data-loss` must never be run in production without a verified database backup.
+- **Recommendation Schema & Table Auditing**:
+  - Audited recommendation models `ProductViewLog`, `SearchLog`, and `RecommendationEvent` and verified they correctly map to `product_view_logs`, `search_logs`, and `recommendation_events` respectively via `@@map(...)` annotations.
+  - Verified the recommendation migration is additive, preserving all existing order, payment, cart, and checkout tables.
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm run build`: pass
+- `backend-nest npm test -- --runInBand`: pass (34 suites, 290 tests)
+- `git diff --check`: pass
+- `git ls-files | Select-String "\.env"`: pass
+- `git ls-files data.xlsx`: pass
+- Branch `fix/seller-orders-count-mismatch` pushed to remote repository.
+- Commited with message: `fix: remove prisma db push from production startup`
+
+Known Gaps:
+
+- Production deployments still require running `npx prisma migrate deploy` explicitly on the runner container during deployment or inside a CD pipeline.
+- Unrelated legacy apps `strawberry-frontend` and `strawberry-backend` remain untouched.
