@@ -986,6 +986,23 @@ export function ShippingLabelPrintView({
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
+            height: ${meta.heightMm}mm !important;
+            overflow: hidden !important;
+          }
+
+          [data-testid="seller-shell"],
+          [data-testid="seller-shell"] > div,
+          [data-testid="seller-shell"] > div > div,
+          .shipping-label-page-main,
+          .shipping-label-page-container {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: ${meta.heightMm}mm !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
           }
 
           body * {

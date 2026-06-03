@@ -212,8 +212,8 @@ export function SellerShippingLabelPageClient({
       }}
     >
       <>
-        <main className="min-h-screen bg-[#f3f4f6] px-4 py-6 sm:px-6">
-          <div className="mx-auto max-w-5xl space-y-5">
+        <main className="shipping-label-page-main min-h-screen bg-[#f3f4f6] px-4 py-6 sm:px-6">
+          <div className="shipping-label-page-container mx-auto max-w-5xl space-y-5">
             <header className="no-print flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
