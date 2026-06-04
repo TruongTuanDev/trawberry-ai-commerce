@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   addCustomerSupportCaseMessage,
   createCustomerSupportCase,
@@ -20,8 +21,15 @@ const issueTypes = [
   "OTHER",
 ] as const;
 
-export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutReceipt }) {
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(receipt.supportCases[0]?.id ?? null);
+export function CustomerSupportSection({
+  receipt,
+}: {
+  receipt: CustomerCheckoutReceipt;
+}) {
+  const { t } = useI18n("customer");
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(
+    receipt.supportCases[0]?.id ?? null,
+  );
   const [selectedCase, setSelectedCase] = useState<CustomerSupportCase | null>(null);
   const [loadingCase, setLoadingCase] = useState(false);
   const { run, isRunning } = useActionFeedback();
@@ -46,7 +54,7 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
       setSelectedCase(response);
       setSelectedCaseId(caseId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load support case.");
+      setError(err instanceof Error ? err.message : t("customer.support.loadCaseFailed"));
     } finally {
       setLoadingCase(false);
     }
@@ -56,15 +64,14 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
     setError(null);
     setSuccess(null);
     await run({
-      action: async () => {
-        return createCustomerSupportCase(receipt.checkoutCode, {
+      action: async () =>
+        createCustomerSupportCase(receipt.checkoutCode, {
           orderId: targetOrderId || undefined,
           issueType,
           subject,
           description,
-        });
-      },
-      successMessage: "Đã gửi yêu cầu hỗ trợ thành công.",
+        }),
+      successMessage: t("customer.support.createSuccess"),
       onSuccess: async (created) => {
         receipt.supportCases.unshift({
           id: created.id,
@@ -79,11 +86,11 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
         setSubject("");
         setDescription("");
         setTargetOrderId("");
-        setSuccess("Support case created.");
+        setSuccess(t("customer.support.createSuccess"));
       },
-      errorMessage: "Gửi yêu cầu hỗ trợ thất bại.",
+      errorMessage: t("customer.support.createFailed"),
     }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Unable to create support case.");
+      setError(err instanceof Error ? err.message : t("customer.support.createFailed"));
     });
   };
 
@@ -92,63 +99,106 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
     setError(null);
     setSuccess(null);
     await run({
-      action: async () => {
-        return addCustomerSupportCaseMessage(selectedCaseId, replyMessage.trim());
-      },
-      successMessage: "Đã gửi phản hồi thành công.",
+      action: async () =>
+        addCustomerSupportCaseMessage(selectedCaseId, replyMessage.trim()),
+      successMessage: t("customer.support.replySuccess"),
       onSuccess: async (updated) => {
         setSelectedCase(updated);
         setReplyMessage("");
-        setSuccess("Reply sent.");
+        setSuccess(t("customer.support.replySuccess"));
       },
-      errorMessage: "Gửi phản hồi thất bại.",
+      errorMessage: t("customer.support.replyFailed"),
     }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Unable to send reply.");
+      setError(err instanceof Error ? err.message : t("customer.support.replyFailed"));
     });
   };
 
   return (
-    <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8" data-testid="customer-support-section">
+    <section
+      className="card-panel rounded-[2rem] px-6 py-8 sm:px-8"
+      data-testid="customer-support-section"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Support</p>
-          <h2 className="mt-2 text-2xl font-bold text-[var(--foreground)]">Checkout support cases</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">Open a case for the full marketplace receipt or for one child order.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            {t("customer.support.title")}
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-[var(--foreground)]">
+            {t("customer.support.checkoutCasesTitle")}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            {t("customer.support.checkoutCasesDescription")}
+          </p>
         </div>
       </div>
 
-      {error ? <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-      {success ? <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div> : null}
+      {error ? (
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {success}
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className="space-y-4">
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-            <h3 className="text-sm font-semibold text-[var(--foreground)]">Open support case</h3>
+            <h3 className="text-sm font-semibold text-[var(--foreground)]">
+              {t("customer.support.openCase")}
+            </h3>
             <div className="mt-4 grid gap-3">
               <label className="text-sm font-medium text-[var(--foreground)]">
-                Issue type
-                <select value={issueType} onChange={(event) => setIssueType(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-issue-type">
+                {t("customer.support.issueType")}
+                <select
+                  value={issueType}
+                  onChange={(event) => setIssueType(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  data-testid="customer-support-issue-type"
+                >
                   {issueTypes.map((item) => (
-                    <option key={item} value={item}>{item}</option>
+                    <option key={item} value={item}>
+                      {t(`customer.support.issueTypes.${item}`)}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm font-medium text-[var(--foreground)]">
-                Scope
-                <select value={targetOrderId} onChange={(event) => setTargetOrderId(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-target">
-                  <option value="">Entire checkout</option>
+                {t("customer.support.scope")}
+                <select
+                  value={targetOrderId}
+                  onChange={(event) => setTargetOrderId(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  data-testid="customer-support-target"
+                >
+                  <option value="">{t("customer.support.entireCheckout")}</option>
                   {receipt.orders.map((order) => (
-                    <option key={order.orderId} value={order.orderId}>{order.shopName} - {order.orderCode}</option>
+                    <option key={order.orderId} value={order.orderId}>
+                      {order.shopName} - {order.orderCode}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="text-sm font-medium text-[var(--foreground)]">
-                Subject
-                <input value={subject} onChange={(event) => setSubject(event.target.value)} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-subject" />
+                {t("customer.support.subject")}
+                <input
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  data-testid="customer-support-subject"
+                />
               </label>
               <label className="text-sm font-medium text-[var(--foreground)]">
-                Description
-                <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-description" />
+                {t("customer.support.message")}
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={4}
+                  className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  data-testid="customer-support-description"
+                />
               </label>
               <button
                 type="button"
@@ -157,13 +207,15 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
                 className="public-button-primary px-5 py-3 text-sm disabled:opacity-50"
                 data-testid="customer-support-submit"
               >
-                {isRunning ? "Đang gửi..." : "Open support case"}
+                {isRunning ? t("customer.support.submitting") : t("customer.support.submit")}
               </button>
             </div>
           </div>
 
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-            <h3 className="text-sm font-semibold text-[var(--foreground)]">Existing cases</h3>
+            <h3 className="text-sm font-semibold text-[var(--foreground)]">
+              {t("customer.support.existingCases")}
+            </h3>
             <div className="mt-4 space-y-3" data-testid="customer-support-case-list">
               {receipt.supportCases.length ? (
                 receipt.supportCases.map((item) => (
@@ -171,19 +223,31 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
                     key={item.id}
                     type="button"
                     onClick={() => void loadCase(item.id)}
-                    className={`w-full rounded-2xl border px-4 py-3 text-left ${selectedCaseId === item.id ? "border-[var(--accent)] bg-[var(--accent-soft)]/35" : "border-[var(--border)] bg-[var(--panel)]"}`}
+                    className={`w-full rounded-2xl border px-4 py-3 text-left ${
+                      selectedCaseId === item.id
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)]/35"
+                        : "border-[var(--border)] bg-[var(--panel)]"
+                    }`}
                     data-testid="customer-support-case-card"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">{item.subject}</p>
-                      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{item.status}</span>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {item.subject}
+                      </p>
+                      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">
+                        {item.status}
+                      </span>
                     </div>
-                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">{item.issueType}</p>
-                    <p className="mt-2 text-xs text-[var(--muted)]">{new Date(item.createdAt).toLocaleString()}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                      {t(`customer.support.issueTypes.${item.issueType}`)}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </p>
                   </button>
                 ))
               ) : (
-                <p className="text-sm text-[var(--muted)]">No support cases yet.</p>
+                <p className="text-sm text-[var(--muted)]">{t("customer.support.empty")}</p>
               )}
             </div>
           </div>
@@ -191,40 +255,74 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
 
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
           {!selectedSummary && !selectedCase ? (
-            <p className="text-sm text-[var(--muted)]">Select a support case to review the thread.</p>
+            <p className="text-sm text-[var(--muted)]">{t("customer.support.selectCase")}</p>
           ) : loadingCase ? (
-            <p className="text-sm text-[var(--muted)]">Loading support case...</p>
+            <p className="text-sm text-[var(--muted)]">{t("customer.support.loadingCase")}</p>
           ) : (
             <>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{selectedCase?.issueType ?? selectedSummary?.issueType}</p>
-                  <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">{selectedCase?.subject ?? selectedSummary?.subject}</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                    {t(
+                      `customer.support.issueTypes.${
+                        selectedCase?.issueType ?? selectedSummary?.issueType ?? "OTHER"
+                      }`,
+                    )}
+                  </p>
+                  <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">
+                    {selectedCase?.subject ?? selectedSummary?.subject}
+                  </h3>
                   {selectedCase?.order ? (
-                    <p className="mt-2 text-sm text-[var(--muted)]">{selectedCase.shopName} - {selectedCase.order.orderCode}</p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {selectedCase.shopName} - {selectedCase.order.orderCode}
+                    </p>
                   ) : (
-                    <p className="mt-2 text-sm text-[var(--muted)]">Applies to full checkout receipt</p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {t("customer.support.fullCheckoutReceipt")}
+                    </p>
                   )}
                 </div>
-                <div className="rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">{selectedCase?.status ?? selectedSummary?.status}</div>
+                <div className="rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+                  {selectedCase?.status ?? selectedSummary?.status}
+                </div>
               </div>
-              {selectedCase?.description ? <p className="mt-4 text-sm leading-6 text-[var(--muted)]">{selectedCase.description}</p> : null}
+              {selectedCase?.description ? (
+                <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+                  {selectedCase.description}
+                </p>
+              ) : null}
               <div className="mt-6 space-y-3" data-testid="customer-support-thread">
                 {selectedCase?.messages.map((message) => (
-                  <article key={message.id} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
+                  <article
+                    key={message.id}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3"
+                  >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">{message.senderRole}{message.senderName ? ` - ${message.senderName}` : ""}</p>
-                      <p className="text-xs text-[var(--muted)]">{new Date(message.createdAt).toLocaleString()}</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {message.senderRole}
+                        {message.senderName ? ` - ${message.senderName}` : ""}
+                      </p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {new Date(message.createdAt).toLocaleString()}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{message.message}</p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                      {message.message}
+                    </p>
                   </article>
                 ))}
               </div>
               {selectedCaseId ? (
                 <div className="mt-6">
                   <label className="text-sm font-medium text-[var(--foreground)]">
-                    Reply
-                    <textarea value={replyMessage} onChange={(event) => setReplyMessage(event.target.value)} rows={4} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="customer-support-reply-message" />
+                    {t("customer.support.reply")}
+                    <textarea
+                      value={replyMessage}
+                      onChange={(event) => setReplyMessage(event.target.value)}
+                      rows={4}
+                      className="mt-2 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      data-testid="customer-support-reply-message"
+                    />
                   </label>
                   <button
                     type="button"
@@ -233,7 +331,7 @@ export function CustomerSupportSection({ receipt }: { receipt: CustomerCheckoutR
                     className="public-button-secondary mt-3 px-5 py-3 text-sm disabled:opacity-50"
                     data-testid="customer-support-reply-submit"
                   >
-                    {isRunning ? "Đang gửi..." : "Send reply"}
+                    {isRunning ? t("customer.support.submitting") : t("customer.support.sendReply")}
                   </button>
                 </div>
               ) : null}

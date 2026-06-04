@@ -25,6 +25,8 @@ model User {
   adminQueueTaskEvents     AdminQueueTaskEvent[]  @relation("AdminQueueTaskEventActor")
   aiGenerationTasks       AiGenerationTask[]
   aiUsageLogs             AiUsageLog[]
+  aiTryOnTasks            AiTryOnTask[]
+  aiTryOnUsageLogs        AiTryOnUsageLog[]
   customerOrders          Order[]                @relation("CustomerOrders")
   marketplaceCheckouts    MarketplaceCheckout[]  @relation("CustomerMarketplaceCheckouts")
   supportCases            SupportCase[]          @relation("CustomerSupportCases")
@@ -44,6 +46,13 @@ model User {
   sentRefundTransfers       RefundManualTransfer[] @relation("RefundTransferSeller")
   receivedRefundTransfers   RefundManualTransfer[] @relation("RefundTransferCustomer")
   notifications             Notification[]         @relation("RecipientNotifications")
+  customerProductReviews    ProductReview[]        @relation("CustomerProductReviews")
+  sellerProductReviews      ProductReview[]        @relation("SellerProductReviews")
+  customerMessageThreads    ShopMessageThread[]    @relation("CustomerMessageThreads")
+  sellerMessageThreads      ShopMessageThread[]    @relation("SellerMessageThreads")
+  customerSentShopMessages  ShopMessage[]          @relation("CustomerShopMessages")
+  sellerSentShopMessages    ShopMessage[]          @relation("SellerShopMessages")
+  adminSentShopMessages     ShopMessage[]          @relation("AdminShopMessages")
 
   @@map("users")
 }
@@ -250,6 +259,8 @@ model Shop {
   aiGeneratedImages     AiGeneratedImage[]
   aiCredits             SellerAiCredit?
   aiUsageLogs           AiUsageLog[]
+  aiTryOnTasks          AiTryOnTask[]
+  aiTryOnUsageLogs      AiTryOnUsageLog[]
   orders                Order[]
   paymentReviewLogs     PaymentReviewLog[]
   supportCases          SupportCase[]
@@ -264,6 +275,8 @@ model Shop {
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
   sellerMonthlyInvoices SellerMonthlyInvoice[]
   returnRefundCases     ReturnRefundCase[]
+  productReviews        ProductReview[]
+  messageThreads        ShopMessageThread[]
 
   @@map("shops")
 }
@@ -357,10 +370,112 @@ model Product {
   orderItems        OrderItem[]
   aiGenerationTasks AiGenerationTask[]
   aiGeneratedImages AiGeneratedImage[]
+  aiTryOnTasks      AiTryOnTask[]
+  aiTryOnUsageLogs  AiTryOnUsageLog[]
+  productReviews    ProductReview[]
+  messageThreads    ShopMessageThread[]
+  aiTryOnEnabled    Boolean            @default(false) @map("ai_try_on_enabled")
 
   @@unique([shopId, wbNmId])
   @@unique([shopId, sellerSku])
   @@map("products")
+}
+
+model ProductViewLog {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId      String?  @map("product_id") @db.Uuid
+  customerId     String?  @map("customer_id") @db.Uuid
+  guestSessionId String?  @map("guest_session_id") @db.VarChar(255)
+  shopId         String?  @map("shop_id") @db.Uuid
+  source         String?  @db.VarChar(100)
+  referrer       String?  @db.VarChar(1000)
+  userAgent      String?  @map("user_agent") @db.VarChar(1000)
+  ipHash         String?  @map("ip_hash") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([shopId, createdAt])
+  @@map("product_view_logs")
+}
+
+model SearchLog {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  query          String   @db.VarChar(500)
+  normalizedQuery String? @map("normalized_query") @db.VarChar(500)
+  customerId     String?  @map("customer_id") @db.Uuid
+  guestSessionId String?  @map("guest_session_id") @db.VarChar(255)
+  resultCount    Int      @default(0) @map("result_count")
+  locale         String?  @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([normalizedQuery, createdAt])
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@map("search_logs")
+}
+
+model RecommendationEvent {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  type            String   @db.VarChar(50)
+  placement       String   @db.VarChar(100)
+  productId       String   @map("product_id") @db.Uuid
+  sourceProductId String?  @map("source_product_id") @db.Uuid
+  customerId      String?  @map("customer_id") @db.Uuid
+  guestSessionId  String?  @map("guest_session_id") @db.VarChar(255)
+  algorithm       String   @default("rule_based_v1") @db.VarChar(100)
+  rank            Int?
+  score           Decimal? @db.Decimal(10, 4)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productId, createdAt])
+  @@index([sourceProductId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([placement, type, createdAt])
+  @@map("recommendation_events")
+}
+
+model VisualSearchLog {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId       String?  @map("customer_id") @db.Uuid
+  guestSessionId   String?  @map("guest_session_id") @db.VarChar(255)
+  imageUrl         String?  @map("image_url") @db.VarChar(1000)
+  imageStorageKey  String?  @map("image_storage_key") @db.VarChar(1024)
+  categoryHint     String?  @map("category_hint") @db.VarChar(255)
+  detectedCategory String?  @map("detected_category") @db.VarChar(255)
+  detectedColor    String?  @map("detected_color") @db.VarChar(255)
+  detectedGender   String?  @map("detected_gender") @db.VarChar(255)
+  detectedKeywords Json?    @map("detected_keywords")
+  cropX            Int?     @map("crop_x")
+  cropY            Int?     @map("crop_y")
+  cropWidth        Int?     @map("crop_width")
+  cropHeight       Int?     @map("crop_height")
+  resultCount      Int      @default(0) @map("result_count")
+  provider         String   @default("rule_based_ai_v1") @db.VarChar(100)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  events           VisualSearchEvent[]
+
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@map("visual_search_logs")
+}
+
+model VisualSearchEvent {
+  id                String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  type              String           @db.VarChar(50)
+  visualSearchLogId String?          @map("visual_search_log_id") @db.Uuid
+  productId         String?          @map("product_id") @db.Uuid
+  rank              Int?
+  score             Decimal?         @db.Decimal(10, 4)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  visualSearchLog   VisualSearchLog? @relation(fields: [visualSearchLogId], references: [id], onDelete: SetNull)
+
+  @@index([visualSearchLogId, createdAt])
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+  @@map("visual_search_events")
 }
 
 model ProductImage {
@@ -516,6 +631,7 @@ model Order {
   shippingLongitude        Decimal?           @map("shipping_longitude") @db.Decimal(10, 7)
   dropoffAddressFullName   String?            @map("dropoff_address_full_name")
   dropoffCity              String?            @map("dropoff_city") @db.VarChar(255)
+  dropoffPostalCode        String?            @map("dropoff_postal_code") @db.VarChar(50)
   dropoffStreet            String?            @map("dropoff_street")
   dropoffBuilding          String?            @map("dropoff_building") @db.VarChar(255)
   dropoffEntrance          String?            @map("dropoff_entrance") @db.VarChar(255)
@@ -574,6 +690,8 @@ model Order {
   deliveryComments         DeliveryComment[]
   sellerFeeLedgerEntries   SellerFeeLedgerEntry[]
   returnRefundCases        ReturnRefundCase[]
+  productReviews           ProductReview[]
+  messageThreads           ShopMessageThread[]
 
   @@index([shopId, createdAt])
   @@index([shopId, status])
@@ -943,6 +1061,7 @@ model DeliveryShipment {
   dropoffLongitude    Decimal?        @map("dropoff_longitude") @db.Decimal(10, 7)
   dropoffAddressFullName String?      @map("dropoff_address_full_name")
   dropoffCity         String?         @map("dropoff_city") @db.VarChar(255)
+  dropoffPostalCode   String?         @map("dropoff_postal_code") @db.VarChar(50)
   dropoffStreet       String?         @map("dropoff_street")
   dropoffBuilding     String?         @map("dropoff_building") @db.VarChar(255)
   dropoffEntrance     String?         @map("dropoff_entrance") @db.VarChar(255)
@@ -1074,10 +1193,110 @@ model OrderItem {
   order                     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product                   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   variant                   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  productReview             ProductReview?
 
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+model ProductReview {
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  productId       String    @map("product_id") @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  sellerId        String    @map("seller_id") @db.Uuid
+  customerId      String    @map("customer_id") @db.Uuid
+  orderId         String    @map("order_id") @db.Uuid
+  orderItemId     String    @unique @map("order_item_id") @db.Uuid
+  rating          Int
+  comment         String?
+  fitFeedback     String?   @map("fit_feedback") @db.VarChar(50)
+  status          String    @default("PUBLISHED") @db.VarChar(50)
+  sellerReply     String?   @map("seller_reply")
+  sellerRepliedAt DateTime? @map("seller_replied_at") @db.Timestamptz(6)
+  hiddenReason    String?   @map("hidden_reason") @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seller          User      @relation("SellerProductReviews", fields: [sellerId], references: [id], onDelete: Restrict)
+  customer        User      @relation("CustomerProductReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  images          ProductReviewImage[]
+
+  @@index([productId, status, createdAt])
+  @@index([shopId, status, createdAt])
+  @@index([customerId, createdAt])
+  @@index([sellerId, createdAt])
+  @@unique([orderItemId, customerId])
+  @@map("product_reviews")
+}
+
+model ProductReviewImage {
+  id         String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  reviewId   String        @map("review_id") @db.Uuid
+  url        String        @db.Text
+  storageKey String?       @map("storage_key") @db.Text
+  mimeType   String        @map("mime_type") @db.VarChar(100)
+  sizeBytes  Int           @map("size_bytes")
+  width      Int?
+  height     Int?
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  review     ProductReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+  @@map("product_review_images")
+}
+
+model ShopMessageThread {
+  id                 String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId             String       @map("shop_id") @db.Uuid
+  sellerId           String       @map("seller_id") @db.Uuid
+  customerId         String       @map("customer_id") @db.Uuid
+  productId          String?      @map("product_id") @db.Uuid
+  orderId            String?      @map("order_id") @db.Uuid
+  status             String       @default("OPEN") @db.VarChar(50)
+  subject            String?      @db.VarChar(255)
+  lastMessageAt      DateTime     @map("last_message_at") @db.Timestamptz(6)
+  lastCustomerReadAt DateTime?    @map("last_customer_read_at") @db.Timestamptz(6)
+  lastSellerReadAt   DateTime?    @map("last_seller_read_at") @db.Timestamptz(6)
+  reportedAt         DateTime?    @map("reported_at") @db.Timestamptz(6)
+  reportedReason     String?      @map("reported_reason") @db.VarChar(500)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop               Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  seller             User         @relation("SellerMessageThreads", fields: [sellerId], references: [id], onDelete: Restrict)
+  customer           User         @relation("CustomerMessageThreads", fields: [customerId], references: [id], onDelete: Cascade)
+  product            Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  order              Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  messages           ShopMessage[]
+
+  @@index([shopId, status, lastMessageAt])
+  @@index([customerId, status, lastMessageAt])
+  @@index([sellerId, status, lastMessageAt])
+  @@index([productId, lastMessageAt])
+  @@index([orderId, lastMessageAt])
+  @@map("shop_message_threads")
+}
+
+model ShopMessage {
+  id               String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  threadId         String            @map("thread_id") @db.Uuid
+  senderRole       String            @map("sender_role") @db.VarChar(50)
+  senderCustomerId String?           @map("sender_customer_id") @db.Uuid
+  senderSellerId   String?           @map("sender_seller_id") @db.Uuid
+  senderAdminId    String?           @map("sender_admin_id") @db.Uuid
+  message          String
+  attachments      Json?
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  thread           ShopMessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderCustomer   User?             @relation("CustomerShopMessages", fields: [senderCustomerId], references: [id], onDelete: SetNull)
+  senderSeller     User?             @relation("SellerShopMessages", fields: [senderSellerId], references: [id], onDelete: SetNull)
+  senderAdmin      User?             @relation("AdminShopMessages", fields: [senderAdminId], references: [id], onDelete: SetNull)
+
+  @@index([threadId, createdAt])
+  @@map("shop_messages")
 }
 
 model AiGenerationTask {
@@ -1184,6 +1403,90 @@ model AiUsageLog {
   @@map("ai_usage_logs")
 }
 
+model AiFeatureSetting {
+  id                  String      @id @db.VarChar(64)
+  aiTryOnEnabled      Boolean     @default(false) @map("ai_try_on_enabled")
+  aiTryOnProvider     String      @default("mock") @map("ai_try_on_provider") @db.VarChar(50)
+  guestDailyLimit     Int         @default(3) @map("guest_daily_limit")
+  customerDailyLimit  Int         @default(5) @map("customer_daily_limit")
+  requireConsent      Boolean     @default(true) @map("require_consent")
+  supportedCategories Json?       @map("supported_categories")
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("ai_feature_settings")
+}
+
+model AiTryOnTask {
+  id                       String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId               String?   @map("customer_id") @db.Uuid
+  guestSessionId           String?   @map("guest_session_id") @db.VarChar(255)
+  shopId                   String    @map("shop_id") @db.Uuid
+  productId                String    @map("product_id") @db.Uuid
+  selectedSize             String?   @map("selected_size") @db.VarChar(255)
+  selectedRussianSize      String?   @map("selected_russian_size") @db.VarChar(255)
+  customerImageUrl         String?   @map("customer_image_url") @db.VarChar(1000)
+  customerImageStorageKey  String?   @map("customer_image_storage_key") @db.VarChar(1024)
+  selectedModelId          String?   @map("selected_model_id") @db.VarChar(255)
+  heightCm                 Int?      @map("height_cm")
+  weightKg                 Int?      @map("weight_kg")
+  gender                   String?   @db.VarChar(50)
+  bodyType                 String?   @map("body_type") @db.VarChar(50)
+  bodyTraits               Json?     @map("body_traits")
+  consentAccepted          Boolean   @default(false) @map("consent_accepted")
+  providerMode             String    @map("provider_mode") @db.VarChar(50)
+  status                   String    @default("PENDING") @db.VarChar(50)
+  resultImageUrl           String?   @map("result_image_url") @db.VarChar(1000)
+  resultImageStorageKey    String?   @map("result_image_storage_key") @db.VarChar(1024)
+  resultMimeType           String?   @map("result_mime_type") @db.VarChar(100)
+  resultWidth              Int?      @map("result_width")
+  resultHeight             Int?      @map("result_height")
+  recommendedSize          String?   @map("recommended_size") @db.VarChar(255)
+  recommendedRussianSize   String?   @map("recommended_russian_size") @db.VarChar(255)
+  sizeRecommendationNote   String?   @map("size_recommendation_note")
+  sizeRecommendationNoteRu String?   @map("size_recommendation_note_ru")
+  sizeRecommendationNoteEn String?   @map("size_recommendation_note_en")
+  sizeRecommendationConfidence String? @map("size_recommendation_confidence") @db.VarChar(50)
+  errorCode                String?   @map("error_code") @db.VarChar(100)
+  errorMessage             String?   @map("error_message")
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt              DateTime? @map("completed_at") @db.Timestamptz(6)
+  customer                 User?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shop                     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product                  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  usageLogs                AiTryOnUsageLog[]
+
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([shopId, createdAt])
+  @@index([productId, createdAt])
+  @@index([status, createdAt])
+  @@map("ai_try_on_tasks")
+}
+
+model AiTryOnUsageLog {
+  id             String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  taskId         String?     @map("task_id") @db.Uuid
+  customerId     String?     @map("customer_id") @db.Uuid
+  guestSessionId String?     @map("guest_session_id") @db.VarChar(255)
+  shopId         String      @map("shop_id") @db.Uuid
+  productId      String?     @map("product_id") @db.Uuid
+  providerMode   String      @map("provider_mode") @db.VarChar(50)
+  status         String      @db.VarChar(50)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  task           AiTryOnTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  customer       User?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  shop           Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product        Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([productId, createdAt])
+  @@index([shopId, createdAt])
+  @@map("ai_try_on_usage_logs")
+}
+
 model Notification {
   id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   recipientUserId     String    @map("recipient_user_id") @db.Uuid
@@ -1208,4 +1511,49 @@ model Notification {
 
   @@index([recipientUserId, recipientRole, status, createdAt])
   @@map("notifications")
+}
+
+model HomepageSlide {
+  id                      String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  titleRu                 String?  @map("title_ru")
+  titleEn                 String?  @map("title_en")
+  subtitleRu              String?  @map("subtitle_ru")
+  subtitleEn              String?  @map("subtitle_en")
+  ctaLabelRu              String?  @map("cta_label_ru")
+  ctaLabelEn              String?  @map("cta_label_en")
+  ctaUrl                  String?  @map("cta_url")
+  altTextRu               String?  @map("alt_text_ru")
+  altTextEn               String?  @map("alt_text_en")
+  imageDesktopUrl         String   @map("image_desktop_url")
+  imageDesktopStorageKey  String?  @map("image_desktop_storage_key")
+  imageMobileUrl          String?  @map("image_mobile_url")
+  imageMobileStorageKey   String?  @map("image_mobile_storage_key")
+  backgroundColor         String?  @map("background_color") @db.VarChar(50)
+  displayOrder            Int      @default(0) @map("display_order")
+  isActive                Boolean  @default(false) @map("is_active")
+  startsAt                DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt                  DateTime? @map("ends_at") @db.Timestamptz(6)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([isActive, displayOrder])
+  @@index([startsAt, endsAt])
+  @@map("homepage_slides")
+}
+
+model AiTryOnModel {
+  id          String   @id @db.VarChar(255)
+  labelEn     String   @map("label_en") @db.VarChar(255)
+  labelRu     String   @map("label_ru") @db.VarChar(255)
+  gender      String   @db.VarChar(50)
+  bodyType    String   @map("body_type") @db.VarChar(100)
+  heightCm    Int      @map("height_cm")
+  weightKg    Int      @map("weight_kg")
+  imageUrl    String   @map("image_url") @db.VarChar(512)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("ai_try_on_models")
 }

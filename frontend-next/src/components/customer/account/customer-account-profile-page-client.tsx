@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   getCustomerProfile,
   updateCustomerProfile,
@@ -24,6 +25,7 @@ export function CustomerAccountProfilePageClient() {
   const { run, isRunning } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { t } = useI18n("customer");
 
   useEffect(() => {
     let mounted = true;
@@ -44,7 +46,7 @@ export function CustomerAccountProfilePageClient() {
         setError(null);
       } catch (issue) {
         if (mounted) {
-          setError(issue instanceof Error ? issue.message : "Unable to load profile.");
+          setError(issue instanceof Error ? issue.message : t("customer.profile.loadFailed"));
         }
       } finally {
         if (mounted) {
@@ -58,7 +60,7 @@ export function CustomerAccountProfilePageClient() {
     return () => {
       mounted = false;
     };
-  }, [authUser?.isSyntheticEmail]);
+  }, [authUser?.isSyntheticEmail, t]);
 
   const handleSave = async () => {
     setError(null);
@@ -72,7 +74,7 @@ export function CustomerAccountProfilePageClient() {
           phone: form.phone.trim() ? maybeNormalizePhone(form.phone) : undefined,
         });
       },
-      successMessage: "Thông tin cá nhân đã được cập nhật.",
+      successMessage: t("customer.profile.saveSuccess"),
       onSuccess: async (response) => {
         setProfile(response);
         setForm({
@@ -81,18 +83,18 @@ export function CustomerAccountProfilePageClient() {
           phone: response.phone || "",
         });
         await refreshRole("customer");
-        setSuccess("Thông tin cá nhân đã được cập nhật.");
+        setSuccess(t("customer.profile.saveSuccess"));
       },
-      errorMessage: "Cập nhật thông tin cá nhân thất bại.",
+      errorMessage: t("customer.profile.saveFailed"),
     }).catch((issue) => {
-      setError(issue instanceof Error ? issue.message : "Unable to update profile.");
+      setError(issue instanceof Error ? issue.message : t("customer.profile.saveFailed"));
     });
   };
 
   return (
     <CustomerAccountShell
-      title="Thông tin cá nhân"
-      description="Cập nhật họ tên, email và số điện thoại của customer hiện tại. Email và số điện thoại được kiểm tra trùng lặp trước khi lưu."
+      title={t("customer.profile.title")}
+      description={t("customer.profile.description")}
     >
       <section className="card-panel rounded-[1.8rem] px-6 py-6 sm:px-7">
         {error ? (
@@ -107,7 +109,7 @@ export function CustomerAccountProfilePageClient() {
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Họ tên">
+          <Field label={t("customer.profile.fullName")}>
             <input
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
@@ -116,7 +118,7 @@ export function CustomerAccountProfilePageClient() {
               data-testid="customer-profile-name"
             />
           </Field>
-          <Field label="Số điện thoại">
+          <Field label={t("customer.profile.phone")}>
             <input
               value={form.phone}
               onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
@@ -129,13 +131,13 @@ export function CustomerAccountProfilePageClient() {
         </div>
 
         <div className="mt-4">
-          <Field label="Email">
+          <Field label={t("customer.profile.email")}>
             <input
               value={form.email}
               onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
               className="public-input"
               disabled={loading}
-              placeholder={authUser?.isSyntheticEmail ? "Thêm email thật để dùng cho customer account" : "name@example.com"}
+              placeholder={authUser?.isSyntheticEmail ? t("customer.profile.syntheticEmailPlaceholder") : "name@example.com"}
               data-testid="customer-profile-email"
             />
           </Field>
@@ -149,11 +151,11 @@ export function CustomerAccountProfilePageClient() {
             className="public-button-primary px-5 py-3 text-sm disabled:opacity-60"
             data-testid="customer-profile-save"
           >
-            {isRunning ? "Đang lưu..." : "Lưu thay đổi"}
+            {isRunning ? t("customer.profile.saving") : t("common.actions.save")}
           </button>
           {profile ? (
             <p className="text-sm text-[var(--muted)]">
-              Tạo tài khoản từ {new Date(profile.createdAt).toLocaleDateString()}.
+              {t("customer.profile.memberSince", { date: new Date(profile.createdAt).toLocaleDateString() })}
             </p>
           ) : null}
         </div>

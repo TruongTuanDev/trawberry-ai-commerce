@@ -122,6 +122,28 @@ export type DeliverySettings = {
   updatedAt: string;
 };
 
+export type ShippingLabelSize = "75x120" | "100x150" | "a6";
+
+export const DEFAULT_SHIPPING_LABEL_SIZE: ShippingLabelSize = "100x150";
+export const SHIPPING_LABEL_SIZE_STORAGE_KEY = "seller-shipping-label-size";
+export const SHIPPING_LABEL_SIZE_OPTIONS: ShippingLabelSize[] = [
+  "75x120",
+  "100x150",
+  "a6",
+];
+
+export function isShippingLabelSize(
+  value: string | null | undefined,
+): value is ShippingLabelSize {
+  return value === "75x120" || value === "100x150" || value === "a6";
+}
+
+export function normalizeShippingLabelSize(
+  value: string | null | undefined,
+): ShippingLabelSize {
+  return isShippingLabelSize(value) ? value : DEFAULT_SHIPPING_LABEL_SIZE;
+}
+
 export type DeliveryOffer = {
   id: string;
   provider: DeliveryProviderName | string;
@@ -197,6 +219,7 @@ export type DeliveryShipment = {
   dropoffAddress: string;
   dropoffAddressFullName?: string | null;
   dropoffCity?: string | null;
+  dropoffPostalCode?: string | null;
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
@@ -315,6 +338,7 @@ export type SellerOrderListItem = {
   shippingAddress: string;
   dropoffAddressFullName?: string | null;
   dropoffCity?: string | null;
+  dropoffPostalCode?: string | null;
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
@@ -395,6 +419,7 @@ export type SellerOrderListItem = {
     productSlugSnapshot: string;
     productImageSnapshot: string | null;
     variantNameSnapshot: string | null;
+    sellerSku: string | null;
   }>;
 };
 
@@ -516,6 +541,50 @@ export type SellerSupportCase = {
     senderName: string | null;
     message: string;
     isInternal: boolean;
+    createdAt: string;
+  }>;
+};
+
+export type SellerReviewRecord = {
+  id: string;
+  productId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  orderId: string;
+  orderItemId: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  hiddenReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; title: string } | null;
+  shop: { id: string; name: string } | null;
+  customer: { id: string; name: string | null; maskedName: string } | null;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  orderItem: {
+    id: string;
+    productTitleSnapshot: string;
+    productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
+    quantity: number;
+  } | null;
+  images: Array<{
+    id: string;
+    url: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
     createdAt: string;
   }>;
 };
@@ -2140,6 +2209,19 @@ export async function uploadShopPaymentQr(
   );
 }
 
+export async function deleteShopPaymentQr(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<ShopPaymentSettings>(
+    `/api/shops/${shopId}/payment-settings/qr-image`,
+    {
+      method: "DELETE",
+      token,
+    },
+  );
+}
+
 export async function updateShopOrderStatus(
   shopId: string,
   orderId: string,
@@ -2604,4 +2686,46 @@ export async function addShopReturnRefundMessage(shopId: string, caseId: string,
     token,
     body: JSON.stringify({ message }),
   });
+}
+
+export async function listShopReviews(
+  shopId: string,
+  query?: {
+    productId?: string;
+    rating?: number;
+    status?: string;
+    q?: string;
+  },
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (query?.productId) params.set("productId", query.productId);
+  if (query?.rating) params.set("rating", String(query.rating));
+  if (query?.status) params.set("status", query.status);
+  if (query?.q) params.set("q", query.q);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<{ items: SellerReviewRecord[] }>(
+    `/api/shops/${shopId}/reviews${suffix}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function replyToShopReview(
+  shopId: string,
+  reviewId: string,
+  payload: { reply: string },
+  token?: string,
+) {
+  return apiRequest<SellerReviewRecord>(
+    `/api/shops/${shopId}/reviews/${encodeURIComponent(reviewId)}/reply`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
 }

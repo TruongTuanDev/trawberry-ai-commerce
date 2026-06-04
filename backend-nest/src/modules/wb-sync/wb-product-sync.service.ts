@@ -15,6 +15,7 @@ import {
   randomUUID,
 } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CategoriesService } from '../categories/categories.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { CategoryMappingService } from '../categories/category-mapping.service';
@@ -57,6 +58,7 @@ export class WbProductSyncService {
     private readonly prisma: PrismaService,
     private readonly apiClient: WbApiClientService,
     private readonly mapper: WbProductMapperService,
+    private readonly categoriesService: CategoriesService,
     private readonly categoryMappingService: CategoryMappingService,
     private readonly config: ConfigService,
   ) {}
@@ -499,6 +501,17 @@ export class WbProductSyncService {
 
     for (const mapped of products) {
       const existing = await this.findExistingProduct(tx, shopId, mapped);
+      const resolvedCategory =
+        await this.categoriesService.resolveCategoryAssignment(
+          {
+            categoryId: mapped.categoryId ? BigInt(mapped.categoryId) : null,
+            categoryName: mapped.mappedCategoryName ?? mapped.categoryName,
+            sourceCategoryName:
+              mapped.sourceCategoryName ?? mapped.categoryName,
+            sourceCategorySource: SOURCE,
+          },
+          tx,
+        );
       const productData = {
         externalSource: SOURCE,
         externalProductId: mapped.externalProductId,
@@ -511,9 +524,9 @@ export class WbProductSyncService {
         localTitle: mapped.name,
         wbDescription: mapped.description,
         localDescription: mapped.description,
-        categoryName: mapped.mappedCategoryName ?? mapped.categoryName,
-        categoryId: mapped.categoryId ? BigInt(mapped.categoryId) : null,
-        sourceCategoryName: mapped.sourceCategoryName ?? mapped.categoryName,
+        categoryName: resolvedCategory.categoryName,
+        categoryId: resolvedCategory.categoryId,
+        sourceCategoryName: resolvedCategory.sourceCategoryName,
         sourceCategorySource: SOURCE,
         subjectId: mapped.subjectId,
         wbVendorCode: mapped.sellerSku,
@@ -592,7 +605,7 @@ export class WbProductSyncService {
         }
       }
 
-      const hasMissingCategory = !mapped.categoryId;
+      const hasMissingCategory = !resolvedCategory.categoryId;
       const hasMissingPrice = true;
       const hasMissingStock = true;
       if (hasMissingCategory) {

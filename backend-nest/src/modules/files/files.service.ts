@@ -114,6 +114,66 @@ export class FilesService {
     return this.storeReturnRefundEvidenceInS3(file, context);
   }
 
+  async storeReviewImage(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+      reviewId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeReviewImageLocally(file, context);
+    }
+
+    return this.storeReviewImageInS3(file, context);
+  }
+
+  async storeHomepageSlideImage(
+    file: ProductImageUploadFile,
+    context: {
+      slideId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeHomepageSlideImageLocally(file, context);
+    }
+
+    return this.storeHomepageSlideImageInS3(file, context);
+  }
+
+  async storeAiTryOnReference(
+    file: ProductImageUploadFile,
+    context: {
+      scope: 'guest' | 'customer';
+      identifier: string;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeAiTryOnReferenceLocally(file, context);
+    }
+
+    return this.storeAiTryOnReferenceInS3(file, context);
+  }
+
+  async storeAiTryOnResult(
+    file: ProductImageUploadFile,
+    context: {
+      providerMode: string;
+      taskId: string;
+      sequence: number;
+    },
+  ): Promise<StoredFileResult> {
+    const storageDriver = this.getStorageDriver();
+    if (storageDriver === 'local') {
+      return this.storeAiTryOnResultLocally(file, context);
+    }
+
+    return this.storeAiTryOnResultInS3(file, context);
+  }
+
   async deleteProductImageFile(params: {
     storageKey?: string | null;
     fileUrl?: string | null;
@@ -488,6 +548,283 @@ export class FilesService {
     };
   }
 
+  private async storeReviewImageLocally(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+      reviewId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'review-images',
+      context.shopId,
+      context.reviewId,
+    );
+    const extension = extname(file.originalname) || '.bin';
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const absolutePath = join(targetDirectory, filename);
+    const storageKey = [
+      'review-images',
+      context.shopId,
+      context.reviewId,
+      filename,
+    ].join('/');
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeReviewImageInS3(
+    file: ProductImageUploadFile,
+    context: {
+      shopId: string;
+      reviewId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const extension = extname(file.originalname) || '.bin';
+    const storageKey = [
+      'review-images',
+      context.shopId,
+      context.reviewId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+
+    const client = this.createS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.getS3Bucket(),
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeHomepageSlideImageLocally(
+    file: ProductImageUploadFile,
+    context: {
+      slideId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'homepage-slides',
+      context.slideId,
+    );
+    const extension = extname(file.originalname) || '.bin';
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const absolutePath = join(targetDirectory, filename);
+    const storageKey = ['homepage-slides', context.slideId, filename].join('/');
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeHomepageSlideImageInS3(
+    file: ProductImageUploadFile,
+    context: {
+      slideId: string;
+    },
+  ): Promise<StoredFileResult> {
+    const extension = extname(file.originalname) || '.bin';
+    const storageKey = [
+      'homepage-slides',
+      context.slideId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+
+    const client = this.createS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.getS3Bucket(),
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnReferenceLocally(
+    file: ProductImageUploadFile,
+    context: {
+      scope: 'guest' | 'customer';
+      identifier: string;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'ai-try-on',
+      context.scope,
+      context.identifier,
+    );
+    const extension = extname(file.originalname) || '.bin';
+    const filename = `${Date.now()}-${randomUUID()}${extension}`;
+    const absolutePath = join(targetDirectory, filename);
+    const storageKey = [
+      'ai-try-on',
+      context.scope,
+      context.identifier,
+      filename,
+    ].join('/');
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnReferenceInS3(
+    file: ProductImageUploadFile,
+    context: {
+      scope: 'guest' | 'customer';
+      identifier: string;
+    },
+  ): Promise<StoredFileResult> {
+    const extension = extname(file.originalname) || '.bin';
+    const storageKey = [
+      'ai-try-on',
+      context.scope,
+      context.identifier,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+
+    const client = this.createS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: this.getS3Bucket(),
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnResultLocally(
+    file: ProductImageUploadFile,
+    context: {
+      providerMode: string;
+      taskId: string;
+      sequence: number;
+    },
+  ): Promise<StoredFileResult> {
+    const uploadRoot = this.configService.get<string>('UPLOAD_ROOT', 'uploads');
+    const extension = this.resolveExtension(file.mimetype, file.originalname);
+    const storageKey = [
+      context.providerMode,
+      context.taskId,
+      `${context.sequence}.${extension}`,
+    ].join('/');
+    const targetDirectory = join(
+      process.cwd(),
+      uploadRoot,
+      'ai-try-on',
+      context.providerMode,
+      context.taskId,
+    );
+    const absolutePath = join(
+      targetDirectory,
+      `${context.sequence}.${extension}`,
+    );
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(absolutePath, file.buffer);
+
+    return {
+      publicUrl: this.buildLocalPublicUrl(['ai-try-on', storageKey].join('/')),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  private async storeAiTryOnResultInS3(
+    file: ProductImageUploadFile,
+    context: {
+      providerMode: string;
+      taskId: string;
+      sequence: number;
+    },
+  ): Promise<StoredFileResult> {
+    const storageKey = [
+      context.providerMode,
+      context.taskId,
+      `${context.sequence}.${this.resolveExtension(file.mimetype, file.originalname)}`,
+    ].join('/');
+    const bucket = this.getAiTryOnBucket();
+    const client = this.createS3Client();
+
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: storageKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return {
+      publicUrl: this.buildS3PublicUrl(storageKey, bucket),
+      storageKey,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
   private async deleteStoredFileLocally(
     storageKey?: string | null,
     fileUrl?: string | null,
@@ -525,13 +862,22 @@ export class FilesService {
     return `${publicBaseUrl.replace(/\/$/, '')}/uploads/${relativePath}`;
   }
 
-  private buildS3PublicUrl(storageKey: string) {
+  private buildS3PublicUrl(storageKey: string, bucket = this.getS3Bucket()) {
     const publicBaseUrl =
       this.configService.get<string>('S3_PUBLIC_BASE_URL') ??
       this.configService.get<string>('S3_ENDPOINT') ??
       'http://localhost:9000';
+    const normalizedBaseUrl = publicBaseUrl.replace(/\/$/, '');
+    const bucketSuffix = `/${bucket}`;
 
-    return `${publicBaseUrl.replace(/\/$/, '')}/${this.getS3Bucket()}/${storageKey}`;
+    if (
+      normalizedBaseUrl === bucket ||
+      normalizedBaseUrl.endsWith(bucketSuffix)
+    ) {
+      return `${normalizedBaseUrl}/${storageKey}`;
+    }
+
+    return `${normalizedBaseUrl}/${bucket}/${storageKey}`;
   }
 
   private extractRelativePath(fileUrl: string, uploadsPrefix: string) {
@@ -576,10 +922,32 @@ export class FilesService {
     return this.configService.get<string>('S3_BUCKET', 'strawberry-assets');
   }
 
+  private getAiTryOnBucket() {
+    return this.configService.get<string>('AI_TRY_ON_BUCKET', 'ai-try-on');
+  }
+
   private getStorageDriver() {
     return this.configService.get<string>(
       'STORAGE_DRIVER',
       this.configService.get<string>('FILE_STORAGE_DRIVER', 'local'),
     );
+  }
+
+  private resolveExtension(mimeType: string, originalName: string) {
+    const normalizedMimeType = mimeType.toLowerCase();
+    switch (normalizedMimeType) {
+      case 'image/jpeg':
+        return 'jpg';
+      case 'image/png':
+        return 'png';
+      case 'image/webp':
+        return 'webp';
+      case 'image/svg+xml':
+        return 'svg';
+      default: {
+        const originalExtension = extname(originalName).replace(/^\./, '');
+        return originalExtension || 'bin';
+      }
+    }
   }
 }

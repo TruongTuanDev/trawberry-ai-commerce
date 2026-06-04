@@ -196,7 +196,7 @@ test("admin fulfillment page is supervision-only while seller keeps status owner
   await newRow.click();
   await expect(adminPage.getByTestId("admin-delivery-detail-status")).toContainText("New");
   await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText(shop.name);
-  await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText("PAID");
+  await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText("Paid");
   await expect(adminPage.getByTestId("admin-delivery-detail")).toContainText("Missing");
   await expect(adminPage.getByRole("button", { name: "Remind seller" })).toBeVisible();
   await expect(adminPage.getByTestId("admin-delivery-mark-in-transit")).toHaveCount(0);
@@ -255,5 +255,4 @@ test("admin fulfillment page is supervision-only while seller keeps status owner
   await expect(adminPage.getByRole("button", { name: "Remind seller" })).toHaveCount(0);
   await expect(adminPage.getByTestId("admin-delivery-detail").getByRole("button", { name: /archive/i })).toHaveCount(0);
 
-  await adminPage.close();
 });

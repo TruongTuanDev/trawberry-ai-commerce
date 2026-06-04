@@ -6,12 +6,15 @@ import {
   getShopPaymentSettings,
   updateShopPaymentSettings,
   uploadShopPaymentQr,
+  deleteShopPaymentQr,
 } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 
 export function SellerPaymentSettingsPageClient() {
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [loading, setLoading] = useState(true);
@@ -40,6 +43,53 @@ export function SellerPaymentSettingsPageClient() {
     cashCourierCollectionStatus: "NOT_AVAILABLE",
     availableMethods: [] as string[],
   });
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const handleFileChange = (newFile: File | null) => {
+    setFile(newFile);
+    if (newFile) {
+      setPreviewUrl(URL.createObjectURL(newFile));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
+  const previewToRender = previewUrl || form.staticQrImageUrl;
+
+  const handleRemoveQr = async () => {
+    if (!currentShopId) return;
+    const confirmQuestion = t("seller.paymentSettings.confirmRemoveQr") || "Are you sure you want to remove the QR code?";
+    if (!window.confirm(confirmQuestion)) return;
+    setError(null);
+    setMessage(null);
+    await runUpload({
+      action: async () => {
+        const saved = await deleteShopPaymentQr(currentShopId, "");
+        setForm((current) => ({
+          ...current,
+          staticQrImageUrl: "",
+          status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
+          isReady: saved.isReady,
+        }));
+        handleFileChange(null);
+        setMessage(t("seller.paymentSettings.qrCodeRemoved") || "QR code removed.");
+        return saved;
+      },
+      successMessage: t("seller.paymentSettings.qrCodeRemoved") || "QR code removed.",
+      errorMessage: t("seller.paymentSettings.saveFailed"),
+    }).catch((err) => {
+      setError(err.message);
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -78,7 +128,7 @@ export function SellerPaymentSettingsPageClient() {
         });
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load payment settings.");
+          setError(err instanceof Error ? err.message : t("seller.paymentSettings.saveFailed"));
         }
       } finally {
         if (mounted) setLoading(false);
@@ -89,7 +139,7 @@ export function SellerPaymentSettingsPageClient() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, user]);
+  }, [currentShopId, t, user]);
 
   const handleSave = async () => {
     if (!currentShopId) return;
@@ -145,11 +195,11 @@ export function SellerPaymentSettingsPageClient() {
           cashCourierCollectionStatus: saved.cashCourierCollectionStatus,
           availableMethods: saved.availableMethods ?? [],
         }));
-        setMessage("Payment settings saved.");
+        setMessage(t("seller.paymentSettings.settingsSaved"));
         return saved;
       },
-      successMessage: "Lưu cấu hình thanh toán thành công!",
-      errorMessage: "Không thể lưu cấu hình thanh toán.",
+      successMessage: t("seller.paymentSettings.settingsSaved"),
+      errorMessage: t("seller.paymentSettings.saveFailed"),
     }).catch((err) => {
       setError(err.message);
     });
@@ -168,12 +218,12 @@ export function SellerPaymentSettingsPageClient() {
           status: saved.status as "READY" | "DISABLED" | "PENDING_REVIEW",
           isReady: saved.isReady,
         }));
-        setFile(null);
-        setMessage("Static QR uploaded.");
+        handleFileChange(null);
+        setMessage(t("seller.paymentSettings.qrUploaded"));
         return saved;
       },
-      successMessage: "Tải ảnh QR thanh toán thành công!",
-      errorMessage: "Không thể tải ảnh QR thanh toán.",
+      successMessage: t("seller.paymentSettings.qrUploaded"),
+      errorMessage: t("seller.paymentSettings.uploadFailed"),
     }).catch((err) => {
       setError(err.message);
     });
@@ -181,46 +231,46 @@ export function SellerPaymentSettingsPageClient() {
 
   return (
     <SectionCard
-      eyebrow="Direct seller payment"
-      title="Payment settings"
-      description="Configure the static SBP or bank QR the buyer will see at checkout for this shop."
+      eyebrow={t("seller.paymentSettings.title")}
+      title={t("seller.paymentSettings.title")}
+      description={t("seller.paymentSettings.subtitle")}
     >
       {loading ? (
-        <p className="text-sm text-[var(--muted)]">Loading...</p>
+        <p className="text-sm text-[var(--muted)]">{t("common.loading")}</p>
       ) : (
         <div className="space-y-6" data-testid="seller-payment-settings-page">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Bank name">
+            <Field label={t("seller.paymentSettings.bankName")}>
               <input value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} className="public-input" data-testid="payment-settings-bank-name" />
             </Field>
-            <Field label="Recipient name">
+            <Field label={t("seller.paymentSettings.recipientName")}>
               <input value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} className="public-input" data-testid="payment-settings-recipient-name" />
             </Field>
-            <Field label="Recipient phone">
+            <Field label={t("seller.paymentSettings.recipientPhone")}>
               <input value={form.recipientPhone} onChange={(event) => setForm((current) => ({ ...current, recipientPhone: event.target.value }))} className="public-input" data-testid="payment-settings-recipient-phone" />
             </Field>
-            <Field label="SBP phone">
+            <Field label={t("seller.paymentSettings.sbpPhone")}>
               <input value={form.sbpPhone} onChange={(event) => setForm((current) => ({ ...current, sbpPhone: event.target.value }))} className="public-input" data-testid="payment-settings-sbp-phone" />
             </Field>
-            <Field label="Recipient account">
+            <Field label={t("seller.paymentSettings.recipientAccount")}>
               <input value={form.recipientAccount} onChange={(event) => setForm((current) => ({ ...current, recipientAccount: event.target.value }))} className="public-input" data-testid="payment-settings-recipient-account" />
             </Field>
-            <Field label="Status">
+            <Field label={t("seller.paymentSettings.status")}>
               <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as "READY" | "DISABLED" | "PENDING_REVIEW" }))} className="public-input" data-testid="payment-settings-status">
-                <option value="PENDING_REVIEW">Pending setup</option>
-                <option value="READY">Ready</option>
-                <option value="DISABLED">Disabled</option>
+                <option value="PENDING_REVIEW">{t("seller.paymentSettings.pendingSetup")}</option>
+                <option value="READY">{t("common.status.ready")}</option>
+                <option value="DISABLED">{t("common.status.disabled")}</option>
               </select>
             </Field>
           </div>
 
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
             <p className="text-sm font-semibold text-[var(--foreground)]">
-              Payment method strategy
+              {t("seller.paymentSettings.paymentMethodStrategy")}
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <ToggleField
-                label="Allow prepaid QR"
+                label={t("seller.paymentSettings.allowPrepaidQr")}
                 checked={form.allowPrepaidQr}
                 onChange={(checked) =>
                   setForm((current) => ({
@@ -230,7 +280,7 @@ export function SellerPaymentSettingsPageClient() {
                 }
               />
               <ToggleField
-                label="Allow pay on delivery via seller QR"
+                label={t("seller.paymentSettings.allowPayOnDeliverySellerQr")}
                 checked={form.allowPayOnDeliverySellerQr}
                 onChange={(checked) =>
                   setForm((current) => ({
@@ -240,7 +290,7 @@ export function SellerPaymentSettingsPageClient() {
                 }
               />
               <ToggleField
-                label="Allow deposit payment"
+                label={t("seller.paymentSettings.allowDepositPayment")}
                 checked={form.allowDepositPayment}
                 onChange={(checked) =>
                   setForm((current) => ({
@@ -249,58 +299,86 @@ export function SellerPaymentSettingsPageClient() {
                   }))
                 }
               />
-              <Field label="Deposit percent">
+              <Field label={t("seller.paymentSettings.depositPercent")}>
                 <input value={form.depositPercent} onChange={(event) => setForm((current) => ({ ...current, depositPercent: event.target.value }))} className="public-input" />
               </Field>
-              <Field label="Deposit required above amount">
+              <Field label={t("seller.paymentSettings.depositRequiredAboveAmount")}>
                 <input value={form.depositRequiredAboveAmount} onChange={(event) => setForm((current) => ({ ...current, depositRequiredAboveAmount: event.target.value }))} className="public-input" />
               </Field>
-              <Field label="COD max amount">
+              <Field label={t("seller.paymentSettings.codMaxAmount")}>
                 <input value={form.codMaxOrderAmount} onChange={(event) => setForm((current) => ({ ...current, codMaxOrderAmount: event.target.value }))} className="public-input" />
               </Field>
-              <Field label="Yandex card on delivery">
+              <Field label={t("seller.paymentSettings.yandexCardOnDelivery")}>
                 <select value={form.yandexCardOnDeliveryStatus} onChange={(event) => setForm((current) => ({ ...current, yandexCardOnDeliveryStatus: event.target.value }))} className="public-input">
-                  <option value="NOT_CONFIGURED">Future / not configured</option>
-                  <option value="PROVIDER_PENDING">Provider pending</option>
-                  <option value="DISABLED">Disabled</option>
-                  <option value="AVAILABLE">Available after provider verification</option>
+                  <option value="NOT_CONFIGURED">{t("seller.paymentSettings.futureNotConfigured")}</option>
+                  <option value="PROVIDER_PENDING">{t("seller.paymentSettings.providerPending")}</option>
+                  <option value="DISABLED">{t("common.status.disabled")}</option>
+                  <option value="AVAILABLE">{t("seller.paymentSettings.availableAfterVerification")}</option>
                 </select>
               </Field>
-              <Field label="Cash courier collection">
-                <input value="Not available" disabled className="public-input bg-[var(--panel)] text-[var(--muted)]" />
+              <Field label={t("seller.paymentSettings.cashCourierCollection")}>
+                <input value={t("common.status.notAvailable")} disabled className="public-input bg-[var(--panel)] text-[var(--muted)]" />
               </Field>
             </div>
             <div className="mt-4 rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]">
-              Available buyer methods now: {form.availableMethods.join(", ") || "None"}
+              {t("seller.paymentSettings.availableBuyerMethods", { value: form.availableMethods.join(", ") || t("common.status.none") })}
             </div>
           </div>
 
-          <Field label="Buyer payment instruction">
+          <Field label={t("seller.paymentSettings.buyerInstruction")}>
             <textarea value={form.paymentInstruction} onChange={(event) => setForm((current) => ({ ...current, paymentInstruction: event.target.value }))} rows={4} className="public-input min-h-32" data-testid="payment-settings-instruction" />
           </Field>
 
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-            <p className="text-sm font-semibold text-[var(--foreground)]">Static QR image</p>
-            {form.staticQrImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.staticQrImageUrl} alt="Seller payment QR" className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
+            <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.paymentSettings.staticQrImage")}</p>
+            {previewToRender ? (
+              <div className="mt-4 relative inline-block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={previewToRender} alt="Seller payment QR" className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
+                {previewUrl && (
+                  <span className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    New Preview
+                  </span>
+                )}
+              </div>
             ) : (
-              <p className="mt-3 text-sm text-[var(--muted)]">No QR uploaded yet.</p>
+              <p className="mt-3 text-sm text-[var(--muted)]" data-testid="payment-settings-no-qr-text">{t("seller.paymentSettings.noQr")}</p>
             )}
-            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="public-input" data-testid="payment-settings-qr-file" />
-              <button type="button" onClick={() => void handleUpload()} disabled={uploading || !file} className="public-button-secondary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-qr-upload">
-                {uploading ? "Đang tải lên..." : "Upload QR"}
-              </button>
+            
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="public-button-secondary px-5 py-3 text-sm cursor-pointer inline-block" data-testid="payment-settings-qr-file-label">
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleFileChange(event.target.files?.[0] ?? null)} className="hidden" data-testid="payment-settings-qr-file" />
+                  {form.staticQrImageUrl ? t("seller.paymentSettings.updateQrCode") : t("seller.paymentSettings.uploadQrCode")}
+                </label>
+
+                {form.staticQrImageUrl && (
+                  <button type="button" onClick={() => void handleRemoveQr()} disabled={uploading} className="bg-rose-100 text-rose-800 hover:bg-rose-200 px-5 py-3 text-sm font-semibold rounded-full disabled:opacity-60 transition" data-testid="payment-settings-qr-remove">
+                    {uploading ? t("seller.productDetail.saving") : t("seller.paymentSettings.removeQrCode")}
+                  </button>
+                )}
+              </div>
+
+              {file && (
+                <div className="flex items-center gap-3 bg-[var(--panel)] p-3 rounded-xl border border-[var(--border)]">
+                  <p className="text-xs text-[var(--muted)] truncate max-w-[200px]">Selected: {file.name}</p>
+                  <button type="button" onClick={() => void handleUpload()} disabled={uploading} className="public-button-primary px-4 py-2 text-xs" data-testid="payment-settings-qr-upload">
+                    {uploading ? t("seller.productDetail.uploading") : t("seller.paymentSettings.uploadQr")}
+                  </button>
+                  <button type="button" onClick={() => handleFileChange(null)} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] underline">
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => void handleSave()} disabled={saving} className="public-button-primary px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60" data-testid="payment-settings-save">
-              {saving ? "Đang lưu..." : "Save payment settings"}
+              {saving ? t("seller.productDetail.saving") : t("seller.paymentSettings.saveSettings")}
             </button>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${form.isReady ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-              {form.isReady ? "Ready for checkout" : "Not checkout-ready yet"}
+              {form.isReady ? t("seller.paymentSettings.readyForCheckout") : t("seller.paymentSettings.notReadyForCheckout")}
             </span>
           </div>
 

@@ -51,7 +51,19 @@ function ProductStatusBadge({
 }
 
 function WarningChip({ warning }: { warning: string }) {
-  return <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">{warning.replaceAll("_", " ")}</span>;
+  const { t } = useI18n("seller");
+  const keyMap: Record<string, string> = {
+    MISSING_PRICE: "missingPrice",
+    MISSING_STOCK: "missingStock",
+    MISSING_CATEGORY: "missingCategory",
+    MISSING_IMAGE: "missingImage",
+    NO_ACTIVE_VARIANT: "missingVariant",
+  };
+  const key = keyMap[warning] || warning.toLowerCase().replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  const translated = t(`seller.products.statusBadges.${key}`);
+  const fallback = warning.replaceAll("_", " ");
+  const displayLabel = translated.includes("statusBadges") ? fallback : translated;
+  return <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">{displayLabel}</span>;
 }
 
 export function ProductTable({

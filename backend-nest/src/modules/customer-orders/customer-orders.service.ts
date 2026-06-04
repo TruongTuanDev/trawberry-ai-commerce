@@ -93,6 +93,7 @@ export class CustomerOrdersService {
         paymentDetails,
         trackingPath: `/orders/${order.id}`,
         deliveryStatus: order.deliveryShipments[0]?.internalStatus ?? null,
+        customerCompletedAt: order.customerCompletedAt?.toISOString() ?? null,
         itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
         items: order.items.map((item) => ({
           id: item.id,
@@ -109,6 +110,20 @@ export class CustomerOrdersService {
           productTitleSnapshot: item.productTitleSnapshot,
           productImageSnapshot: item.productImageSnapshot,
           variantNameSnapshot: item.variantNameSnapshot,
+          review: item.productReview
+            ? {
+                id: item.productReview.id,
+                rating: item.productReview.rating,
+                comment: item.productReview.comment,
+                fitFeedback: item.productReview.fitFeedback,
+                status: item.productReview.status,
+                sellerReply: item.productReview.sellerReply,
+                sellerRepliedAt:
+                  item.productReview.sellerRepliedAt?.toISOString() ?? null,
+                createdAt: item.productReview.createdAt.toISOString(),
+                updatedAt: item.productReview.updatedAt.toISOString(),
+              }
+            : null,
         })),
         returnRefundCases: (order.returnRefundCases ?? []).map((entry) => ({
           id: entry.id,
@@ -181,6 +196,9 @@ export class CustomerOrdersService {
           },
           items: {
             orderBy: { productTitleSnapshot: 'asc' as const },
+            include: {
+              productReview: true,
+            },
           },
           deliveryShipments: {
             take: 1,

@@ -56,6 +56,160 @@ export type PublicProduct = {
     logoUrl: string | null;
     paymentInstructions: string | null;
   };
+  aiTryOn: {
+    enabled: boolean;
+  };
+};
+
+export type RecommendationPlacement = "home" | "product_detail" | "cart" | "search";
+
+export type VisualSearchEventType = "impression" | "click";
+
+export type RecommendationProductsResponse = {
+  algorithm: string;
+  items: PublicProduct[];
+};
+
+export type VisualSearchResponse = {
+  analysis: {
+    category: string | null;
+    color: string | null;
+    gender: string | null;
+    keywords: string[];
+  };
+  products: PublicProduct[];
+  algorithm: string;
+  visualSearchLogId?: string | null;
+  disabled?: boolean;
+};
+
+export type AiTryOnBuiltInModel = {
+  modelId: string;
+  gender: "male" | "female" | "other";
+  bodyType: string;
+  heightCm: number;
+  weightKg: number;
+  imageUrl: string;
+  labelRu: string;
+  labelEn: string;
+};
+
+export type PublicAiTryOnConfig = {
+  enabled: boolean;
+  providerMode: "mock" | "demo" | "openai";
+  guestDailyLimit: number;
+  customerDailyLimit: number;
+  requireConsent: boolean;
+  supportedCategories: string[];
+};
+
+export type CreateAiTryOnTaskPayload = {
+  selectedSize: string;
+  selectedRussianSize?: string;
+  heightCm?: number;
+  weightKg?: number;
+  gender?: "male" | "female" | "other";
+  bodyType?: "slim" | "regular" | "large";
+  bodyTraits?: string[];
+  customerImageUrl?: string;
+  customerImageStorageKey?: string;
+  selectedModelId?: string;
+  consentAccepted?: boolean;
+};
+
+export type AiTryOnTask = {
+  id: string;
+  customerId: string | null;
+  guestSessionId: string | null;
+  shopId: string;
+  productId: string;
+  selectedSize: string | null;
+  selectedRussianSize: string | null;
+  providerMode: "mock" | "demo" | "openai";
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  errorCode: string | null;
+  errorMessage: string | null;
+  resultImageUrl: string | null;
+  resultImage: {
+    url: string;
+    storageKey: string | null;
+    mimeType: string | null;
+    width: number | null;
+    height: number | null;
+  } | null;
+  sizeRecommendation: {
+    recommendedSize: string | null;
+    recommendedRussianSize: string | null;
+    note: string | null;
+    noteRu: string | null;
+    noteEn: string | null;
+    confidence: "low" | "medium" | "high" | null;
+  };
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+};
+
+export type UploadAiTryOnReferenceResponse = {
+  url: string;
+  storageKey: string;
+  mimeType: string;
+  size: number;
+};
+
+export type PublicProductReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  createdAt: string;
+  verifiedPurchase: boolean;
+  customerName: string;
+  orderCode: string | null;
+  images: Array<{
+    id: string;
+    url: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+    createdAt: string;
+  }>;
+};
+
+export type PublicProductReviewsResponse = {
+  items: PublicProductReview[];
+  summary: {
+    averageRating: string | null;
+    ratingCount: number;
+    countsByRating: Record<"1" | "2" | "3" | "4" | "5", number>;
+  };
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type PublicShopProfile = {
+  id: string;
+  slug: string;
+  name: string;
+  displayName: string;
+  description: string | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  isVerified: boolean;
+  approvedAt: string | null;
+  productCount: number;
+  ratingAverage: string | null;
+  ratingCount: number;
+  joinedAt: string | null;
+  locationLabel: string | null;
 };
 
 export type PaginatedPublicProducts = {
@@ -342,11 +496,22 @@ export type PublicTrackedOrder = {
   } | null;
 };
 
+export type CreateVisualSearchPayload = {
+  image: File;
+  categoryHint?: string;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
+  guestSessionId?: string;
+};
+
 export async function getPublicProducts(query?: {
   search?: string;
   q?: string;
   categoryId?: string;
   categorySlug?: string;
+  shopSlug?: string;
   brand?: string;
   color?: string;
   gender?: string;
@@ -362,6 +527,7 @@ export async function getPublicProducts(query?: {
   if (query?.q) params.set("q", query.q);
   if (query?.categoryId) params.set("categoryId", query.categoryId);
   if (query?.categorySlug) params.set("categorySlug", query.categorySlug);
+  if (query?.shopSlug) params.set("shopSlug", query.shopSlug);
   if (query?.brand) params.set("brand", query.brand);
   if (query?.color) params.set("color", query.color);
   if (query?.gender) params.set("gender", query.gender);
@@ -382,6 +548,12 @@ export async function getPublicProducts(query?: {
   );
 }
 
+export async function getPublicShopProfile(shopSlug: string) {
+  return apiRequest<{ shop: PublicShopProfile }>(`/api/public/shops/${shopSlug}`, {
+    method: "GET",
+  });
+}
+
 export async function getCategories() {
   return apiRequest<PublicCategory[]>("/api/categories", {
     method: "GET",
@@ -392,6 +564,173 @@ export async function getPublicProduct(productId: string) {
   return apiRequest<PublicProduct>(`/api/public/products/${productId}`, {
     method: "GET",
   });
+}
+
+export async function getHomeRecommendations(limit = 12) {
+  return apiRequest<RecommendationProductsResponse>(
+    `/api/public/recommendations/home?limit=${limit}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getSimilarProductRecommendations(
+  productId: string,
+  limit = 12,
+) {
+  return apiRequest<RecommendationProductsResponse>(
+    `/api/public/recommendations/products/${productId}/similar?limit=${limit}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+type TrackProductViewPayload = {
+  productId: string;
+  source?: string;
+  referrer?: string;
+  guestSessionId?: string;
+};
+
+type TrackSearchPayload = {
+  query: string;
+  resultCount?: number;
+  locale?: string;
+  guestSessionId?: string;
+};
+
+type TrackRecommendationEventPayload = {
+  type: "impression" | "click";
+  placement: RecommendationPlacement;
+  productId: string;
+  sourceProductId?: string;
+  algorithm?: string;
+  rank?: number;
+  score?: number;
+  guestSessionId?: string;
+};
+
+type TrackVisualSearchEventPayload = {
+  type: VisualSearchEventType;
+  visualSearchLogId?: string;
+  productId: string;
+  rank?: number;
+  score?: number;
+  guestSessionId?: string;
+};
+
+const GUEST_SESSION_STORAGE_KEY = "trawberry_guest_session_id";
+
+function createGuestSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `guest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function getGuestSessionId() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  const existing = window.localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
+  if (existing) {
+    return existing;
+  }
+
+  const nextValue = createGuestSessionId();
+  window.localStorage.setItem(GUEST_SESSION_STORAGE_KEY, nextValue);
+  return nextValue;
+}
+
+async function swallowTrackingRequest(path: string, payload: unknown) {
+  const guestSessionId = getGuestSessionId();
+
+  try {
+    await apiRequest<void>(path, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: guestSessionId
+        ? {
+            "x-guest-session-id": guestSessionId,
+          }
+        : undefined,
+    });
+  } catch {
+    return;
+  }
+}
+
+export async function trackProductView(payload: TrackProductViewPayload) {
+  await swallowTrackingRequest("/api/public/tracking/product-view", payload);
+}
+
+export async function trackSearch(payload: TrackSearchPayload) {
+  await swallowTrackingRequest("/api/public/tracking/search", payload);
+}
+
+export async function trackRecommendationEvent(
+  payload: TrackRecommendationEventPayload,
+) {
+  await swallowTrackingRequest("/api/public/recommendations/events", payload);
+}
+
+export async function createVisualSearch(payload: CreateVisualSearchPayload) {
+  const formData = new FormData();
+  formData.append("image", payload.image);
+  if (payload.categoryHint?.trim()) {
+    formData.append("categoryHint", payload.categoryHint.trim());
+  }
+  if (payload.cropX !== undefined) {
+    formData.append("cropX", String(payload.cropX));
+  }
+  if (payload.cropY !== undefined) {
+    formData.append("cropY", String(payload.cropY));
+  }
+  if (payload.cropWidth !== undefined) {
+    formData.append("cropWidth", String(payload.cropWidth));
+  }
+  if (payload.cropHeight !== undefined) {
+    formData.append("cropHeight", String(payload.cropHeight));
+  }
+
+  const guestSessionId = payload.guestSessionId ?? getGuestSessionId();
+  return apiRequest<VisualSearchResponse>("/api/public/visual-search", {
+    method: "POST",
+    body: formData,
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function trackVisualSearchEvent(
+  payload: TrackVisualSearchEventPayload,
+) {
+  await swallowTrackingRequest("/api/public/visual-search/events", payload);
+}
+
+export async function getPublicProductReviews(
+  productId: string,
+  query?: {
+    rating?: number;
+    page?: number;
+    limit?: number;
+  },
+) {
+  const params = new URLSearchParams();
+  if (query?.rating) params.set("rating", String(query.rating));
+  if (query?.page) params.set("page", String(query.page));
+  if (query?.limit) params.set("limit", String(query.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<PublicProductReviewsResponse>(
+    `/api/public/products/${productId}/reviews${suffix}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function createCheckoutOrder(payload: CheckoutOrderPayload) {
@@ -457,4 +796,71 @@ export async function uploadPaymentProof(
       body: formData,
     },
   );
+}
+
+export type PublicHomepageSlide = {
+  id: string;
+  titleRu: string | null;
+  titleEn: string | null;
+  subtitleRu: string | null;
+  subtitleEn: string | null;
+  ctaLabelRu: string | null;
+  ctaLabelEn: string | null;
+  ctaUrl: string | null;
+  altTextRu: string | null;
+  altTextEn: string | null;
+  imageDesktopUrl: string;
+  imageMobileUrl: string | null;
+  backgroundColor: string | null;
+  displayOrder: number;
+};
+
+export async function getPublicHomepageSlides() {
+  return apiRequest<PublicHomepageSlide[]>("/api/public/homepage-slides", {
+    method: "GET",
+  });
+}
+
+export async function getPublicAiTryOnConfig() {
+  return apiRequest<PublicAiTryOnConfig>("/api/public/ai-try-on/config", {
+    method: "GET",
+  });
+}
+
+export async function uploadAiTryOnReference(
+  file: File,
+  guestSessionId?: string,
+) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<UploadAiTryOnReferenceResponse>("/api/public/ai-try-on/uploads", {
+    method: "POST",
+    body: formData,
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function createAiTryOnTask(
+  productId: string,
+  payload: CreateAiTryOnTaskPayload,
+  guestSessionId?: string,
+) {
+  return apiRequest<AiTryOnTask>(`/api/public/products/${productId}/try-on/tasks`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function getAiTryOnTask(taskId: string, guestSessionId?: string) {
+  return apiRequest<AiTryOnTask>(`/api/public/ai-try-on/tasks/${taskId}`, {
+    method: "GET",
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function getPublicAiTryOnModels() {
+  return apiRequest<AiTryOnBuiltInModel[]>("/api/public/ai-try-on/models", {
+    method: "GET",
+  });
 }

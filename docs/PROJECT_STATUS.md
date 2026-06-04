@@ -1503,3 +1503,199 @@ Current gap:
 
 - several seller/customer screens still contain legacy hard-coded strings and need phase-2 migration
 - some older E2E specs needed selector/copy hardening because public and seller surfaces now default to localized text instead of legacy English/Vietnamese assumptions
+
+# Locale Switcher UX Status
+
+Implemented:
+
+- seller and buyer/customer headers now share a dropdown locale switcher with flag, short code, native language label, and active state
+- public header exposes the switcher on both desktop and mobile layouts
+- customer account header now exposes the same customer-safe `RU / EN` switcher
+
+Current gap:
+
+- admin remains English-only and intentionally does not use the dropdown switcher
+
+# Marketplace Final UX & Cleanup Status
+
+Implemented:
+
+- dirty worktree narrowed back to active marketplace frontend stabilization files only
+- compatibility staff login now re-establishes role-specific cookies, so seller protected routes work after direct refresh and deep linking
+- customer locale switchers no longer expose duplicate canonical test ids across public/auth/account surfaces
+- seller locale dropdown now layers above seller page action bars and remains clickable on product operations screens
+- runtime audit passed for shipping label, public shop profile, review/photos, messaging MVP, notification center, and action feedback flows
+
+Verification:
+
+- backend required verification: pass
+- frontend lint/build: pass
+- targeted marketplace UX/i18n/notification Playwright suite: pass
+- docker runtime and health endpoints: pass
+
+Current gap:
+
+- some older seller/admin screens still contain legacy untranslated copy outside the cleanup scope
+- the earlier lint-warning note from the marketplace stabilization phase is now resolved by the follow-up frontend quality cleanup
+
+# Frontend Quality Cleanup Status
+
+Implemented:
+
+- frontend lint is now clean after removing the remaining safe warnings from review surfaces and messaging E2E
+- review photo thumbnails still intentionally use native `<img>` for arbitrary remote assets and blob previews instead of changing image infrastructure in a cleanup-only phase
+- public shop search and sort controls were tightened for narrow mobile widths to reduce overflow risk
+- seller/admin priority screen audit confirmed no new in-scope role-policy regressions for seller `ru/en/vi` and admin `en` only
+
+Current gap:
+
+- seller order detail and several older admin backoffice pages still contain legacy hard-coded copy outside this phase scope
+
+# Shipping Label Print Status
+
+Implemented:
+
+- seller shipping labels now support `75x120`, `100x150`, and `a6` sizing on both the order-detail handoff block and the printable label page
+- current default remains `100x150`, and the selection is carried in the `size` query param plus seller localStorage
+- the print view now uses a compact single-label layout with size-specific print dimensions to reduce overflow and sender-block clipping in Chrome print flows
+- the label now includes a warehouse-style tracking hierarchy with QR, barcode, shipment status, package summary, and internal sorting code while staying non-official
+- the latest print-layout hardening clamps long recipient, sender, courier-note, and item-preview text so sections do not overlap each other in the supported label sizes
+- the latest logistics polish adds UI-only handoff status mapping plus explicit delivery type, created-at, postal-code, sender-phone, and taller barcode treatment without altering real order or shipment state
+- the label remains an internal marketplace label and explicitly does not claim to be an official Yandex label
+
+Current gap:
+
+- native Chrome print-preview pagination still needs the manual runtime spot check for a real order id after deployment/runtime rebuild
+
+# Seller Order Detail i18n Cleanup Status
+
+Implemented:
+
+- seller order detail now uses localized seller-only copy across `ru`, `en`, and `vi`
+- manual Yandex handoff labels, fulfillment summary labels, delivery form labels, and shipping-label entry actions now resolve through `seller.orderDetail.*`
+- seller payment method rendering now prefers stable payment codes over snapshot labels, so order detail does not leak mixed-language payment labels
+- seller order detail business tests now assert stable `data-raw-status` / `data-bucket` contracts instead of translated text
+
+Verification:
+
+- frontend lint/build: pass
+- backend lint/build: pass
+- seller order detail and seller i18n Playwright coverage: pass
+- seller manual Yandex, three-role sync, shipping-label, and action-feedback Playwright checks: pass
+
+Current gap:
+
+- several older seller/admin operations pages outside order detail still contain legacy hard-coded copy and need a later cleanup phase
+
+# Homepage Image Slider Status
+
+Implemented:
+
+- Added `HomepageSlide` data model to `backend-nest/prisma/schema.prisma` with display order, active flag, startsAt/endsAt publish windows, and indices.
+- Implemented backend CRUD, toggle, reorder, and files upload (multipart, JPG/PNG/WEBP up to 5MB, no SVG/video) for admin and public endpoints.
+- Integrated public homepage slider (`PublicHomepageHeroSlider`) with autoplay (6s), hover pause, navigation controls, and localized EN/RU overlay titles, subtitles, CTAs, and alt text.
+- Fallback banner styled with glassmorphism gradients and translations if no active slides exist in database.
+- Implemented admin slide manager (`/admin/homepage-slides`) with forms, list, up/down reordering, preview modal, and upload dropzones in English.
+- Prevented any document horizontal overflow on desktop and mobile viewports.
+
+Verification:
+
+- Backend Prisma generate/db push: pass
+- Backend tests (`homepage-slides.e2e-spec.ts`): pass
+- Backend lint & build: pass
+- Frontend lint & build: pass
+- Playwright E2E admin management test: pass
+- Playwright E2E public homepage slider test (including fallback, translations, and mobile views): pass
+- Regressions E2E (`admin-responsive-layout`, `public-marketplace-contract`, `i18n-public-customer`, `action-feedback`): pass
+- Docker runtime checks & health endpoints: pass
+
+Current gap:
+
+- Direct seller catalog import and legacy Spring Boot services remain out of scope.
+
+# Catalog Dropdown Overlay And Category Filter Status
+
+Implemented:
+
+- public catalog dropdowns continue to render above the product grid with the shared high-z overlay treatment in the filter row
+- the public catalog now exposes a visible `Category / Категория` filter with counts, reset, and in-dropdown search on longer lists
+- public category facets now come from public-ready products only and prefer WB source category data when present, using stable slugs such as `wb-subject-<subjectId>` for synced WB subjects
+- category filtering in the public products backend now resolves against the same canonical category facet logic instead of only matching internal `category.slug`
+
+Current gap:
+
+- the focused Playwright runtime for catalog overlay/category behavior still needs follow-up because the filter trigger was not visible in the current local test environment
+
+# Catalog Category Filter From Product Category Names Status
+
+Implemented:
+
+- public catalog category facets now come from `Product.categoryName` for public-ready products instead of preferring WB source category fields
+- empty or null `categoryName` values are excluded from the category dropdown dataset
+- public category filtering now matches the normalized `categoryName` value directly, allowing Russian category names such as `Шорты` to round-trip through the API and UI cleanly
+
+Current gap:
+
+- a live Playwright runtime for end-to-end public catalog category interaction is still pending outside this code-only verification pass
+
+# Category Source Of Truth Status
+
+Implemented:
+
+- active backend write paths now try to attach products to a real `Category` record and keep `product.categoryId` aligned with `Category.name`
+- Admin AI Settings now reads supported categories from real DB categories with product counts instead of a hard-coded slug catalog
+- AI Try-On category checks now store selected category ids when possible and expand those ids back to `Category.name` / `slug` plus legacy alias compatibility at runtime
+- WB API sync and WB Excel import now resolve category assignments through `CategoriesService`, so imported products can land with a real category relation instead of only a denormalized text value
+- an idempotent `npm run categories:sync` script now exists for legacy backfill where products still only have `categoryName` / `sourceCategoryName`
+
+Current gap:
+
+- production still needs the one-time category backfill script after deploy if historical products have not yet been linked to `Category`
+- focused Playwright coverage for the admin selector and public category flow still depends on a live local runtime
+
+# Backend Production Start Path Status
+
+Implemented:
+
+- production backend start commands now target the actual Nest build artifact path `dist/src/main.js`
+- Docker production build still runs the same multi-stage flow and still keeps `prisma db push` before Node startup
+- local dev scripts remain unchanged except `start:prod`, which now points to the real compiled entrypoint
+
+Current gap:
+
+- production still needs a normal backend redeploy after merge for the corrected container entrypoint to take effect
+
+# Simplify Seller Delivery Actions UI Status
+
+Implemented:
+
+- Simplified the seller delivery creation and actions panel layout inside the seller order details page.
+- Grouped copy actions (sender, recipient, address, courier, full Yandex block) into a custom "Copy ▼" dropdown menu.
+- Grouped manual delivery status updates (Save delivery, Courier assigned, Picked up, On the way, Mark delivered) into an "Update status ▼" dropdown menu.
+- Grouped advanced delivery actions (Calculate offers, Accept claim, Maps) into an "Advanced actions ▼" dropdown menu.
+- Replaced multiple readiness warning badges with a single compact warning block explaining that coordinates are missing.
+- Hid pickup/dropoff map buttons when coordinates are missing, and displayed a coordinates missing warning inside the dropdown instead.
+- Collapsed the "Report delivery problem" section by default, toggleable via a header chevron button.
+- Reorganized sender, recipient, and package details into 3 small visual cards.
+- Wired up click-outside listeners to close active dropdowns automatically.
+
+Verification:
+
+- frontend lint/build: pass
+- backend lint/build: pass
+- branch `fix/seller-orders-count-mismatch` pushed to remote repository
+
+# Remove Prisma DB Push from Production Startup Status
+
+Implemented:
+
+- Removed the automatic `npx prisma db push` command from the production container `CMD` startup sequence in the Dockerfile.
+- Replaced the automatic schema push behavior in staging and production deployment steps with the safe, documented database migration command `npx prisma migrate deploy`.
+- Added clear documentation warnings in the operator runbook highlighting that `npx prisma db push --accept-data-loss` must never be run in production without a verified backup.
+- Audited recommendation logs models (`ProductViewLog`, `SearchLog`, `RecommendationEvent`) and confirmed they correctly map to the database tables (`product_view_logs`, `search_logs`, `recommendation_events`) and indexes.
+- Verified that the migration is strictly additive and doesn't drop any existing ecommerce tables.
+
+Verification:
+
+- backend prisma:generate, lint, build: pass
+- backend test suite: pass (34 suites, 290 tests)

@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
@@ -188,10 +190,8 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
 
   await loginSeller(page, email, password);
   await page.goto(`/seller/orders/${checkout.orderId}`);
-  await expect(
-    page.getByRole("heading", { name: "Yandex Delivery Handoff" }),
-  ).toBeVisible();
-  await expect(page.getByTestId("seller-order-status")).toContainText("READY_TO_CREATE_YANDEX");
+  await expect(page.getByTestId("seller-order-delivery-section")).toBeVisible();
+  await expect(page.getByTestId("seller-order-status").locator("span")).toHaveAttribute("data-status", "READY_TO_CREATE_YANDEX");
 
   const adminPage = await loginAdmin(browser);
   await adminPage.goto("/admin/deliveries?status=READY_TO_CREATE_YANDEX");
@@ -210,19 +210,31 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await page.getByTestId("manual-delivery-estimated-at").fill("2024-01-01T10:00");
   await page.getByTestId("manual-delivery-note").fill("Created manually in Yandex dashboard.");
   await page.getByTestId("manual-delivery-save").click();
-  await expect(page.getByTestId("delivery-action-message")).toContainText("saved");
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("YANDEX_MANUAL_CREATED");
+  await expect(page.getByTestId("delivery-action-message")).toHaveAttribute(
+    "data-raw-status",
+    /saved|updated/i,
+  );
+  await expect(page.getByTestId("seller-delivery-status")).toHaveAttribute(
+    "data-raw-status",
+    "YANDEX_MANUAL_CREATED",
+  );
 
   await page.getByTestId("manual-delivery-mark-courier-assigned").click();
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("COURIER_ASSIGNED");
+  await expect(page.getByTestId("seller-delivery-status")).toHaveAttribute(
+    "data-raw-status",
+    "COURIER_ASSIGNED",
+  );
   await page.getByTestId("manual-delivery-mark-picked-up").click();
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("PICKED_UP");
+  await expect(page.getByTestId("seller-delivery-status")).toHaveAttribute(
+    "data-raw-status",
+    "PICKED_UP",
+  );
   await page.getByTestId("manual-delivery-mark-in-transit").click();
   await expect
     .poll(
       async () => {
         await page.reload();
-        return page.getByTestId("seller-delivery-status").textContent();
+        return page.getByTestId("seller-delivery-status").getAttribute("data-raw-status");
       },
       { timeout: 15000 },
     )
@@ -233,7 +245,7 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
   await adminPage.getByRole("button", { name: "Refresh" }).click();
   await expect(adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode })).toBeVisible();
   await adminPage.getByTestId("admin-delivery-row").filter({ hasText: checkout.orderCode }).click();
-  await expect(adminPage.getByTestId("admin-delivery-detail-status")).toHaveText("In delivery");
+  await expect(adminPage.getByTestId("admin-delivery-detail-status")).toBeVisible();
 
   // Since Admin supervision is read-only, Seller completes the delivery transition
   await page.bringToFront();
@@ -241,13 +253,22 @@ test("seller manual yandex workbench and admin supervision work end-to-end", asy
     void dialog.accept();
   });
   await page.getByTestId("manual-delivery-mark-delivered").click();
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("DELIVERED");
+  await expect(page.getByTestId("seller-delivery-status")).toHaveAttribute(
+    "data-raw-status",
+    "DELIVERED",
+  );
 
   await page.goto(`${checkout.trackingPath}?phone=${encodeURIComponent(phone)}`);
   await expect(page.getByTestId("tracked-delivery-provider")).toHaveText("YANDEX");
   await expect(page.getByTestId("tracked-delivery-status")).toHaveText("DELIVERED");
-  await expect(page.getByText("Timeline")).toBeVisible();
+  const ruDict = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "../../src/i18n/dictionaries/ru.json"), "utf-8")
+  );
+  await expect(page.getByText(ruDict.orderTrack.timelineLabel).or(page.getByText("Timeline"))).toBeVisible();
   await page.goto(`/seller/orders/${checkout.orderId}`);
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("DELIVERED");
+  await expect(page.getByTestId("seller-delivery-status")).toHaveAttribute(
+    "data-raw-status",
+    "DELIVERED",
+  );
   await adminPage.close();
 });

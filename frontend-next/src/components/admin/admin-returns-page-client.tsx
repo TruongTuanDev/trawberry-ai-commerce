@@ -28,6 +28,64 @@ const decisionOptions = [
   "OVERRIDE_REFUND_CONFIRMED",
 ] as const;
 
+function formatDecision(value: (typeof decisionOptions)[number]) {
+  switch (value) {
+    case "APPROVE":
+      return "Approve";
+    case "REJECT":
+      return "Reject";
+    case "REQUEST_MORE_EVIDENCE":
+      return "Request more evidence";
+    case "CLOSE":
+      return "Close";
+    case "OVERRIDE_REFUND_CONFIRMED":
+      return "Override refund confirmed";
+    default:
+      return value;
+  }
+}
+
+function formatAuthorRole(value: string) {
+  switch (value) {
+    case "CUSTOMER":
+      return "Customer";
+    case "SELLER":
+      return "Seller";
+    case "ADMIN":
+      return "Admin";
+    case "SYSTEM":
+      return "System";
+    default:
+      return value;
+  }
+}
+
+function formatTransferStatus(value: string) {
+  switch (value) {
+    case "PENDING":
+      return "Pending";
+    case "SENT":
+      return "Sent";
+    case "CONFIRMED":
+      return "Confirmed";
+    case "REJECTED":
+      return "Rejected";
+    default:
+      return value;
+  }
+}
+
+function formatCodeLabel(value: string | null | undefined) {
+  if (!value) {
+    return "Unknown";
+  }
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function AdminReturnsPageClient({
   caseId,
 }: {
@@ -114,10 +172,10 @@ export function AdminReturnsPageClient({
       setError("Admin note is required.");
       return;
     }
-    if (decision === "REJECT" && !window.confirm("Bạn có chắc chắn muốn TỪ CHỐI yêu cầu trả hàng/hoàn tiền này không?")) {
+    if (decision === "REJECT" && !window.confirm("Reject this return or refund request?")) {
       return;
     }
-    if (decision === "OVERRIDE_REFUND_CONFIRMED" && !window.confirm("Bạn có chắc chắn muốn GHI ĐÈ xác nhận hoàn tiền này không?")) {
+    if (decision === "OVERRIDE_REFUND_CONFIRMED" && !window.confirm("Override this refund confirmation?")) {
       return;
     }
     setError(null);
@@ -130,7 +188,7 @@ export function AdminReturnsPageClient({
           adminNote,
         });
       },
-      successMessage: "Đã lưu quyết định xử lý trả hàng/hoàn tiền.",
+      successMessage: "Return or refund decision saved.",
       onSuccess: async (updated) => {
         setSelected(updated);
         await refreshList(updated.id);
@@ -149,7 +207,7 @@ export function AdminReturnsPageClient({
           message: publicMessage,
         });
       },
-      successMessage: "Đã gửi tin nhắn công khai.",
+      successMessage: "Public admin message sent.",
       onSuccess: async (updated) => {
         setSelected(updated);
         await refreshList(updated.id);
@@ -168,7 +226,7 @@ export function AdminReturnsPageClient({
           message: internalNote,
         });
       },
-      successMessage: "Đã thêm ghi chú nội bộ.",
+      successMessage: "Internal admin note added.",
       onSuccess: async (updated) => {
         setSelected(updated);
         await refreshList(updated.id);
@@ -238,7 +296,7 @@ export function AdminReturnsPageClient({
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{labelForReturnType(selected.type)}</p>
                 <h3 className="mt-2 text-2xl font-bold text-[var(--foreground)]">{selected.order.orderCode}</h3>
                 <p className="mt-2 text-sm text-[var(--muted)]">{selected.shop.name} - {selected.customer.name ?? "Customer"} - {selected.seller.name ?? "Seller"}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Payment method {selected.order.paymentMethod ?? "Unknown"} - status {selected.order.paymentStatus}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">Payment method {formatCodeLabel(selected.order.paymentMethod)} - status {formatCodeLabel(selected.order.paymentStatus)}</p>
                 <p className="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
                   {labelForReturnStatus(selected.status)}
                 </p>
@@ -259,7 +317,7 @@ export function AdminReturnsPageClient({
                       <select value={decision} onChange={(event) => setDecision(event.target.value as (typeof decisionOptions)[number])} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-return-decision-select">
                         {decisionOptions.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                        {formatDecision(option)}
                           </option>
                         ))}
                       </select>
@@ -301,7 +359,7 @@ export function AdminReturnsPageClient({
                     {selected.messages.map((entry) => (
                       <article key={entry.id} className="rounded-[1rem] border border-[var(--border)] bg-white px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-[var(--foreground)]">{entry.authorRole}{entry.authorName ? ` - ${entry.authorName}` : ""}</p>
+                          <p className="text-sm font-semibold text-[var(--foreground)]">{formatAuthorRole(entry.authorRole)}{entry.authorName ? ` - ${entry.authorName}` : ""}</p>
                           <p className="text-xs text-[var(--muted)]">{new Date(entry.createdAt).toLocaleString()}</p>
                         </div>
                         <p className="mt-2 text-sm text-[var(--muted)]">{entry.message}</p>
@@ -349,7 +407,7 @@ export function AdminReturnsPageClient({
                   {selected.manualTransfers.map((entry) => (
                     <article key={entry.id} className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
                       <p className="text-sm font-semibold text-[var(--foreground)]">{entry.method} - {formatRub(entry.amount)}</p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">{entry.status}</p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{formatTransferStatus(entry.status)}</p>
                       {entry.bankReference ? <p className="mt-1 text-sm text-[var(--muted)]">Reference: {entry.bankReference}</p> : null}
                       {entry.proofImageUrl ? (
                         <a href={entry.proofImageUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold">

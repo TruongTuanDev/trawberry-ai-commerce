@@ -68,7 +68,7 @@ export function NotificationBell({ role }: NotificationBellProps) {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative p-2 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/12 transition cursor-pointer flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/20"
-        aria-label={t("notifications.customerTitle")}
+        aria-label={role === "seller" ? t("notifications.sellerTitle") : t("notifications.customerTitle")}
         data-testid="notification-bell"
       >
         <Bell className="h-5 w-5" />

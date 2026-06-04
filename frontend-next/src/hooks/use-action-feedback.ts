@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
+import { type Locale, type LocaleRole } from "@/i18n/config";
+import { getLocalizedErrorMessage } from "@/i18n/error-messages";
 import { getAuthErrorMessage, type AuthMode } from "@/lib/auth-api";
 
 interface RunOptions<T> {
@@ -9,6 +11,9 @@ interface RunOptions<T> {
   successMessage?: string;
   errorMessage?: string;
   authMode?: AuthMode;
+  role?: LocaleRole;
+  locale?: Locale;
+  fallbackKey?: string;
   onSuccess?: (result: T) => void | Promise<void>;
   onError?: (error: unknown, message: string) => void;
   onFinally?: () => void;
@@ -20,8 +25,11 @@ export function useActionFeedback() {
   const run = async <T>({
     action,
     successMessage,
-    errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.",
+    errorMessage,
     authMode,
+    role,
+    locale,
+    fallbackKey,
     onSuccess,
     onError,
     onFinally,
@@ -43,42 +51,47 @@ export function useActionFeedback() {
       return result;
     } catch (error) {
       let message = authMode
-        ? getAuthErrorMessage(error, authMode)
-        : error instanceof Error && error.message
-          ? error.message
-          : errorMessage;
+        ? getAuthErrorMessage(error, authMode, { role, locale })
+        : role
+          ? getLocalizedErrorMessage({
+              role,
+              locale,
+              error,
+              fallbackKey: fallbackKey ?? "errors.default",
+            })
+          : errorMessage ?? "Something went wrong. Please try again.";
 
-      if (!authMode) {
+      if (!authMode && !role) {
         const lowerMessage = message.toLowerCase();
         if (
           lowerMessage.includes("unauthorized") ||
           lowerMessage.includes("session expired") ||
           lowerMessage.includes("401")
         ) {
-          message = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+          message = "Your session expired. Please sign in again.";
         } else if (
           lowerMessage.includes("forbidden") ||
           lowerMessage.includes("not allowed") ||
           lowerMessage.includes("403")
         ) {
-          message = "Bạn không có quyền thực hiện thao tác này.";
+          message = "You do not have permission to perform this action.";
         } else if (
           lowerMessage.includes("conflict") ||
           lowerMessage.includes("stale") ||
           lowerMessage.includes("409")
         ) {
-          message = "Dữ liệu đã thay đổi. Vui lòng tải lại trang.";
+          message = "The data changed. Please refresh the page.";
         } else if (
           lowerMessage.includes("too many requests") ||
           lowerMessage.includes("rate limit") ||
           lowerMessage.includes("429")
         ) {
-          message = "Bạn thao tác quá nhanh. Vui lòng thử lại sau.";
+          message = "Too many requests. Please try again later.";
         } else if (
           lowerMessage.includes("internal server error") ||
           lowerMessage.includes("500")
         ) {
-          message = "Có lỗi hệ thống. Vui lòng thử lại.";
+          message = "A system error occurred. Please try again.";
         }
       }
 

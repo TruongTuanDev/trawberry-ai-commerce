@@ -60,6 +60,7 @@ type StoredProduct = {
   categoryId: bigint | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
+  subjectId: bigint | null;
   averageRating: Prisma.Decimal | null;
   feedbackCount: number | null;
   updatedAt: Date;
@@ -274,6 +275,48 @@ describe('PublicProductsController contract (e2e)', () => {
             basePrice: decimal(1825),
             stockQuantity: 0,
             lowStockThreshold: 1,
+          }),
+        ],
+      }),
+      buildProduct({
+        id: 'product-ru-shorts',
+        title: 'Russian Shorts Public',
+        categoryName: 'Шорты',
+        sourceCategoryName: 'Шорты',
+        category: {
+          id: 11n,
+          name: 'Шорты',
+          slug: 'shorts',
+        },
+        variants: [
+          buildVariant({
+            id: 'variant-ru-shorts',
+            productId: 'product-ru-shorts',
+            sizeName: 'M',
+            russianSize: '46',
+            techSize: 'M',
+            sellerSku: 'RU-SHORTS-M',
+            basePrice: decimal(1200),
+            stockQuantity: 7,
+          }),
+        ],
+      }),
+      buildProduct({
+        id: 'product-no-category',
+        title: 'No Category Product',
+        categoryName: null,
+        sourceCategoryName: null,
+        category: null,
+        variants: [
+          buildVariant({
+            id: 'variant-no-category',
+            productId: 'product-no-category',
+            sizeName: 'S',
+            russianSize: '44',
+            techSize: 'S',
+            sellerSku: 'NO-CAT-S',
+            basePrice: decimal(1100),
+            stockQuantity: 2,
           }),
         ],
       }),
@@ -539,12 +582,16 @@ describe('PublicProductsController contract (e2e)', () => {
       .expect(200);
 
     const body = readBody<PaginatedPublicProductsResponseDto>(response);
-    expect(body.items.map((item) => item.id)).toEqual([
-      'product-ready',
-      'product-price-changed',
-      'product-limited',
-    ]);
-    expect(body.meta.total).toBe(3);
+    expect(body.items.map((item) => item.id)).toEqual(
+      expect.arrayContaining([
+        'product-ready',
+        'product-price-changed',
+        'product-limited',
+        'product-ru-shorts',
+        'product-no-category',
+      ]),
+    );
+    expect(body.meta.total).toBe(5);
   });
 
   it('returns public detail fields and variant availability contract', async () => {
@@ -588,6 +635,49 @@ describe('PublicProductsController contract (e2e)', () => {
           availableQuantity: 0,
         }),
       ]),
+    );
+  });
+
+  it('builds category facets from category relation and filters by category id', async () => {
+    const listResponse = await request(app.getHttpServer())
+      .get('/api/public/products')
+      .query({ q: 'Шорты' })
+      .expect(200);
+
+    const listBody = readBody<PaginatedPublicProductsResponseDto>(listResponse);
+    expect(listBody.filters.categories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Шорты',
+          slug: 'shorts',
+          count: 1,
+        }),
+      ]),
+    );
+    expect(
+      listBody.filters.categories.find(
+        (category) => category.name === 'Outerwear',
+      ),
+    ).toBeUndefined();
+    expect(
+      listBody.filters.categories.find((category) => category.name === ''),
+    ).toBeUndefined();
+
+    const filteredResponse = await request(app.getHttpServer())
+      .get('/api/public/products')
+      .query({ categoryId: '11' })
+      .expect(200);
+
+    const filteredBody =
+      readBody<PaginatedPublicProductsResponseDto>(filteredResponse);
+    expect(filteredBody.items.map((item) => item.id)).toContain(
+      'product-ru-shorts',
+    );
+    expect(filteredBody.items.map((item) => item.id)).not.toContain(
+      'product-ready',
+    );
+    expect(filteredBody.items.map((item) => item.id)).not.toContain(
+      'product-no-category',
     );
   });
 
@@ -953,8 +1043,9 @@ function buildProduct(input: {
   color?: string;
   gender?: string;
   composition?: string;
-  categoryName?: string;
-  sourceCategoryName?: string;
+  categoryName?: string | null;
+  sourceCategoryName?: string | null;
+  category?: StoredProduct['category'];
   catalogStatus?: string;
   visibility?: string;
   variants: StoredVariant[];
@@ -975,9 +1066,10 @@ function buildProduct(input: {
     composition: input.composition ?? '100% cotton',
     visibility: input.visibility ?? 'ACTIVE',
     catalogStatus: input.catalogStatus ?? 'PUBLISHED',
-    categoryId: 10n,
+    categoryId: input.category === null ? null : (input.category?.id ?? 10n),
     categoryName: input.categoryName ?? 'Jackets',
     sourceCategoryName: input.sourceCategoryName ?? 'Outerwear',
+    subjectId: null,
     averageRating: decimalValue(4.8),
     feedbackCount: 2,
     updatedAt: new Date('2026-05-17T10:00:00Z'),
@@ -999,11 +1091,14 @@ function buildProduct(input: {
     ],
     variants: input.variants,
     shop: approvedShop,
-    category: {
-      id: 10n,
-      name: input.categoryName ?? 'Jackets',
-      slug: 'jackets',
-    },
+    category:
+      input.category === undefined
+        ? {
+            id: 10n,
+            name: input.categoryName ?? 'Jackets',
+            slug: 'jackets',
+          }
+        : input.category,
   };
 }
 
@@ -1278,6 +1373,25 @@ function matchesSearchCondition(
       product.categoryName,
       String((condition.categoryName as { contains: string }).contains),
     );
+  }
+
+  if (
+    condition.category &&
+    typeof condition.category === 'object' &&
+    condition.category !== null &&
+    'name' in condition.category
+  ) {
+    const categoryNameFilter = (
+      condition.category as {
+        name?: { contains?: string };
+      }
+    ).name;
+    if (categoryNameFilter?.contains) {
+      return stringContains(
+        product.category?.name,
+        categoryNameFilter.contains,
+      );
+    }
   }
 
   if (

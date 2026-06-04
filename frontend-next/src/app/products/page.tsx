@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
-import { PromoSlider } from "@/components/public/promo-slider";
+import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, type PaginatedPublicProducts, type PublicProduct } from "@/lib/public-api";
+import {
+  getGuestSessionId,
+  getPublicHomepageSlides,
+  getPublicProducts,
+  trackSearch,
+  type PaginatedPublicProducts,
+  type PublicHomepageSlide,
+  type PublicProduct,
+} from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
 
@@ -22,7 +30,8 @@ const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 }
 function readFilters(searchParams: { get(name: string): string | null }) {
   return {
     q: searchParams.get("q") ?? searchParams.get("search") ?? "",
-    categorySlug: searchParams.get("categorySlug") ?? "",
+    categoryId: searchParams.get("categoryId") ?? "",
+    categorySlug: searchParams.get("categorySlug") ?? searchParams.get("category") ?? "",
     brand: searchParams.get("brand") ?? "",
     color: searchParams.get("color") ?? "",
     gender: searchParams.get("gender") ?? "",
@@ -79,14 +88,37 @@ function ProductsPageContent({
   const [error, setError] = useState<string | null>(null);
   const [requestKey, setRequestKey] = useState(0);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [categorySearch, setCategorySearch] = useState("");
   const [layoutCols, setLayoutCols] = useState<"3" | "4">("4");
   const [isMounted, setIsMounted] = useState(false);
+  const [slides, setSlides] = useState<PublicHomepageSlide[]>([]);
+  const trackedSearchKeyRef = useRef<string>("");
+  const categoryOptions = useMemo(() => facets?.categories ?? [], [facets]);
+  const selectedCategoryOption = useMemo(
+    () =>
+      categoryOptions.find(
+        (category) =>
+          category.id === filters.categoryId ||
+          (filters.categoryId === "" &&
+            (category.slug ?? category.name) === filters.categorySlug),
+      ) ?? null,
+    [categoryOptions, filters.categoryId, filters.categorySlug],
+  );
+  const filteredCategoryOptions = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return categoryOptions;
+
+    return categoryOptions.filter((category) =>
+      category.name.toLowerCase().includes(query),
+    );
+  }, [categoryOptions, categorySearch]);
 
   const page = Number(searchParams.get("page") ?? "1");
   const hasActiveFilters = useMemo(
     () =>
       Boolean(
         filters.q.trim() ||
+          filters.categoryId ||
           filters.categorySlug ||
           filters.brand.trim() ||
           filters.color.trim() ||
@@ -134,8 +166,37 @@ function ProductsPageContent({
         setActiveDropdown(null);
       }
     };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveDropdown(null);
+      }
+    };
+
     document.addEventListener("click", handleOutsideClick);
-    return () => document.removeEventListener("click", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchSlides = async () => {
+      try {
+        const data = await getPublicHomepageSlides();
+        if (mounted) {
+          setSlides(data);
+        }
+      } catch (err) {
+        console.error("Failed to load homepage slides on products page:", err);
+      }
+    };
+    void fetchSlides();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const suggestionChips = useMemo(() => {
@@ -169,6 +230,7 @@ function ProductsPageContent({
           page,
           size: meta.size,
           q: filters.q || undefined,
+          categoryId: filters.categoryId || undefined,
           categorySlug: filters.categorySlug || undefined,
           brand: filters.brand || undefined,
           color: filters.color || undefined,
@@ -201,9 +263,35 @@ function ProductsPageContent({
     };
   }, [filters, meta.size, page, requestKey]);
 
+  useEffect(() => {
+    const query = filters.q.trim();
+    if (!query || loading || error) {
+      return;
+    }
+
+    const { recommendationTrackingEnabled } = readRecommendationFlagsFromDocument();
+    if (!recommendationTrackingEnabled) {
+      return;
+    }
+
+    const trackingKey = `${query}:${meta.total}:${page}`;
+    if (trackedSearchKeyRef.current === trackingKey) {
+      return;
+    }
+    trackedSearchKeyRef.current = trackingKey;
+
+    void trackSearch({
+      query,
+      resultCount: meta.total,
+      locale: typeof document === "undefined" ? undefined : document.documentElement.lang,
+      guestSessionId: getGuestSessionId(),
+    });
+  }, [error, filters.q, loading, meta.total, page]);
+
   const applyFilters = (targetFilters = filters) => {
     const params = new URLSearchParams();
     if (targetFilters.q.trim()) params.set("q", targetFilters.q.trim());
+    if (targetFilters.categoryId) params.set("categoryId", targetFilters.categoryId);
     if (targetFilters.categorySlug) params.set("categorySlug", targetFilters.categorySlug);
     if (targetFilters.brand.trim()) params.set("brand", targetFilters.brand.trim());
     if (targetFilters.color.trim()) params.set("color", targetFilters.color.trim());
@@ -247,7 +335,15 @@ function ProductsPageContent({
     return `/products?${params.toString()}`;
   };
 
-  const categoryOptions = useMemo(() => facets?.categories ?? [], [facets]);
+  const dropdownContainerClass = "relative z-20 shrink-0 custom-dropdown-container";
+  const dropdownPanelClass =
+    "absolute left-0 top-full mt-2 z-[60] overflow-hidden rounded-[1.25rem] border border-gray-100 bg-white shadow-xl";
+  const submitFiltersSoon = () => {
+    setTimeout(() => {
+      const form = document.querySelector("#filter-form") as HTMLFormElement;
+      if (form) form.requestSubmit();
+    }, 50);
+  };
 
   const showFilters = useMemo(() => {
     if (!isMounted) return false;
@@ -278,16 +374,20 @@ function ProductsPageContent({
               <option value="false">Out of stock</option>
             </select>
             <select
-              value={filters.categorySlug}
+              value={filters.categoryId}
               onChange={(event) => {
-                setFilters((current) => ({ ...current, categorySlug: event.target.value }));
+                setFilters((current) => ({
+                  ...current,
+                  categoryId: event.target.value,
+                  categorySlug: "",
+                }));
               }}
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-category"
             >
               <option value="">Все категории</option>
               {categoryOptions.map((category) => (
-                <option key={category.id || category.name} value={category.slug ?? ""}>
+                <option key={category.id || category.name} value={category.id}>
                   {category.name}
                 </option>
               ))}
@@ -327,7 +427,8 @@ function ProductsPageContent({
                 const targetFilters = {
                   q: searchInput ? searchInput.value : filters.q,
                   inStock: stockSelect ? stockSelect.value : filters.inStock,
-                  categorySlug: categorySelect ? categorySelect.value : filters.categorySlug,
+                  categoryId: categorySelect ? categorySelect.value : filters.categoryId,
+                  categorySlug: filters.categorySlug,
                   sort: sortSelect ? sortSelect.value : filters.sort,
                   brand: filters.brand,
                   color: filters.color,
@@ -353,14 +454,14 @@ function ProductsPageContent({
           </div>
           <div id="debug-info" className="text-[10px] text-red-500 font-mono" data-testid="e2e-debug"></div>
 
-          {!hasActiveFilters && <PromoSlider compact />}
+          {!hasActiveFilters && <PublicHomepageHeroSlider initialSlides={slides} />}
 
-          <div className={showFilters ? "space-y-4" : "hidden"}>
-              <section className="bg-gray-50/70 p-3.5 rounded-[1.8rem] border border-[var(--border)] shadow-sm backdrop-blur-md">
+          <div className={showFilters ? "relative z-30 space-y-4 overflow-visible" : "hidden"}>
+              <section className="relative z-30 overflow-visible rounded-[1.8rem] border border-[var(--border)] bg-gray-50/70 p-3.5 shadow-sm backdrop-blur-md">
                 <form
                   id="filter-form"
                   onSubmit={handleSearch}
-                  className="flex flex-wrap items-center justify-between gap-3 w-full"
+                  className="flex w-full flex-wrap items-center justify-between gap-3 overflow-visible"
                 >
 
                   {/* Wrapped Horizontal Filter Row */}
@@ -389,10 +490,11 @@ function ProductsPageContent({
                     </button>
 
                     {/* Custom Sort Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "sort" ? null : "sort")}
+                        data-testid="catalog-filter-sort-trigger"
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "sort" || filters.sort !== "newest"
                             ? "bg-[#cb11ab]/5 border-[#cb11ab] text-[#cb11ab]"
@@ -412,7 +514,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "sort" && (
-                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-2.5 min-w-[200px] flex flex-col gap-1">
+                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-1 p-2.5`} data-testid="catalog-filter-sort-panel">
                           {[
                             { label: t("catalog.sortOptions.newest"), value: "newest" },
                             { label: t("catalog.sortOptions.price_asc"), value: "price_asc" },
@@ -461,8 +563,135 @@ function ProductsPageContent({
                       <span>{t("catalog.allFilters")}</span>
                     </button>
 
+                    <div className={dropdownContainerClass}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveDropdown(activeDropdown === "category" ? null : "category")}
+                        data-testid="catalog-filter-category-trigger"
+                        className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
+                          activeDropdown === "category" ||
+                          filters.categoryId ||
+                          filters.categorySlug
+                            ? "bg-[#cb11ab]/5 border-[#cb11ab] text-[#cb11ab]"
+                            : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
+                        }`}
+                      >
+                        <span>
+                          {selectedCategoryOption
+                            ? `${t("catalog.category")}: ${selectedCategoryOption.name}`
+                            : t("catalog.category")}
+                        </span>
+                        <svg
+                          className={`w-3 h-3 text-gray-400 transition-transform ${activeDropdown === "category" ? "rotate-180" : ""}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {activeDropdown === "category" && (
+                        <div
+                          className={`${dropdownPanelClass} flex max-h-[340px] min-w-[260px] max-w-[min(92vw,340px)] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin`}
+                          data-testid="catalog-filter-category-panel"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">
+                              {t("catalog.chooseCategory")}
+                            </div>
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-500">
+                              {categoryOptions.length}
+                            </span>
+                          </div>
+                          {categoryOptions.length > 6 ? (
+                            <input
+                              value={categorySearch}
+                              onChange={(event) => setCategorySearch(event.target.value)}
+                              placeholder={t("catalog.searchCategory")}
+                              className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#cb11ab] font-bold"
+                            />
+                          ) : null}
+                          {filteredCategoryOptions.length > 0 ? (
+                            <div className="flex flex-col gap-1 max-h-[180px] overflow-y-auto pr-1">
+                              {filteredCategoryOptions.map((category) => {
+                                const categoryValue = category.id;
+                                const isSelected = filters.categoryId === categoryValue;
+
+                                return (
+                                  <button
+                                    key={category.id || categoryValue}
+                                    type="button"
+                                    onClick={() => {
+                                      setFilters((current) => ({
+                                        ...current,
+                                        categoryId: isSelected ? "" : categoryValue,
+                                        categorySlug: "",
+                                      }));
+                                      setActiveDropdown(null);
+                                      submitFiltersSoon();
+                                    }}
+                                    className={`w-full rounded-xl px-3 py-2 text-left text-xs transition cursor-pointer ${
+                                      isSelected
+                                        ? "bg-[#cb11ab]/5 text-[#cb11ab]"
+                                        : "text-gray-700 hover:bg-gray-50"
+                                    }`}
+                                  >
+                                    <span className="flex items-center justify-between gap-3">
+                                      <span className="min-w-0">
+                                        <span className="block truncate font-bold">{category.name}</span>
+                                        {category.slug ? (
+                                          <span className="block truncate text-[10px] text-gray-400">
+                                            {category.slug}
+                                          </span>
+                                        ) : null}
+                                      </span>
+                                      <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-500">
+                                        {category.count}
+                                      </span>
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border border-dashed border-gray-200 px-3 py-4 text-center text-xs font-semibold text-gray-400">
+                              {t("catalog.noCategoriesFound")}
+                            </div>
+                          )}
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveDropdown(null);
+                                submitFiltersSoon();
+                              }}
+                              className="flex-1 py-2 text-center rounded-xl bg-[#cb11ab] text-white text-xs font-bold hover:bg-[#b00f92] transition cursor-pointer select-none"
+                            >
+                              {t("catalog.ok")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCategorySearch("");
+                                setFilters((current) => ({
+                                  ...current,
+                                  categoryId: "",
+                                  categorySlug: "",
+                                }));
+                                setActiveDropdown(null);
+                                submitFiltersSoon();
+                              }}
+                              className="px-3 py-2 text-center rounded-xl border border-gray-200 text-gray-400 text-xs font-bold hover:bg-gray-50 transition cursor-pointer select-none"
+                            >
+                              {t("catalog.reset")}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Custom Price Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "price" ? null : "price")}
@@ -546,7 +775,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Срок доставки Mockup */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "delivery" ? null : "delivery")}
@@ -575,10 +804,11 @@ function ProductsPageContent({
                     </div>
 
                     {/* Custom Color Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "color" ? null : "color")}
+                        data-testid="catalog-filter-color-trigger"
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "color" || filters.color
                             ? "bg-[#cb11ab]/5 border-[#cb11ab] text-[#cb11ab]"
@@ -664,7 +894,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Размеры одежды Mockup */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "sizes" ? null : "sizes")}
@@ -694,7 +924,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Детский рост Mockup */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "height" ? null : "height")}
@@ -723,7 +953,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Custom Gender Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "gender" ? null : "gender")}
@@ -812,7 +1042,7 @@ function ProductsPageContent({
                     </div>
 
                     {/* Custom Brand Dropdown Pill */}
-                    <div className="relative shrink-0 custom-dropdown-container">
+                    <div className={dropdownContainerClass}>
                       <button
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "brand" ? null : "brand")}
@@ -990,7 +1220,7 @@ function ProductsPageContent({
           </div>
 
           {loading ? (
-            <section className={`grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
                   <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
@@ -1004,7 +1234,7 @@ function ProductsPageContent({
               ))}
             </section>
           ) : items.length ? (
-            <section className={`grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

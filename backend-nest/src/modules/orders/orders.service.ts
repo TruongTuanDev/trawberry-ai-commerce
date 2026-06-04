@@ -32,6 +32,10 @@ export class OrdersService {
     const size = query.size ?? 20;
     const skip = (page - 1) * size;
     const where = this.buildWhere(shopId, query);
+    const summaryWhere = this.buildWhere(shopId, {
+      ...query,
+      status: undefined,
+    });
     const orderBy =
       query.sort === 'createdAt_asc'
         ? { createdAt: 'asc' as const }
@@ -47,7 +51,7 @@ export class OrdersService {
       }),
       this.prisma.order.count({ where }),
       this.prisma.order.findMany({
-        where,
+        where: summaryWhere,
         select: {
           status: true,
           paymentStatus: true,
@@ -66,7 +70,7 @@ export class OrdersService {
     ]);
 
     const summary = {
-      ALL: total,
+      ALL: summaryRows.length,
       NEW: 0,
       ASSEMBLING: 0,
       IN_TRANSIT: 0,
@@ -391,6 +395,17 @@ export class OrdersService {
   ): Prisma.OrderWhereInput {
     const where: Prisma.OrderWhereInput = {
       shopId,
+      NOT: {
+        status: { in: ['NEW', 'PENDING'] },
+        paymentStatus: {
+          in: [
+            'PENDING',
+            'UNPAID',
+            'PAY_ON_DELIVERY_SELECTED',
+            'YANDEX_PAYMENT_ON_DELIVERY_PENDING',
+          ],
+        },
+      },
     };
 
     if (query.status) {
@@ -454,7 +469,12 @@ export class OrdersService {
         return {
           sellerArchivedAt: null,
           paymentStatus: {
-            in: ['PAID', 'APPROVED', 'SELLER_CONFIRMED_DELIVERY_PAYMENT'],
+            notIn: [
+              'PENDING',
+              'UNPAID',
+              'PAY_ON_DELIVERY_SELECTED',
+              'YANDEX_PAYMENT_ON_DELIVERY_PENDING',
+            ],
           },
           status: { in: ['NEW', 'PENDING'] },
           deliveryShipments: {
@@ -743,6 +763,7 @@ export class OrdersService {
     shippingAddress: string;
     dropoffAddressFullName?: string | null;
     dropoffCity?: string | null;
+    dropoffPostalCode?: string | null;
     dropoffStreet?: string | null;
     dropoffBuilding?: string | null;
     dropoffEntrance?: string | null;
@@ -825,6 +846,12 @@ export class OrdersService {
       productSlugSnapshot: string;
       productImageSnapshot: string | null;
       variantNameSnapshot: string | null;
+      sellerSkuSnapshot?: string | null;
+      product?: {
+        sellerSku: string | null;
+        wbVendorCode: string | null;
+      } | null;
+      variant?: { sellerSku: string | null } | null;
     }>;
     supportCases?: Array<{
       id: string;
@@ -890,6 +917,7 @@ export class OrdersService {
       dropoffAddressFullName:
         order.dropoffAddressFullName ?? order.shippingAddress,
       dropoffCity: order.dropoffCity ?? null,
+      dropoffPostalCode: order.dropoffPostalCode ?? null,
       dropoffStreet: order.dropoffStreet ?? null,
       dropoffBuilding: order.dropoffBuilding ?? null,
       dropoffEntrance: order.dropoffEntrance ?? null,
@@ -968,6 +996,12 @@ export class OrdersService {
         productSlugSnapshot: item.productSlugSnapshot,
         productImageSnapshot: item.productImageSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
+        sellerSku:
+          item.sellerSkuSnapshot ||
+          item.variant?.sellerSku ||
+          item.product?.sellerSku ||
+          item.product?.wbVendorCode ||
+          null,
       })),
       supportCases:
         order.supportCases?.map((supportCase) => ({
@@ -1253,6 +1287,7 @@ export class OrdersService {
           yandexClaimId: true,
           yandexTrackingLink: true,
           deliveryNote: true,
+          dropoffPostalCode: true,
         },
       },
       sellerFeeLedgerEntries: {
@@ -1270,6 +1305,19 @@ export class OrdersService {
       },
       items: {
         orderBy: { productTitleSnapshot: 'asc' as const },
+        include: {
+          product: {
+            select: {
+              sellerSku: true,
+              wbVendorCode: true,
+            },
+          },
+          variant: {
+            select: {
+              sellerSku: true,
+            },
+          },
+        },
       },
       supportCases: {
         orderBy: { createdAt: 'desc' as const },

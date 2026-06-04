@@ -14,6 +14,78 @@ const issueTypes = ["", "PAYMENT_PROOF", "DELIVERY_DELAY", "WRONG_ITEM", "DAMAGE
 const statuses = ["", "OPEN", "IN_REVIEW", "WAITING_CUSTOMER", "WAITING_SELLER", "RESOLVED", "REJECTED", "CLOSED"];
 const priorities = ["", "LOW", "NORMAL", "HIGH", "URGENT"];
 
+function formatIssueType(value: string) {
+  switch (value) {
+    case "PAYMENT_PROOF":
+      return "Payment proof";
+    case "DELIVERY_DELAY":
+      return "Delivery delay";
+    case "WRONG_ITEM":
+      return "Wrong item";
+    case "DAMAGED_ITEM":
+      return "Damaged item";
+    case "REFUND_REQUEST":
+      return "Refund request";
+    case "CANCEL_REQUEST":
+      return "Cancel request";
+    case "OTHER":
+      return "Other";
+    default:
+      return value;
+  }
+}
+
+function formatStatus(value: string) {
+  switch (value) {
+    case "OPEN":
+      return "Open";
+    case "IN_REVIEW":
+      return "In review";
+    case "WAITING_CUSTOMER":
+      return "Waiting for customer";
+    case "WAITING_SELLER":
+      return "Waiting for seller";
+    case "RESOLVED":
+      return "Resolved";
+    case "REJECTED":
+      return "Rejected";
+    case "CLOSED":
+      return "Closed";
+    default:
+      return value;
+  }
+}
+
+function formatPriority(value: string) {
+  switch (value) {
+    case "LOW":
+      return "Low";
+    case "NORMAL":
+      return "Normal";
+    case "HIGH":
+      return "High";
+    case "URGENT":
+      return "Urgent";
+    default:
+      return value;
+  }
+}
+
+function formatSenderRole(value: string) {
+  switch (value) {
+    case "CUSTOMER":
+      return "Customer";
+    case "SELLER":
+      return "Seller";
+    case "ADMIN":
+      return "Admin";
+    case "SYSTEM":
+      return "System";
+    default:
+      return value;
+  }
+}
+
 export function AdminSupportCasesPageClient() {
   const [items, setItems] = useState<SupportCaseDetail[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -97,15 +169,15 @@ export function AdminSupportCasesPageClient() {
       </section>
 
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-support-status-filter">
-            {statuses.map((item) => <option key={item} value={item}>{item || "All statuses"}</option>)}
+            {statuses.map((item) => <option key={item} value={item}>{item ? formatStatus(item) : "All statuses"}</option>)}
           </select>
           <select value={issueType} onChange={(event) => setIssueType(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-support-issue-filter">
-            {issueTypes.map((item) => <option key={item} value={item}>{item || "All issue types"}</option>)}
+            {issueTypes.map((item) => <option key={item} value={item}>{item ? formatIssueType(item) : "All issue types"}</option>)}
           </select>
           <select value={priority} onChange={(event) => setPriority(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" data-testid="admin-support-priority-filter">
-            {priorities.map((item) => <option key={item} value={item}>{item || "All priorities"}</option>)}
+            {priorities.map((item) => <option key={item} value={item}>{item ? formatPriority(item) : "All priorities"}</option>)}
           </select>
           <div className="flex gap-2">
             <input value={checkoutCode} onChange={(event) => setCheckoutCode(event.target.value)} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder="Checkout code" />
@@ -124,7 +196,7 @@ export function AdminSupportCasesPageClient() {
               <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`w-full px-5 py-4 text-left ${selectedId === item.id ? "bg-[var(--panel)]" : "bg-white"}`} data-testid="admin-support-case-row">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold text-[var(--foreground)]">{item.subject}</p>
-                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{item.status}</span>
+                  <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--muted)]">{formatStatus(item.status)}</span>
                 </div>
                 <p className="mt-2 text-sm text-[var(--muted)]">{item.checkoutCode}{item.shopName ? ` - ${item.shopName}` : ""}</p>
               </button>
@@ -140,7 +212,7 @@ export function AdminSupportCasesPageClient() {
             <div className="space-y-5" data-testid="admin-support-case-detail">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{selected.issueType}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{formatIssueType(selected.issueType)}</p>
                   <h3 className="mt-2 text-2xl font-bold text-[var(--foreground)]">{selected.subject}</h3>
                   <p className="mt-2 text-sm text-[var(--muted)]">{selected.checkoutCode}{selected.order ? ` - ${selected.order.orderCode}` : ""}</p>
                 </div>
@@ -151,20 +223,18 @@ export function AdminSupportCasesPageClient() {
                     onChange={async (event) => {
                       const newStatus = event.target.value;
                       await runUpdateCase({
-                        action: async () => {
-                          return updateAdminSupportCase(selected.id, { status: newStatus, priority: selected.priority, resolutionNote });
-                        },
-                        successMessage: "Đã cập nhật trạng thái.",
+                        action: async () => updateAdminSupportCase(selected.id, { status: newStatus, priority: selected.priority, resolutionNote }),
+                        successMessage: "Support case status updated.",
                         onSuccess: async (updated) => {
                           setSelected(updated);
                           await refreshList();
-                        }
+                        },
                       });
                     }}
                     className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                     data-testid="admin-support-status-select"
                   >
-                    {statuses.filter(Boolean).map((item) => <option key={item} value={item}>{item}</option>)}
+                    {statuses.filter(Boolean).map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}
                   </select>
                   <select
                     value={selected.priority}
@@ -172,19 +242,17 @@ export function AdminSupportCasesPageClient() {
                     onChange={async (event) => {
                       const newPriority = event.target.value;
                       await runUpdateCase({
-                        action: async () => {
-                          return updateAdminSupportCase(selected.id, { priority: newPriority, status: selected.status, resolutionNote });
-                        },
-                        successMessage: "Đã cập nhật độ ưu tiên.",
+                        action: async () => updateAdminSupportCase(selected.id, { priority: newPriority, status: selected.status, resolutionNote }),
+                        successMessage: "Support case priority updated.",
                         onSuccess: async (updated) => {
                           setSelected(updated);
                           await refreshList();
-                        }
+                        },
                       });
                     }}
                     className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                   >
-                    {priorities.filter(Boolean).map((item) => <option key={item} value={item}>{item}</option>)}
+                    {priorities.filter(Boolean).map((item) => <option key={item} value={item}>{formatPriority(item)}</option>)}
                   </select>
                 </div>
               </div>
@@ -197,26 +265,24 @@ export function AdminSupportCasesPageClient() {
                 type="button"
                 onClick={async () => {
                   await runUpdateCase({
-                    action: async () => {
-                      return updateAdminSupportCase(selected.id, { resolutionNote });
-                    },
-                    successMessage: "Đã lưu ghi chú giải quyết.",
+                    action: async () => updateAdminSupportCase(selected.id, { resolutionNote }),
+                    successMessage: "Resolution note saved.",
                     onSuccess: async (updated) => {
                       setSelected(updated);
                       await refreshList();
-                    }
+                    },
                   });
                 }}
                 disabled={isUpdatingCase || isSendingMessage}
                 className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50"
               >
-                {isUpdatingCase ? "Đang lưu..." : "Save note"}
+                {isUpdatingCase ? "Saving..." : "Save note"}
               </button>
               <div className="space-y-3" data-testid="admin-support-thread">
                 {selected.messages.map((entry) => (
                   <article key={entry.id} className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">{entry.senderRole}{entry.senderName ? ` - ${entry.senderName}` : ""}{entry.isInternal ? " (Internal)" : ""}</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">{formatSenderRole(entry.senderRole)}{entry.senderName ? ` - ${entry.senderName}` : ""}{entry.isInternal ? " (Internal)" : ""}</p>
                       <p className="text-xs text-[var(--muted)]">{new Date(entry.createdAt).toLocaleString()}</p>
                     </div>
                     <p className="mt-2 text-sm text-[var(--muted)]">{entry.message}</p>
@@ -233,23 +299,21 @@ export function AdminSupportCasesPageClient() {
                   type="button"
                   onClick={async () => {
                     await runSendMessage({
-                      action: async () => {
-                        return addAdminSupportCaseMessage(selected.id, { message, isInternal: internal });
-                      },
-                      successMessage: internal ? "Đã lưu ghi chú nội bộ." : "Đã gửi phản hồi thành công.",
+                      action: async () => addAdminSupportCaseMessage(selected.id, { message, isInternal: internal }),
+                      successMessage: internal ? "Internal note saved." : "Support reply sent.",
                       onSuccess: async (updated) => {
                         setSelected(updated);
                         setMessage("");
                         setInternal(false);
                         await refreshList();
-                      }
+                      },
                     });
                   }}
                   disabled={!message.trim() || isUpdatingCase || isSendingMessage}
                   className="mt-3 rounded-full bg-[#2f2025] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                   data-testid="admin-support-send"
                 >
-                  {isSendingMessage ? "Đang gửi..." : "Send message"}
+                  {isSendingMessage ? "Sending..." : "Send message"}
                 </button>
               </div>
             </div>

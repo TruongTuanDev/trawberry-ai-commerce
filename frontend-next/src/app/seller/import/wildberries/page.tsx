@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useI18n } from "@/i18n/use-i18n";
 import { SectionCard } from "@/components/seller/section-card";
 import {
   confirmWildberriesImport,
@@ -13,6 +14,7 @@ import {
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export default function WildberriesImportPage() {
+  const { t } = useI18n("seller");
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const shops = useSellerWorkspaceStore((state) => state.shops);
   const [file, setFile] = useState<File | null>(null);
@@ -34,12 +36,12 @@ export default function WildberriesImportPage() {
 
   const previewImport = async () => {
     if (!currentShopId || !file) {
-      setError("Select a seller shop and .xlsx file first.");
+      setError(t("seller.wbExcel.selectShopAndFile"));
       return;
     }
 
     if (!file.name.toLowerCase().endsWith(".xlsx")) {
-      setError("Only .xlsx Wildberries exports are supported.");
+      setError(t("seller.wbExcel.onlyXlsx"));
       return;
     }
 
@@ -57,7 +59,7 @@ export default function WildberriesImportPage() {
       });
       setPreview(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to preview import.");
+      setError(err instanceof Error ? err.message : t("seller.wbExcel.previewFailed"));
     } finally {
       setLoading(false);
     }
@@ -72,7 +74,7 @@ export default function WildberriesImportPage() {
     try {
       setResult(await confirmWildberriesImport(currentShopId, preview.importId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to confirm import.");
+      setError(err instanceof Error ? err.message : t("seller.wbExcel.confirmFailed"));
     } finally {
       setConfirming(false);
     }
@@ -81,14 +83,14 @@ export default function WildberriesImportPage() {
   return (
     <div className="space-y-6" data-testid="wb-import-page">
       <SectionCard
-        eyebrow="Wildberries Excel"
-        title="Import products from Wildberries"
-        description="Upload a Wildberries export Excel file with sheet Товары. The backend groups rows by seller SKU into products with size variants."
+        eyebrow={t("seller.wbExcel.eyebrow")}
+        title={t("seller.wbExcel.title")}
+        description={t("seller.wbExcel.description")}
       >
         <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-4">
             <label className="block">
-              <span className="text-sm font-semibold text-[var(--foreground)]">Excel file</span>
+              <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbExcel.excelFile")}</span>
               <input
                 type="file"
                 accept=".xlsx"
@@ -104,7 +106,7 @@ export default function WildberriesImportPage() {
 
             <div className="grid gap-4 md:grid-cols-4">
               <label className="block">
-                <span className="text-sm font-semibold text-[var(--foreground)]">Default stock</span>
+                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbExcel.defaultStock")}</span>
                 <input
                   type="number"
                   min={0}
@@ -115,19 +117,19 @@ export default function WildberriesImportPage() {
                 />
               </label>
               <label className="block">
-                <span className="text-sm font-semibold text-[var(--foreground)]">Publish mode</span>
+                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbExcel.publishMode")}</span>
                 <select
                   value={publishMode}
                   data-testid="wb-import-publish-mode"
                   className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                   onChange={(event) => setPublishMode(event.target.value as "DRAFT" | "ACTIVE")}
                 >
-                  <option value="DRAFT">Draft</option>
-                  <option value="ACTIVE">Active if valid</option>
+                  <option value="DRAFT">{t("seller.wbExcel.draft")}</option>
+                  <option value="ACTIVE">{t("seller.wbExcel.activeIfValid")}</option>
                 </select>
               </label>
               <label className="block">
-                <span className="text-sm font-semibold text-[var(--foreground)]">Fallback price</span>
+                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbExcel.fallbackPrice")}</span>
                 <input
                   type="number"
                   min={0}
@@ -138,24 +140,24 @@ export default function WildberriesImportPage() {
                 />
               </label>
               <label className="block">
-                <span className="text-sm font-semibold text-[var(--foreground)]">Image mode</span>
+                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbExcel.imageMode")}</span>
                 <select
                   value="REMOTE_URL"
                   disabled
                   className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--foreground)]"
                 >
-                  <option value="REMOTE_URL">Use Wildberries image links</option>
-                  <option value="DOWNLOAD_TO_STORAGE">Download to storage (coming soon)</option>
+                  <option value="REMOTE_URL">{t("seller.wbExcel.useRemoteUrls")}</option>
+                  <option value="DOWNLOAD_TO_STORAGE">{t("seller.wbExcel.downloadToStorage")}</option>
                 </select>
               </label>
             </div>
           </div>
 
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Target shop</p>
-            <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? "No shop selected"}</p>
-            <p className="mt-2 text-sm text-[var(--muted)]">Wildberries export Excel is supported.</p>
-            <p className="mt-2 text-sm text-[var(--muted)]">Images use remote WB URLs by default for fast imports. Downloading to storage is planned for a later phase.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbExcel.targetShop")}</p>
+            <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? t("seller.wbSync.noShopSelected")}</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.wbExcel.supportInfo")}</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.wbExcel.imageInfo")}</p>
             <button
               type="button"
               onClick={() => void previewImport()}
@@ -163,13 +165,13 @@ export default function WildberriesImportPage() {
               data-testid="wb-import-preview"
               className="mt-5 inline-flex w-full justify-center rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {loading ? "Parsing..." : "Preview import"}
+              {loading ? t("seller.wbExcel.parsing") : t("seller.wbExcel.previewButton")}
             </button>
           </div>
         </div>
 
         {error ? (
-          <div className="mt-5 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
+          <div className="mt-5 rounded-2xl border border-[var(--border-danger)] bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
           </div>
         ) : null}
@@ -177,30 +179,30 @@ export default function WildberriesImportPage() {
 
       {preview ? (
         <SectionCard
-          eyebrow="Preview"
-          title="Import summary"
-          description="Review warnings and product grouping before confirming."
+          eyebrow={t("seller.wbExcel.previewEyebrow")}
+          title={t("seller.wbExcel.previewTitle")}
+          description={t("seller.wbExcel.previewDescription")}
         >
           <div className="grid gap-3 sm:grid-cols-5" data-testid="wb-import-summary">
-            <Metric label="Products" value={preview.totalProducts} />
-            <Metric label="Variants" value={preview.totalVariants} />
-            <Metric label="Images" value={preview.totalImages} />
-            <Metric label="Warnings" value={preview.warnings.length} />
-            <Metric label="Errors" value={preview.errors.length} />
+            <Metric label={t("seller.wbExcel.metricProducts")} value={preview.totalProducts} />
+            <Metric label={t("seller.wbExcel.metricVariants")} value={preview.totalVariants} />
+            <Metric label={t("seller.wbExcel.metricImages")} value={preview.totalImages} />
+            <Metric label={t("seller.wbExcel.metricWarnings")} value={preview.warnings.length} />
+            <Metric label={t("seller.wbExcel.metricErrors")} value={preview.errors.length} />
           </div>
 
-          <IssueList title="Errors" issues={preview.errors} />
-          <IssueList title="Warnings" issues={preview.warnings.slice(0, 12)} />
+          <IssueList title={t("seller.wbExcel.metricErrors")} issues={preview.errors} rowLabel={t("seller.wbExcel.rowLabel")} />
+          <IssueList title={t("seller.wbExcel.metricWarnings")} issues={preview.warnings.slice(0, 12)} rowLabel={t("seller.wbExcel.rowLabel")} />
 
           <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
             <div className="grid grid-cols-[1fr_1.4fr_1fr_1fr_90px_90px_100px] gap-3 border-b border-[var(--border)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              <div>SKU</div>
-              <div>Name</div>
-              <div>Brand</div>
-              <div>Category</div>
-              <div>Sizes</div>
-              <div>Images</div>
-              <div>Price</div>
+              <div>{t("seller.wbExcel.sku")}</div>
+              <div>{t("seller.wbExcel.name")}</div>
+              <div>{t("seller.wbExcel.brand")}</div>
+              <div>{t("seller.wbExcel.category")}</div>
+              <div>{t("seller.wbExcel.sizes")}</div>
+              <div>{t("seller.wbExcel.metricImages")}</div>
+              <div>{t("seller.wbExcel.price")}</div>
             </div>
             {preview.products.slice(0, 30).map((product) => (
               <div
@@ -208,13 +210,16 @@ export default function WildberriesImportPage() {
                 className="grid grid-cols-[1fr_1.4fr_1fr_1fr_90px_90px_100px] gap-3 border-b border-[var(--border)] px-4 py-3 text-sm last:border-b-0"
                 data-testid="wb-import-product-row"
               >
-                <div className="truncate font-semibold">{product.sellerSku ?? product.externalProductId ?? "N/A"}</div>
+                <div className="truncate font-semibold">{product.sellerSku ?? product.externalProductId ?? t("common.notProvided")}</div>
                 <div className="truncate">{product.name}</div>
-                <div className="truncate">{product.brand ?? "N/A"}</div>
+                <div className="truncate">{product.brand ?? t("common.notProvided")}</div>
                 <div className="truncate" title={product.sourceCategoryName ?? undefined}>
-                  {product.mappedCategoryName ?? product.categoryName ?? "N/A"}
+                  {product.mappedCategoryName ?? product.categoryName ?? t("common.notProvided")}
                   {product.sourceCategoryName && product.sourceCategoryName !== (product.mappedCategoryName ?? product.categoryName) ? (
-                    <span className="ml-1 text-xs text-[var(--muted)]">from {product.sourceCategoryName}</span>
+                    <span className="ml-1 text-xs text-[var(--muted)]">
+                      {t("seller.wbExcel.from")}{" "}
+                      {product.sourceCategoryName}
+                    </span>
                   ) : null}
                 </div>
                 <div>{product.variantsCount}</div>
@@ -232,10 +237,10 @@ export default function WildberriesImportPage() {
               data-testid="wb-import-confirm"
               className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {confirming ? "Importing..." : "Confirm import"}
+              {confirming ? t("seller.wbExcel.importing") : t("seller.wbExcel.confirmButton")}
             </button>
             {preview.errors.length ? (
-              <span className="text-sm text-[var(--muted)]">Fix blocking errors before confirming.</span>
+              <span className="text-sm text-[var(--muted)]">{t("seller.wbExcel.fixErrors")}</span>
             ) : null}
           </div>
         </SectionCard>
@@ -243,27 +248,27 @@ export default function WildberriesImportPage() {
 
       {result ? (
         <SectionCard
-          eyebrow="Completed"
-          title="Import result"
-          description="Products were imported to Seller Catalog. They are not public until you review and publish them."
+          eyebrow={t("seller.wbExcel.resultEyebrow")}
+          title={t("seller.wbExcel.resultTitle")}
+          description={t("seller.wbExcel.resultDescription")}
         >
           <div className="grid gap-3 sm:grid-cols-3" data-testid="wb-import-result">
-            <Metric label="Created products" value={result.createdProducts} />
-            <Metric label="Updated products" value={result.updatedProducts} />
-            <Metric label="Variants created" value={result.createdVariants} />
-            <Metric label="Variants updated" value={result.updatedVariants} />
-            <Metric label="Images added" value={result.addedImages} />
-            <Metric label="Images skipped" value={result.skippedImages} />
+            <Metric label={t("seller.wbExcel.createdProducts")} value={result.createdProducts} />
+            <Metric label={t("seller.wbExcel.updatedProducts")} value={result.updatedProducts} />
+            <Metric label={t("seller.wbExcel.variantsCreated")} value={result.createdVariants} />
+            <Metric label={t("seller.wbExcel.variantsUpdated")} value={result.updatedVariants} />
+            <Metric label={t("seller.wbExcel.imagesAdded")} value={result.addedImages} />
+            <Metric label={t("seller.wbExcel.imagesSkipped")} value={result.skippedImages} />
           </div>
           <p className="mt-4 text-sm text-[var(--muted)]">
-            Review imported products, fill any missing price, stock, category, or images, then publish the products you want to sell.
+            {t("seller.wbExcel.resultHelper")}
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/seller/products?tab=IMPORTED" className="inline-flex rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white">
-              View imported products
+              {t("seller.wbExcel.viewImported")}
             </Link>
             <Link href="/seller/products?tab=NEEDS_REVIEW" className="inline-flex rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)]">
-              View needs review
+              {t("seller.wbExcel.viewNeedsReview")}
             </Link>
           </div>
         </SectionCard>
@@ -281,7 +286,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function IssueList({ title, issues }: { title: string; issues: WbImportIssue[] }) {
+function IssueList({ title, issues, rowLabel }: { title: string; issues: WbImportIssue[]; rowLabel: string }) {
   if (!issues.length) return null;
 
   return (
@@ -290,7 +295,7 @@ function IssueList({ title, issues }: { title: string; issues: WbImportIssue[] }
       <div className="mt-3 space-y-2">
         {issues.map((issue, index) => (
           <p key={`${issue.code}-${issue.row ?? index}`} className="text-sm text-[var(--muted)]">
-            {issue.row ? `Row ${issue.row}: ` : ""}
+            {issue.row ? rowLabel.replace("{{row}}", String(issue.row)) : ""}
             {issue.message}
           </p>
         ))}

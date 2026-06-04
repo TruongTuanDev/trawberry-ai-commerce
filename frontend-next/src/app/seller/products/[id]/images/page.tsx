@@ -28,12 +28,14 @@ import {
   type ProductImage,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useI18n } from "@/i18n/use-i18n";
 
 const POLLING_STATUSES = new Set<AiImageTask["status"]>(["PENDING", "PROCESSING"]);
 const POLLING_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 30;
 
 export default function SellerProductImagesPage() {
+  const { t } = useI18n("seller");
   const params = useParams<{ id: string }>();
   const productId = params.id;
   const hydrated = useSellerWorkspaceStore((state) => state.hydrated);
@@ -108,7 +110,7 @@ export default function SellerProductImagesPage() {
         setError(null);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load product images.");
+          setError(err instanceof Error ? err.message : t("seller.productDetail.errorGalleryDescription"));
         }
       } finally {
         if (mounted) {
@@ -122,7 +124,7 @@ export default function SellerProductImagesPage() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, hydrated, productId, selectShop]);
+  }, [currentShopId, hydrated, productId, selectShop, t]);
 
   useEffect(() => {
     if (!currentShopId || !currentTask || !POLLING_STATUSES.has(currentTask.status)) {
@@ -146,19 +148,19 @@ export default function SellerProductImagesPage() {
 
           if (attempts >= MAX_POLL_ATTEMPTS) {
             window.clearInterval(interval);
-            setError("AI task polling timed out before the worker reached a final state.");
+            setError(t("seller.productDetail.pollTimeout"));
           }
         })
         .catch((pollError) => {
           window.clearInterval(interval);
-          setError(pollError instanceof Error ? pollError.message : "Unable to refresh AI task.");
+          setError(pollError instanceof Error ? pollError.message : t("seller.productDetail.pollError"));
         });
     }, POLLING_INTERVAL_MS);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [currentShopId, currentTask]);
+  }, [currentShopId, currentTask, t]);
 
   const selectedSummary = useMemo(
     () => selectedFiles.map((file) => file.name).join(", "),
@@ -196,9 +198,9 @@ export default function SellerProductImagesPage() {
       const uploaded = await uploadShopProductImages(currentShopId, productId, selectedFiles);
       setImages((current) => [...current, ...uploaded].sort((left, right) => left.sortOrder - right.sortOrder));
       setSelectedFiles([]);
-      setSuccessMessage(`Uploaded ${uploaded.length} image${uploaded.length > 1 ? "s" : ""}.`);
+      setSuccessMessage(t("seller.productDetail.imagesUploaded", { count: uploaded.length }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to upload product images.");
+      setError(err instanceof Error ? err.message : t("seller.productDetail.imagesUploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -216,9 +218,9 @@ export default function SellerProductImagesPage() {
     try {
       await deleteShopProductImage(currentShopId, productId, imageId);
       setImages((current) => current.filter((image) => image.id !== imageId));
-      setSuccessMessage("Image deleted.");
+      setSuccessMessage(t("seller.productDetail.imageDeleted"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to delete image.");
+      setError(err instanceof Error ? err.message : t("seller.productDetail.imageDeleteFailed"));
     } finally {
       setDeletingImageId(null);
     }
@@ -262,9 +264,9 @@ export default function SellerProductImagesPage() {
             return left.sortOrder - right.sortOrder;
           }),
       );
-      setSuccessMessage(payload.isMain ? "Main image updated." : "Image metadata updated.");
+      setSuccessMessage(payload.isMain ? t("seller.productDetail.mainImageUpdated") : t("seller.productDetail.imageMetaUpdated"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update image metadata.");
+      setError(err instanceof Error ? err.message : t("seller.productDetail.imageMetaUpdateFailed"));
     } finally {
       setUpdatingImageId(null);
     }
@@ -317,9 +319,9 @@ export default function SellerProductImagesPage() {
       setCurrentTask(task);
       setAiModalOpen(false);
       await refreshCredits();
-      setSuccessMessage(`AI task ${task.id.slice(0, 8)} created.`);
+      setSuccessMessage(t("seller.productDetail.aiTaskCreated", { id: task.id.slice(0, 8) }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to create AI task.";
+      const message = err instanceof Error ? err.message : t("seller.productDetail.aiTaskCreateFailed");
       setError(message);
       setAiModalError(message);
       throw err;
@@ -342,10 +344,10 @@ export default function SellerProductImagesPage() {
       setImages((current) => [...current, attachedImage].sort((left, right) => left.sortOrder - right.sortOrder));
       const refreshedTask = await getAiImageTask(currentShopId, currentTask.id);
       setCurrentTask(refreshedTask);
-      setSuccessMessage("AI image attached to product gallery.");
+      setSuccessMessage(t("seller.productDetail.aiImageAttached"));
       await refreshImages();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to attach AI image.");
+      setError(err instanceof Error ? err.message : t("seller.productDetail.aiImageAttachFailed"));
     } finally {
       setAttachingImageId(null);
     }
@@ -361,15 +363,15 @@ export default function SellerProductImagesPage() {
 
   if (loading) {
     return (
-      <SectionCard eyebrow="Product images" title="Loading gallery" description="Fetching seller product images and AI task status from NestJS.">
-        <p className="text-sm text-[var(--muted)]">Loading...</p>
+      <SectionCard eyebrow={t("seller.productDetail.manageImages")} title={t("seller.productDetail.loadingGalleryTitle")} description={t("seller.productDetail.loadingGalleryDescription")}>
+        <p className="text-sm text-[var(--muted)]">{t("seller.results.loading")}</p>
       </SectionCard>
     );
   }
 
   if (error && !product) {
     return (
-      <SectionCard eyebrow="Product images" title="Unable to load gallery" description="The selected product gallery could not be loaded for the current shop.">
+      <SectionCard eyebrow={t("seller.productDetail.manageImages")} title={t("seller.productDetail.errorGalleryTitle")} description={t("seller.productDetail.errorGalleryDescription")}>
         <p className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</p>
       </SectionCard>
     );
@@ -382,26 +384,26 @@ export default function SellerProductImagesPage() {
           href={`/seller/products/${product?.id ?? productId}`}
           className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)]"
         >
-          Back to product
+          {t("seller.productDetail.backToProduct")}
         </Link>
         <button
           type="button"
           onClick={() => void handleOpenAiModal()}
           className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
         >
-          Generate AI Image
+          {t("seller.productDetail.generateAiImage")}
         </button>
       </div>
 
       <SectionCard
         eyebrow="Upload"
-        title="Add product images"
-        description="Direct upload is still available for seller-managed assets. AI generation lives alongside it and can attach completed results back into the gallery."
+        title={t("seller.productDetail.addImagesTitle")}
+        description={t("seller.productDetail.addImagesDescription")}
       >
         <div className="space-y-4">
           <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-[var(--border)] bg-[var(--panel)] px-6 py-8 text-center transition hover:border-[var(--accent)] hover:bg-[var(--panel-strong)]">
-            <span className="text-sm font-semibold text-[var(--foreground)]">Choose multiple image files</span>
-            <span className="mt-2 text-sm text-[var(--muted)]">JPG, PNG, WEBP. Files upload into the selected seller shop and product.</span>
+            <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.productDetail.chooseFiles")}</span>
+            <span className="mt-2 text-sm text-[var(--muted)]">{t("seller.productDetail.chooseFilesHint")}</span>
             <input
               type="file"
               accept="image/*"
@@ -437,7 +439,7 @@ export default function SellerProductImagesPage() {
               className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="product-image-upload"
             >
-              {uploading ? "Uploading..." : "Upload selected images"}
+              {uploading ? t("seller.productDetail.uploading") : t("seller.productDetail.uploadSelected")}
             </button>
             <button
               type="button"
@@ -445,7 +447,7 @@ export default function SellerProductImagesPage() {
               disabled={!selectedFiles.length || uploading}
               className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Clear selection
+              {t("seller.productDetail.clearSelection")}
             </button>
           </div>
         </div>
@@ -463,38 +465,38 @@ export default function SellerProductImagesPage() {
         />
 
         <SectionCard
-          eyebrow="AI Pipeline"
-          title="Seller AI generate flow"
-          description="Create a task, let NestJS queue it, poll for progress, then attach finished images into the product gallery."
+          eyebrow={t("seller.aiImages.pipelineEyebrow")}
+          title={t("seller.productDetail.generateFlowTitle")}
+          description={t("seller.productDetail.generateFlowDescription")}
         >
           <div className="space-y-4">
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4 text-sm text-[var(--muted)]">
-              <p className="font-semibold text-[var(--foreground)]">AI credits</p>
+              <p className="font-semibold text-[var(--foreground)]">{t("seller.productDetail.creditsTitle")}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em]">Remaining</p>
+                  <p className="text-xs uppercase tracking-[0.18em]">{t("seller.aiImages.remaining")}</p>
                   <p className="mt-1 text-base font-semibold text-[var(--foreground)]">{credits?.remainingCredits ?? 0}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em]">Used</p>
+                  <p className="text-xs uppercase tracking-[0.18em]">{t("seller.aiImages.used")}</p>
                   <p className="mt-1 text-base font-semibold text-[var(--foreground)]">{credits?.usedCredits ?? 0}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.18em]">Total</p>
+                  <p className="text-xs uppercase tracking-[0.18em]">{t("seller.aiImages.total")}</p>
                   <p className="mt-1 text-base font-semibold text-[var(--foreground)]">{credits?.totalCredits ?? 0}</p>
                 </div>
               </div>
             </div>
             {currentTask ? (
               <div className="rounded-[1.25rem] border border-[var(--border)] bg-white px-4 py-4 text-sm text-[var(--muted)]">
-                <p className="font-semibold text-[var(--foreground)]">Latest task</p>
+                <p className="font-semibold text-[var(--foreground)]">{t("seller.productDetail.latestTask")}</p>
                 <p className="mt-2">Task ID: {currentTask.id}</p>
                 <p className="mt-1">Status: {currentTask.status}</p>
                 <p className="mt-1">Credit cost: {currentTask.creditCost}</p>
               </div>
             ) : (
               <p className="text-sm text-[var(--muted)]">
-                No AI task has been created for this product yet. Open the modal to start one.
+                {t("seller.productDetail.noTask")}
               </p>
             )}
           </div>

@@ -1,11 +1,151 @@
 # Trawberry AI Commerce
 
+## GitHub Actions CD
+
+GitHub Actions CD is prepared in `.github/workflows/deploy.yml`.
+
+CD scope:
+
+- `push` to `main`
+- `workflow_dispatch`
+- wait for CI success on the same commit
+- build and push production images to GHCR
+- SSH to VPS and deploy with `infra/docker-compose.prod.yml`
+- run post-deploy smoke checks
+
+Required GitHub secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_KEY`
+- `VPS_APP_DIR`
+- optional `VPS_PORT`
+- optional `VPS_KNOWN_HOSTS`
+- optional `GHCR_PAT`
+
+GHCR note:
+
+- GitHub Actions uses `GITHUB_TOKEN` to push images to GHCR during `build-and-push`.
+- If GHCR packages are private, set `GHCR_PAT` with at least `read:packages` so the VPS can `docker login` and pull deploy images.
+
+Recommended GitHub variable:
+
+- `DEPLOY_NEXT_PUBLIC_API_URL=https://api.yourdomain.ru`
+
+## VPS First Deploy
+
+Operator-first first-deploy docs:
+
+- [docs/VPS_SETUP.md](/c:/Users/admin/trawberry-ai-commerce/docs/VPS_SETUP.md)
+- [docs/DEPLOYMENT.md](/c:/Users/admin/trawberry-ai-commerce/docs/DEPLOYMENT.md)
+- [docs/PRODUCTION_RUNBOOK.md](/c:/Users/admin/trawberry-ai-commerce/docs/PRODUCTION_RUNBOOK.md)
+
+Production env template:
+
+- [infra/.env.production.example](/c:/Users/admin/trawberry-ai-commerce/infra/.env.production.example)
+
+## GitHub Actions CI
+
+GitHub Actions CI is now prepared for the active marketplace stack in `.github/workflows/ci.yml`.
+
+Workflow scope:
+
+- `push` to `main`
+- `pull_request` to `main`
+- backend targeted verification with PostgreSQL and Redis
+- frontend lint/build
+- ai-service compile/pytest with mock-safe env
+- Docker compose config validation
+- production Docker image build on `push main`
+
+CI safety defaults:
+
+- no real `.env` required
+- no paid OpenAI smoke
+- no production secrets required
+- no real Wildberries or carrier API calls in default CI
+
+## Category Backfill Script
+
+When historical products still have `categoryName` / `sourceCategoryName` but no linked `categoryId`, run:
+
+```bash
+cd backend-nest
+npm run categories:sync
+```
+
+The script is idempotent. It creates missing `Category` rows by normalized name, links products to those categories, and refreshes the mirrored `product.categoryName` field without deleting old data.
+
+If production already has the correct `Category` rows and only needs to attach legacy products without creating anything new, run:
+
+```bash
+cd backend-nest
+npm run categories:link-products -- --dry-run
+npm run categories:link-products
+```
+
+This exact-match script only links products with `categoryId = null` by matching `Product.categoryName` first and `Product.sourceCategoryName` second against existing `Category.name`.
+
+## Production Deployment Foundation
+
+Production artifacts for VPS deployment are now included:
+
+- `infra/docker-compose.prod.yml`
+- `infra/nginx/nginx.conf`
+- `infra/nginx/Dockerfile`
+- `infra/scripts/deploy.sh`
+- `infra/scripts/smoke-production.sh`
+- `infra/scripts/backup-postgres.sh`
+- `infra/scripts/restore-postgres.sh`
+- `docs/DEPLOYMENT.md`
+- `docs/PRODUCTION_RUNBOOK.md`
+- `docs/SECURITY_CHECKLIST.md`
+- `docs/BACKUP_RESTORE.md`
+
+Production compose guarantees:
+
+- no source bind mounts for app services or nginx config
+- named volumes for PostgreSQL, Redis, and MinIO
+- only the reverse proxy is public
+- backend, ai-service, PostgreSQL, Redis, and MinIO stay internal
+- health checks and `restart: unless-stopped` across the stack
+- MinIO bucket bootstrap is handled by `infra/minio-init/init-buckets.sh`, including public-read bootstrap for the AI Try-On bucket
+
+Production sizing:
+
+- Recommended: `8 vCPU`, `16 GB RAM`, `200 GB NVMe`
+- Minimum: `4 vCPU`, `8 GB RAM`, `100 GB`
+
+Basic production flow:
+
+```bash
+cd /opt/trawberry-ai-commerce
+cp infra/.env.example infra/.env.production
+vi infra/.env.production
+./infra/scripts/deploy.sh
+```
+
 ## Auth Separation Update
 
 - Public marketplace promotes only customer login/register and seller register/login.
 - Admin login is operational-only at `/admin-login`.
 - Public pages do not show admin login links.
 - Customer and seller registration accept email/password or phone/password.
+
+## Recommendation Flags
+
+Recommendation Phase 1 is additive and can be disabled safely with:
+
+- `RECOMMENDATIONS_ENABLED`
+- `PUBLIC_RECOMMENDATIONS_ENABLED`
+- `RECOMMENDATION_TRACKING_ENABLED`
+
+Expected behavior when flags are off:
+
+- no storefront recommendation sections
+- no client tracking calls
+- backend tracking endpoints no-op safely
+- backend recommendation endpoints return empty lists
 
 Marketplace/e-commerce stack đang được migrate sang kiến trúc mới:
 
@@ -245,3 +385,47 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env logs -f backend
 ```
 
 See `docs/DOCKER_BUILD_RELIABILITY.md` for troubleshooting and CI-readiness notes.
+
+## 12. AI Try-On
+
+Phase 1 AI Try-On is wired end-to-end and Phase 2 adds the real OpenAI provider path:
+
+- admin config UI: `/admin/ai-settings`
+- public product detail CTA: `/products/[id]`
+- backend public APIs:
+  - `GET /api/public/ai-try-on/config`
+  - `POST /api/public/ai-try-on/uploads`
+  - `POST /api/public/products/:productId/try-on/tasks`
+  - `GET /api/public/ai-try-on/tasks/:taskId`
+- ai-service internal endpoint:
+  - `POST /internal/ai-try-on/generate`
+
+Provider modes:
+
+- `mock`
+- `demo`
+- `openai`
+
+OpenAI readiness:
+
+- keep API keys only in `ai-service`
+- set admin provider mode to `openai`
+- configure `OPENAI_API_KEY`
+- optionally configure `AI_TRY_ON_OPENAI_MODEL`
+- optionally configure `AI_TRY_ON_PROVIDER_TIMEOUT_SECONDS`
+- optionally configure `AI_TRY_ON_OUTPUT_SIZE`
+- rebuild/restart services
+
+Phase 2 note:
+
+- `openai` mode now calls the real OpenAI Images edit path from `ai-service`
+- `mock` and `demo` remain the stable local/demo modes
+- the API key must never be exposed to the frontend or committed to the repo
+- real try-on output quality still depends on provider capability and source image quality
+Kích thước lý tưởng nhất (Tỷ lệ 2.57 : 1):
+
+1800 × 700 px (Khuyên dùng cho độ nét cao trên màn hình Retina/4K).
+1600 × 620 px hoặc 1232 × 480 px (Khít chuẩn xác tuyệt đối với màn hình desktop thông thường).
+Tỷ lệ ảnh cho Mobile (Nếu upload ở trường Mobile Image URL):
+
+900 × 1200 px hoặc 1080 × 1350 px (Tỷ lệ đứng 3:4 hoặc 4:5 để tối ưu không gian hiển thị trên màn hình điện thoại).

@@ -23,13 +23,13 @@ import { Button } from "@/components/ui/button";
 import { ActionMenu } from "@/components/ui/action-menu";
 
 const sellerTabs: Array<{ value: SellerFulfillmentBucket; label: string }> = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "NEW", label: "Mới" },
-  { value: "ASSEMBLING", label: "Lắp ráp" },
-  { value: "IN_TRANSIT", label: "Trong quá trình giao hàng" },
-  { value: "COMPLETED", label: "Hoàn thành" },
-  { value: "CANCELLED", label: "Đã hủy" },
-  { value: "ARCHIVED", label: "Lưu trữ" },
+  { value: "ALL", label: "All" },
+  { value: "NEW", label: "New" },
+  { value: "ASSEMBLING", label: "Assembling" },
+  { value: "IN_TRANSIT", label: "In Transit" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
+  { value: "ARCHIVED", label: "Archived" },
 ];
 
 type ShipmentPanelState = {
@@ -131,7 +131,7 @@ export function SellerOrdersPageClient() {
       setResponse(next);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load orders.");
+      setError(err instanceof Error ? err.message : t("seller.productDetail.errorDescription"));
     } finally {
       setLoading(false);
     }
@@ -151,8 +151,8 @@ export function SellerOrdersPageClient() {
       action: async () => {
         await archiveShopOrder(currentShopId, order.id, "");
       },
-      successMessage: "Đã lưu trữ đơn hàng.",
-      errorMessage: "Không thể lưu trữ đơn hàng.",
+      successMessage: t("sellerOrders.messages.archiveSuccess"),
+      errorMessage: t("sellerOrders.messages.archiveFailed"),
       onSuccess: async () => {
         await load();
       },
@@ -165,7 +165,7 @@ export function SellerOrdersPageClient() {
       action: async () => {
         const detail = await getOrderDelivery(currentShopId, order.id, "");
         if (!detail.activeShipment) {
-          throw new Error("Đơn chưa có vận đơn để bàn giao.");
+          throw new Error(t("sellerOrders.messages.handoffNoWaybill"));
         }
         await markManualDeliveryInTransit(
           currentShopId,
@@ -175,8 +175,8 @@ export function SellerOrdersPageClient() {
           "",
         );
       },
-      successMessage: "Đã bàn giao cho vận chuyển.",
-      errorMessage: "Không thể bàn giao đơn cho vận chuyển.",
+      successMessage: t("sellerOrders.messages.handoffSuccess"),
+      errorMessage: t("sellerOrders.messages.handoffFailed"),
       onSuccess: async () => {
         await load();
       },
@@ -189,7 +189,7 @@ export function SellerOrdersPageClient() {
       action: async () => {
         const detail = await getOrderDelivery(currentShopId, order.id, "");
         if (!detail.activeShipment) {
-          throw new Error("Đơn chưa có vận đơn hoạt động.");
+          throw new Error(t("sellerOrders.messages.handoffNoWaybill"));
         }
         await markManualDeliveryDelivered(
           currentShopId,
@@ -199,8 +199,8 @@ export function SellerOrdersPageClient() {
           "",
         );
       },
-      successMessage: "Đã chuyển đơn sang Hoàn thành.",
-      errorMessage: "Không thể hoàn thành đơn.",
+      successMessage: t("sellerOrders.messages.completeSuccess"),
+      errorMessage: t("sellerOrders.messages.completeFailed"),
       onSuccess: async () => {
         await load();
       },
@@ -213,7 +213,7 @@ export function SellerOrdersPageClient() {
       action: async () => {
         const detail = await getOrderDelivery(currentShopId, order.id, "");
         if (!detail.activeShipment) {
-          throw new Error("Đơn chưa có vận đơn hoạt động.");
+          throw new Error(t("sellerOrders.messages.handoffNoWaybill"));
         }
         await markManualDeliveryFailed(
           currentShopId,
@@ -222,13 +222,13 @@ export function SellerOrdersPageClient() {
           {
             reasonCode: "SELLER_CANCELLED",
             reasonText: "Seller cancelled the order from fulfillment queue.",
-            customerVisibleMessage: "Đơn hàng đã được người bán hủy trong quá trình giao.",
+            customerVisibleMessage: t("sellerOrders.messages.cancelCustomerMessage"),
           },
           "",
         );
       },
-      successMessage: "Đã chuyển đơn sang Đã hủy.",
-      errorMessage: "Không thể hủy đơn đang giao.",
+      successMessage: t("sellerOrders.messages.cancelSuccess"),
+      errorMessage: t("sellerOrders.messages.cancelFailed"),
       onSuccess: async () => {
         await load();
       },
@@ -253,8 +253,8 @@ export function SellerOrdersPageClient() {
           "",
         );
       },
-      successMessage: "Đã tạo đơn vận chuyển và chuyển sang Lắp ráp.",
-      errorMessage: "Không thể tạo đơn vận chuyển.",
+      successMessage: t("sellerOrders.messages.shipmentSuccess"),
+      errorMessage: t("sellerOrders.messages.shipmentFailed"),
       onSuccess: async () => {
         setShipmentPanel(null);
         await load();
@@ -267,7 +267,7 @@ export function SellerOrdersPageClient() {
       <SectionCard
         eyebrow={t("sellerOrders.fulfillment")}
         title={t("sellerOrders.title")}
-        description="Luồng xử lý đơn hàng tách riêng khỏi payment review. Chỉ các đơn đã xác nhận thanh toán mới xuất hiện trong các bucket vận hành."
+        description={t("sellerOrders.description")}
       >
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seller order filters">
           {localizedSellerTabs.map((tab) => (
@@ -323,7 +323,7 @@ export function SellerOrdersPageClient() {
             variant="outline"
             onClick={() => void load()}
           >
-            Tải lại
+            {t("sellerOrders.refreshQueue")}
           </Button>
         </div>
       </SectionCard>
@@ -331,7 +331,7 @@ export function SellerOrdersPageClient() {
       <SectionCard
         eyebrow={t("sellerOrders.orders")}
         title={title}
-        description="Hành động thay đổi theo bucket để seller biết rõ bước tiếp theo của từng đơn."
+        description={t("sellerOrders.ordersDescription")}
       >
         {error ? (
           <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div>
@@ -339,17 +339,17 @@ export function SellerOrdersPageClient() {
 
         <div className="overflow-hidden rounded-[1.5rem] border border-[var(--border)] bg-white">
           <div className="hidden grid-cols-[140px_1.2fr_1.2fr_140px_170px_220px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
-            <div>Đơn</div>
+            <div>{t("sellerOrders.order")}</div>
             <div>{t("sellerOrders.buyer")}</div>
-            <div>Sản phẩm</div>
-            <div>Số tiền</div>
-            <div>Vận chuyển</div>
-            <div>Hành động</div>
+            <div>{t("sellerOrders.products")}</div>
+            <div>{t("sellerOrders.amount")}</div>
+            <div>{t("sellerOrders.delivery")}</div>
+            <div>{t("sellerOrders.actions")}</div>
           </div>
 
           <div className="divide-y divide-[var(--border)]">
             {loading ? (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading orders...</div>
+              <div className="px-5 py-8 text-sm text-[var(--muted)]">{t("seller.results.loading")}</div>
             ) : orders.length ? (
               orders.map((order) => (
                 <article key={order.id} className="grid gap-4 px-4 py-4 lg:grid-cols-[140px_1.2fr_1.2fr_140px_170px_220px] lg:px-5" data-testid="seller-order-card">
@@ -362,22 +362,29 @@ export function SellerOrdersPageClient() {
                   <div className="text-sm text-[var(--muted)]">
                     <p className="font-semibold text-[var(--foreground)]">{order.customer.name}</p>
                     <p>{order.customer.phone}</p>
-                    <p>{order.customer.email ?? "No email"}</p>
+                    <p>{order.customer.email ?? t("sellerOrders.noEmail")}</p>
                   </div>
-                  <div className="text-sm text-[var(--muted)]">
+                  <div className="text-sm text-[var(--muted)] space-y-2">
                     {order.items.slice(0, 2).map((item) => (
-                      <p key={item.id}>
-                        {item.productTitleSnapshot} x {item.quantity}
-                      </p>
+                      <div key={item.id} className="border-b border-gray-100 last:border-0 pb-1 last:pb-0">
+                        <p className="font-semibold text-[var(--foreground)]">{item.productTitleSnapshot}</p>
+                        <p className="text-xs">
+                          {t("sellerOrders.sku")}: <span className="font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{item.sellerSku || t("sellerOrders.skuNotSet")}</span>
+                        </p>
+                        {item.variantNameSnapshot && (
+                          <p className="text-xs">Size: {item.variantNameSnapshot}</p>
+                        )}
+                        <p className="text-xs">Qty: x{item.quantity}</p>
+                      </div>
                     ))}
-                    {order.items.length > 2 ? <p>+{order.items.length - 2} sản phẩm</p> : null}
+                    {order.items.length > 2 ? <p className="text-xs font-semibold text-[var(--accent)] mt-1">{t("sellerOrders.moreProducts", { count: order.items.length - 2 })}</p> : null}
                   </div>
                   <div className="text-sm font-semibold text-[var(--foreground)]">{order.totalAmount}</div>
                   <div className="text-sm text-[var(--muted)]">
-                    <p>{order.delivery?.manualYandexOrderId ?? "Chưa có mã Yandex"}</p>
+                    <p>{order.delivery?.manualYandexOrderId ?? t("sellerOrders.noYandexId")}</p>
                     {order.delivery?.trackingUrl ? (
                       <a href={order.delivery.trackingUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex text-[var(--accent)] underline">
-                        Theo dõi Yandex
+                        {t("sellerOrders.trackYandex")}
                       </a>
                     ) : null}
                   </div>
@@ -395,7 +402,7 @@ export function SellerOrdersPageClient() {
                           })
                         }
                       >
-                        Tạo đơn vận chuyển
+                        {t("sellerOrders.createShipment")}
                       </Button>
                     )}
                     {order.sellerStatusBucket === "ASSEMBLING" && (
@@ -406,7 +413,7 @@ export function SellerOrdersPageClient() {
                         disabled={isRunning}
                         loading={isRunning}
                       >
-                        Bàn giao vận chuyển
+                        {t("sellerOrders.handoff")}
                       </Button>
                     )}
                     {order.sellerStatusBucket === "IN_TRANSIT" && (
@@ -417,7 +424,7 @@ export function SellerOrdersPageClient() {
                         disabled={isRunning}
                         loading={isRunning}
                       >
-                        Hoàn thành
+                        {t("sellerOrders.complete")}
                       </Button>
                     )}
                     {(order.sellerStatusBucket === "COMPLETED" || order.sellerStatusBucket === "CANCELLED") && (
@@ -428,21 +435,21 @@ export function SellerOrdersPageClient() {
                         disabled={isRunning}
                         loading={isRunning}
                       >
-                        Lưu trữ
+                        {t("sellerOrders.archive")}
                       </Button>
                     )}
                     <ActionMenu
                       items={[
                         {
-                          label: "Chi tiết",
+                          label: t("sellerOrders.details"),
                           href: `/seller/orders/${order.id}`,
                         },
                         ...(order.sellerStatusBucket === "IN_TRANSIT"
                           ? [
                               {
-                                label: "Hủy đơn",
+                                label: t("sellerOrders.cancelOrder"),
                                 variant: "danger" as const,
-                                confirm: "Bạn có chắc chắn muốn hủy đơn hàng này?",
+                                confirm: t("sellerOrders.cancelConfirm"),
                                 onClick: () => void handleCancel(order),
                                 disabled: isRunning,
                                 loading: isRunning,
@@ -455,13 +462,13 @@ export function SellerOrdersPageClient() {
                 </article>
               ))
             ) : (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">Không có đơn nào trong bucket này.</div>
+              <div className="px-5 py-8 text-sm text-[var(--muted)]">{t("sellerOrders.empty")}</div>
             )}
           </div>
         </div>
 
         <div className="mt-5 flex items-center justify-between">
-          <p className="text-sm text-[var(--muted)]">Page {response?.meta.page ?? 1} of {response?.meta.totalPages ?? 1}</p>
+          <p className="text-sm text-[var(--muted)]">{t("common.pageOf", { page: response?.meta.page ?? 1, total: response?.meta.totalPages ?? 1 })}</p>
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -488,7 +495,7 @@ export function SellerOrdersPageClient() {
           <div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Tạo đơn vận chuyển</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("sellerOrders.createShipmentTitle")}</p>
                 <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">{shipmentPanel.order.orderNumber}</h3>
               </div>
               <Button
@@ -496,7 +503,7 @@ export function SellerOrdersPageClient() {
                 size="sm"
                 onClick={() => setShipmentPanel(null)}
               >
-                Đóng
+                {t("common.close")}
               </Button>
             </div>
 
@@ -508,7 +515,7 @@ export function SellerOrdersPageClient() {
                     current ? { ...current, manualYandexOrderId: event.target.value } : current,
                   )
                 }
-                placeholder="manualYandexOrderId"
+                placeholder={t("sellerOrders.manualYandexOrderIdPlaceholder")}
                 className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
               />
               <input
@@ -518,7 +525,7 @@ export function SellerOrdersPageClient() {
                     current ? { ...current, trackingUrl: event.target.value } : current,
                   )
                 }
-                placeholder="trackingUrl (nếu có)"
+                placeholder={t("sellerOrders.trackingUrlPlaceholder")}
                 className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
               />
               <textarea
@@ -529,7 +536,7 @@ export function SellerOrdersPageClient() {
                   )
                 }
                 rows={4}
-                placeholder="Ghi chú cho vận đơn"
+                placeholder={t("sellerOrders.deliveryNotePlaceholder")}
                 className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
               />
             </div>
@@ -541,7 +548,7 @@ export function SellerOrdersPageClient() {
                 disabled={isRunning}
                 loading={isRunning}
               >
-                Lưu và chuyển sang Lắp ráp
+                {t("sellerOrders.saveAndAssemble")}
               </Button>
             </div>
           </div>

@@ -313,6 +313,13 @@ describe('WbProductSyncService credentials', () => {
         })),
       } as never,
       {
+        resolveCategoryAssignment: jest.fn().mockResolvedValue({
+          categoryId: null,
+          categoryName: null,
+          sourceCategoryName: null,
+        }),
+      } as never,
+      {
         mapSourceCategory: jest.fn().mockResolvedValue({
           sourceCategoryName: null,
           categoryId: null,

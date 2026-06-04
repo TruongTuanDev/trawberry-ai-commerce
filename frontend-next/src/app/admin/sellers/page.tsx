@@ -14,6 +14,21 @@ import { useActionFeedback } from "@/hooks/use-action-feedback";
 
 const statuses: Array<SellerApprovalStatus | "ALL"> = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
+function formatApprovalStatus(value: SellerApprovalStatus | "ALL") {
+  switch (value) {
+    case "PENDING":
+      return "Pending";
+    case "APPROVED":
+      return "Approved";
+    case "REJECTED":
+      return "Rejected";
+    case "ALL":
+      return "All";
+    default:
+      return value;
+  }
+}
+
 export default function AdminSellersPage() {
   const [status, setStatus] = useState<SellerApprovalStatus | "ALL">("PENDING");
   const [sellers, setSellers] = useState<AdminSeller[]>([]);
@@ -74,7 +89,7 @@ export default function AdminSellersPage() {
       action: async () => {
         return approveAdminSeller(seller.userId);
       },
-      successMessage: "Phê duyệt người bán thành công.",
+      successMessage: "Seller approved successfully.",
       onSuccess: async () => {
         await refresh();
       },
@@ -86,7 +101,7 @@ export default function AdminSellersPage() {
 
   const reject = async () => {
     if (!selectedSeller) return;
-    if (!window.confirm(`Bạn có chắc chắn muốn từ chối người bán ${selectedSeller.email} không?`)) {
+    if (!window.confirm(`Reject seller ${selectedSeller.email}?`)) {
       return;
     }
     setSavingUserId(selectedSeller.userId);
@@ -96,7 +111,7 @@ export default function AdminSellersPage() {
       action: async () => {
         return rejectAdminSeller(selectedSeller.userId, reason.trim() || undefined);
       },
-      successMessage: "Từ chối người bán thành công.",
+      successMessage: "Seller rejected successfully.",
       onSuccess: async () => {
         setSelectedSeller(null);
         setReason("");
@@ -144,7 +159,7 @@ export default function AdminSellersPage() {
               }`}
               data-testid={`seller-status-tab-${item}`}
             >
-              {item}
+              {formatApprovalStatus(item)}
             </button>
           ))}
         </div>
@@ -160,79 +175,81 @@ export default function AdminSellersPage() {
         {message ? <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
         {error ? <div className="mt-4 rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
 
-        <div className="mt-5 overflow-hidden rounded-[1.25rem] border border-[var(--border)]">
-          <div className="hidden grid-cols-[1.2fr_1fr_120px_120px_140px_140px_300px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)] lg:grid">
-            <div>Seller</div>
-            <div>Status</div>
-            <div>Shops</div>
-            <div>Revenue</div>
-            <div>Pending fee</div>
-            <div>Reviewed</div>
-            <div>Actions</div>
-          </div>
-          <div className="divide-y divide-[var(--border)]">
-            {loading ? (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading sellers...</div>
-            ) : sellers.length ? (
-              sellers.map((seller) => (
-                <article
-                  key={seller.userId}
-                  className="grid gap-4 px-5 py-4 lg:grid-cols-[1.2fr_1fr_120px_120px_140px_140px_300px] lg:items-center"
-                  data-testid="admin-seller-row"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--foreground)]">{seller.name ?? "Unnamed seller"}</p>
-                    <p className="mt-1 text-sm text-[var(--muted)]">{seller.email}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{seller.phone ?? "No phone"}{seller.primaryShopName ? ` · ${seller.primaryShopName}` : ""}</p>
-                  </div>
-                  <div>
-                    <span className="inline-flex rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                      {seller.sellerApprovalStatus}
-                    </span>
-                    {seller.sellerRejectionReason ? (
-                      <p className="mt-2 text-xs text-[var(--muted)]">{seller.sellerRejectionReason}</p>
-                    ) : null}
-                  </div>
-                  <p className="text-sm text-[var(--foreground)]">{seller.activeShopCount ?? 0}/{seller.shopCount ?? 0}</p>
-                  <p className="text-sm text-[var(--foreground)]">{seller.revenueThisMonth ?? "0"} ₽</p>
-                  <p className="text-sm text-[var(--foreground)]">{seller.pendingPlatformFees ?? "0"} ₽</p>
-                  <p className="text-sm text-[var(--muted)]">
-                    {seller.sellerApprovedAt ?? seller.sellerRejectedAt
-                      ? new Date(seller.sellerApprovedAt ?? seller.sellerRejectedAt ?? "").toLocaleDateString()
-                      : "Not reviewed"}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href={`/admin/sellers/${seller.userId}`}
-                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
-                      data-testid={`view-seller-${seller.userId}`}
-                    >
-                      Review
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void approve(seller)}
-                      disabled={isRunning || seller.sellerApprovalStatus === "APPROVED"}
-                      className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
-                      data-testid={`approve-seller-${seller.userId}`}
-                    >
-                      {savingUserId === seller.userId && isRunning ? "Đang xác nhận..." : "Approve"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSeller(seller)}
-                      disabled={isRunning || seller.sellerApprovalStatus === "REJECTED"}
-                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
-                      data-testid={`reject-seller-${seller.userId}`}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">No sellers match this status.</div>
-            )}
+        <div className="mt-5 overflow-x-auto rounded-[1.25rem] border border-[var(--border)] scrollbar-thin">
+          <div className="min-w-full lg:min-w-[1100px]">
+            <div className="hidden grid-cols-[1.2fr_1fr_120px_120px_140px_140px_300px] gap-4 border-b border-[var(--border)] bg-[var(--panel-strong)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)] lg:grid">
+              <div>Seller</div>
+              <div>Status</div>
+              <div>Shops</div>
+              <div>Revenue</div>
+              <div>Pending fee</div>
+              <div>Reviewed</div>
+              <div>Actions</div>
+            </div>
+            <div className="divide-y divide-[var(--border)]">
+              {loading ? (
+                <div className="px-5 py-8 text-sm text-[var(--muted)]">Loading sellers...</div>
+              ) : sellers.length ? (
+                sellers.map((seller) => (
+                  <article
+                    key={seller.userId}
+                    className="grid gap-4 px-5 py-4 lg:grid-cols-[1.2fr_1fr_120px_120px_140px_140px_300px] lg:items-center"
+                    data-testid="admin-seller-row"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">{seller.name ?? "Unnamed seller"}</p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">{seller.email}</p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">{seller.phone ?? "No phone"}{seller.primaryShopName ? ` · ${seller.primaryShopName}` : ""}</p>
+                    </div>
+                    <div>
+                      <span className="inline-flex rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
+                        {formatApprovalStatus(seller.sellerApprovalStatus)}
+                      </span>
+                      {seller.sellerRejectionReason ? (
+                        <p className="mt-2 text-xs text-[var(--muted)]">{seller.sellerRejectionReason}</p>
+                      ) : null}
+                    </div>
+                    <p className="text-sm text-[var(--foreground)]">{seller.activeShopCount ?? 0}/{seller.shopCount ?? 0}</p>
+                    <p className="text-sm text-[var(--foreground)]">{seller.revenueThisMonth ?? "0"} ₽</p>
+                    <p className="text-sm text-[var(--foreground)]">{seller.pendingPlatformFees ?? "0"} ₽</p>
+                    <p className="text-sm text-[var(--muted)]">
+                      {seller.sellerApprovedAt ?? seller.sellerRejectedAt
+                        ? new Date(seller.sellerApprovedAt ?? seller.sellerRejectedAt ?? "").toLocaleDateString()
+                        : "Not reviewed"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/admin/sellers/${seller.userId}`}
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)]"
+                        data-testid={`view-seller-${seller.userId}`}
+                      >
+                        Review
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => void approve(seller)}
+                        disabled={isRunning || seller.sellerApprovalStatus === "APPROVED"}
+                        className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                        data-testid={`approve-seller-${seller.userId}`}
+                      >
+                        {savingUserId === seller.userId && isRunning ? "Approving..." : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSeller(seller)}
+                        disabled={isRunning || seller.sellerApprovalStatus === "REJECTED"}
+                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
+                        data-testid={`reject-seller-${seller.userId}`}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="px-5 py-8 text-sm text-[var(--muted)]">No sellers match this status.</div>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -256,7 +273,7 @@ export default function AdminSellersPage() {
                 Cancel
               </button>
               <button type="button" onClick={() => void reject()} disabled={isRunning} className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white" data-testid="confirm-reject-seller">
-                {isRunning ? "Đang từ chối..." : "Reject seller"}
+                {isRunning ? "Rejecting..." : "Reject seller"}
               </button>
             </div>
           </div>

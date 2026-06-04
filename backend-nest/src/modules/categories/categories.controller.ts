@@ -21,6 +21,12 @@ export class CategoriesController {
   }
 
   @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
+  @Get('api/admin/categories')
+  listAdminCategories() {
+    return this.categoriesService.adminListCategories();
+  }
+
+  @UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
   @Post('api/admin/categories')
   createCategory(
     @Body() body: Parameters<CategoriesService['createCategory']>[0],

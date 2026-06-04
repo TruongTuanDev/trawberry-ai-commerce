@@ -11,11 +11,9 @@ router = APIRouter(tags=["health"])
 async def health() -> HealthResponse:
     settings = get_settings()
     safe_error_code: str | None = None
-    openai_configured = (
-        settings.ai_image_provider == "openai" and bool(settings.openai_api_key)
-    )
+    openai_configured = bool(settings.openai_api_key)
 
-    if settings.ai_image_provider == "openai" and not settings.openai_api_key:
+    if not settings.openai_api_key:
         safe_error_code = "OPENAI_UNAUTHORIZED"
     elif settings.storage_driver == "s3" and (
         not settings.s3_bucket
@@ -31,5 +29,5 @@ async def health() -> HealthResponse:
         openai_configured=openai_configured,
         openai_smoke_enabled=settings.run_openai_smoke,
         safe_error_code=safe_error_code,
-        try_on_ready=False,
+        try_on_ready=True,
     )

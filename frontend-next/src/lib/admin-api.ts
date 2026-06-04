@@ -716,6 +716,50 @@ export type AdminReturnRefundCase = {
   };
 };
 
+export type AdminReviewRecord = {
+  id: string;
+  productId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  orderId: string;
+  orderItemId: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  hiddenReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; title: string } | null;
+  shop: { id: string; name: string } | null;
+  customer: { id: string; name: string | null; maskedName: string } | null;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  orderItem: {
+    id: string;
+    productTitleSnapshot: string;
+    productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
+    quantity: number;
+  } | null;
+  images: Array<{
+    id: string;
+    url: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+    createdAt: string;
+  }>;
+};
+
 export async function getAdminDashboardSummary(query?: {
   dateFrom?: string;
   dateTo?: string;
@@ -1323,5 +1367,288 @@ export async function adminRemindYandex(orderId: string) {
   }>(`/api/admin/deliveries/${encodeURIComponent(orderId)}/remind-yandex`, {
     method: "POST",
     body: JSON.stringify({}),
+  });
+}
+
+export async function listAdminReviews(query?: {
+  productId?: string;
+  rating?: number;
+  status?: string;
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+  if (query?.productId) params.set("productId", query.productId);
+  if (query?.rating) params.set("rating", String(query.rating));
+  if (query?.status) params.set("status", query.status);
+  if (query?.q) params.set("q", query.q);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<{ items: AdminReviewRecord[] }>(
+    `/api/admin/reviews${suffix}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function hideAdminReview(reviewId: string, reason?: string) {
+  return apiRequest<AdminReviewRecord>(
+    `/api/admin/reviews/${encodeURIComponent(reviewId)}/hide`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+    },
+  );
+}
+
+export async function restoreAdminReview(reviewId: string) {
+  return apiRequest<AdminReviewRecord>(
+    `/api/admin/reviews/${encodeURIComponent(reviewId)}/restore`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({}),
+    },
+  );
+}
+
+export type AdminHomepageSlide = {
+  id: string;
+  titleRu: string | null;
+  titleEn: string | null;
+  subtitleRu: string | null;
+  subtitleEn: string | null;
+  ctaLabelRu: string | null;
+  ctaLabelEn: string | null;
+  ctaUrl: string | null;
+  altTextRu: string | null;
+  altTextEn: string | null;
+  imageDesktopUrl: string;
+  imageDesktopStorageKey: string | null;
+  imageMobileUrl: string | null;
+  imageMobileStorageKey: string | null;
+  backgroundColor: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminAiTryOnSettings = {
+  id: string;
+  enabled: boolean;
+  providerMode: "mock" | "demo" | "openai";
+  guestDailyLimit: number;
+  customerDailyLimit: number;
+  requireConsent: boolean;
+  supportedCategories: string[];
+  providerConfigured: boolean | null;
+  aiServiceReachable: boolean | null;
+  providerSafeErrorCode: string | null;
+  productAvailabilitySync: {
+    enabledProducts: number;
+    disabledProducts: number;
+    mode: "RESTRICTED" | "ALLOW_ALL_ELIGIBLE";
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminCategoryOption = {
+  id: string;
+  name: string;
+  slug: string | null;
+  productCount: number;
+};
+
+export type UpdateAdminAiTryOnSettingsPayload = {
+  enabled: boolean;
+  providerMode: "mock" | "demo" | "openai";
+  guestDailyLimit: number;
+  customerDailyLimit: number;
+  requireConsent: boolean;
+  supportedCategories: string[];
+};
+
+export type CreateHomepageSlideInput = {
+  titleRu?: string | null;
+  titleEn?: string | null;
+  subtitleRu?: string | null;
+  subtitleEn?: string | null;
+  ctaLabelRu?: string | null;
+  ctaLabelEn?: string | null;
+  ctaUrl?: string | null;
+  altTextRu?: string | null;
+  altTextEn?: string | null;
+  imageDesktopUrl: string;
+  imageDesktopStorageKey?: string | null;
+  imageMobileUrl?: string | null;
+  imageMobileStorageKey?: string | null;
+  backgroundColor?: string | null;
+  displayOrder?: number;
+  isActive?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
+
+export type UpdateHomepageSlideInput = Partial<CreateHomepageSlideInput>;
+
+export async function listHomepageSlides() {
+  return apiRequest<AdminHomepageSlide[]>("/api/admin/homepage-slides", {
+    method: "GET",
+  });
+}
+
+export async function createHomepageSlide(input: CreateHomepageSlideInput) {
+  return apiRequest<AdminHomepageSlide>("/api/admin/homepage-slides", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateHomepageSlide(id: string, input: UpdateHomepageSlideInput) {
+  return apiRequest<AdminHomepageSlide>(`/api/admin/homepage-slides/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteHomepageSlide(id: string) {
+  return apiRequest<void>(`/api/admin/homepage-slides/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function toggleHomepageSlide(id: string) {
+  return apiRequest<AdminHomepageSlide>(`/api/admin/homepage-slides/${encodeURIComponent(id)}/toggle`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function reorderHomepageSlides(ids: string[]) {
+  return apiRequest<AdminHomepageSlide[]>("/api/admin/homepage-slides/reorder", {
+    method: "POST",
+    body: JSON.stringify({ slideIds: ids }),
+  });
+}
+
+export async function uploadHomepageSlideImage(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<{
+    url: string;
+    storageKey: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>("/api/admin/homepage-slides/upload", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function getAdminAiTryOnSettings() {
+  return apiRequest<AdminAiTryOnSettings>("/api/admin/ai-settings", {
+    method: "GET",
+  });
+}
+
+export async function getAdminCategories() {
+  return apiRequest<AdminCategoryOption[]>("/api/admin/categories", {
+    method: "GET",
+  });
+}
+
+export async function updateAdminAiTryOnSettings(
+  payload: UpdateAdminAiTryOnSettingsPayload,
+) {
+  return apiRequest<AdminAiTryOnSettings>("/api/admin/ai-settings", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  phone: string | null;
+  preferredLocale: string | null;
+  role: string;
+  status: string;
+  createdAt: string;
+};
+
+export type AdminUserListResponse = {
+  items: AdminUser[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type CreateAdminUserInput = {
+  fullName?: string;
+  email: string;
+  phone?: string;
+  role: string;
+  password?: string;
+  status?: string;
+};
+
+export type UpdateAdminUserInput = {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  password?: string;
+  status?: string;
+};
+
+export async function getAdminUsers(query?: {
+  search?: string;
+  role?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (query?.search) params.set("q", query.search);
+  if (query?.role) params.set("role", query.role);
+  if (query?.status) params.set("status", query.status);
+  if (query?.page) params.set("page", String(query.page));
+  if (query?.limit) params.set("limit", String(query.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<AdminUserListResponse>(`/api/admin/users${suffix}`, {
+    method: "GET",
+  });
+}
+
+export async function getAdminUser(id: string) {
+  return apiRequest<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: "GET",
+  });
+}
+
+export async function createAdminUser(input: CreateAdminUserInput) {
+  return apiRequest<AdminUser>("/api/admin/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateAdminUser(id: string, input: UpdateAdminUserInput) {
+  return apiRequest<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteAdminUser(id: string) {
+  return apiRequest<void>(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }

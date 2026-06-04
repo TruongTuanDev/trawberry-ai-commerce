@@ -2,10 +2,12 @@
 
 import { useMemo } from "react";
 import { clsx } from "clsx";
+import { useI18n } from "@/i18n/use-i18n";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 export function ShopSwitcher() {
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
   const shops = useSellerWorkspaceStore((state) => state.shops);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
@@ -19,7 +21,9 @@ export function ShopSwitcher() {
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Shop switcher</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+        {t("sellerShell.shopSwitcher")}
+      </p>
       <div className="mt-2 flex items-center gap-3">
         <select
           value={currentShopId ?? ""}
@@ -30,15 +34,21 @@ export function ShopSwitcher() {
             "disabled:cursor-not-allowed disabled:bg-[var(--panel)] disabled:text-[var(--muted)]",
           )}
         >
-          {shops.length === 0 ? <option value="">{loading ? "Loading shops..." : "No shops available"}</option> : null}
+          {shops.length === 0 ? (
+            <option value="">
+              {loading ? t("sellerShell.loadingShops") : t("sellerShell.noShopsAvailable")}
+            </option>
+          ) : null}
           {shops.map((shop) => (
             <option key={shop.id} value={shop.id}>
-              {shop.name} · {shop.status}
+              {shop.name} {"\u00b7"} {shop.status}
             </option>
           ))}
         </select>
         <div className="text-sm text-[var(--muted)]">
-          {currentShop ? `${currentShop.productCount} products` : "Choose active shop"}
+          {currentShop
+            ? t("sellerShell.productsCount", { count: currentShop.productCount })
+            : t("sellerShell.chooseActiveShop")}
         </div>
       </div>
     </div>

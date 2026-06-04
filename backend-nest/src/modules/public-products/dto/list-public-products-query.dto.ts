@@ -37,6 +37,11 @@ export class ListPublicProductsQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  shopSlug?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   brand?: string;
 
   @ApiPropertyOptional()

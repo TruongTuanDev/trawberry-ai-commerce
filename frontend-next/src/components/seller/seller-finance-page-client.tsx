@@ -11,6 +11,7 @@ import {
   type SellerFinanceLedgerEntry,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useI18n } from "@/i18n/use-i18n";
 
 function formatRub(value: string) {
   return new Intl.NumberFormat("ru-RU", {
@@ -21,6 +22,7 @@ function formatRub(value: string) {
 }
 
 export function SellerFinancePageClient() {
+  const { t } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -71,7 +73,7 @@ export function SellerFinancePageClient() {
       } catch (issue) {
         if (active) {
           setError(
-            issue instanceof Error ? issue.message : "Unable to load seller finance.",
+            issue instanceof Error ? issue.message : t("seller.finance.loadFailed"),
           );
         }
       } finally {
@@ -85,7 +87,7 @@ export function SellerFinancePageClient() {
     return () => {
       active = false;
     };
-  }, [currentShopId, hydrated, loadShops, shops.length]);
+  }, [currentShopId, hydrated, loadShops, shops.length, t]);
 
   const currentShop = useMemo(
     () => shops.find((shop) => shop.id === currentShopId) ?? null,
@@ -95,30 +97,30 @@ export function SellerFinancePageClient() {
   return (
     <div className="space-y-6" data-testid="seller-finance-page">
       <SectionCard
-        eyebrow="Finance"
-        title="Seller Finance"
-        description="Platform commission is calculated from confirmed paid product revenue only, using the shop commission active at confirmation time."
+        eyebrow={t("seller.finance.eyebrow")}
+        title={t("seller.finance.title")}
+        description={t("seller.finance.subtitle")}
       >
         {loading ? (
-          <p className="text-sm text-[var(--muted)]">Loading finance data...</p>
+          <p className="text-sm text-[var(--muted)]">{t("seller.finance.loading")}</p>
         ) : error ? (
           <p className="text-sm text-[var(--danger)]">{error}</p>
         ) : metrics ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">Shop</p>
+              <p className="text-sm text-[var(--muted)]">{t("seller.finance.shop")}</p>
               <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
-                {currentShop?.name ?? "Unknown shop"}
+                {currentShop?.name ?? t("common.unknown")}
               </p>
             </article>
             <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">Billing period</p>
+              <p className="text-sm text-[var(--muted)]">{t("seller.finance.billingPeriod")}</p>
               <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
                 {metrics.billingPeriod}
               </p>
             </article>
             <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">Confirmed revenue this month</p>
+              <p className="text-sm text-[var(--muted)]">{t("seller.finance.confirmedRevenueThisMonth")}</p>
               <p
                 className="mt-3 text-lg font-semibold text-[var(--foreground)]"
                 data-testid="seller-finance-confirmed-revenue-this-month"
@@ -127,7 +129,7 @@ export function SellerFinancePageClient() {
               </p>
             </article>
             <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">Estimated platform fee</p>
+              <p className="text-sm text-[var(--muted)]">{t("seller.finance.estimatedPlatformFee")}</p>
               <p
                 className="mt-3 text-lg font-semibold text-[var(--warning)]"
                 data-testid="seller-finance-estimated-platform-fee"
@@ -137,26 +139,26 @@ export function SellerFinancePageClient() {
             </article>
           </div>
         ) : (
-          <p className="text-sm text-[var(--muted)]">Select a shop to see finance data.</p>
+          <p className="text-sm text-[var(--muted)]">{t("seller.finance.selectShop")}</p>
         )}
       </SectionCard>
 
       <SectionCard
-        eyebrow="Ledger"
-        title="Fee Ledger"
-        description="Each final confirmed order stores a read-only commission snapshot at confirmation time."
+        eyebrow={t("seller.finance.ledgerEyebrow")}
+        title={t("seller.finance.ledgerTitle")}
+        description={t("seller.finance.ledgerDescription")}
       >
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-[var(--muted)]">
               <tr>
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Order</th>
-                <th className="px-3 py-2 font-medium">Source</th>
-                <th className="px-3 py-2 font-medium">Revenue</th>
-                <th className="px-3 py-2 font-medium">Commission %</th>
-                <th className="px-3 py-2 font-medium">Commission</th>
-                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.date")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.order")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.source")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.revenue")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.commissionPercent")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.commission")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -181,7 +183,7 @@ export function SellerFinancePageClient() {
               {ledger.length < 1 ? (
                 <tr>
                   <td colSpan={7} className="px-3 py-6 text-center text-[var(--muted)]">
-                    No ledger entries yet.
+                    {t("seller.finance.noLedger")}
                   </td>
                 </tr>
               ) : null}
@@ -191,19 +193,19 @@ export function SellerFinancePageClient() {
       </SectionCard>
 
       <SectionCard
-        eyebrow="Invoices"
-        title="Monthly Invoices"
-        description="Admin issues and marks invoices paid manually in this MVP phase."
+        eyebrow={t("seller.finance.invoicesEyebrow")}
+        title={t("seller.finance.invoicesTitle")}
+        description={t("seller.finance.invoicesDescription")}
       >
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="text-left text-[var(--muted)]">
               <tr>
-                <th className="px-3 py-2 font-medium">Period</th>
-                <th className="px-3 py-2 font-medium">Total revenue</th>
-                <th className="px-3 py-2 font-medium">Total commission</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Paid at</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.period")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.totalRevenue")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.totalCommission")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.status")}</th>
+                <th className="px-3 py-2 font-medium">{t("seller.finance.columns.paidAt")}</th>
               </tr>
             </thead>
             <tbody>
@@ -226,14 +228,14 @@ export function SellerFinancePageClient() {
                   <td className="px-3 py-3 text-[var(--muted)]">
                     {invoice.paidAt
                       ? new Date(invoice.paidAt).toLocaleDateString("ru-RU")
-                      : "Not paid"}
+                      : t("seller.finance.notPaid")}
                   </td>
                 </tr>
               ))}
               {invoices.length < 1 ? (
                 <tr>
                   <td colSpan={5} className="px-3 py-6 text-center text-[var(--muted)]">
-                    No invoices generated yet.
+                    {t("seller.finance.noInvoices")}
                   </td>
                 </tr>
               ) : null}

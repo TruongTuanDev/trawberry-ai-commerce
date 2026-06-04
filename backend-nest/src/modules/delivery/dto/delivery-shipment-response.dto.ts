@@ -98,6 +98,9 @@ export class DeliveryShipmentResponseDto {
   dropoffCity!: string | null;
 
   @ApiProperty({ nullable: true })
+  dropoffPostalCode!: string | null;
+
+  @ApiProperty({ nullable: true })
   dropoffStreet!: string | null;
 
   @ApiProperty({ nullable: true })

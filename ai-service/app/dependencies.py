@@ -10,6 +10,11 @@ from app.services.mock_image_provider import MockImageProvider
 from app.services.openai_image_provider import OpenAIImageProvider
 from app.services.prompt_builder import EcommercePromptBuilder
 from app.services.storage_service import build_storage_service
+from app.services.demo_try_on_provider import DemoTryOnProvider
+from app.services.mock_try_on_provider import MockTryOnProvider
+from app.services.openai_try_on_provider import OpenAITryOnProvider
+from app.services.try_on_provider import TryOnProvider
+from app.services.try_on_service import TryOnService
 
 
 @lru_cache
@@ -28,6 +33,23 @@ def get_ai_image_service() -> AiImageService:
         storage_service=build_storage_service(settings),
         prompt_builder=EcommercePromptBuilder(),
         callback_client=CallbackClient(settings),
+    )
+
+
+@lru_cache
+def get_try_on_providers() -> dict[str, TryOnProvider]:
+    settings = get_settings()
+    return {
+        "mock": MockTryOnProvider(),
+        "demo": DemoTryOnProvider(),
+        "openai": OpenAITryOnProvider(settings),
+    }
+
+
+@lru_cache
+def get_try_on_service() -> TryOnService:
+    return TryOnService(
+        providers=get_try_on_providers(),
     )
 
 

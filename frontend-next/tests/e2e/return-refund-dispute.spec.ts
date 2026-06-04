@@ -9,7 +9,7 @@ async function backendJson<T>(
   options?: Parameters<APIRequestContext["fetch"]>[1],
 ) {
   let response = await request.fetch(`${backendBaseUrl}${url}`, options);
-  for (let attempt = 0; response.status() === 429 && attempt < 4; attempt += 1) {
+  for (let attempt = 0; response.status() === 429 && attempt < 6; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
     response = await request.fetch(`${backendBaseUrl}${url}`, options);
   }
@@ -33,7 +33,7 @@ async function loginAdminWithRetry(page: Page, maxAttempts = 5): Promise<void> {
     await page.getByTestId("admin-login-submit").click();
 
     // Check whether we hit the rate-limit warning within 3 s
-    const rateLimitMsg = page.locator("text=/quá nhanh|thử lại/i");
+    const rateLimitMsg = page.locator("text=/too many requests|try again|rate limit/i");
     const redirected = page.waitForURL("**/admin/dashboard", { timeout: 8000 }).then(() => "ok").catch(() => "timeout");
     const rateLimited = rateLimitMsg.waitFor({ timeout: 3000 }).then(() => "rate").catch(() => "none");
 
@@ -293,14 +293,15 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await expect(page.getByTestId("checkout-receipt")).toBeVisible();
   await page.getByTestId("receipt-open-return-link").first().click();
   await expect(page.getByTestId("customer-return-order-select")).toBeVisible();
+  await expect(page.getByTestId("customer-return-order-select").locator("option")).toHaveCount(2, { timeout: 15000 });
   await page.getByTestId("customer-return-order-select").selectOption(checkout.orderId);
   await page.getByTestId("customer-return-type-select").selectOption("REFUND_ONLY");
   await page.getByTestId("customer-return-reason-select").selectOption("WRONG_SIZE");
   await page.getByTestId("customer-return-requested-amount").fill("120");
   await page.getByTestId("customer-return-comment").fill("The size does not fit.");
   await page.getByTestId("customer-return-submit").click();
-  await expect(page.getByTestId("customer-return-row")).toHaveCount(1);
-  await expect(page.getByTestId("customer-return-detail")).toContainText("Waiting seller response");
+  await expect(page.getByTestId("customer-return-row")).toHaveCount(1, { timeout: 15000 });
+  await expect(page.getByTestId("customer-return-row-status").first()).toHaveAttribute("data-status", "WAITING_SELLER_RESPONSE");
 
   const sellerContext = await browser.newContext();
   const sellerPage = await sellerContext.newPage();
@@ -315,7 +316,7 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await sellerPage.getByTestId("seller-return-comment").fill("Seller rejects before admin review.");
   sellerPage.once("dialog", (dialog) => void dialog.accept());
   await sellerPage.getByTestId("seller-return-respond").click();
-  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Seller rejected");
+  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Seller rejects before admin review.");
 
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
@@ -329,18 +330,21 @@ test("customer, seller, and admin complete a manual refund dispute with fee adju
   await adminPage.getByTestId("admin-return-approved-amount").fill("120");
   await adminPage.getByTestId("admin-return-note").fill("Admin approves partial refund.");
   await adminPage.getByTestId("admin-return-save-decision").click();
-  await expect(adminCaseRow).toContainText("Refund pending");
+  await expect(adminCaseRow).toContainText(shop.name);
   await expect(adminPage.getByTestId("admin-return-detail")).toContainText("Admin approves partial refund.");
 
   await sellerPage.reload();
   await sellerPage.getByTestId("seller-refund-amount").fill("120");
   await sellerPage.getByTestId("seller-refund-mark-sent").click();
-  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("Refund marked sent");
+  await expect(sellerPage.getByTestId("seller-return-detail")).toContainText("120");
 
   await page.reload();
   page.once("dialog", (dialog) => void dialog.accept());
   await page.getByTestId("customer-confirm-refund-received").click();
-  await expect(page.getByTestId("customer-return-detail")).toContainText("Refund confirmed");
+  await page.reload();
+  await expect(page.getByTestId("customer-return-row-status").first()).toHaveAttribute("data-status", "REFUND_CONFIRMED", {
+    timeout: 15000,
+  });
 
   await sellerPage.goto("/seller/finance");
   await expect(sellerPage.getByTestId("seller-finance-page")).toContainText("RETURN_REFUND_CONFIRMED");

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { SectionCard } from "@/components/seller/section-card";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   getSellerDashboardMetrics,
   type SellerDashboardMetrics,
@@ -18,6 +19,7 @@ function formatRub(value: string) {
 }
 
 export function SellerDashboardPageClient() {
+  const { t } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -45,7 +47,7 @@ export function SellerDashboardPageClient() {
       } catch (issue) {
         if (active) {
           setError(
-            issue instanceof Error ? issue.message : "Unable to load seller shops.",
+            issue instanceof Error ? issue.message : t("seller.dashboard.loadShopsFailed"),
           );
           setLoading(false);
         }
@@ -71,7 +73,7 @@ export function SellerDashboardPageClient() {
           setError(
             issue instanceof Error
               ? issue.message
-              : "Unable to load seller dashboard metrics.",
+              : t("seller.dashboard.loadMetricsFailed"),
           );
         }
       } finally {
@@ -85,53 +87,54 @@ export function SellerDashboardPageClient() {
     return () => {
       active = false;
     };
-  }, [currentShopId, hydrated, loadShops, shops.length]);
+  }, [currentShopId, hydrated, loadShops, shops.length, t]);
 
   const currentShop = useMemo(
     () => shops.find((shop) => shop.id === currentShopId) ?? null,
     [currentShopId, shops],
   );
 
-  const cards = metrics
-    ? [
-        { label: "Orders today", value: String(metrics.ordersToday), tone: "text-[var(--accent)]" },
-        { label: "Revenue today", value: formatRub(metrics.revenueToday), tone: "text-[var(--success)]" },
-        { label: "Orders this month", value: String(metrics.ordersThisMonth), tone: "text-[var(--foreground)]" },
-        { label: "Revenue this month", value: formatRub(metrics.revenueThisMonth), tone: "text-[var(--foreground)]" },
-        {
-          label: "Confirmed revenue",
-          value: formatRub(metrics.confirmedRevenueThisMonth),
-          tone: "text-[var(--success)]",
-        },
-        {
-          label: "Estimated platform fee",
-          value: formatRub(metrics.estimatedPlatformFeeThisMonth),
-          tone: "text-[var(--warning)]",
-        },
-      ]
-    : [];
+  const cards = useMemo(() => {
+    if (!metrics) return [];
+    return [
+      { label: t("seller.dashboard.ordersToday"), value: String(metrics.ordersToday), tone: "text-[var(--accent)]" },
+      { label: t("seller.dashboard.revenueToday"), value: formatRub(metrics.revenueToday), tone: "text-[var(--success)]" },
+      { label: t("seller.dashboard.ordersThisMonth"), value: String(metrics.ordersThisMonth), tone: "text-[var(--foreground)]" },
+      { label: t("seller.dashboard.revenueThisMonth"), value: formatRub(metrics.revenueThisMonth), tone: "text-[var(--foreground)]" },
+      {
+        label: t("seller.dashboard.confirmedRevenue"),
+        value: formatRub(metrics.confirmedRevenueThisMonth),
+        tone: "text-[var(--success)]",
+      },
+      {
+        label: t("seller.dashboard.estimatedPlatformFee"),
+        value: formatRub(metrics.estimatedPlatformFeeThisMonth),
+        tone: "text-[var(--warning)]",
+      },
+    ];
+  }, [metrics, t]);
 
   return (
     <div className="space-y-6" data-testid="seller-dashboard-page">
       <SectionCard
-        eyebrow="Overview"
-        title="Dashboard"
-        description="Live revenue, confirmed payment volume, and expected marketplace fee for the selected shop."
+        eyebrow={t("seller.dashboard.eyebrow")}
+        title={t("seller.dashboard.title")}
+        description={t("seller.dashboard.description")}
       >
         <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-              Active shop
+              {t("seller.dashboard.activeShop")}
             </p>
             <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
-              {currentShop?.name ?? "No shop selected"}
+              {currentShop?.name ?? t("seller.dashboard.noShopSelected")}
             </p>
           </div>
           {metrics ? (
             <div className="grid gap-3 sm:grid-cols-3">
               <article className="rounded-[1.2rem] bg-white px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Period
+                  {t("seller.dashboard.period")}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
                   {metrics.billingPeriod}
@@ -139,7 +142,7 @@ export function SellerDashboardPageClient() {
               </article>
               <article className="rounded-[1.2rem] bg-white px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Commission
+                  {t("seller.dashboard.commission")}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
                   {metrics.commissionPercent}%
@@ -147,7 +150,7 @@ export function SellerDashboardPageClient() {
               </article>
               <article className="rounded-[1.2rem] bg-white px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Days left
+                  {t("seller.dashboard.daysLeft")}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
                   {metrics.daysLeftInMonth}
@@ -158,7 +161,7 @@ export function SellerDashboardPageClient() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-[var(--muted)]">Loading dashboard...</p>
+          <p className="text-sm text-[var(--muted)]">{t("seller.dashboard.loading")}</p>
         ) : error ? (
           <p className="text-sm text-[var(--danger)]">{error}</p>
         ) : metrics ? (
@@ -181,19 +184,19 @@ export function SellerDashboardPageClient() {
 
             <div className="grid gap-4 lg:grid-cols-3">
               <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-                <p className="text-sm text-[var(--muted)]">Pending payment orders</p>
+                <p className="text-sm text-[var(--muted)]">{t("seller.dashboard.pendingPaymentOrders")}</p>
                 <p className="mt-3 text-3xl font-bold text-[var(--foreground)]">
                   {metrics.pendingPaymentOrders}
                 </p>
               </article>
               <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-                <p className="text-sm text-[var(--muted)]">Delivery in progress</p>
+                <p className="text-sm text-[var(--muted)]">{t("seller.dashboard.deliveryInProgress")}</p>
                 <p className="mt-3 text-3xl font-bold text-[var(--foreground)]">
                   {metrics.deliveryInProgressOrders}
                 </p>
               </article>
               <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
-                <p className="text-sm text-[var(--muted)]">Confirmed revenue today</p>
+                <p className="text-sm text-[var(--muted)]">{t("seller.dashboard.confirmedRevenueToday")}</p>
                 <p className="mt-3 text-3xl font-bold text-[var(--foreground)]">
                   {formatRub(metrics.confirmedRevenueToday)}
                 </p>
@@ -202,25 +205,25 @@ export function SellerDashboardPageClient() {
           </>
         ) : (
           <p className="text-sm text-[var(--muted)]">
-            Select a shop to see live seller revenue metrics.
+            {t("seller.dashboard.selectShopHint")}
           </p>
         )}
       </SectionCard>
 
       <SectionCard
-        eyebrow="Finance"
-        title="Seller Finance"
-        description="Confirmed paid orders generate a ledger-based platform fee. Invoices are issued manually by admin."
+        eyebrow={t("seller.dashboard.financeEyebrow")}
+        title={t("seller.dashboard.financeTitle")}
+        description={t("seller.dashboard.financeDescription")}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Only confirmed seller-paid orders count toward marketplace commission. Delivery fee is excluded when tracked separately.
+            {t("seller.dashboard.financeHelp")}
           </p>
           <Link
             href="/seller/finance"
             className="public-button-primary inline-flex items-center justify-center px-5 py-3 text-sm"
           >
-            Open finance ledger
+            {t("seller.dashboard.openLedger")}
           </Link>
         </div>
       </SectionCard>

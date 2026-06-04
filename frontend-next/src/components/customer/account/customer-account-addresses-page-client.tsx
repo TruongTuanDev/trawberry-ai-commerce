@@ -8,6 +8,7 @@ import {
   getCustomerAddressReadinessBadge,
 } from "@/components/customer/account/customer-account-utils";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 import {
   createCustomerAddress,
   deleteCustomerAddress,
@@ -62,6 +63,7 @@ export function CustomerAccountAddressesPageClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<CustomerAddressSuggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const { t } = useI18n("customer");
 
   const loadAddresses = async () => {
     const response = await getCustomerAddresses();
@@ -78,7 +80,7 @@ export function CustomerAccountAddressesPageClient() {
         setError(null);
       } catch (issue) {
         if (mounted) {
-          setError(issue instanceof Error ? issue.message : "Unable to load addresses.");
+          setError(issue instanceof Error ? issue.message : t("customer.addresses.loadFailed"));
         }
       } finally {
         if (mounted) {
@@ -90,7 +92,7 @@ export function CustomerAccountAddressesPageClient() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const query = [form.street?.trim(), form.building?.trim()].filter(Boolean).join(" ");
@@ -133,21 +135,21 @@ export function CustomerAccountAddressesPageClient() {
   const geoBadge = useMemo(() => {
     if (form.latitude && form.longitude && form.geoPrecision === "MANUAL_PIN") {
       return {
-        label: "Manual pin set",
+        label: t("customer.addresses.manualPin"),
         tone: "border-sky-200 bg-sky-50 text-sky-700",
       };
     }
     if (form.latitude && form.longitude && form.geoPrecision !== "UNKNOWN") {
       return {
-        label: `Verified (${form.geoPrecision})`,
+        label: t("customer.addresses.verifiedPrecision", { precision: form.geoPrecision ?? "UNKNOWN" }),
         tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
       };
     }
     return {
-      label: "Coordinates missing",
+      label: t("customer.addresses.missingCoordinates"),
       tone: "border-amber-200 bg-amber-50 text-amber-700",
     };
-  }, [form.geoPrecision, form.latitude, form.longitude]);
+  }, [form.geoPrecision, form.latitude, form.longitude, t]);
 
   const resetForm = () => {
     setEditingAddressId(null);
@@ -188,19 +190,19 @@ export function CustomerAccountAddressesPageClient() {
 
         if (editingAddressId) {
           return updateCustomerAddress(editingAddressId, payload);
-        } else {
-          return createCustomerAddress(payload);
         }
+
+        return createCustomerAddress(payload);
       },
-      successMessage: editingAddressId ? "Đã cập nhật địa chỉ thành công." : "Đã tạo địa chỉ thành công.",
+      successMessage: editingAddressId ? t("customer.addresses.updateSuccess") : t("customer.addresses.createSuccess"),
       onSuccess: async () => {
-        setSuccess(editingAddressId ? "Address updated." : "Address created.");
+        setSuccess(editingAddressId ? t("customer.addresses.updateSuccess") : t("customer.addresses.createSuccess"));
         await loadAddresses();
         resetForm();
       },
-      errorMessage: "Lưu địa chỉ thất bại.",
+      errorMessage: t("customer.addresses.saveFailed"),
     }).catch((issue) => {
-      setError(issue instanceof Error ? issue.message : "Unable to save address.");
+      setError(issue instanceof Error ? issue.message : t("customer.addresses.saveFailed"));
     });
   };
 
@@ -242,29 +244,27 @@ export function CustomerAccountAddressesPageClient() {
   };
 
   const handleDelete = async (addressId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa địa chỉ này? Xóa địa chỉ không thể hoàn tác.")) return;
+    if (!window.confirm(t("customer.addresses.deleteConfirm"))) return;
     setError(null);
     setSuccess(null);
     setDeletingId(addressId);
 
     await run({
-      action: async () => {
-        return deleteCustomerAddress(addressId);
-      },
-      successMessage: "Đã xóa địa chỉ thành công.",
+      action: async () => deleteCustomerAddress(addressId),
+      successMessage: t("customer.addresses.deleteSuccess"),
       onSuccess: async () => {
-        setSuccess("Address deleted.");
+        setSuccess(t("customer.addresses.deleteSuccess"));
         await loadAddresses();
         if (editingAddressId === addressId) {
           resetForm();
         }
       },
-      errorMessage: "Xóa địa chỉ thất bại.",
+      errorMessage: t("customer.addresses.deleteFailed"),
       onFinally: () => {
         setDeletingId(null);
       },
     }).catch((issue) => {
-      setError(issue instanceof Error ? issue.message : "Unable to delete address.");
+      setError(issue instanceof Error ? issue.message : t("customer.addresses.deleteFailed"));
     });
   };
 
@@ -274,20 +274,18 @@ export function CustomerAccountAddressesPageClient() {
     setSettingDefaultId(addressId);
 
     await run({
-      action: async () => {
-        return setDefaultCustomerAddress(addressId);
-      },
-      successMessage: "Đã đặt làm địa chỉ mặc định.",
+      action: async () => setDefaultCustomerAddress(addressId),
+      successMessage: t("customer.addresses.defaultSuccess"),
       onSuccess: async () => {
-        setSuccess("Default address updated.");
+        setSuccess(t("customer.addresses.defaultSuccess"));
         await loadAddresses();
       },
-      errorMessage: "Cập nhật địa chỉ mặc định thất bại.",
+      errorMessage: t("customer.addresses.defaultFailed"),
       onFinally: () => {
         setSettingDefaultId(null);
       },
     }).catch((issue) => {
-      setError(issue instanceof Error ? issue.message : "Unable to update default address.");
+      setError(issue instanceof Error ? issue.message : t("customer.addresses.defaultFailed"));
     });
   };
 
@@ -301,21 +299,39 @@ export function CustomerAccountAddressesPageClient() {
         handleEdit(updated);
       } else if (suggestions[0]) {
         fillSuggestion(suggestions[0]);
-        setSuccess("Mock geocoder applied the top Moscow suggestion.");
+        setSuccess(t("customer.addresses.mockSuggestionApplied"));
       } else {
-        setSuccess("Manual coordinates are kept. No mock suggestion matched this address.");
+        setSuccess(t("customer.addresses.manualCoordinatesKept"));
       }
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to verify address.");
+      setError(issue instanceof Error ? issue.message : t("customer.addresses.verifyFailed"));
     } finally {
       setVerifying(false);
     }
   };
 
+  const commentLabels = {
+    entrance: t("customer.addresses.entrance"),
+    noEntrance: t("customer.addresses.noEntrance"),
+    intercom: t("customer.addresses.intercom"),
+    floor: t("customer.addresses.floor"),
+    floorUnknown: t("customer.addresses.noFloor"),
+    apartment: t("customer.addresses.apartment"),
+    noApartment: t("customer.addresses.noApartment"),
+  };
+
+  const readinessLabels = {
+    yandexReady: t("customer.addresses.yandexReady"),
+    manualReady: t("customer.addresses.manualDeliveryAllowed"),
+    manualPin: t("customer.addresses.manualPin"),
+    verified: t("customer.addresses.verified"),
+    missingCoordinates: t("customer.addresses.missingCoordinates"),
+  };
+
   return (
     <CustomerAccountShell
-      title="Yandex-compatible addresses"
-      description="Save structured delivery addresses with building-level details and coordinates for manual Yandex workbench."
+      title={t("customer.addresses.title")}
+      description={t("customer.addresses.description")}
     >
       {error ? (
         <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
@@ -332,21 +348,21 @@ export function CustomerAccountAddressesPageClient() {
         <section className="card-panel rounded-[1.8rem] px-6 py-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-              Address book
+              {t("customer.addresses.addressBook")}
             </p>
             <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-              Saved addresses
+              {t("customer.addresses.savedAddresses")}
             </h2>
           </div>
 
           <div className="mt-5 grid gap-4" data-testid="customer-address-list">
             {loading ? (
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4 text-sm text-[var(--muted)]">
-                Loading addresses...
+                {t("customer.addresses.loading")}
               </div>
             ) : addresses.length ? (
               addresses.map((address) => {
-                const badge = getCustomerAddressReadinessBadge(address);
+                const badge = getCustomerAddressReadinessBadge(address, readinessLabels);
                 const isDeleting = isRunning && deletingId === address.id;
                 const isSettingDefault = isRunning && settingDefaultId === address.id;
                 return (
@@ -362,8 +378,8 @@ export function CustomerAccountAddressesPageClient() {
                             {address.fullName}
                           </p>
                           {address.isDefault ? (
-                            <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-                              Default
+                            <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]" data-testid="customer-address-default-badge">
+                              {t("customer.addresses.default")}
                             </span>
                           ) : null}
                           <span
@@ -376,25 +392,28 @@ export function CustomerAccountAddressesPageClient() {
                         <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                           {formatCustomerAddress(address)}
                         </p>
-                        {formatCustomerAddressComment(address) ? (
+                        {formatCustomerAddressComment(address, commentLabels) ? (
                           <p className="mt-2 text-sm text-[var(--muted)]">
-                            {formatCustomerAddressComment(address)}
+                            {formatCustomerAddressComment(address, commentLabels)}
                           </p>
                         ) : null}
                         <p className="mt-2 text-xs text-[var(--muted)]">
-                          Geo: {address.geoProvider} / {address.geoPrecision}
+                          {t("customer.addresses.geoMeta", { provider: address.geoProvider, precision: address.geoPrecision })}
                         </p>
                         <p className="mt-2 text-xs text-[var(--muted)]">
-                          Manual-ready: {address.yandexManualReady ? "Yes" : "No"} · API-ready: {address.yandexApiReady ? "Yes" : "No"}
+                          {t("customer.addresses.readinessMeta", {
+                            manual: address.yandexManualReady ? t("common.yes") : t("common.no"),
+                            api: address.yandexApiReady ? t("common.yes") : t("common.no"),
+                          })}
                         </p>
                         {address.missingYandexFields.length ? (
                           <p className="mt-2 text-xs text-amber-700">
-                            Missing for Yandex: {address.missingYandexFields.join(", ")}
+                            {t("customer.addresses.missingFields", { fields: address.missingYandexFields.join(", ") })}
                           </p>
                         ) : null}
                         {address.latitude || address.longitude ? (
                           <p className="mt-2 text-xs text-[var(--muted)]">
-                            GPS: {address.latitude ?? "?"}, {address.longitude ?? "?"}
+                            {t("customer.addresses.gpsMeta", { latitude: address.latitude ?? "?", longitude: address.longitude ?? "?" })}
                           </p>
                         ) : null}
                       </div>
@@ -407,7 +426,7 @@ export function CustomerAccountAddressesPageClient() {
                             className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50"
                             data-testid={`customer-address-default-${address.id}`}
                           >
-                            {isSettingDefault ? "Đang lưu..." : "Set default"}
+                            {isSettingDefault ? t("customer.addresses.saving") : t("customer.addresses.setDefault")}
                           </button>
                         ) : null}
                         <button
@@ -417,7 +436,7 @@ export function CustomerAccountAddressesPageClient() {
                           className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50"
                           data-testid={`customer-address-edit-${address.id}`}
                         >
-                          Edit
+                          {t("common.actions.edit")}
                         </button>
                         <button
                           type="button"
@@ -426,7 +445,7 @@ export function CustomerAccountAddressesPageClient() {
                           className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50"
                           data-testid={`customer-address-delete-${address.id}`}
                         >
-                          {isDeleting ? "Đang xóa..." : "Delete"}
+                          {isDeleting ? t("customer.addresses.deleting") : t("common.actions.delete")}
                         </button>
                       </div>
                     </div>
@@ -435,7 +454,7 @@ export function CustomerAccountAddressesPageClient() {
               })
             ) : (
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-5 text-sm text-[var(--muted)]">
-                No saved addresses yet.
+                {t("customer.addresses.empty")}
               </div>
             )}
           </div>
@@ -445,50 +464,38 @@ export function CustomerAccountAddressesPageClient() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                {editingAddressId ? "Edit" : "Add"}
+                {editingAddressId ? t("common.actions.edit") : t("customer.addresses.add")}
               </p>
               <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-                {editingAddressId ? "Update address" : "Add Yandex-compatible address"}
+                {editingAddressId ? t("customer.addresses.updateAddress") : t("customer.addresses.addAddress")}
               </h2>
             </div>
             {editingAddressId ? (
               <button type="button" onClick={resetForm} disabled={isRunning} className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50">
-                Cancel
+                {t("common.actions.cancel")}
               </button>
             ) : null}
           </div>
 
           <div className="mt-5 grid gap-5">
             <section className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(180deg,#fdfefe_0%,#f8fbff_100%)] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">1. Region / city</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("customer.addresses.sectionRegionCity")}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <AddressField label="Country">
-                  <input value={form.country || "Russia"} onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))} className="public-input" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="Country code">
-                  <input value={form.countryCode || "RU"} onChange={(event) => setForm((current) => ({ ...current, countryCode: event.target.value }))} className="public-input" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="City">
-                  <input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value, region: current.region || event.target.value, federalSubject: current.federalSubject || event.target.value }))} className="public-input" data-testid="customer-address-city" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="District / area">
-                  <input value={form.district || ""} onChange={(event) => setForm((current) => ({ ...current, district: event.target.value }))} className="public-input" data-testid="customer-address-region" disabled={isRunning} />
-                </AddressField>
+                <AddressField label={t("customer.addresses.country")}><input value={form.country || "Russia"} onChange={(event) => setForm((current) => ({ ...current, country: event.target.value }))} className="public-input" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.countryCode")}><input value={form.countryCode || "RU"} onChange={(event) => setForm((current) => ({ ...current, countryCode: event.target.value }))} className="public-input" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.city")}><input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value, region: current.region || event.target.value, federalSubject: current.federalSubject || event.target.value }))} className="public-input" data-testid="customer-address-city" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.district")}><input value={form.district || ""} onChange={(event) => setForm((current) => ({ ...current, district: event.target.value }))} className="public-input" data-testid="customer-address-region" disabled={isRunning} /></AddressField>
               </div>
             </section>
 
             <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">2. Street / building</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("customer.addresses.sectionStreetBuilding")}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_180px]">
-                <AddressField label="Street">
-                  <input value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} className="public-input" data-testid="customer-address-street" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="Building">
-                  <input value={form.building} onChange={(event) => setForm((current) => ({ ...current, building: event.target.value }))} className="public-input" data-testid="customer-address-building" disabled={isRunning} />
-                </AddressField>
+                <AddressField label={t("customer.addresses.street")}><input value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} className="public-input" data-testid="customer-address-street" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.building")}><input value={form.building} onChange={(event) => setForm((current) => ({ ...current, building: event.target.value }))} className="public-input" data-testid="customer-address-building" disabled={isRunning} /></AddressField>
               </div>
               {suggestionsLoading ? (
-                <p className="mt-3 text-xs text-[var(--muted)]">Loading mock suggestions...</p>
+                <p className="mt-3 text-xs text-[var(--muted)]">{t("customer.addresses.loadingSuggestions")}</p>
               ) : suggestions.length ? (
                 <div className="mt-3 grid gap-2">
                   {suggestions.map((suggestion) => (
@@ -501,7 +508,7 @@ export function CustomerAccountAddressesPageClient() {
                       data-testid="customer-address-suggestion"
                     >
                       <span className="block font-semibold">{suggestion.title}</span>
-                      <span className="mt-1 block text-xs text-[var(--muted)]">Mock geocoder suggestion</span>
+                      <span className="mt-1 block text-xs text-[var(--muted)]">{t("customer.addresses.mockSuggestion")}</span>
                     </button>
                   ))}
                 </div>
@@ -509,164 +516,49 @@ export function CustomerAccountAddressesPageClient() {
             </section>
 
             <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">3. Delivery details</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("customer.addresses.sectionDeliveryDetails")}</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <AddressField label="Entrance">
-                  <input value={form.entrance || ""} onChange={(event) => setForm((current) => ({ ...current, entrance: event.target.value, noEntrance: event.target.value ? false : current.noEntrance }))} disabled={Boolean(form.noEntrance) || isRunning} className="public-input disabled:opacity-60" data-testid="customer-address-entrance" />
-                </AddressField>
-                <BooleanField
-                  label="No private entrance"
-                  checked={Boolean(form.noEntrance)}
-                  onChange={(checked) =>
-                    setForm((current) => ({
-                      ...current,
-                      noEntrance: checked,
-                      entrance: checked ? "" : current.entrance,
-                    }))
-                  }
-                  testId="customer-address-no-entrance"
-                  disabled={isRunning}
-                />
-                <AddressField label="Intercom / door code">
-                  <input value={form.intercom || ""} onChange={(event) => setForm((current) => ({ ...current, intercom: event.target.value }))} className="public-input" data-testid="customer-address-intercom" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="Floor">
-                  <input value={form.floor || ""} onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value, noFloor: event.target.value ? false : current.noFloor }))} disabled={Boolean(form.noFloor) || isRunning} className="public-input disabled:opacity-60" data-testid="customer-address-floor" />
-                </AddressField>
-                <BooleanField
-                  label="No / unknown floor"
-                  checked={Boolean(form.noFloor)}
-                  onChange={(checked) =>
-                    setForm((current) => ({
-                      ...current,
-                      noFloor: checked,
-                      floor: checked ? "" : current.floor,
-                    }))
-                  }
-                  testId="customer-address-no-floor"
-                  disabled={isRunning}
-                />
-                <AddressField label="Apartment">
-                  <input value={form.apartment || ""} onChange={(event) => setForm((current) => ({ ...current, apartment: event.target.value, noApartment: event.target.value ? false : current.noApartment }))} disabled={Boolean(form.noApartment) || isRunning} className="public-input disabled:opacity-60" data-testid="customer-address-apartment" />
-                </AddressField>
-                <BooleanField
-                  label="No apartment"
-                  checked={Boolean(form.noApartment)}
-                  onChange={(checked) =>
-                    setForm((current) => ({
-                      ...current,
-                      noApartment: checked,
-                      apartment: checked ? "" : current.apartment,
-                    }))
-                  }
-                  testId="customer-address-no-apartment"
-                  disabled={isRunning}
-                />
-                <AddressField label="Postal code">
-                  <input value={form.postalCode || ""} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} className="public-input" data-testid="customer-address-postalCode" disabled={isRunning} />
-                </AddressField>
+                <AddressField label={t("customer.addresses.entrance")}><input value={form.entrance || ""} onChange={(event) => setForm((current) => ({ ...current, entrance: event.target.value, noEntrance: event.target.value ? false : current.noEntrance }))} disabled={Boolean(form.noEntrance) || isRunning} className="public-input disabled:opacity-60" data-testid="customer-address-entrance" /></AddressField>
+                <BooleanField label={t("customer.addresses.noEntrance")} checked={Boolean(form.noEntrance)} onChange={(checked) => setForm((current) => ({ ...current, noEntrance: checked, entrance: checked ? "" : current.entrance }))} testId="customer-address-no-entrance" disabled={isRunning} />
+                <AddressField label={t("customer.addresses.intercom")}><input value={form.intercom || ""} onChange={(event) => setForm((current) => ({ ...current, intercom: event.target.value }))} className="public-input" data-testid="customer-address-intercom" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.floor")}><input value={form.floor || ""} onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value, noFloor: event.target.value ? false : current.noFloor }))} disabled={Boolean(form.noFloor) || isRunning} className="public-input disabled:opacity-60" data-testid="customer-address-floor" /></AddressField>
+                <BooleanField label={t("customer.addresses.noFloor")} checked={Boolean(form.noFloor)} onChange={(checked) => setForm((current) => ({ ...current, noFloor: checked, floor: checked ? "" : current.floor }))} testId="customer-address-no-floor" disabled={isRunning} />
+                <AddressField label={t("customer.addresses.apartment")}><input value={form.apartment || ""} onChange={(event) => setForm((current) => ({ ...current, apartment: event.target.value, noApartment: event.target.value ? false : current.noApartment }))} disabled={Boolean(form.noApartment) || isRunning} className="public-input disabled:opacity-60" data-testid="customer-address-apartment" /></AddressField>
+                <BooleanField label={t("customer.addresses.noApartment")} checked={Boolean(form.noApartment)} onChange={(checked) => setForm((current) => ({ ...current, noApartment: checked, apartment: checked ? "" : current.apartment }))} testId="customer-address-no-apartment" disabled={isRunning} />
+                <AddressField label={t("customer.addresses.postalCode")}><input value={form.postalCode || ""} onChange={(event) => setForm((current) => ({ ...current, postalCode: event.target.value }))} className="public-input" data-testid="customer-address-postalCode" disabled={isRunning} /></AddressField>
               </div>
-              <AddressField label="Courier instructions">
-                <textarea value={form.comment || ""} onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))} rows={3} className="public-input mt-4 min-h-24" data-testid="customer-address-comment" disabled={isRunning} />
-              </AddressField>
+              <AddressField label={t("customer.addresses.courierInstructions")}><textarea value={form.comment || ""} onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))} rows={3} className="public-input mt-4 min-h-24" data-testid="customer-address-comment" disabled={isRunning} /></AddressField>
             </section>
 
             <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">4. Recipient</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("customer.addresses.sectionRecipient")}</p>
               <div className="mt-4 grid gap-4">
-                <AddressField label="Recipient name">
-                  <input value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="public-input" data-testid="customer-address-fullName" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="Phone">
-                  <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="customer-address-phone" disabled={isRunning} />
-                </AddressField>
+                <AddressField label={t("customer.addresses.fullName")}><input value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="public-input" data-testid="customer-address-fullName" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.recipientPhone")}><input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="customer-address-phone" disabled={isRunning} /></AddressField>
               </div>
             </section>
 
             <section className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(180deg,#ffffff_0%,#f9fbff_100%)] p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">5. Coordinates</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("customer.addresses.sectionCoordinates")}</p>
                   <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${geoBadge.tone}`}>
                     {geoBadge.label}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((current) => ({
-                        ...current,
-                        geoProvider: "MANUAL",
-                        geoPrecision:
-                          current.latitude !== null && current.longitude !== null
-                            ? "MANUAL_PIN"
-                            : current.geoPrecision,
-                      }))
-                    }
-                    disabled={isRunning}
-                    className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50"
-                  >
-                    Use manual coordinates
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((current) => ({
-                        ...current,
-                        geoPrecision:
-                          current.latitude !== null && current.longitude !== null
-                            ? "MANUAL_PIN"
-                            : "UNKNOWN",
-                        geoProvider: "MANUAL",
-                      }))
-                    }
-                    disabled={isRunning}
-                    className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50"
-                  >
-                    Mark as manual pin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((current) => ({
-                        ...current,
-                        latitude: null,
-                        longitude: null,
-                        geoPrecision: "UNKNOWN",
-                        geoProvider: "MANUAL",
-                      }))
-                    }
-                    disabled={isRunning}
-                    className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50"
-                  >
-                    Clear coordinates
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleVerify()}
-                    disabled={verifying || isRunning}
-                    className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50"
-                    data-testid="customer-address-verify"
-                  >
-                    {verifying ? "Đang xác nhận..." : editingAddressId ? "Verify address" : "Apply mock suggestion"}
-                  </button>
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, geoProvider: "MANUAL", geoPrecision: current.latitude !== null && current.longitude !== null ? "MANUAL_PIN" : current.geoPrecision, }))} disabled={isRunning} className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50">{t("customer.addresses.useManualCoordinates")}</button>
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, geoPrecision: current.latitude !== null && current.longitude !== null ? "MANUAL_PIN" : "UNKNOWN", geoProvider: "MANUAL", }))} disabled={isRunning} className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50">{t("customer.addresses.markManualPin")}</button>
+                  <button type="button" onClick={() => setForm((current) => ({ ...current, latitude: null, longitude: null, geoPrecision: "UNKNOWN", geoProvider: "MANUAL", }))} disabled={isRunning} className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50">{t("customer.addresses.clearCoordinates")}</button>
+                  <button type="button" onClick={() => void handleVerify()} disabled={verifying || isRunning} className="public-button-secondary px-4 py-2 text-sm disabled:opacity-50" data-testid="customer-address-verify">{verifying ? t("customer.addresses.verifying") : editingAddressId ? t("customer.addresses.verifyAddress") : t("customer.addresses.applyMockSuggestion")}</button>
                 </div>
               </div>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <AddressField label="Latitude">
-                  <input value={form.latitude ?? ""} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value ? Number(event.target.value) : null, geoPrecision: event.target.value && current.longitude ? "MANUAL_PIN" : current.geoPrecision }))} className="public-input" data-testid="customer-address-latitude" disabled={isRunning} />
-                </AddressField>
-                <AddressField label="Longitude">
-                  <input value={form.longitude ?? ""} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value ? Number(event.target.value) : null, geoPrecision: event.target.value && current.latitude ? "MANUAL_PIN" : current.geoPrecision }))} className="public-input" data-testid="customer-address-longitude" disabled={isRunning} />
-                </AddressField>
+                <AddressField label={t("customer.addresses.latitude")}><input value={form.latitude ?? ""} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value ? Number(event.target.value) : null, geoPrecision: event.target.value && current.longitude ? "MANUAL_PIN" : current.geoPrecision }))} className="public-input" data-testid="customer-address-latitude" disabled={isRunning} /></AddressField>
+                <AddressField label={t("customer.addresses.longitude")}><input value={form.longitude ?? ""} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value ? Number(event.target.value) : null, geoPrecision: event.target.value && current.latitude ? "MANUAL_PIN" : current.geoPrecision }))} className="public-input" data-testid="customer-address-longitude" disabled={isRunning} /></AddressField>
               </div>
-              <p className="mt-3 text-xs text-[var(--muted)]">
-                Default tests use a mock/manual geocoder. No real Yandex API call is made in this phase.
-              </p>
-              <p className="mt-2 text-xs text-[var(--muted)]">
-                Manual-ready needs city, street, building, and recipient phone. API-ready will require coordinates for future Yandex API claims.
-              </p>
+              <p className="mt-3 text-xs text-[var(--muted)]">{t("customer.addresses.mockGeocoderHint")}</p>
+              <p className="mt-2 text-xs text-[var(--muted)]">{t("customer.addresses.manualReadyHint")}</p>
             </section>
           </div>
 
@@ -677,7 +569,7 @@ export function CustomerAccountAddressesPageClient() {
             className="public-button-primary mt-6 px-5 py-3 text-sm disabled:opacity-60"
             data-testid="customer-address-save"
           >
-            {isRunning ? "Đang lưu..." : editingAddressId ? "Save changes" : "Add address"}
+            {isRunning ? t("customer.addresses.saving") : editingAddressId ? t("customer.addresses.saveChanges") : t("customer.addresses.addAddress")}
           </button>
         </section>
       </div>

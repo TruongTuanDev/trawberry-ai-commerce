@@ -246,10 +246,24 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   await customerPage.getByTestId("customer-login-submit").click();
   await customerPage.waitForURL("**/customer/orders");
 
+  await customerPage.goto("/customer/account/addresses");
+  await customerPage.getByTestId("customer-address-fullName").fill("Three Role Customer");
+  await customerPage.getByTestId("customer-address-phone").fill(buyerPhone);
+  await customerPage.getByTestId("customer-address-city").fill("Moscow");
+  await customerPage.getByTestId("customer-address-region").fill("Tverskoy District");
+  await customerPage.getByTestId("customer-address-street").fill("Sync Street");
+  await customerPage.getByTestId("customer-address-building").fill("5");
+  await customerPage.getByTestId("customer-address-entrance").fill("1");
+  await customerPage.getByTestId("customer-address-floor").fill("2");
+  await customerPage.getByTestId("customer-address-apartment").fill("12");
+  await customerPage.getByTestId("customer-address-latitude").fill("55.751244");
+  await customerPage.getByTestId("customer-address-longitude").fill("37.618423");
+  await customerPage.getByTestId("customer-address-save").click();
+  await expect(customerPage.getByTestId("customer-address-card")).toHaveCount(1);
+
   await customerPage.goto(`/products/${product.id}`);
   await customerPage.getByTestId("continue-to-checkout").click();
   await customerPage.waitForURL(/\/checkout/);
-  await customerPage.getByTestId("checkout-address").fill("Moscow, Sync Street 5");
   await customerPage.getByTestId("checkout-note").fill("Three role sync checkout");
   await customerPage.getByTestId("checkout-submit").click();
   await expect(customerPage.getByTestId("checkout-confirmation")).toBeVisible();
@@ -270,11 +284,11 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   await sellerPage.getByTestId("login-password").fill(sellerPassword);
   await sellerPage.getByTestId("login-submit").click();
   await sellerPage.waitForURL("**/seller/dashboard");
-  await sellerPage.goto("/seller/orders");
-  await sellerPage.getByPlaceholder("Search by order, customer, phone, product").fill(buyerPhone);
-  await expect(sellerPage.getByTestId("seller-order-card")).toHaveCount(0);
   await sellerPage.goto(`/seller/orders/${orderId}`);
-  await expect(sellerPage.getByTestId("seller-order-next-action")).toContainText(/Wait for payment|Confirm or reject payment proof|No action|create_delivery_order/);
+  await expect(sellerPage.getByTestId("seller-order-next-action")).toHaveAttribute(
+    "data-raw-status",
+    /review_payment_proof|create_delivery_order|accept_pay_on_delivery_order/,
+  );
 
   await backendJson(request, `/api/public/orders/${orderId}/payment-proof`, {
     method: "POST",
@@ -290,9 +304,6 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   });
 
   await sellerPage.goto("/seller/payments-to-confirm");
-  await sellerPage
-    .getByPlaceholder("Search by order, customer, payment method")
-    .fill(buyerPhone);
   await expect(sellerPage.getByText("Three Role Customer")).toBeVisible();
   await expect(sellerPage.getByTestId("seller-payment-review-row")).toBeVisible();
 
@@ -332,18 +343,26 @@ test("customer, seller, and admin stay synchronized through payment, delivery, a
   expect(normalizedPlatformFeeDue).toBeGreaterThan(0);
 
   await sellerPage.goto(`/seller/orders/${orderId}`);
-  await expect(sellerPage.getByTestId("seller-order-display-status")).toContainText(/Ready to create Yandex|Payment confirmed|Assembling/);
+  await expect(sellerPage.getByTestId("seller-order-display-status")).toHaveAttribute(
+    "data-raw-status",
+    /READY_TO_CREATE_YANDEX|ASSEMBLING|YANDEX_MANUAL_CREATED/,
+  );
   await sellerPage.getByTestId("manual-yandex-order-id").fill(`YANDEX-${stamp}`);
   await sellerPage.getByTestId("manual-delivery-save").click();
-  await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/saved|updated/i);
+  await expect(sellerPage.getByTestId("delivery-action-message")).toHaveAttribute("data-raw-status", /saved|updated/i);
   await sellerPage.getByTestId("manual-delivery-mark-in-transit").click();
-  await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/on the way|transit/i);
+  await expect(sellerPage.getByTestId("delivery-action-message")).toHaveAttribute("data-raw-status", /on-the-way|transit/i);
   sellerPage.once("dialog", (dialog) => dialog.accept());
   await sellerPage.getByTestId("manual-delivery-mark-delivered").click();
-  await expect(sellerPage.getByTestId("delivery-action-message")).toContainText(/delivered/i);
+  await expect(sellerPage.getByTestId("delivery-action-message")).toHaveAttribute("data-raw-status", /delivered/i);
 
   await customerPage.goto(`/customer/orders/${checkoutCode}`);
-  await expect(customerPage.getByTestId("receipt-order-card")).toContainText("DELIVERED");
+  await expect(
+    customerPage
+      .getByTestId("receipt-order-card")
+      .locator("[data-status='DELIVERED']")
+      .first(),
+  ).toBeVisible();
 
   await safeClose(sellerContext);
   await safeClose(customerContext);

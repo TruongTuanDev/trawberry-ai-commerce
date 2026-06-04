@@ -6,8 +6,10 @@ import { getDeliverySettings, updateDeliverySettings } from "@/lib/seller-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
+import { useI18n } from "@/i18n/use-i18n";
 
 export function SellerDeliverySettingsPageClient() {
+  const { t } = useI18n("seller");
   const user = useAuthStore((state) => state.sellerUser);
   const currentShopId = useSellerWorkspaceStore((state) => state.currentShopId);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export function SellerDeliverySettingsPageClient() {
     ];
 
     if (!enabledCarriers.length) {
-      setError("Enable at least one carrier.");
+      setError(t("seller.delivery.carrierRequired"));
       return;
     }
 
@@ -128,11 +130,11 @@ export function SellerDeliverySettingsPageClient() {
           interCityPreferredCarrier: saved.interCityPreferredCarrier as "CDEK" | "YANDEX",
           fallbackCarrier: saved.fallbackCarrier as "CDEK" | "YANDEX",
         }));
-        setSuccessMessage("Delivery settings saved.");
+        setSuccessMessage(t("seller.delivery.saved"));
         return saved;
       },
-      successMessage: "Lưu cấu hình vận chuyển thành công!",
-      errorMessage: "Không thể lưu cấu hình vận chuyển.",
+      successMessage: t("seller.delivery.saved"),
+      errorMessage: t("seller.delivery.saveFailed"),
     }).catch((err) => {
       setError(err.message);
     });
@@ -140,70 +142,70 @@ export function SellerDeliverySettingsPageClient() {
 
   return (
     <SectionCard
-      eyebrow="Delivery foundation"
-      title="Seller delivery settings"
-      description="Configure pickup data, default package dimensions, and which carriers appear in mock-mode offer calculation."
+      eyebrow={t("seller.delivery.eyebrow")}
+      title={t("seller.delivery.title")}
+      description={t("seller.delivery.subtitle")}
     >
       {loading ? (
-        <p className="text-sm text-[var(--muted)]">Loading...</p>
+        <p className="text-sm text-[var(--muted)]">{t("common.loading")}</p>
       ) : (
         <div className="space-y-6" data-testid="seller-delivery-settings-page">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Pickup address">
+            <Field label={t("seller.delivery.pickupAddress")}>
               <input value={form.pickupAddress} onChange={(event) => setForm((current) => ({ ...current, pickupAddress: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-address" />
             </Field>
-            <Field label="Pickup city">
+            <Field label={t("seller.delivery.pickupCity")}>
               <input value={form.pickupCity} onChange={(event) => setForm((current) => ({ ...current, pickupCity: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-city" />
             </Field>
-            <Field label="Postal code">
+            <Field label={t("seller.delivery.postalCode")}>
               <input value={form.pickupPostalCode} onChange={(event) => setForm((current) => ({ ...current, pickupPostalCode: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-postal-code" />
             </Field>
-            <Field label="Pickup phone">
+            <Field label={t("seller.delivery.pickupPhone")}>
               <input value={form.pickupContactPhone} onChange={(event) => setForm((current) => ({ ...current, pickupContactPhone: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-contact-phone" />
             </Field>
-            <Field label="Pickup latitude">
+            <Field label={t("seller.delivery.pickupLatitude")}>
               <input value={form.pickupLatitude} onChange={(event) => setForm((current) => ({ ...current, pickupLatitude: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-latitude" />
             </Field>
-            <Field label="Pickup longitude">
+            <Field label={t("seller.delivery.pickupLongitude")}>
               <input value={form.pickupLongitude} onChange={(event) => setForm((current) => ({ ...current, pickupLongitude: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-longitude" />
             </Field>
-            <Field label="Pickup contact">
+            <Field label={t("seller.delivery.pickupContact")}>
               <input value={form.pickupContactName} onChange={(event) => setForm((current) => ({ ...current, pickupContactName: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-contact-name" />
             </Field>
-            <Field label="Default carrier">
+            <Field label={t("seller.delivery.defaultCarrier")}>
               <select value={form.defaultCarrier} onChange={(event) => setForm((current) => ({ ...current, defaultCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-carrier">
                 <option value="CDEK">CDEK</option>
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
-            <Field label="Same-city priority">
+            <Field label={t("seller.delivery.sameCityPriority")}>
               <select value={form.sameCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, sameCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-same-city-carrier">
                 <option value="YANDEX">Yandex</option>
                 <option value="CDEK">CDEK</option>
               </select>
             </Field>
-            <Field label="Inter-city priority">
+            <Field label={t("seller.delivery.interCityPriority")}>
               <select value={form.interCityPreferredCarrier} onChange={(event) => setForm((current) => ({ ...current, interCityPreferredCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-inter-city-carrier">
                 <option value="CDEK">CDEK</option>
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
-            <Field label="Fallback carrier">
+            <Field label={t("seller.delivery.fallbackCarrier")}>
               <select value={form.fallbackCarrier} onChange={(event) => setForm((current) => ({ ...current, fallbackCarrier: event.target.value as "CDEK" | "YANDEX" }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-fallback-carrier">
                 <option value="CDEK">CDEK</option>
                 <option value="YANDEX">Yandex</option>
               </select>
             </Field>
-            <Field label="Default weight (g)">
+            <Field label={t("seller.delivery.defaultWeight")}>
               <input value={form.defaultWeightGram} onChange={(event) => setForm((current) => ({ ...current, defaultWeightGram: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-weight-gram" />
             </Field>
-            <Field label="Length (cm)">
+            <Field label={t("seller.delivery.length")}>
               <input value={form.defaultLengthCm} onChange={(event) => setForm((current) => ({ ...current, defaultLengthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-length-cm" />
             </Field>
-            <Field label="Width (cm)">
+            <Field label={t("seller.delivery.width")}>
               <input value={form.defaultWidthCm} onChange={(event) => setForm((current) => ({ ...current, defaultWidthCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-width-cm" />
             </Field>
-            <Field label="Height (cm)">
+            <Field label={t("seller.delivery.height")}>
               <input value={form.defaultHeightCm} onChange={(event) => setForm((current) => ({ ...current, defaultHeightCm: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-default-height-cm" />
             </Field>
           </div>
@@ -211,16 +213,16 @@ export function SellerDeliverySettingsPageClient() {
           <div className="grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5 md:grid-cols-2">
             <label className="flex items-center gap-3 text-sm font-medium text-[var(--foreground)]">
               <input type="checkbox" checked={form.enabledCdek} onChange={(event) => setForm((current) => ({ ...current, enabledCdek: event.target.checked }))} data-testid="delivery-enabled-cdek" />
-              Enable CDEK nationwide offers
+              {t("seller.delivery.enableCdek")}
             </label>
             <label className="flex items-center gap-3 text-sm font-medium text-[var(--foreground)]">
               <input type="checkbox" checked={form.enabledYandex} onChange={(event) => setForm((current) => ({ ...current, enabledYandex: event.target.checked }))} data-testid="delivery-enabled-yandex" />
-              Enable Yandex express mock offers
+              {t("seller.delivery.enableYandex")}
             </label>
           </div>
 
           <button type="button" onClick={() => void handleSave()} disabled={saving} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="delivery-settings-save">
-            {saving ? "Đang lưu..." : "Save delivery settings"}
+            {saving ? t("seller.productDetail.saving") : t("seller.delivery.save")}
           </button>
 
           {error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}

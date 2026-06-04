@@ -55,6 +55,7 @@ type OrderRecord = {
   shippingLongitude?: Prisma.Decimal | null;
   dropoffAddressFullName?: string | null;
   dropoffCity?: string | null;
+  dropoffPostalCode?: string | null;
   dropoffStreet?: string | null;
   dropoffBuilding?: string | null;
   dropoffEntrance?: string | null;
@@ -135,6 +136,7 @@ type OrderRecord = {
     dropoffLongitude: Prisma.Decimal | null;
     dropoffAddressFullName: string | null;
     dropoffCity: string | null;
+    dropoffPostalCode: string | null;
     dropoffStreet: string | null;
     dropoffBuilding: string | null;
     dropoffEntrance: string | null;
@@ -630,6 +632,7 @@ export class DeliveryService {
           }) ??
           order.shippingAddress,
         dropoffCity: order.dropoffCity,
+        dropoffPostalCode: order.dropoffPostalCode,
         dropoffStreet: order.dropoffStreet,
         dropoffBuilding: order.dropoffBuilding,
         dropoffEntrance: order.dropoffEntrance,
@@ -2219,6 +2222,7 @@ export class DeliveryService {
     dropoffLongitude: Prisma.Decimal | null;
     dropoffAddressFullName: string | null;
     dropoffCity: string | null;
+    dropoffPostalCode: string | null;
     dropoffStreet: string | null;
     dropoffBuilding: string | null;
     dropoffEntrance: string | null;
@@ -2303,6 +2307,7 @@ export class DeliveryService {
       dropoffLongitude: shipment.dropoffLongitude?.toString() ?? null,
       dropoffAddressFullName: shipment.dropoffAddressFullName,
       dropoffCity: shipment.dropoffCity,
+      dropoffPostalCode: shipment.dropoffPostalCode,
       dropoffStreet: shipment.dropoffStreet,
       dropoffBuilding: shipment.dropoffBuilding,
       dropoffEntrance: shipment.dropoffEntrance,
@@ -2783,6 +2788,7 @@ export class DeliveryService {
           customerEmail: true,
           shippingAddress: true,
           dropoffCity: true,
+          dropoffPostalCode: true,
           dropoffStreet: true,
           dropoffBuilding: true,
           dropoffGeoPrecision: true,
@@ -2830,6 +2836,7 @@ export class DeliveryService {
         customerEmail: true,
         shippingAddress: true,
         dropoffCity: true,
+        dropoffPostalCode: true,
         dropoffStreet: true,
         dropoffBuilding: true,
         dropoffLatitude: true,

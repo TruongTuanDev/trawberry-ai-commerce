@@ -179,6 +179,15 @@ type SearchCondition = {
       productTitleSnapshot?: { contains: string };
     };
   };
+  status?: string | { in: string[] };
+  deliveryShipments?: {
+    none?: {
+      internalStatus: string | { notIn: string[] };
+    };
+    some?: {
+      internalStatus: string | { in: string[] };
+    };
+  };
 };
 
 type OrderFindManyArgs = {
@@ -381,6 +390,7 @@ describe('OrdersController (e2e)', () => {
             unitPrice: decimal('55.00'),
             lineTotal: decimal('110.00'),
             variantNameSnapshot: 'Default',
+            sellerSkuSnapshot: 'sku-alpha-123',
           },
         ],
         supportCases: [],
@@ -683,6 +693,32 @@ describe('OrdersController (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(403);
   });
+
+  it('returns global status bucket counts in summary regardless of active status filter', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/orders?page=1&size=10&status=ASSEMBLING')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const body = readBody<PaginatedOrdersResponseDto>(response);
+
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].id).toBe('order-2');
+    expect(body.summary.NEW).toBe(1);
+    expect(body.summary.ASSEMBLING).toBe(1);
+    expect(body.summary.ALL).toBe(2);
+  });
+
+  it('includes resolved sellerSku in order response items', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .get('/api/shops/shop-1/orders/order-1')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const body = readBody<OrderResponseDto>(response);
+
+    expect(body.items[0].sellerSku).toBe('sku-alpha-123');
+  });
 });
 
 async function loginAndGetToken(
@@ -745,6 +781,45 @@ function filterOrders(orders: StoredOrder[], where: OrderListWhere) {
             return order.items.some((item) =>
               item.productTitleSnapshot.toLowerCase().includes(term),
             );
+          }
+          if (condition.status) {
+            const statusVal = condition.status;
+            if (typeof statusVal === 'string') {
+              return order.status === statusVal;
+            }
+            if (statusVal.in && Array.isArray(statusVal.in)) {
+              return statusVal.in.includes(order.status);
+            }
+          }
+          if (condition.deliveryShipments) {
+            const ds = condition.deliveryShipments;
+            const hasDelivery =
+              order.deliveryShipments && order.deliveryShipments.length > 0;
+            if (ds.none) {
+              if (!hasDelivery) return true;
+              const matchNone = order.deliveryShipments?.some((shipment) => {
+                const target = ds.none.internalStatus;
+                if (typeof target === 'string')
+                  return shipment.internalStatus === target;
+                if (target?.notIn && Array.isArray(target.notIn)) {
+                  return !target.notIn.includes(shipment.internalStatus);
+                }
+                return false;
+              });
+              return !matchNone;
+            }
+            if (ds.some) {
+              if (!hasDelivery) return false;
+              return order.deliveryShipments?.some((shipment) => {
+                const target = ds.some.internalStatus;
+                if (typeof target === 'string')
+                  return shipment.internalStatus === target;
+                if (target?.in && Array.isArray(target.in)) {
+                  return target.in.includes(shipment.internalStatus);
+                }
+                return false;
+              });
+            }
           }
           return false;
         });

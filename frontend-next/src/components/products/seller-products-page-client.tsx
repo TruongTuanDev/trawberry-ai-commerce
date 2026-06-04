@@ -356,7 +356,7 @@ export function SellerProductsPageClient() {
         });
         await loadShops();
         selectShop(created.id);
-        setCreateMessage(`${created.name} created.`);
+        setCreateMessage(t("seller.products.messages.shopCreatedNamed", { name: created.name }));
         setShopForm({ name: "", slug: "" });
         router.refresh();
         return created;
@@ -415,7 +415,7 @@ export function SellerProductsPageClient() {
 
   return (
     <div className="space-y-6" data-testid="seller-products-page">
-      <SectionCard eyebrow="Catalog" title={t("seller.products.title")} description={t("seller.products.subtitle")}>
+      <SectionCard eyebrow={t("seller.products.catalog")} title={t("seller.products.title")} description={t("seller.products.subtitle")}>
         <div className="space-y-5">
           {createMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{createMessage}</div> : null}
           {createError ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{createError}</div> : null}

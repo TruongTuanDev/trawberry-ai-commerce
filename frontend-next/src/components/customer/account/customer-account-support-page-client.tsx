@@ -2,23 +2,26 @@
 
 import Link from "next/link";
 import { CustomerAccountShell } from "@/components/customer/account/customer-account-shell";
+import { useI18n } from "@/i18n/use-i18n";
 
 export function CustomerAccountSupportPageClient() {
+  const { t } = useI18n("customer");
+
   return (
     <CustomerAccountShell
-      title="Hỗ trợ"
-      description="Customer support hiện bám theo receipt checkout và order tracking. Từ đây bạn có thể đi vào lịch sử đơn mua hoặc trang tra cứu public để tiếp tục xử lý."
+      title={t("customer.support.pageTitle")}
+      description={t("customer.support.pageDescription")}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <SupportCard
           href="/customer/orders"
-          title="Hỗ trợ theo đơn mua"
-          description="Mở receipt customer để gửi support case theo toàn checkout hoặc theo từng order con."
+          title={t("customer.support.ordersSupportTitle")}
+          description={t("customer.support.ordersSupportDescription")}
         />
         <SupportCard
           href="/orders/track"
-          title="Tra cứu công khai"
-          description="Dùng cho các checkout công khai khi bạn chỉ có mã đơn và số điện thoại đã dùng lúc checkout."
+          title={t("customer.support.publicLookupTitle")}
+          description={t("customer.support.publicLookupDescription")}
         />
       </div>
     </CustomerAccountShell>

@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { USER_ROLES } from '../../common/constants/roles.constant';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { CategoriesService } from '../categories/categories.service';
 import { CategoryMappingService } from '../categories/category-mapping.service';
 import { WildberriesImportOptionsDto } from './dto/wildberries-import-options.dto';
 import { WildberriesExcelParserService } from './wildberries-excel-parser.service';
@@ -26,6 +27,7 @@ export class WildberriesImportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly parser: WildberriesExcelParserService,
+    private readonly categoriesService: CategoriesService,
     private readonly categoryMappingService: CategoryMappingService,
   ) {}
 
@@ -206,6 +208,22 @@ export class WildberriesImportsService {
         shopId,
         normalizedProduct,
       );
+      const resolvedCategory =
+        await this.categoriesService.resolveCategoryAssignment(
+          {
+            categoryId: normalizedProduct.categoryId
+              ? BigInt(normalizedProduct.categoryId)
+              : null,
+            categoryName:
+              normalizedProduct.mappedCategoryName ??
+              normalizedProduct.categoryName,
+            sourceCategoryName:
+              normalizedProduct.sourceCategoryName ??
+              normalizedProduct.categoryName,
+            sourceCategorySource: SOURCE,
+          },
+          tx,
+        );
       const productData = {
         externalSource: SOURCE,
         externalProductId: normalizedProduct.externalProductId,
@@ -216,15 +234,9 @@ export class WildberriesImportsService {
         wbDescription: normalizedProduct.description,
         localDescription: normalizedProduct.description,
         brand: normalizedProduct.brand,
-        categoryName:
-          normalizedProduct.mappedCategoryName ??
-          normalizedProduct.categoryName,
-        categoryId: normalizedProduct.categoryId
-          ? BigInt(normalizedProduct.categoryId)
-          : null,
-        sourceCategoryName:
-          normalizedProduct.sourceCategoryName ??
-          normalizedProduct.categoryName,
+        categoryName: resolvedCategory.categoryName,
+        categoryId: resolvedCategory.categoryId,
+        sourceCategoryName: resolvedCategory.sourceCategoryName,
         sourceCategorySource: SOURCE,
         wbVendorCode: normalizedProduct.sellerSku,
         wbVideoUrl: normalizedProduct.videoUrl,
@@ -313,7 +325,7 @@ export class WildberriesImportsService {
         result.addedImages += 1;
       }
 
-      const hasMissingCategory = !normalizedProduct.categoryId;
+      const hasMissingCategory = !resolvedCategory.categoryId;
       const hasMissingPrice = normalizedProduct.variants.every(
         (variant) => !(variant.price && variant.price > 0),
       );

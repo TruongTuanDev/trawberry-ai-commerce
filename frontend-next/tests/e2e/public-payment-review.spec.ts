@@ -224,7 +224,7 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
 
   await expect(customerPage).toHaveURL(new RegExp(`/orders/${orderId}\\?phone=`));
   await expect(customerPage.getByTestId("tracked-order-page")).toBeVisible();
-  await expect(customerPage.getByTestId("tracked-payment-status")).toHaveText("PENDING");
+  await expect(customerPage.getByTestId("tracked-payment-status")).toHaveAttribute("data-status", "PENDING");
 
   await customerPage.getByTestId("payment-proof-input").setInputFiles({
     name: "payment-proof.png",

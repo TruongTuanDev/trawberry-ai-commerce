@@ -44,6 +44,7 @@ export type CustomerCheckoutReceipt = {
     paymentDetails: PaymentDetails;
     trackingPath: string;
     deliveryStatus: string | null;
+    customerCompletedAt?: string | null;
     returnRefundCases?: ReturnRefundCaseSummary[];
     itemsCount: number;
     items: Array<{
@@ -56,8 +57,32 @@ export type CustomerCheckoutReceipt = {
       productTitleSnapshot: string;
       productImageSnapshot: string | null;
       variantNameSnapshot: string | null;
+      review: CustomerProductReview | null;
     }>;
   }>;
+};
+
+export type CustomerProductReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  images: ReviewImageAsset[];
+};
+
+export type ReviewImageAsset = {
+  id: string;
+  url: string;
+  mimeType: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
 };
 
 export type CustomerProfile = {
@@ -295,6 +320,42 @@ export type CustomerReturnRefundCase = {
   };
 };
 
+export type CustomerReviewRecord = {
+  id: string;
+  productId: string;
+  shopId: string;
+  sellerId: string;
+  customerId: string;
+  orderId: string;
+  orderItemId: string;
+  rating: number;
+  comment: string | null;
+  fitFeedback: string | null;
+  status: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  hiddenReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; title: string } | null;
+  shop: { id: string; name: string } | null;
+  customer: { id: string; name: string | null; maskedName: string } | null;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+  } | null;
+  orderItem: {
+    id: string;
+    productTitleSnapshot: string;
+    productImageSnapshot: string | null;
+    variantNameSnapshot: string | null;
+    quantity: number;
+  } | null;
+  images: ReviewImageAsset[];
+};
+
 export async function getCustomerOrderHistory() {
   return apiRequest<{ items: CustomerCheckoutReceipt[] }>("/api/customer/orders", {
     method: "GET",
@@ -499,5 +560,49 @@ export async function cancelCustomerReturnRefundCase(caseId: string) {
   return apiRequest<CustomerReturnRefundCase>(`/api/customer/returns/${encodeURIComponent(caseId)}/cancel`, {
     method: "POST",
     body: JSON.stringify({}),
+  });
+}
+
+export async function listCustomerReviews() {
+  return apiRequest<{ items: CustomerReviewRecord[] }>("/api/customer/reviews", {
+    method: "GET",
+  });
+}
+
+export async function createCustomerReview(body: {
+  orderId: string;
+  orderItemId: string;
+  productId?: string;
+  rating: number;
+  comment?: string;
+  fitFeedback?: string;
+}) {
+  return apiRequest<CustomerReviewRecord>("/api/customer/reviews", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateCustomerReview(
+  reviewId: string,
+  body: {
+    rating?: number;
+    comment?: string;
+    fitFeedback?: string;
+  },
+) {
+  return apiRequest<CustomerReviewRecord>(`/api/customer/reviews/${encodeURIComponent(reviewId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function uploadCustomerReviewImage(reviewId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<CustomerReviewRecord>(`/api/customer/reviews/${encodeURIComponent(reviewId)}/images`, {
+    method: "POST",
+    body: formData,
   });
 }

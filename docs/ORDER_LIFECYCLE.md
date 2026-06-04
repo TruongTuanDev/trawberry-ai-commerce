@@ -1,5 +1,33 @@
 # Order Lifecycle
 
+## Seller printable shipping label addendum
+
+Seller order detail now supports an internal printable shipping label for manual Yandex operations.
+
+- route:
+  - `/seller/orders/[id]/shipping-label`
+  - optional print mode: `/seller/orders/[id]/shipping-label?print=1`
+- purpose:
+  - internal marketplace package identification for seller/courier handling
+  - not an official Yandex label
+- default print size:
+  - `100mm x 150mm`
+- content:
+  - order code
+  - recipient summary
+  - sender / pickup summary
+  - manual Yandex id and tracking URL when present
+  - payment summary
+  - package item summary
+  - QR that links to public order tracking lookup
+
+Operational rules remain unchanged:
+
+- seller still creates Yandex shipments manually outside the platform
+- seller still enters `manualYandexOrderId` and optional tracking URL manually
+- no real Yandex API label or provider barcode is generated in this phase
+- payment and fulfillment transitions are unchanged
+
 ## Admin fulfillment supervision addendum
 
 Admin now supervises the same normalized fulfillment lifecycle as the seller board:
@@ -142,3 +170,13 @@ Important rule:
 
 - opening a case does not change payment history or delete prior ledger rows
 - only confirmed refund closes the finance loop
+
+## Internal shipping label note
+
+- seller order detail and `/seller/orders/[id]/shipping-label` now support internal label sizes `75x120`, `100x150`, and `a6`
+- default label size is `100x150`, stored client-side for seller convenience, and passed through the `size` query param
+- the printable label remains an internal marketplace handoff aid for manual/Yandex-compatible delivery and must not be presented as an official Yandex label
+- the print layout now includes QR plus barcode scanning zones, compact sender/recipient blocks, and a warehouse sorting code while remaining single-page per supported label size
+- text-heavy blocks such as recipient address, courier note, item preview, and internal note must clamp or wrap within their own section and must not visually overlap neighboring sections in any supported size
+- print-label UI status text is mapped separately from backend shipment status so raw failure enums are not printed on handoff labels
+- the label should expose delivery type, created-at, postal-code, and sender-phone fields when present, using placeholders instead of invented data when values are missing

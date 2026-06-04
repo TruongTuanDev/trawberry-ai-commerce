@@ -19,11 +19,13 @@ type PublicProductRecord = {
   seoSlug: string | null;
   categoryName: string | null;
   sourceCategoryName: string | null;
+  aiTryOnEnabled: boolean;
   visibility: string | null;
   catalogStatus: string;
   averageRating: Prisma.Decimal | null;
   feedbackCount: number | null;
   categoryId: bigint | null;
+  subjectId: bigint | null;
   createdAt: Date;
   publishedAt: Date | null;
   updatedAt: Date;
@@ -52,6 +54,13 @@ type FacetProductRecord = Pick<
   'brand' | 'color' | 'gender' | 'categoryName' | 'category' | 'variants'
 >;
 
+type PublicCategoryFacet = {
+  id: string;
+  name: string;
+  slug: string | null;
+  count: number;
+};
+
 @Injectable()
 export class PublicProductsService {
   constructor(
@@ -69,6 +78,11 @@ export class PublicProductsService {
       },
       shop: {
         status: 'ACTIVE',
+        ...(query.shopSlug
+          ? {
+              slug: query.shopSlug,
+            }
+          : {}),
         sellerProfile: {
           approvalStatus: 'APPROVED',
         },
@@ -110,11 +124,7 @@ export class PublicProductsService {
             },
           }
         : {}),
-      ...(query.categoryId
-        ? { categoryId: BigInt(query.categoryId) }
-        : query.categorySlug
-          ? { category: { slug: query.categorySlug, isActive: true } }
-          : {}),
+      ...(query.categoryId ? { categoryId: BigInt(query.categoryId) } : {}),
       ...(query.brand?.trim()
         ? { brand: { contains: query.brand.trim(), mode: 'insensitive' } }
         : {}),
@@ -149,6 +159,14 @@ export class PublicProductsService {
                 categoryName: {
                   contains: search,
                   mode: 'insensitive',
+                },
+              },
+              {
+                category: {
+                  name: {
+                    contains: search,
+                    mode: 'insensitive',
+                  },
                 },
               },
               {
@@ -198,6 +216,13 @@ export class PublicProductsService {
         : {}),
     };
 
+    const facetWhere: Prisma.ProductWhereInput = {
+      ...where,
+    };
+    if (query.categoryId) {
+      delete facetWhere.categoryId;
+    }
+
     const [products, facetProducts] = await Promise.all([
       this.prisma.product.findMany({
         where,
@@ -242,30 +267,25 @@ export class PublicProductsService {
         },
       }),
       this.prisma.product.findMany({
-        where: {
-          visibility: 'ACTIVE',
-          images: { some: {} },
-          shop: {
-            status: 'ACTIVE',
-            sellerProfile: { approvalStatus: 'APPROVED' },
-          },
-          variants: {
-            some: {
-              isActive: true,
-              OR: [{ discountPrice: { gt: 0 } }, { basePrice: { gt: 0 } }],
-            },
-          },
-        },
+        where: facetWhere,
         include: { category: true, variants: true },
         take: 500,
       }),
     ]);
 
+    const readinessVisibleProducts = products.filter(
+      (product) => this.productReadiness.getReadiness(product).ready,
+    );
     const visibleProducts = this.sortProducts(
-      products.filter(
-        (product) => this.productReadiness.getReadiness(product).ready,
-      ),
+      query.categorySlug
+        ? readinessVisibleProducts.filter((product) =>
+            this.matchesCategoryFilter(product, query.categorySlug!),
+          )
+        : readinessVisibleProducts,
       query.sort ?? 'newest',
+    );
+    const visibleFacetProducts = facetProducts.filter(
+      (product) => this.productReadiness.getReadiness(product).ready,
     );
     const items = visibleProducts.slice(
       (query.page - 1) * query.size,
@@ -283,7 +303,7 @@ export class PublicProductsService {
             ? 0
             : Math.ceil(visibleProducts.length / query.size),
       },
-      filters: this.buildFacets(facetProducts),
+      filters: this.buildFacets(visibleFacetProducts),
     };
   }
 
@@ -425,6 +445,9 @@ export class PublicProductsService {
         logoUrl: product.shop.logoUrl,
         paymentInstructions: product.shop.paymentInstructions,
       },
+      aiTryOn: {
+        enabled: product.aiTryOnEnabled,
+      },
     };
   }
 
@@ -504,10 +527,7 @@ export class PublicProductsService {
   }
 
   private buildFacets(products: FacetProductRecord[]) {
-    const categories = new Map<
-      string,
-      { id: string; name: string; slug: string | null; count: number }
-    >();
+    const categories = new Map<string, PublicCategoryFacet>();
     const brands = new Map<string, number>();
     const colors = new Map<string, number>();
     const genders = new Map<string, number>();
@@ -515,15 +535,16 @@ export class PublicProductsService {
     let priceMax: Prisma.Decimal | null = null;
 
     for (const product of products) {
-      const categoryName = product.category?.name ?? product.categoryName;
-      const categoryId =
-        product.category?.id.toString() ?? product.categoryName ?? null;
-      if (categoryName && categoryId) {
-        const existing = categories.get(categoryId);
-        categories.set(categoryId, {
-          id: product.category?.id.toString() ?? '',
+      const categoryName = this.normalizeCategoryName(
+        product.category?.name ?? product.categoryName,
+      );
+      if (categoryName) {
+        const categoryKey = product.category?.id.toString() ?? categoryName;
+        const existing = categories.get(categoryKey);
+        categories.set(categoryKey, {
+          id: product.category?.id.toString() ?? categoryName,
           name: categoryName,
-          slug: product.category?.slug ?? null,
+          slug: product.category?.slug ?? categoryName,
           count: (existing?.count ?? 0) + 1,
         });
       }
@@ -555,5 +576,31 @@ export class PublicProductsService {
       priceMin: priceMin?.toString() ?? null,
       priceMax: priceMax?.toString() ?? null,
     };
+  }
+
+  private matchesCategoryFilter(
+    product: Pick<PublicProductRecord, 'category' | 'categoryName'>,
+    categoryFilter: string,
+  ) {
+    const normalizedCategoryName = this.normalizeCategoryName(
+      product.category?.name ?? product.categoryName,
+    );
+    const normalizedFilter = this.normalizeCategoryName(categoryFilter);
+
+    return Boolean(
+      normalizedCategoryName &&
+      normalizedFilter &&
+      (product.category?.id.toString() === categoryFilter ||
+        normalizedCategoryName.localeCompare(normalizedFilter, undefined, {
+          sensitivity: 'accent',
+        }) === 0 ||
+        this.normalizeCategoryName(product.category?.slug) ===
+          normalizedFilter),
+    );
+  }
+
+  private normalizeCategoryName(value: string | null | undefined) {
+    const normalized = value?.normalize('NFKC').trim();
+    return normalized ? normalized : null;
   }
 }

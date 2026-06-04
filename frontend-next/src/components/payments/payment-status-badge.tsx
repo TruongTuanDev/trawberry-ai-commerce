@@ -16,9 +16,11 @@ const toneByPaymentStatus: Record<string, string> = {
 export function PaymentStatusBadge({
   status,
   testId,
+  role,
 }: {
   status: string;
   testId?: string;
+  role?: string;
 }) {
   const { cookieLocale, roleLocales } = useLocaleStore();
   const locale = cookieLocale ?? roleLocales.seller ?? "ru";

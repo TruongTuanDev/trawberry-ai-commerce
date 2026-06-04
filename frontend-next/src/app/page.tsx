@@ -40,6 +40,7 @@ async function loadHomepageCatalog() {
 }
 
 export default async function HomePage() {
+  const recommendationFlags = getRecommendationFlags();
   const { items, total } = await loadHomepageCatalog();
   const cookieStore = await cookies();
   const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_KEY)?.value) ?? "ru";

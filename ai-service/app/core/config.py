@@ -23,6 +23,34 @@ class Settings(BaseSettings):
     )
     openai_api_key: str | None = None
     openai_image_model: str = "gpt-image-1"
+    ai_try_on_openai_model: str = Field(
+        default="gpt-image-1",
+        validation_alias=AliasChoices(
+            "AI_TRY_ON_OPENAI_MODEL",
+            "OPENAI_TRY_ON_MODEL",
+        ),
+    )
+    ai_try_on_provider_timeout_seconds: int = Field(
+        default=120,
+        validation_alias=AliasChoices(
+            "AI_TRY_ON_PROVIDER_TIMEOUT_SECONDS",
+            "OPENAI_TRY_ON_TIMEOUT_SECONDS",
+        ),
+    )
+    ai_try_on_output_size: Literal[
+        "auto",
+        "1024x1024",
+        "1536x1024",
+        "1024x1536",
+        "256x256",
+        "512x512",
+    ] = Field(
+        default="1024x1536",
+        validation_alias=AliasChoices(
+            "AI_TRY_ON_OUTPUT_SIZE",
+            "OPENAI_TRY_ON_OUTPUT_SIZE",
+        ),
+    )
     openai_image_size: str = "1024x1536"
     openai_image_quality: str = "medium"
     openai_image_output_format: Literal["jpeg", "png", "webp"] = "jpeg"

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { VisualSearchModal } from "@/components/public/visual-search/visual-search-modal";
 import { useI18n } from "@/i18n/use-i18n";
+import { readVisualSearchFlagsFromDocument } from "@/lib/visual-search-flags";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -83,9 +85,11 @@ function CartIcon() {
 }
 
 export function PublicHeader() {
-  const { t } = useI18n("customer");
+  const { t, locale } = useI18n("customer");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [visualSearchOpen, setVisualSearchOpen] = useState(false);
+  const [visualSearchFlagsReady, setVisualSearchFlagsReady] = useState(false);
   const hydrateCart = useCartStore((state) => state.hydrate);
   const cartCount = useCartStore((state) => state.getItemCount());
   const hydrateAuth = useAuthStore((state) => state.hydrate);
@@ -123,6 +127,21 @@ export function PublicHeader() {
     refreshRole,
     user,
   ]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setVisualSearchFlagsReady(true);
+    }, 0);
+
+    return () => window.clearTimeout(handle);
+  }, []);
+
+  const visualSearchFlags = visualSearchFlagsReady
+    ? readVisualSearchFlagsFromDocument()
+    : {
+        publicVisualSearchEnabled: false,
+        visualSearchTrackingEnabled: false,
+      };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -173,6 +192,7 @@ export function PublicHeader() {
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 className="transition hover:text-white"
               >
                 {link.label}
@@ -186,10 +206,11 @@ export function PublicHeader() {
             <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/90">
               {t("publicHeader.currency")}
             </span>
-            <LanguageSwitcher role="customer" />
+            <LanguageSwitcher role="customer" compact tone="dark" />
             {!user?.role ? (
               <Link
                 href="/customer/register"
+                prefetch={false}
                 className="rounded-full bg-white/12 px-2.5 py-0.5 text-[10px] font-semibold text-white/90 hover:bg-white/18"
                 data-testid="public-customer-register-link"
               >
@@ -211,6 +232,7 @@ export function PublicHeader() {
         <div className="flex items-center justify-between gap-3 py-1 sm:gap-4 md:gap-6">
           <Link
             href="/"
+            prefetch={false}
             className="flex shrink-0 items-center"
             data-testid="public-logo"
           >
@@ -230,7 +252,7 @@ export function PublicHeader() {
             <MenuIcon />
           </button>
 
-          <form onSubmit={handleSearch} className="max-w-4xl flex-1">
+          <form onSubmit={handleSearch} className="max-w-4xl flex-1 min-w-0">
             <label htmlFor="public-header-search" className="sr-only">
               {t("publicHeader.searchProducts")}
             </label>
@@ -247,22 +269,27 @@ export function PublicHeader() {
                 className="min-w-0 flex-1 border-none bg-transparent p-0 text-sm outline-none placeholder:text-[var(--muted)] focus:outline-none focus:ring-0 focus-visible:outline-none"
                 data-testid="public-header-search"
               />
-              <button
-                type="button"
-                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600"
-                aria-label={t("publicHeader.searchByImage")}
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
+              {visualSearchFlags.publicVisualSearchEnabled ? (
+                <button
+                  type="button"
+                  className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-slate-100 hover:text-gray-600"
+                  aria-label={t("publicHeader.searchByImage")}
+                  data-testid="public-header-visual-search-trigger"
+                  onClick={() => setVisualSearchOpen(true)}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              ) : null}
             </div>
           </form>
 
           <div className="flex shrink-0 items-center gap-3 sm:gap-5 md:gap-6">
             <Link
               href={customerAddressHref}
+              prefetch={false}
               className="hidden cursor-pointer flex-col items-center justify-center text-center text-white/90 transition hover:text-white md:flex"
               title={t("publicHeader.manageAddress")}
               aria-label={t("publicHeader.openAddressSettings")}
@@ -280,6 +307,7 @@ export function PublicHeader() {
 
             <Link
               href={customerHref}
+              prefetch={false}
               className="flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
               data-testid="public-customer-link"
             >
@@ -293,6 +321,7 @@ export function PublicHeader() {
 
             <Link
               href="/cart"
+              prefetch={false}
               className="relative flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
               data-testid="public-cart-link"
             >
@@ -314,23 +343,40 @@ export function PublicHeader() {
           </div>
         </div>
 
-        {!user?.role && (
-          <div className="flex gap-2 pb-1 pt-2 lg:hidden">
+        <div className="flex flex-wrap items-center gap-2 pb-1 pt-2 lg:hidden">
+          <LanguageSwitcher
+            role="customer"
+            compact
+            tone="dark"
+            testId="language-switcher-customer-mobile"
+          />
+          {!user?.role && (
+            <>
             <Link
               href={customerHref}
+              prefetch={false}
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg border border-white/18 bg-white/12 px-3 text-xs font-semibold text-white backdrop-blur"
             >
               {t("publicHeader.login")}
             </Link>
             <Link
               href="/customer/register"
+              prefetch={false}
               className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[#cb11ab]"
             >
               {t("publicHeader.register")}
             </Link>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
+      <VisualSearchModal
+        open={visualSearchOpen}
+        locale={locale}
+        t={t}
+        trackingEnabled={visualSearchFlags.visualSearchTrackingEnabled}
+        onClose={() => setVisualSearchOpen(false)}
+      />
     </header>
   );
 }

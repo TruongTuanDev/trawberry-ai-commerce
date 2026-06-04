@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useI18n } from "@/i18n/use-i18n";
 import type { ProductDetail, UpdateProductPayload } from "@/lib/seller-api";
 
 const productFormSchema = z.object({
@@ -24,6 +25,7 @@ export function ProductForm({
   saving: boolean;
   onSubmit: (payload: UpdateProductPayload) => Promise<void>;
 }) {
+  const { t } = useI18n("seller");
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -55,23 +57,23 @@ export function ProductForm({
         visibility: values.visibility,
       });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Unable to save product.");
+      setFormError(error instanceof Error ? error.message : t("seller.products.form.saveFailed"));
     }
   });
 
   return (
     <form onSubmit={submit} className="space-y-5 rounded-[1.75rem] border border-[var(--border)] bg-white p-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">Metadata</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">{t("seller.products.form.metadata")}</p>
         <h2 className="mt-2 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-[var(--foreground)]">
-          Product editor
+          {t("seller.products.form.title")}
         </h2>
       </div>
 
       <div className="grid gap-5">
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor="localTitle">
-            Local title
+            {t("seller.products.form.localTitle")}
           </label>
           <input
             id="localTitle"
@@ -86,7 +88,7 @@ export function ProductForm({
 
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor="localDescription">
-            Local description
+            {t("seller.products.form.localDescription")}
           </label>
           <textarea
             id="localDescription"
@@ -100,7 +102,7 @@ export function ProductForm({
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor="seoSlug">
-              SEO slug
+              {t("seller.products.form.seoSlug")}
             </label>
             <input
               id="seoSlug"
@@ -111,7 +113,7 @@ export function ProductForm({
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--foreground)]" htmlFor="visibility">
-              Visibility
+              {t("seller.products.form.visibility")}
             </label>
             <select
               id="visibility"
@@ -119,10 +121,10 @@ export function ProductForm({
               className="w-full rounded-xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm outline-none transition focus:border-[var(--accent)]"
               data-testid="product-visibility"
             >
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="DRAFT">Draft</option>
-              <option value="ARCHIVED">Archived</option>
+              <option value="ACTIVE">{t("seller.products.filters.statusOptions.active")}</option>
+              <option value="INACTIVE">{t("seller.products.filters.statusOptions.inactive")}</option>
+              <option value="DRAFT">{t("seller.products.filters.statusOptions.draft")}</option>
+              <option value="ARCHIVED">{t("seller.products.filters.statusOptions.archived")}</option>
             </select>
           </div>
         </div>
@@ -139,7 +141,7 @@ export function ProductForm({
           className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="product-save"
         >
-          {saving ? "Saving..." : "Save changes"}
+          {saving ? t("seller.products.form.saving") : t("seller.products.form.saveChanges")}
         </button>
       </div>
     </form>

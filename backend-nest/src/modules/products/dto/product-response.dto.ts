@@ -75,6 +75,9 @@ export class ProductResponseDto {
   @ApiProperty()
   readyToPublish!: boolean;
 
+  @ApiProperty()
+  aiTryOnEnabled!: boolean;
+
   @ApiProperty({ nullable: true })
   mainImage!: string | null;
 

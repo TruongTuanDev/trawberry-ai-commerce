@@ -36,7 +36,9 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
     { href: "/seller/import/wildberries-api", label: t("sellerShell.wbSync") },
     { href: "/seller/ai-images", label: t("sellerShell.aiImages") },
     { href: "/seller/orders", label: t("sellerShell.orders") },
+    { href: "/seller/messages", label: t("sellerShell.messages") },
     { href: "/seller/returns", label: t("sellerShell.returns") },
+    { href: "/seller/reviews", label: t("sellerShell.reviews") },
     { href: "/seller/support-cases", label: t("sellerShell.support") },
     { href: "/seller/payments", label: t("sellerShell.payments") },
     { href: "/seller/payments-to-confirm", label: t("sellerShell.toConfirm") },
@@ -111,7 +113,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
-          <header className="border-b border-[var(--border)] bg-[rgba(255,250,243,0.92)] px-4 py-4 backdrop-blur sm:px-6">
+          <header className="relative z-20 border-b border-[var(--border)] bg-[rgba(255,250,243,0.92)] px-4 py-4 backdrop-blur sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">

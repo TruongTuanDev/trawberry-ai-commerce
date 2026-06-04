@@ -46,11 +46,11 @@ export function NotificationDropdown({
       const all = await getNotifications(role, { page: 1, limit: 5 });
       setNotifications(all.items);
     } catch (error) {
-      console.error("Failed to load dropdown notifications:", error);
+      console.error(t("notifications.loadDropdownFailed"), error);
     } finally {
       setLoading(false);
     }
-  }, [role]);
+  }, [role, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -71,7 +71,7 @@ export function NotificationDropdown({
           onMutation?.();
         }
       } catch (error) {
-        console.error("Failed to mark all read:", error);
+        console.error(t("notifications.markAllReadFailed"), error);
       }
     });
   };
@@ -82,7 +82,7 @@ export function NotificationDropdown({
         await markNotificationRead(role, item.id);
         onMutation?.();
       } catch (error) {
-        console.error("Failed to mark read on click:", error);
+        console.error(t("notifications.markReadFailed"), error);
       }
     }
     onClose();
@@ -101,6 +101,21 @@ export function NotificationDropdown({
       : role === "seller"
         ? "seller.notifications.emptyTitle"
         : "notifications.customerEmptyTitle";
+
+  const typeLabels: Record<string, string> = {
+    ORDER_NEW: t("notifications.order"),
+    PAYMENT_CONFIRMATION_REQUIRED: t("notifications.payment"),
+    DELIVERY_STATUS_CHANGED: t("notifications.delivery"),
+    YANDEX_CREATION_REMINDER: t("notifications.delivery"),
+    RETURN_CASE_OPENED: t("notifications.return"),
+    RETURN_SELLER_RESPONSE_REQUIRED: t("notifications.return"),
+    RETURN_ADMIN_REVIEW_REQUIRED: t("notifications.dispute"),
+    MESSAGE_RECEIVED: t("notifications.messages"),
+    MESSAGE_REPORTED: t("notifications.messages"),
+    SELLER_FEE_INVOICE_ISSUED: t("notifications.finance"),
+    ORDER_FULFILLMENT_OVERDUE: t("notifications.order"),
+    SYSTEM: t("notifications.system"),
+  };
 
   return (
     <div
@@ -154,7 +169,7 @@ export function NotificationDropdown({
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex items-center justify-between gap-2">
                     <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      {item.type}
+                      {typeLabels[item.type] ?? item.type}
                     </span>
                     <span className="text-2xs flex-shrink-0 text-slate-400 dark:text-slate-500">
                       {new Date(item.createdAt).toLocaleString(

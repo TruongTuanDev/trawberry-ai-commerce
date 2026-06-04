@@ -18,6 +18,77 @@ import {
 import type { SellerDocument, SellerOnboardingProfile } from "@/lib/seller-onboarding-api";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 
+function formatApprovalStatus(value: string | null | undefined) {
+  switch (value) {
+    case "PENDING":
+      return "Pending";
+    case "APPROVED":
+      return "Approved";
+    case "REJECTED":
+      return "Rejected";
+    default:
+      return value ?? "Not provided";
+  }
+}
+
+function formatDocumentType(value: string | null | undefined) {
+  switch (value) {
+    case "PASSPORT":
+      return "Passport";
+    case "INN":
+      return "INN";
+    case "OGRN":
+      return "OGRN";
+    case "COMPANY_REGISTRATION":
+      return "Company registration";
+    case "BANK_DETAILS":
+      return "Bank details";
+    case "OTHER":
+      return "Other";
+    default:
+      return value ?? "Not provided";
+  }
+}
+
+function formatLegalType(value: string | null | undefined) {
+  switch (value) {
+    case "INDIVIDUAL":
+      return "Individual";
+    case "IP":
+      return "Sole proprietor";
+    case "LLC":
+      return "LLC";
+    case "OTHER":
+      return "Other";
+    default:
+      return value ?? "Not provided";
+  }
+}
+
+function formatPaymentConfigStatus(value: string | null | undefined) {
+  switch (value) {
+    case "READY":
+      return "Ready";
+    case "MISSING":
+      return "Missing";
+    case "PENDING":
+      return "Pending";
+    default:
+      return value ?? "Not provided";
+  }
+}
+
+function formatCodeLabel(value: string | null | undefined) {
+  if (!value) {
+    return "Not provided";
+  }
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function AdminSellerDetailClient({ userId }: { userId: string }) {
   const router = useRouter();
   const [seller, setSeller] = useState<AdminSellerDetail | null>(null);
@@ -68,7 +139,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       action: async () => {
         return approveAdminSellerDocument(userId, documentId);
       },
-      successMessage: "Phê duyệt tài liệu thành công.",
+      successMessage: "Document approved successfully.",
       onSuccess: async () => {
         await load(false);
       },
@@ -79,7 +150,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
   };
 
   const rejectDocument = async (documentId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn từ chối tài liệu này không?")) {
+    if (!window.confirm("Reject this document?")) {
       return;
     }
     setSaving(documentId);
@@ -89,7 +160,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       action: async () => {
         return rejectAdminSellerDocument(userId, documentId, documentRejectReasons[documentId]?.trim() || undefined);
       },
-      successMessage: "Từ chối tài liệu thành công.",
+      successMessage: "Document rejected successfully.",
       onSuccess: async () => {
         await load(false);
       },
@@ -107,7 +178,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       action: async () => {
         return approveAdminSeller(userId);
       },
-      successMessage: "Phê duyệt người bán thành công.",
+      successMessage: "Seller approved successfully.",
       onSuccess: async () => {
         const updated = await getAdminSeller(userId);
         setSeller(updated);
@@ -120,7 +191,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
   };
 
   const rejectSeller = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn từ chối người bán này không?")) {
+    if (!window.confirm("Reject this seller?")) {
       return;
     }
     setSaving("seller");
@@ -130,7 +201,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       action: async () => {
         return rejectAdminSeller(userId, rejectReason.trim() || undefined);
       },
-      successMessage: "Từ chối người bán thành công.",
+      successMessage: "Seller rejected successfully.",
       onSuccess: async () => {
         const updated = await getAdminSeller(userId);
         setSeller(updated);
@@ -164,7 +235,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
             <p className="mt-2 text-sm text-[var(--muted)]">{seller?.name ?? "Unnamed seller"}</p>
           </div>
           <span className="w-fit rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]" data-testid="admin-seller-status">
-            {seller?.sellerApprovalStatus ?? "Loading"}
+            {formatApprovalStatus(seller?.sellerApprovalStatus) ?? "Loading"}
           </span>
         </div>
         {message ? <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</div> : null}
@@ -187,7 +258,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
                 {seller.shops.map((shop) => (
                   <div key={shop.id} className="rounded-[0.9rem] border border-[var(--border)] bg-white px-4 py-3">
                     <p className="text-sm font-semibold text-[var(--foreground)]">{shop.name}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{shop.status} · payment {shop.paymentConfigStatus}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{formatCodeLabel(shop.status)} · payment {formatPaymentConfigStatus(shop.paymentConfigStatus)}</p>
                     <p className="mt-2 text-sm text-[var(--muted)]">
                       Revenue {shop.confirmedRevenueThisMonth} ₽ · Pending fee {shop.pendingPlatformFees} ₽
                     </p>
@@ -203,7 +274,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
                     <p className="text-sm font-semibold text-[var(--foreground)]">{order.orderCode}</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">{order.shopName}</p>
                     <p className="mt-2 text-sm text-[var(--muted)]">
-                      {order.status} · {order.paymentStatus} · {order.totalAmount} ₽
+                      {formatCodeLabel(order.status)} · {formatCodeLabel(order.paymentStatus)} · {order.totalAmount} ₽
                     </p>
                   </div>
                 )) : (
@@ -221,7 +292,7 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
           <p className="mt-4 text-sm text-[var(--muted)]">Loading profile...</p>
         ) : profile ? (
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <ProfileField label="Legal type" value={profile.legalType} />
+            <ProfileField label="Legal type" value={formatLegalType(profile.legalType)} />
             <ProfileField label="Legal name" value={profile.legalName} />
             <ProfileField label="INN" value={profile.inn} />
             <ProfileField label="OGRN" value={profile.ogrn} />
@@ -243,15 +314,15 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
           {documents.length ? (
             documents.map((document) => (
               <article key={document.id} className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4" data-testid="admin-document-row">
-                <div className="grid gap-3 lg:grid-cols-[1fr_140px_1.4fr] lg:items-start">
+                <div className="grid gap-3 grid-cols-1 xl:grid-cols-[1fr_140px_1.4fr] lg:items-start">
                   <div>
                     <p className="text-sm font-semibold text-[var(--foreground)]">{document.originalName ?? document.documentType}</p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">{document.documentType}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{formatDocumentType(document.documentType)}</p>
                     <a href={document.url} target="_blank" className="mt-1 block text-xs text-[var(--accent-strong)]" rel="noreferrer">
                       Open document
                     </a>
                   </div>
-                  <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">{document.status}</span>
+                  <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">{formatApprovalStatus(document.status)}</span>
                   <div className="flex flex-col gap-2">
                     <input
                       value={documentRejectReasons[document.id] ?? ""}

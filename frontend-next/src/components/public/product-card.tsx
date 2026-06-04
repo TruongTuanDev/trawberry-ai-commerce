@@ -50,18 +50,25 @@ export function ProductCard({ product }: { product: PublicProduct }) {
       className="card-panel hover-card-effect group flex h-full flex-col overflow-hidden rounded-[1.85rem] border-white/70 bg-white"
       data-testid="product-card"
     >
-      <Link href={`/products/${product.id}`} className="relative block overflow-hidden">
+      <Link
+        href={`/products/${product.id}`}
+        className="relative block overflow-hidden"
+        onClick={onProductNavigate}
+      >
         <div className="absolute inset-x-4 top-4 z-10 flex items-start justify-between gap-3">
           <div className="flex flex-wrap gap-2">
             <StockBadge label={stockState.label} tone={stockState.tone} />
-            {product.averageRating ? (
-              <span className="inline-flex items-center rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)]">
-                {Number(product.averageRating).toFixed(1)}
+            {product.averageRating && product.feedbackCount > 0 ? (
+              <span
+                className="inline-flex items-center rounded-full bg-white/92 px-2.5 py-1 text-xs font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)]"
+                data-testid={`product-rating-summary-${product.id}`}
+              >
+                {"★"} {Number(product.averageRating).toFixed(1)} ({product.feedbackCount})
               </span>
             ) : null}
           </div>
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[#cb11ab] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
-            ♡
+            {"♡"}
           </span>
         </div>
 
@@ -94,6 +101,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
                 href={`/products/${product.id}`}
                 className="mt-2 line-clamp-2 block text-base font-semibold text-[var(--foreground)]"
                 data-testid={`product-view-${product.id}`}
+                onClick={onProductNavigate}
               >
                 {product.name}
               </Link>
@@ -167,6 +175,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
           <Link
             href={`/products/${product.id}`}
             className="public-button-secondary inline-flex w-full justify-center px-4 py-3 text-sm"
+            onClick={onProductNavigate}
           >
             {t("productDetail.view")}
           </Link>

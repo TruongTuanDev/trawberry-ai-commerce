@@ -1,3 +1,7 @@
+import type { Locale } from "@/i18n/config";
+import { translate } from "@/i18n/translate";
+import { useLocaleStore } from "@/i18n/locale-store";
+
 export function formatRub(value: string | number | null | undefined) {
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
@@ -44,16 +48,26 @@ export const returnRefundStatusLabels: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
-export function labelForReturnStatus(status: string) {
-  return returnRefundStatusLabels[status] ?? status;
+export function labelForReturnStatus(status: string, locale?: string) {
+  const activeLocale = (locale ?? (typeof window !== "undefined" ? useLocaleStore.getState().cookieLocale : "ru") ?? "ru") as Locale;
+  const key = `common.status.return.${status}`;
+  const translated = translate(activeLocale, key);
+  return translated === key ? (returnRefundStatusLabels[status] ?? status) : translated;
 }
 
-export function labelForReturnType(type: string) {
-  return returnRefundTypeLabels[type] ?? type;
+export function labelForReturnType(type: string, locale?: string) {
+  const activeLocale = (locale ?? (typeof window !== "undefined" ? useLocaleStore.getState().cookieLocale : "ru") ?? "ru") as Locale;
+  const key = `common.returnTypes.${type}`;
+  const translated = translate(activeLocale, key);
+  return translated === key ? (returnRefundTypeLabels[type] ?? type) : translated;
 }
 
-export function labelForReturnReason(reason: string) {
-  return returnRefundReasonLabels[reason] ?? reason;
+export function labelForReturnReason(reason: string, locale?: string) {
+  const activeLocale = (locale ?? (typeof window !== "undefined" ? useLocaleStore.getState().cookieLocale : "ru") ?? "ru") as Locale;
+  const dictKey = reason === "ITEM_NOT_AS_DESCRIBED" ? "NOT_AS_DESCRIBED" : reason === "BUYER_CHANGED_MIND" ? "CHANGED_MIND" : reason;
+  const key = `common.returnReasons.${dictKey}`;
+  const translated = translate(activeLocale, key);
+  return translated === key ? (returnRefundReasonLabels[reason] ?? reason) : translated;
 }
 
 export function canCustomerConfirmRefund(status: string) {

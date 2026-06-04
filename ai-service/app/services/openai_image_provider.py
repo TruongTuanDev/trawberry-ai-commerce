@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import io
 import logging
 import re
-import tempfile
 from dataclasses import dataclass
 from hashlib import sha256
-from pathlib import Path
 from typing import Any, Callable
 
 import httpx
 import openai
 from openai import OpenAI
 from PIL import Image, UnidentifiedImageError
-import io
 
 from app.config import Settings
 from app.services.image_provider import (
@@ -24,6 +22,7 @@ from app.services.image_provider import (
     ProviderImageResult,
 )
 from app.services.image_quality_guard import validate_generated_image
+from app.services.openai_image_support import build_image_edit_upload
 
 
 LOGGER = logging.getLogger(__name__)
@@ -173,7 +172,7 @@ class OpenAIImageProvider(ImageProvider):
                 diagnostics=self._with_openai_error_details(diagnostics, error),
             ) from error
 
-        return self._parse_response(response)
+        return await self._parse_response(response)
 
     async def _download_reference_images(
         self,
@@ -306,35 +305,79 @@ class OpenAIImageProvider(ImageProvider):
         self._apply_generate_params(params)
         return client.images.generate(**params)
 
+
+    def _make_square_png(self, payload: bytes, target_size: int = 1024) -> bytes:
+        with Image.open(io.BytesIO(payload)) as img:
+            img = img.convert("RGBA")
+            w, h = img.size
+            aspect_ratio = w / h
+            if w > h:
+                new_w = target_size
+                new_h = int(target_size / aspect_ratio)
+            else:
+                new_h = target_size
+                new_w = int(target_size * aspect_ratio)
+            img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            square_img = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+            offset_x = (target_size - new_w) // 2
+            offset_y = (target_size - new_h) // 2
+            square_img.paste(img_resized, (offset_x, offset_y))
+            out = io.BytesIO()
+            square_img.save(out, format="PNG")
+            return out.getvalue()
+
     def _call_openai_edit(
         self,
         client: OpenAI,
         request: ProviderGenerateRequest,
         downloaded_images: list[DownloadedImage],
     ):
-        with tempfile.TemporaryDirectory(prefix="strawberry-openai-") as tmp_dir:
-            files = []
-            file_handles = []
-            try:
-                for index, image in enumerate(downloaded_images):
-                    path = Path(tmp_dir) / f"{index + 1}-{image.filename}"
-                    path.write_bytes(image.payload)
-                    handle = path.open("rb")
-                    file_handles.append(handle)
-                    files.append(handle)
+        if self._is_dalle2_model:
+            target_size = 1024
+            if self.settings.openai_image_size in ("256x256", "512x512", "1024x1024"):
+                target_size = int(self.settings.openai_image_size.split("x")[0])
 
-                params: dict[str, Any] = {
-                    "model": self.settings.openai_image_model,
-                    "image": files if len(files) > 1 else files[0],
-                    "prompt": self._normalize_prompt(request.prompt),
-                    "n": request.quantity,
-                }
+            img1 = downloaded_images[0]
+            sq1 = self._make_square_png(img1.payload, target_size)
 
-                self._apply_edit_params(params)
-                return client.images.edit(**params)
-            finally:
-                for handle in file_handles:
-                    handle.close()
+            params: dict[str, Any] = {
+                "model": self.settings.openai_image_model,
+                "image": build_image_edit_upload(
+                    filename=img1.filename,
+                    payload=sq1,
+                    content_type="image/png",
+                ),
+                "prompt": self._normalize_prompt(request.prompt),
+                "n": request.quantity,
+            }
+
+            if len(downloaded_images) > 1:
+                img2 = downloaded_images[1]
+                sq2 = self._make_square_png(img2.payload, target_size)
+                params["mask"] = build_image_edit_upload(
+                    filename="mask.png",
+                    payload=sq2,
+                    content_type="image/png",
+                )
+        else:
+            files = [
+                build_image_edit_upload(
+                    filename=image.filename,
+                    payload=image.payload,
+                    content_type=image.content_type,
+                )
+                for image in downloaded_images
+            ]
+
+            params = {
+                "model": self.settings.openai_image_model,
+                "image": files if len(files) > 1 else files[0],
+                "prompt": self._normalize_prompt(request.prompt),
+                "n": request.quantity,
+            }
+
+        self._apply_edit_params(params)
+        return client.images.edit(**params)
 
     def _apply_generate_params(self, params: dict[str, Any]) -> None:
         params["size"] = self.settings.openai_image_size
@@ -350,7 +393,6 @@ class OpenAIImageProvider(ImageProvider):
         params["size"] = self.settings.openai_image_size
         params["timeout"] = self.settings.openai_image_timeout_seconds
         if self._is_dalle2_model:
-            params["response_format"] = "b64_json"
             return
 
         params["quality"] = self.settings.openai_image_quality
@@ -358,7 +400,7 @@ class OpenAIImageProvider(ImageProvider):
             "output_format": self.settings.openai_image_output_format,
         }
 
-    def _parse_response(self, response) -> list[ProviderImageResult]:
+    async def _parse_response(self, response) -> list[ProviderImageResult]:
         data = getattr(response, "data", None)
         if not data:
                 raise ProviderError(
@@ -376,23 +418,49 @@ class OpenAIImageProvider(ImageProvider):
         results: list[ProviderImageResult] = []
         for image in data:
             image_b64 = getattr(image, "b64_json", None)
-            if not image_b64:
+            image_url = getattr(image, "url", None)
+            has_b64_json = bool(image_b64)
+            has_url = bool(image_url)
+
+            if image_b64:
+                try:
+                    image_bytes = base64.b64decode(image_b64)
+                except ValueError as error:
+                    raise ProviderError(
+                        "OpenAI returned malformed base64 image output.",
+                        status_code=502,
+                        retryable=False,
+                        code="AI_SERVICE_INVALID_RESPONSE",
+                    ) from error
+            elif image_url:
+                try:
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.get(image_url, timeout=30.0)
+                        resp.raise_for_status()
+                        image_bytes = resp.content
+                except Exception as error:
+                    LOGGER.error("Failed to download generated image from OpenAI URL: %s", image_url, exc_info=True)
+                    raise ProviderError(
+                        "Failed to retrieve generated image from URL.",
+                        status_code=502,
+                        retryable=False,
+                        code="RESULT_IMAGE_UPLOAD_FAILED",
+                    ) from error
+            else:
                 raise ProviderError(
-                    "OpenAI returned an image response without b64_json output.",
+                    "OpenAI returned no valid image payload (missing b64_json and url).",
                     status_code=502,
                     retryable=False,
-                    code="AI_SERVICE_INVALID_RESPONSE",
+                    code="RESULT_IMAGE_MISSING",
                 )
 
-            try:
-                image_bytes = base64.b64decode(image_b64)
-            except ValueError as error:
-                raise ProviderError(
-                    "OpenAI returned malformed base64 image output.",
-                    status_code=502,
-                    retryable=False,
-                    code="AI_SERVICE_INVALID_RESPONSE",
-                ) from error
+            LOGGER.info(
+                "OpenAI image parsing: has_b64_json=%s, has_url=%s, generated_image_byte_length=%d, output_mime=%s",
+                has_b64_json,
+                has_url,
+                len(image_bytes),
+                mime_type,
+            )
 
             quality = validate_generated_image(
                 image_bytes,

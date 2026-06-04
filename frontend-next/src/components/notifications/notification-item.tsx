@@ -120,10 +120,12 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
     ORDER_NEW: t("notifications.order"),
     PAYMENT_CONFIRMATION_REQUIRED: t("notifications.payment"),
     DELIVERY_STATUS_CHANGED: t("notifications.delivery"),
-    YANDEX_CREATION_REMINDER: "Yandex",
+    YANDEX_CREATION_REMINDER: t("notifications.delivery"),
     RETURN_CASE_OPENED: t("notifications.return"),
     RETURN_SELLER_RESPONSE_REQUIRED: t("notifications.return"),
     RETURN_ADMIN_REVIEW_REQUIRED: t("notifications.dispute"),
+    MESSAGE_RECEIVED: t("notifications.messages"),
+    MESSAGE_REPORTED: t("notifications.messages"),
     SELLER_FEE_INVOICE_ISSUED: t("notifications.finance"),
     ORDER_FULFILLMENT_OVERDUE: t("notifications.order"),
     SYSTEM: t("notifications.system"),
@@ -146,9 +148,9 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
         <div className="min-w-0 flex-1 pr-8">
           <div className="mb-1 flex flex-wrap items-center gap-2">
             <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {typeLabels[type] ?? typeConfig.label}
+              {typeLabels[type] ?? type}
             </span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="text-slate-300 dark:text-slate-700">·</span>
             <span className="text-xs text-slate-400 dark:text-slate-500">{formatTime(notification.createdAt)}</span>
             {isUnread ? (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-2xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
@@ -173,7 +175,7 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
             ) : null}
             {notification.shopId ? (
               <span className="inline-flex items-center rounded bg-blue-50 px-2 py-0.5 text-3xs font-semibold text-blue-600 dark:bg-blue-950/20 dark:text-blue-400">
-                Shop ID: #{notification.shopId.slice(0, 8)}
+                {t("notifications.shopId")}: #{notification.shopId.slice(0, 8)}
               </span>
             ) : null}
             {notification.returnRefundCaseId ? (
@@ -183,7 +185,7 @@ export function NotificationItem({ notification, role, onMutation, hideActions =
             ) : null}
             {notification.invoiceId ? (
               <span className="inline-flex items-center rounded bg-emerald-50 px-2 py-0.5 text-3xs font-semibold text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400">
-                Invoice: #{notification.invoiceId.slice(0, 8)}
+                {t("notifications.invoice")}: #{notification.invoiceId.slice(0, 8)}
               </span>
             ) : null}
             {actionLabel ? (

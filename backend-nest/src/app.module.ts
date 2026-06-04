@@ -7,8 +7,12 @@ import { ProductsModule } from './modules/products/products.module';
 import { ProductImagesModule } from './modules/product-images/product-images.module';
 import { FilesModule } from './modules/files/files.module';
 import { AiImagesModule } from './modules/ai-images/ai-images.module';
+import { AiTryOnModule } from './modules/ai-try-on/ai-try-on.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PublicProductsModule } from './modules/public-products/public-products.module';
+import { PublicShopsModule } from './modules/public-shops/public-shops.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrderTrackingModule } from './modules/order-tracking/order-tracking.module';
@@ -24,6 +28,9 @@ import { CustomerAccountModule } from './modules/customer-account/customer-accou
 import { SellerFinanceModule } from './modules/seller-finance/seller-finance.module';
 import { ReturnRefundsModule } from './modules/return-refunds/return-refunds.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { HomepageSlidesModule } from './modules/homepage-slides/homepage-slides.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { VisualSearchModule } from './modules/visual-search/visual-search.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -45,6 +52,7 @@ import { HealthController } from './health.controller';
     ProductImagesModule,
     FilesModule,
     AiImagesModule,
+    AiTryOnModule,
     OrdersModule,
     PaymentsModule,
     DeliveryModule,
@@ -57,7 +65,13 @@ import { HealthController } from './health.controller';
     SellerFinanceModule,
     ReturnRefundsModule,
     NotificationsModule,
+    HomepageSlidesModule,
+    RecommendationsModule,
+    VisualSearchModule,
     PublicProductsModule,
+    PublicShopsModule,
+    ReviewsModule,
+    MessagesModule,
     CheckoutModule,
     OrderTrackingModule,
     CustomerOrdersModule,

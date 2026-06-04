@@ -12,6 +12,57 @@ import {
 import { labelForReturnStatus, labelForReturnType } from "@/components/returns/return-refund-utils";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 
+function formatPaymentStatus(value: string | null | undefined) {
+  switch (value) {
+    case "PENDING":
+      return "Pending prepaid review";
+    case "PAY_ON_DELIVERY_SELECTED":
+      return "Pay on delivery selected";
+    case "DELIVERED_AWAITING_PAYMENT":
+      return "Delivered awaiting payment";
+    case "BUYER_MARKED_DELIVERY_PAID":
+      return "Buyer marked delivery paid";
+    case "DELIVERY_PAYMENT_REJECTED":
+      return "Delivery payment rejected";
+    case "PAID":
+      return "Paid";
+    case "REJECTED":
+      return "Rejected";
+    default:
+      return value ?? "Unknown";
+  }
+}
+
+function formatProofStatus(value: string | null | undefined) {
+  switch (value) {
+    case "BUYER_MARKED_PAID":
+      return "Buyer marked paid";
+    case "NOT_SUBMITTED":
+      return "No proof yet";
+    case "SELLER_CONFIRMED":
+      return "Seller confirmed";
+    case "SELLER_REJECTED":
+      return "Seller rejected";
+    default:
+      return value ?? "Unknown";
+  }
+}
+
+function formatLedgerStatus(value: string | null | undefined) {
+  switch (value) {
+    case "PENDING":
+      return "Pending";
+    case "ISSUED":
+      return "Issued";
+    case "PAID":
+      return "Paid";
+    case "CANCELLED":
+      return "Cancelled";
+    default:
+      return value ?? "Not created";
+  }
+}
+
 export function AdminPaymentsSupervisionPageClient() {
   const [items, setItems] = useState<AdminPaymentSupervisionRow[]>([]);
   const [selected, setSelected] = useState<AdminPaymentSupervisionRow | null>(null);
@@ -93,8 +144,8 @@ export function AdminPaymentsSupervisionPageClient() {
   const handleAction = async (action: "confirm" | "reject") => {
     if (!selected) return;
     const confirmMessage = action === "confirm"
-      ? "Bạn có chắc chắn muốn PHÊ DUYỆT thanh toán này không?"
-      : "Bạn có chắc chắn muốn TỪ CHỐI thanh toán này không?";
+      ? "Confirm this payment?"
+      : "Reject this payment?";
     if (!window.confirm(confirmMessage)) {
       return;
     }
@@ -106,7 +157,7 @@ export function AdminPaymentsSupervisionPageClient() {
           ? adminConfirmPayment(selected.id, {})
           : adminRejectPayment(selected.id, {});
       },
-      successMessage: action === "confirm" ? "Phê duyệt thanh toán thành công." : "Từ chối thanh toán thành công.",
+      successMessage: action === "confirm" ? "Payment approved successfully." : "Payment rejected successfully.",
       onSuccess: async (updated) => {
         setSelected(updated);
         await load();
@@ -170,10 +221,10 @@ export function AdminPaymentsSupervisionPageClient() {
                     {item.sellerName ?? "Seller"} · {item.paymentMethodLabel ?? item.paymentMethod ?? "Direct seller payment"}
                   </p>
                   <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-                    {item.paymentStatus} - {item.paymentProofStatus}
+                    {formatPaymentStatus(item.paymentStatus)} - {formatProofStatus(item.paymentProofStatus)}
                   </p>
                   <p className="mt-1 text-xs text-[var(--muted)]">
-                    Ledger {item.ledgerStatus ?? "not created"}
+                    Ledger {formatLedgerStatus(item.ledgerStatus)}
                   </p>
                   {item.activeReturnRefundCase ? (
                     <p className="mt-1 text-xs text-rose-700">
@@ -198,9 +249,9 @@ export function AdminPaymentsSupervisionPageClient() {
                 <p className="mt-1 text-sm text-[var(--muted)]">
                   {selected.sellerName ?? "Seller"} · {selected.sellerEmail ?? "no email"} · {selected.paymentMethodLabel ?? selected.paymentMethod ?? "Direct seller payment"}
                 </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">Buyer proof status: {selected.paymentProofStatus}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">Buyer proof status: {formatProofStatus(selected.paymentProofStatus)}</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  Ledger: {selected.ledgerStatus ?? "not created"}{selected.ledgerCommissionAmount ? ` · fee ${selected.ledgerCommissionAmount}` : ""}{selected.ledgerInvoiceStatus ? ` · invoice ${selected.ledgerInvoiceStatus}` : ""}
+                  Ledger: {formatLedgerStatus(selected.ledgerStatus)}{selected.ledgerCommissionAmount ? ` · fee ${selected.ledgerCommissionAmount}` : ""}{selected.ledgerInvoiceStatus ? ` · invoice ${selected.ledgerInvoiceStatus}` : ""}
                 </p>
               </div>
               <PaymentDetailsPanel details={selected.paymentDetails} title="Seller payment destination" />
@@ -218,10 +269,10 @@ export function AdminPaymentsSupervisionPageClient() {
               ) : null}
               <div className="flex flex-wrap gap-3">
                 <button type="button" onClick={() => void handleAction("confirm")} disabled={saving} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="admin-payment-confirm">
-                  {saving ? "Đang cập nhật..." : "Admin confirm"}
+                  {saving ? "Updating..." : "Admin confirm"}
                 </button>
                 <button type="button" onClick={() => void handleAction("reject")} disabled={saving} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" data-testid="admin-payment-reject">
-                  {saving ? "Đang cập nhật..." : "Admin reject"}
+                  {saving ? "Updating..." : "Admin reject"}
                 </button>
               </div>
             </div>

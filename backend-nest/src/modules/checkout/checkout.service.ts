@@ -80,6 +80,7 @@ type ResolvedCheckoutCustomer = {
   latitude: number | null;
   longitude: number | null;
   city: string | null;
+  postalCode: string | null;
   street: string | null;
   building: string | null;
   entrance: string | null;
@@ -278,6 +279,7 @@ export class CheckoutService {
                 : null,
             dropoffAddressFullName: checkoutCustomer.addressFullName,
             dropoffCity: checkoutCustomer.city,
+            dropoffPostalCode: checkoutCustomer.postalCode,
             dropoffStreet: checkoutCustomer.street,
             dropoffBuilding: checkoutCustomer.building,
             dropoffEntrance: checkoutCustomer.entrance,
@@ -508,6 +510,7 @@ export class CheckoutService {
         latitude: dto.customer.latitude ?? null,
         longitude: dto.customer.longitude ?? null,
         city: null,
+        postalCode: null,
         street: null,
         building: null,
         entrance: null,
@@ -555,6 +558,7 @@ export class CheckoutService {
         ? Number(address.longitude.toString())
         : null,
       city: address.city,
+      postalCode: address.postalCode,
       street: address.street,
       building: address.building,
       entrance: address.entrance,
@@ -724,7 +728,10 @@ export class CheckoutService {
         item.product.images[0]?.wbUrl ??
         null,
       sellerSkuSnapshot:
-        item.variant.sellerSku ?? item.product.sellerSku ?? null,
+        item.variant.sellerSku ??
+        item.product.sellerSku ??
+        item.product.wbVendorCode ??
+        null,
       barcodeSnapshot: item.variant.wbBarcode ?? null,
       wbNmIdSnapshot: item.product.wbNmId,
     };

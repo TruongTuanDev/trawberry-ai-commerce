@@ -1,5 +1,38 @@
 # Orders API
 
+## 2026-05-25 Seller Printable Shipping Label Addendum
+
+No new backend endpoint was required for the printable seller shipping label.
+
+The existing seller order detail projection already provides the data needed by the frontend print route:
+
+- `orderNumber`
+- `shopId`
+- `shopName`
+- `paymentMethod`
+- `paymentStatus`
+- `customer.name`
+- `customer.phone`
+- `items[]`
+- `manualYandexOrderId`
+- `trackingUrl`
+- structured dropoff snapshot fields already exposed on seller order detail
+
+The frontend composes the printable route from existing contracts:
+
+- seller order detail:
+  - `GET /api/shops/:shopId/orders/:orderId`
+- seller delivery detail:
+  - existing seller delivery detail route used by seller order detail/workbench
+- seller delivery settings:
+  - existing seller delivery settings route used to show pickup origin context
+
+Important scope note:
+
+- the printable label is an internal marketplace label only
+- it is not an official Yandex label
+- no new provider integration or lifecycle status was introduced
+
 ## 2026-05-24 Admin Fulfillment Supervision Tabs Addendum
 
 Admin order supervision now has a dedicated seller-friendly fulfillment projection.

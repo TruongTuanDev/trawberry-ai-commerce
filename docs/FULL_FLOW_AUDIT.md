@@ -1,5 +1,437 @@
 # Full Commerce Flow Audit
 
+## AI Try-On Real Demo Models Addendum
+
+- verified the public AI Try-On modal no longer depends on silhouette placeholder model cards
+- verified the built-in model catalog is now a shared backend-to-frontend contract with 10 real assets
+- verified the backend still validates `selectedModelId` against the shared built-in model list
+- verified the worker path needed an asset-origin fix:
+  - built-in model image URLs are frontend public assets
+  - worker-side ai-service requests should not resolve those relative paths against the backend host
+  - the worker now resolves them against `FRONTEND_URL` / `PUBLIC_SITE_URL`
+- verified non-goals:
+  - no business-rule change to AI Try-On eligibility
+  - no paid OpenAI smoke
+  - no removal of the custom user photo upload path
+
+## AI Try-On Product Availability Sync Addendum
+
+- verified the admin AI settings flow previously updated only the settings row and not the denormalized `products.ai_try_on_enabled` gate
+- verified this created a real false-negative path in production:
+  - admin selected category ids in AI settings
+  - `supportedCategories` persisted correctly
+  - products in those categories still had `aiTryOnEnabled = false`
+  - public AI Try-On requests remained blocked as unsupported
+- verified the active fix updates settings and product availability together in one backend transaction
+- verified the new synchronization policy:
+  - selected category ids => matching products enabled
+  - non-selected or null category ids => matching products disabled
+  - empty supported-category selection => eligible public-ready products with images enabled
+- verified the admin UI now receives a synchronization summary and can confirm the product availability refresh to the operator
+- verified non-goals:
+  - no paid OpenAI smoke
+  - no direct production SQL requirement for the main admin save path
+  - no seller/catalog business rule rewrite outside AI Try-On availability
+
+## AI Try-On Category Id Support Addendum
+
+- verified the active AI Try-On settings contract can store category ids and not only legacy category slugs
+- verified the runtime gate must treat `product.categoryId` as the primary fast-path when admin settings already contain ids such as `1010` or `1040`
+- verified legacy unsynced products still require a bridge:
+  - if `product.categoryId` is null
+  - but `product.categoryName` or `product.sourceCategoryName` matches an existing `Category.name`
+  - runtime should still resolve that category and avoid a false unsupported result
+- added a conservative operational script `npm run categories:link-products` for exact-match linking of legacy products to existing categories without creating new categories
+
+## Catalog Filter Dropdown Overlay Addendum
+
+- verified the catalog/search filter row renders multiple inline dropdowns from a shared page-level implementation in `frontend-next/src/app/products/page.tsx`
+- verified the overlay issue was caused by stacking context, not filter business logic:
+  - filter bar blur styling created a local stacking context
+  - dropdown panels were visually constrained below later sibling product content
+- verified the fix is UI-layer-only:
+  - no catalog filtering logic change
+  - no search param contract change
+  - no product-card data contract change
+  - no header routing/session/cart behavior change
+- verified non-goals:
+  - no backend change
+  - no portal migration required for this fix
+  - no public design-system rewrite
+
+## AI Try-On Supported Category Selector Addendum
+
+- verified admin AI settings no longer depend on free-text category entry for the primary workflow
+- verified canonical supported-category slugs remain the persisted contract even after the admin UI change
+- verified backward compatibility for legacy values:
+  - comma-separated stored strings are parsed
+  - aliases normalize to canonical slugs
+  - unknown legacy values can be preserved intentionally instead of being dropped silently
+- verified backend product support checks now match category aliases and phrase-like names, including Russian apparel names
+- verified the public AI try-on unsupported-product state now maps by error code to localized EN/RU copy instead of rendering the raw backend English message
+- verified non-goals:
+  - no paid OpenAI smoke
+  - no seller catalog/category business-rule rewrite
+  - no legacy app changes
+  - no change to backend authority over public AI try-on eligibility
+
+## Customer Auth I18n Addendum
+
+- verified customer login/register no longer surface mixed-language raw backend strings in the public UI
+- verified expired customer sessions now redirect through the customer login path with localized EN/RU messaging
+- verified customer auth error mapping covers:
+  - invalid credentials
+  - duplicate email
+  - duplicate phone
+  - network failure
+  - expired or invalid customer session
+  - invalid phone/email/password validation cases
+- verified frontend API base URL normalization now strips duplicated `/api` suffixes and avoids insecure client fallback on HTTPS pages
+- verified targeted browser coverage exists for customer auth i18n through:
+  - `tests/e2e/customer-auth-i18n.spec.ts`
+  - `tests/e2e/i18n-public-customer.spec.ts`
+- residual audit note:
+  - additional customer account screens still need a wider pass to remove direct `error.message` rendering outside the auth-specific scope
+
+## GitHub Actions CD To VPS Addendum
+
+- verified the active release path now supports a dedicated CD workflow separate from CI
+- verified deploy flow is image-based and GHCR-backed:
+  - `backend-nest`
+  - `frontend-next`
+  - `ai-service`
+  - `nginx`
+- verified deployment is gated on successful CI for the same commit
+- verified the VPS deploy path:
+  - does not overwrite `infra/.env.production`
+  - does not delete persistent volumes
+  - does not run `docker system prune -a`
+  - does not expose `ai-service` publicly
+- verified image selection is override-based through `infra/.env.deploy`, leaving the production env file stable
+- verified production smoke remains login-free and OpenAI-free after deploy
+- verified rollback guidance now exists for:
+  - previous image SHA selection
+  - compose restart using prior image tags
+  - database restore caveat when schema compatibility is broken
+
+## GitHub Actions CI Foundation Addendum
+
+- verified the active marketplace stack now has a dedicated GitHub Actions workflow for the current delivery path only:
+  - `backend-nest`
+  - `frontend-next`
+  - `ai-service`
+  - `infra`
+- verified CI does not require production secrets or a real `.env` file
+- verified CI defaults remain mock-safe:
+  - no paid OpenAI smoke
+  - no real Wildberries API sync
+  - no real delivery provider calls
+- verified backend CI isolates to targeted specs instead of the broader unstable full suite
+- verified compose validation covers both:
+  - local compose contract
+  - production compose contract
+- verified production Docker image build is separated and runs only on `push main`
+- verified repository safety checks now fail if tracked git content includes:
+  - `.env`
+  - `data.xlsx`
+  - Playwright/test artifacts
+
+## Production Docker Deployment Foundation Addendum
+
+- verified the active release path now has a dedicated production compose file separate from local development compose
+- verified production topology keeps only the reverse proxy public while `backend-nest`, `ai-service`, PostgreSQL, Redis, and MinIO remain Docker-internal
+- verified named persistence volumes are defined for:
+  - PostgreSQL
+  - Redis
+  - MinIO
+- verified production compose avoids source bind mounts for application services
+- verified health checks exist for:
+  - frontend
+  - backend
+  - ai-service
+  - PostgreSQL
+  - Redis
+  - MinIO
+- verified deployment runbooks now cover:
+  - VPS sizing
+  - firewall and SSH guidance
+  - domain mapping
+  - HTTPS options
+  - backup and restore
+  - AI Try-On production-safe defaults
+- verified non-goals:
+  - no commerce business rule change
+  - no new payment provider
+  - no public exposure of internal services
+  - no secret material committed into git
+
+## AI Try-On OpenAI Provider Phase 2 Addendum
+
+- verified `openai` mode now routes from `frontend-next` to `backend-nest` to `ai-service` and into the real OpenAI image-edit provider path
+- verified provider secrets remain isolated to `ai-service`
+- verified admin settings expose only safe runtime state, never the raw API key
+- verified failed provider states map to stable customer-safe error codes:
+  - `AI_PROVIDER_NOT_CONFIGURED`
+  - `AI_TRY_ON_IMAGE_UNSUITABLE`
+  - `AI_PROVIDER_ERROR`
+  - `AI_TIMEOUT`
+- verified mock/demo try-on modes still complete locally and preserve Phase 1 demo stability
+- verified built-in model references are now raster PNG assets so they are consumable by the real provider path
+- verified task polling continues to expose stored result image metadata and failed-task diagnostics without crashing the public product flow
+- verified non-goals:
+  - no promise of perfect garment fidelity or size accuracy
+  - no frontend-side OpenAI calls
+  - no secret exposure in public/customer/admin responses
+
+## AI Try-On MVP Addendum
+
+- verified public product detail now exposes an AI Try-On CTA without opening a new tab
+- verified disabled state remains user-visible and returns under-development feedback instead of hiding the CTA
+- verified enabled state requires an explicit size click before the modal opens, preserving existing product purchase flow behavior
+- verified modal flow includes:
+  - body profile fields
+  - built-in model picker
+  - optional customer reference upload
+  - consent gating
+  - product preview
+  - result polling
+- verified backend is the source of truth for:
+  - enable/disable
+  - provider mode
+  - supported categories
+  - consent requirement
+  - guest/customer daily limits
+  - task status and result metadata
+- verified ai-service now owns provider selection for try-on generation with `mock`, `demo`, and `openai` paths
+- verified OpenAI API keys remain server-side only and are not exposed through the frontend
+- verified size recommendation is deterministic and explainable rather than opaque AI-only sizing
+- verified current non-goals:
+  - no real garment try-on OpenAI pipeline in Phase 1
+  - no seller Center product toggle UI yet
+  - no promise of fit accuracy beyond reference guidance
+
+## Admin Operations English-only Cleanup Addendum
+
+- verified admin operations UI remains English-only after the cleanup
+- verified cleanup scope is presentation-only:
+  - no seller/customer locale policy expansion
+  - no payment, fulfillment, Yandex, return, or moderation business logic change
+- verified admin-only visible raw states now map to readable English labels on:
+  - `/admin/sellers`
+  - `/admin/sellers/[id]`
+  - seller fee supervision
+  - `/admin/deliveries`
+  - payments supervision
+  - returns / refunds / disputes
+  - `/admin/messages`
+  - `/admin/reviews`
+  - `/admin/support-cases`
+- verified touched admin regressions remain stable without depending on mutable human copy where a selector or raw status contract is safer:
+  - seller fee dashboard assertion aligned to current English UI
+  - admin delivery supervision read-only assertions narrowed to delivery-page scope
+  - admin fulfillment supervision no longer fails on teardown-only manual page close
+  - product reviews empty-state assertion now tolerates duplicated shell rendering by using the first matching test id
+  - notifications role-layout test timeout increased to avoid false negatives during multi-role setup
+- verified runtime admin route smoke checks returned healthy responses for:
+  - `/admin/dashboard`
+  - `/admin/deliveries`
+  - `/admin/reviews`
+  - `/admin/messages`
+  - `/admin/notifications`
+
+## Seller Remaining Operations i18n Cleanup Addendum
+
+- verified seller remaining operational screens now live-switch correctly in `ru`, `en`, and `vi`:
+  - `/seller/support-cases`
+  - `/seller/onboarding`
+  - `/seller/pending`
+  - `/seller/import/wildberries`
+  - `/seller/import/wildberries-api`
+  - `/seller/messages`
+  - `/seller/reviews`
+- verified cleanup scope is UI-only:
+  - support-case status and sender-role rendering changed to dictionary-backed labels
+  - onboarding/pending approval and next-step chrome changed to dictionary-backed labels
+  - Wildberries import pages changed only visible placeholders and headings, not import/sync behavior
+  - seller message list status chips changed only visible labels, not thread ownership or reply flow
+- verified seller messaging business regression remains selector-based rather than locale-text based
+- verified frontend Docker runtime now builds without external Google Fonts fetches, removing a non-business runtime blocker from seller route verification
+- verified no customer/public or admin behavior was expanded in this phase
+
+## Product Reviews UX Polish + Review Photo Upload Addendum
+
+- verified review flow now supports optional customer review photos
+- verified review business rules remain unchanged:
+  - verified purchase only
+  - delivered/completed order only
+  - one review per order item/customer
+- verified customer review UX:
+  - star-icon rating input
+  - explicit required comment text
+  - custom localized photo picker
+  - preview and remove-before-submit
+- verified public product review rendering now includes:
+  - aggregate summary card
+  - star filter chips
+  - review image thumbnails
+  - seller reply block
+- verified moderation effect:
+  - hidden reviews remove both text and images from public surfaces
+  - restored reviews become public again
+  - hidden reviews do not affect public aggregates
+- verified seller/admin internal review visibility:
+  - seller review list shows customer photo thumbnails
+  - admin review moderation list shows customer photo thumbnails
+
+## Buyer-Seller Messaging MVP Addendum
+
+- buyers can now start a conversation with a shop from:
+  - public shop profile
+  - public product detail
+- guest behavior is verified:
+  - guest click redirects to customer login with `next` and `intent=message`
+- authenticated customer flow is verified:
+  - create thread
+  - read thread list and detail
+  - send follow-up messages
+  - report thread
+- seller flow is verified:
+  - seller can only access threads for owned shops
+  - seller sees unread customer thread state
+  - seller can reply
+  - seller can close a thread
+- admin moderation flow is verified:
+  - admin can list reported threads
+  - admin can open thread detail
+  - admin can close or reopen a thread
+- notification flow is verified:
+  - seller receives `MESSAGE_RECEIVED` after customer message
+  - customer receives `MESSAGE_RECEIVED` after seller reply
+  - admin receives `MESSAGE_REPORTED` after customer report
+- verified non-goals:
+  - no realtime websocket
+  - no file attachments UI
+  - no external messaging provider
+  - no private seller contact exposure through the public shop profile CTA
+
+## Product Reviews & Ratings Addendum
+
+- customers can now create verified product reviews only after a delivered/completed purchase
+- verified review eligibility is enforced by backend order ownership and order-item checks
+- public product detail now shows:
+  - real review list
+  - verified purchase badge
+  - seller reply when present
+  - rating summary aggregated from published reviews only
+- public product cards now show real rating summary when available
+- public shop profiles now use real aggregated review ratings instead of placeholder-only rating state
+- seller can now view and reply to reviews from `/seller/reviews`
+- admin can now moderate reviews from `/admin/reviews` by hiding or restoring them
+- hidden reviews are removed from public product and shop aggregates
+- no fake ratings are generated anywhere in this flow
+
+## Public Shop Profile Addendum
+
+- buyers can now open a public shop profile route at `/shops/[slug]` from marketplace product surfaces
+- public shop profile reads only public-safe data from active approved shops
+- verified shop product grid behavior:
+  - uses the same public visibility rules as the marketplace catalog
+  - excludes hidden, invalid, deleted, or out-of-stock products
+  - reuses the existing public product list contract through `shopSlug`
+- verified public-safe metadata:
+  - shop name
+  - slug
+  - logo/avatar when present
+  - verification state
+  - joined date
+  - pickup city / location label when public-safe
+  - placeholder-safe rating summary
+- verified non-goals:
+  - no private seller phone/email exposure
+  - no warehouse/private full address exposure
+  - no finance, commission, or payment-proof exposure
+  - no real messaging implementation
+
+## Seller Printable Shipping Label Addendum
+
+- seller order detail now supports an internal printable shipping label flow for manual Yandex operations
+- verified route:
+  - `/seller/orders/[id]/shipping-label`
+- verified print behavior:
+  - label preview centered on screen
+  - seller shell/sidebar/header hidden from the print page output
+  - print stylesheet targets `100mm x 150mm`
+- verified label payload sources:
+  - existing seller order detail API
+  - existing seller delivery detail data
+  - existing seller delivery settings data for pickup origin context
+- verified label content:
+  - order code
+  - recipient name/phone/address snapshot
+  - sender/pickup summary
+  - manual Yandex id when present
+  - payment method/status
+  - package summary
+  - QR to public tracking lookup
+- verified business isolation:
+  - no order lifecycle mutation was added
+  - no payment review logic changed
+  - no real Yandex API call or official provider label generation was introduced
+
+## Seller Payment Settings + Products i18n Addendum
+
+- seller payment settings now render role-based localized copy in `ru`, `en`, and `vi` on the active frontend runtime
+- seller product list filter toolbar is now a client-subscribed locale surface:
+  - search placeholder
+  - status filter
+  - stock-state filter
+  - apply-filters CTA
+- seller shop switcher helper text now follows seller locale state
+- seller product metadata form no longer exposes hard-coded English labels for local title/description, SEO slug, visibility, and save states
+- no seller business logic changed:
+  - product visibility/readiness rules remain unchanged
+  - product delete/update logic remains unchanged
+  - payment-settings save/upload behavior remains unchanged
+
+## Customer Account i18n Cleanup Addendum
+
+- customer notifications route now uses customer-shell dictionary keys for the page frame instead of server-hard-coded Vietnamese text
+- customer returns/refunds now use localized RU/EN UI chrome for:
+  - page frame
+  - form labels
+  - helper text
+  - detail metrics
+  - case actions
+  - file upload trigger/empty filename state
+- customer order detail support section and public receipt lookup now render localized account-level labels while preserving existing API and business behavior
+- no checkout, return/refund, support, or session business logic changed in this cleanup
+
+## Customer Account i18n Addendum
+
+- customer auth and account surfaces now follow the buyer locale policy:
+  - supported locales: `ru`, `en`
+  - default locale: `ru`
+  - no Vietnamese option in buyer UI
+- verified customer-localized surfaces:
+  - `/customer/login`
+  - `/customer/register`
+  - `/customer/account`
+  - `/customer/account/addresses`
+  - `/customer/account/security`
+  - `/customer/account/support`
+  - `/customer/orders`
+  - `/customer/orders/[checkoutCode]`
+  - `/customer/returns`
+- customer business flows remain locale-agnostic in regression coverage:
+  - account management uses stable field and badge test ids
+  - return / refund status assertions use raw `data-status`
+  - notification regression checks role-level visibility and actions instead of localized copy bodies
+- no customer backend contract or business rule changed:
+  - register still redirects to `/customer/login?registered=1`
+  - session refresh behavior is unchanged
+  - checkout address readiness rules remain backend-authoritative
+  - order, return, refund, and support flows preserve existing business logic
+
 ## Seller Workspace Hydration Addendum
 
 - seller operational pages now tolerate direct deep links and page refreshes without assuming `currentShopId` is already present in the client workspace store
@@ -513,3 +945,70 @@ Future audit item: design an optional marketplace parent order for combined rece
 - public runtime default is Russian when no user preference and no locale cookie exist
 - seller runtime supports `ru -> vi -> en` switching with persistence
 - admin runtime remains English-only with no language switcher
+
+# Locale Switcher UX Audit Addendum
+
+- seller and buyer/customer locale switching now use the same dropdown interaction model instead of always-visible pills
+- live switch remains client-side, immediate, and cookie/profile-backed
+- customer/public surfaces still do not expose `vi`
+- seller surfaces still expose `ru/en/vi`
+- auth, protected shell, cart, and notification bell flows were left unchanged by the switcher redesign
+
+# Marketplace Final UX & Cleanup Audit Addendum
+
+- dirty worktree cleanup preserved only active-stack marketplace stabilization changes and removed the unrelated deleted workspace artifact from the phase scope
+- seller shipping-label regression root cause was auth compatibility drift on `/login`; seller/admin compatibility login now reapplies the role-specific cookie path before redirecting into protected workspaces
+- customer locale switching audit found duplicate canonical locale-switcher ids across public and account shells; the customer-safe canonical id is now single-instance again
+- seller locale switching audit found the dropdown menu could sit under page action bars on product operations screens; seller shell header stacking now keeps the locale menu above content
+- runtime route checks for `/products`, `/shops/demo-shop`, `/customer/messages`, `/seller/messages`, `/admin/messages`, and `/seller/orders` returned healthy HTML from the rebuilt runtime
+- focused marketplace UX regressions for reviews, messaging, public shops, shipping label, action feedback, notifications, and role-based locale behavior are now passing against the current runtime
+- seller order detail now live-switches correctly in `ru/en/vi`, and its business E2E contracts use raw status attributes instead of translated labels
+
+# Shipping Label Print Audit Addendum
+
+- printable seller shipping labels now expose size-aware routes via `/seller/orders/[id]/shipping-label?size=75x120|100x150|a6`
+- seller order detail and the label page both keep the same selected size, with client-side persistence only; no fulfillment or Yandex business logic changed
+- the print DOM is constrained to a single internal marketplace label container, and the label keeps sender, recipient, address/access, manual Yandex reference, order code, and QR data visible in the supported sizes
+- the label now also renders a thermal-printer-friendly barcode strip and internal sorting code derived from live order identifiers rather than mock data
+- the latest polish layer remaps raw failure-like shipment states into print-friendly handoff states and surfaces delivery type, created-at, postal-code, and sender-phone fields for warehouse operations without touching routing or fulfillment logic
+- the label continues to state that it is not an official Yandex label
+
+# Admin-managed Public Homepage Image Slider Audit Addendum
+
+- **Aesthetics & Visuality**: Public homepage hero slider now uses rich image visuals (desktop and mobile specific) instead of generic text/cards. Visual enhancements include a dark gradient overlay for text readability, interactive micro-animations (hover pause, dot states), and glassmorphic navigation arrows.
+- **Admin Management Operations**: Admin can view, create, edit, delete, toggle active status, reorder (via up/down buttons), upload JPG/PNG/WEBP desktop/mobile assets (up to 5MB, no SVG/video), and view a visual slide preview.
+- **Publish Window Logic**: Public display of slides is strictly gated by `isActive = true` and current time matching the publish window (between `startsAt` and `endsAt` if set). Invalid publish windows (startsAt > endsAt) are rejected by backend validation.
+- **Graceful Fallback**: If no active slides exist within their publish windows, the homepage displays a premium styled fallback banner using localized English/Russian texts without breaking the homepage layout.
+- **Responsive Layout**: Slides are fully responsive. Mobile viewports display the `imageMobileUrl` (or fall back to `imageDesktopUrl`), and no horizontal overflow is present on either public storefront or admin console views.
+
+# Catalog Dropdown Overlay And WB Category Facet Audit Addendum
+
+- public catalog filter overlays now stay above suggestion chips and the product grid via the shared filter-row stacking treatment; the bug source was the filter bar stacking context combined with sibling grid painting below it
+- the public catalog filter row now includes a visible `Category / Категория` dropdown that reuses the same overlay behavior as sort, color, brand, price, and other filter popovers
+- public category facets are now derived from public-ready products only and prefer WB source category data when available:
+  - `sourceCategoryName` is the primary display label
+  - `subjectId` becomes the stable canonical slug as `wb-subject-<subjectId>` when present
+  - internal category name/slug and mapped `categoryName` remain fallbacks for non-WB or legacy products
+- public `categorySlug` filtering no longer depends solely on internal `category.slug`; it now matches through the same canonical category resolver and also tolerates legacy slug-style links
+- current frontend/runtime verification for the overlay flow still needs a stable Playwright-visible public catalog state before the new UI interaction test can pass end-to-end
+
+# Catalog CategoryName Audit Addendum
+
+- public catalog category facets now use `Product.categoryName` as the source of truth for category labels and counts on marketplace-visible products
+- null or empty `categoryName` values are excluded from the public category dataset, so the dropdown only represents real visible catalog categories
+- category filtering now compares against the normalized `categoryName` value itself, which keeps Russian names such as `Шорты` intact instead of requiring WB-subject-derived slugs to exist in the database
+
+# Category Source Of Truth Audit Addendum
+
+- the active marketplace stack now treats the normalized `Category` relation as the primary category source for catalog filters, admin AI supported category selection, and AI Try-On runtime checks
+- `Product.categoryName` and `Product.sourceCategoryName` remain compatibility mirrors only; they are still read as fallback inputs when a legacy product has not yet been linked to `Category`
+- seller/manual product create-update paths and WB import/sync flows now route category assignment through `CategoriesService.resolveCategoryAssignment(...)`, which can reuse an existing category or create one safely by normalized name
+- Admin AI Settings now consumes a real admin category list with product counts and saves selected category ids when a category match exists, while preserving unmapped legacy values separately instead of silently dropping them
+- AI Try-On support evaluation now expands stored category ids back into related category names/slugs and still understands legacy alias strings, so a saved admin selection and a product category relation stay consistent even during legacy backfill
+- a one-time `npm run categories:sync` backfill is available to migrate historical products that still only hold denormalized category text into linked `Category` rows without deleting old data
+
+# Backend Production Start Path Audit Addendum
+
+- the production backend container failure was caused by an entrypoint mismatch, not by Prisma or database readiness
+- NestJS compiles this repository to `dist/src/main.js`, while the production container had been starting `node dist/main`
+- the production bootstrap path is now aligned in both `backend-nest/package.json` and `backend-nest/Dockerfile`, while preserving the existing `prisma db push` pre-start behavior
