@@ -30,6 +30,7 @@ import { ReturnRefundsModule } from './modules/return-refunds/return-refunds.mod
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HomepageSlidesModule } from './modules/homepage-slides/homepage-slides.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { VisualSearchModule } from './modules/visual-search/visual-search.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -66,6 +67,7 @@ import { HealthController } from './health.controller';
     NotificationsModule,
     HomepageSlidesModule,
     RecommendationsModule,
+    VisualSearchModule,
     PublicProductsModule,
     PublicShopsModule,
     ReviewsModule,

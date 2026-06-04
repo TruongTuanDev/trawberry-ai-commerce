@@ -437,6 +437,47 @@ model RecommendationEvent {
   @@map("recommendation_events")
 }
 
+model VisualSearchLog {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customerId       String?  @map("customer_id") @db.Uuid
+  guestSessionId   String?  @map("guest_session_id") @db.VarChar(255)
+  imageUrl         String?  @map("image_url") @db.VarChar(1000)
+  imageStorageKey  String?  @map("image_storage_key") @db.VarChar(1024)
+  categoryHint     String?  @map("category_hint") @db.VarChar(255)
+  detectedCategory String?  @map("detected_category") @db.VarChar(255)
+  detectedColor    String?  @map("detected_color") @db.VarChar(255)
+  detectedGender   String?  @map("detected_gender") @db.VarChar(255)
+  detectedKeywords Json?    @map("detected_keywords")
+  cropX            Int?     @map("crop_x")
+  cropY            Int?     @map("crop_y")
+  cropWidth        Int?     @map("crop_width")
+  cropHeight       Int?     @map("crop_height")
+  resultCount      Int      @default(0) @map("result_count")
+  provider         String   @default("rule_based_ai_v1") @db.VarChar(100)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  events           VisualSearchEvent[]
+
+  @@index([customerId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@map("visual_search_logs")
+}
+
+model VisualSearchEvent {
+  id                String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  type              String           @db.VarChar(50)
+  visualSearchLogId String?          @map("visual_search_log_id") @db.Uuid
+  productId         String?          @map("product_id") @db.Uuid
+  rank              Int?
+  score             Decimal?         @db.Decimal(10, 4)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  visualSearchLog   VisualSearchLog? @relation(fields: [visualSearchLogId], references: [id], onDelete: SetNull)
+
+  @@index([visualSearchLogId, createdAt])
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+  @@map("visual_search_events")
+}
+
 model ProductImage {
   id                     String             @id @db.Uuid
   productId              String             @map("product_id") @db.Uuid

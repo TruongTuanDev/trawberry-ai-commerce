@@ -1,5 +1,24 @@
 # Project Status
 
+## Visual Product Search Phase 1 - 2026-06-04
+
+- Status: Implemented on current branch
+- What shipped:
+  - additive visual-search analytics tables and migration
+  - public visual search query and event endpoints under `/api/public/visual-search*`
+  - safe rule-based matching against existing public-ready marketplace products
+  - optional OpenAI vision analysis with automatic fallback when disabled, missing, or failed
+  - public header camera icon and shopper modal for upload, crop selection, category hint, and result grid
+- Safety status:
+  - no checkout/order/cart/payment/shipping/WB sync/AI Try-On behavior changes
+  - normal text search flow remains unchanged
+  - disabled flags hide the UI and degrade API responses to safe empty results
+- Feature flags:
+  - `VISUAL_SEARCH_ENABLED`
+  - `PUBLIC_VISUAL_SEARCH_ENABLED`
+  - `VISUAL_SEARCH_TRACKING_ENABLED`
+  - `NEXT_PUBLIC_VISUAL_SEARCH_ENABLED`
+
 ## Seller Fulfillment Count Mismatch & Thermal Print Improvements - 2026-06-04
 
 - Status: Implemented on current branch (`fix/seller-orders-count-mismatch`)

@@ -1,5 +1,26 @@
 # Phase Report
 
+## 2026-06-04 Visual Product Search Phase 1
+
+- Status: Implemented on current branch
+- Scope:
+  - additive Prisma `VisualSearchLog` and `VisualSearchEvent` models plus migration
+  - new public APIs: `POST /api/public/visual-search` and `POST /api/public/visual-search/events`
+  - safe provider flow with optional OpenAI vision analysis and guaranteed fallback to rule-based matching
+  - public-header camera trigger and modal upload/crop/category-hint flow
+  - storefront result grid reusing existing `ProductCard`
+- Feature flags:
+  - `VISUAL_SEARCH_ENABLED`
+  - `PUBLIC_VISUAL_SEARCH_ENABLED`
+  - `VISUAL_SEARCH_TRACKING_ENABLED`
+  - `NEXT_PUBLIC_VISUAL_SEARCH_ENABLED`
+- Safety guarantee:
+  - checkout, order, cart, payment, shipping, WB sync, and AI Try-On contracts were not modified
+  - when flags are off, the camera trigger is hidden and the API returns a safe disabled/empty payload
+  - if AI analysis fails or is not configured, the backend falls back to `categoryHint` plus empty keywords without surfacing a provider `500`
+- Phase 2 direction:
+  - image embeddings and vector search
+
 ## 2026-06-04 Seller Fulfillment Count Mismatch & Thermal Print Improvements
 
 - Status: Implemented on current branch (`fix/seller-orders-count-mismatch`)

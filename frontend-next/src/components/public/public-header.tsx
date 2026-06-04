@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { VisualSearchModal } from "@/components/public/visual-search/visual-search-modal";
 import { useI18n } from "@/i18n/use-i18n";
+import { readVisualSearchFlagsFromDocument } from "@/lib/visual-search-flags";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -83,9 +85,11 @@ function CartIcon() {
 }
 
 export function PublicHeader() {
-  const { t } = useI18n("customer");
+  const { t, locale } = useI18n("customer");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [visualSearchOpen, setVisualSearchOpen] = useState(false);
+  const [visualSearchFlagsReady, setVisualSearchFlagsReady] = useState(false);
   const hydrateCart = useCartStore((state) => state.hydrate);
   const cartCount = useCartStore((state) => state.getItemCount());
   const hydrateAuth = useAuthStore((state) => state.hydrate);
@@ -123,6 +127,21 @@ export function PublicHeader() {
     refreshRole,
     user,
   ]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setVisualSearchFlagsReady(true);
+    }, 0);
+
+    return () => window.clearTimeout(handle);
+  }, []);
+
+  const visualSearchFlags = visualSearchFlagsReady
+    ? readVisualSearchFlagsFromDocument()
+    : {
+        publicVisualSearchEnabled: false,
+        visualSearchTrackingEnabled: false,
+      };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -250,16 +269,20 @@ export function PublicHeader() {
                 className="min-w-0 flex-1 border-none bg-transparent p-0 text-sm outline-none placeholder:text-[var(--muted)] focus:outline-none focus:ring-0 focus-visible:outline-none"
                 data-testid="public-header-search"
               />
-              <button
-                type="button"
-                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600"
-                aria-label={t("publicHeader.searchByImage")}
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
+              {visualSearchFlags.publicVisualSearchEnabled ? (
+                <button
+                  type="button"
+                  className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-slate-100 hover:text-gray-600"
+                  aria-label={t("publicHeader.searchByImage")}
+                  data-testid="public-header-visual-search-trigger"
+                  onClick={() => setVisualSearchOpen(true)}
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              ) : null}
             </div>
           </form>
 
@@ -347,6 +370,13 @@ export function PublicHeader() {
           )}
         </div>
       </div>
+      <VisualSearchModal
+        open={visualSearchOpen}
+        locale={locale}
+        t={t}
+        trackingEnabled={visualSearchFlags.visualSearchTrackingEnabled}
+        onClose={() => setVisualSearchOpen(false)}
+      />
     </header>
   );
 }

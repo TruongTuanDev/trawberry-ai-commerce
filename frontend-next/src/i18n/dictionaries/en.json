@@ -173,6 +173,21 @@
     "cashback": "Cashback",
     "currency": "RUB"
   },
+  "visualSearch": {
+    "findProductsByPhoto": "Find products by photo",
+    "dragOrChoosePhoto": "Drag or choose photo",
+    "supportedFormats": "Supported formats: JPG, PNG, WEBP up to 8MB",
+    "selectProductArea": "Select product area",
+    "findProduct": "Find product",
+    "finding": "Finding products...",
+    "similarProductsFound": "Similar products found",
+    "couldNotFindProductsByPhoto": "Could not find products by photo",
+    "shorts": "Shorts",
+    "top": "Top",
+    "accessories": "Accessories",
+    "otherItem": "Other item",
+    "categoryHint": "Category hint"
+  },
   "publicFooter": {
     "tagline": "Easier shopping",
     "title": "Find products, place orders, track delivery, and confirm payment in one place.",
