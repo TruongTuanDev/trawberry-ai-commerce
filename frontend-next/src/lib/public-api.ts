@@ -63,9 +63,24 @@ export type PublicProduct = {
 
 export type RecommendationPlacement = "home" | "product_detail" | "cart" | "search";
 
+export type VisualSearchEventType = "impression" | "click";
+
 export type RecommendationProductsResponse = {
   algorithm: string;
   items: PublicProduct[];
+};
+
+export type VisualSearchResponse = {
+  analysis: {
+    category: string | null;
+    color: string | null;
+    gender: string | null;
+    keywords: string[];
+  };
+  products: PublicProduct[];
+  algorithm: string;
+  visualSearchLogId?: string | null;
+  disabled?: boolean;
 };
 
 export type AiTryOnBuiltInModel = {
@@ -481,6 +496,16 @@ export type PublicTrackedOrder = {
   } | null;
 };
 
+export type CreateVisualSearchPayload = {
+  image: File;
+  categoryHint?: string;
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
+  guestSessionId?: string;
+};
+
 export async function getPublicProducts(query?: {
   search?: string;
   q?: string;
@@ -587,6 +612,15 @@ type TrackRecommendationEventPayload = {
   guestSessionId?: string;
 };
 
+type TrackVisualSearchEventPayload = {
+  type: VisualSearchEventType;
+  visualSearchLogId?: string;
+  productId: string;
+  rank?: number;
+  score?: number;
+  guestSessionId?: string;
+};
+
 const GUEST_SESSION_STORAGE_KEY = "trawberry_guest_session_id";
 
 function createGuestSessionId() {
@@ -642,6 +676,39 @@ export async function trackRecommendationEvent(
   payload: TrackRecommendationEventPayload,
 ) {
   await swallowTrackingRequest("/api/public/recommendations/events", payload);
+}
+
+export async function createVisualSearch(payload: CreateVisualSearchPayload) {
+  const formData = new FormData();
+  formData.append("image", payload.image);
+  if (payload.categoryHint?.trim()) {
+    formData.append("categoryHint", payload.categoryHint.trim());
+  }
+  if (payload.cropX !== undefined) {
+    formData.append("cropX", String(payload.cropX));
+  }
+  if (payload.cropY !== undefined) {
+    formData.append("cropY", String(payload.cropY));
+  }
+  if (payload.cropWidth !== undefined) {
+    formData.append("cropWidth", String(payload.cropWidth));
+  }
+  if (payload.cropHeight !== undefined) {
+    formData.append("cropHeight", String(payload.cropHeight));
+  }
+
+  const guestSessionId = payload.guestSessionId ?? getGuestSessionId();
+  return apiRequest<VisualSearchResponse>("/api/public/visual-search", {
+    method: "POST",
+    body: formData,
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
+  });
+}
+
+export async function trackVisualSearchEvent(
+  payload: TrackVisualSearchEventPayload,
+) {
+  await swallowTrackingRequest("/api/public/visual-search/events", payload);
 }
 
 export async function getPublicProductReviews(

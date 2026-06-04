@@ -6,6 +6,7 @@ import { I18nBootstrap } from "@/components/i18n/i18n-bootstrap";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
 import { getRecommendationFlags } from "@/lib/recommendation-flags";
+import { getVisualSearchFlags } from "@/lib/visual-search-flags";
 
 export const metadata: Metadata = {
  title: "Skidkaberry AI Commerce",
@@ -20,6 +21,7 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const initialLocale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_KEY)?.value);
   const recommendationFlags = getRecommendationFlags();
+  const visualSearchFlags = getVisualSearchFlags();
 
   return (
     <html lang="en">
@@ -30,6 +32,12 @@ export default async function RootLayout({
         )}
         data-recommendation-tracking-enabled={String(
           recommendationFlags.recommendationTrackingEnabled,
+        )}
+        data-public-visual-search-enabled={String(
+          visualSearchFlags.publicVisualSearchEnabled,
+        )}
+        data-visual-search-tracking-enabled={String(
+          visualSearchFlags.visualSearchTrackingEnabled,
         )}
       >
         <ToastProvider>

@@ -173,6 +173,21 @@
     "cashback": "Hoàn tiền",
     "currency": "RUB"
   },
+  "visualSearch": {
+    "findProductsByPhoto": "T\u00ecm s\u1ea3n ph\u1ea9m b\u1eb1ng \u1ea3nh",
+    "dragOrChoosePhoto": "K\u00e9o th\u1ea3 ho\u1eb7c ch\u1ecdn \u1ea3nh",
+    "supportedFormats": "\u0110\u1ecbnh d\u1ea1ng h\u1ed7 tr\u1ee3: JPG, PNG, WEBP t\u1ed1i \u0111a 8MB",
+    "selectProductArea": "Ch\u1ecdn v\u00f9ng s\u1ea3n ph\u1ea9m",
+    "findProduct": "T\u00ecm s\u1ea3n ph\u1ea9m",
+    "finding": "\u0110ang t\u00ecm s\u1ea3n ph\u1ea9m...",
+    "similarProductsFound": "\u0110\u00e3 t\u00ecm th\u1ea5y s\u1ea3n ph\u1ea9m t\u01b0\u01a1ng t\u1ef1",
+    "couldNotFindProductsByPhoto": "Kh\u00f4ng th\u1ec3 t\u00ecm s\u1ea3n ph\u1ea9m b\u1eb1ng \u1ea3nh n\u00e0y. Vui l\u00f2ng th\u1eed \u1ea3nh kh\u00e1c.",
+    "shorts": "Qu\u1ea7n short",
+    "top": "\u00c1o top",
+    "accessories": "Ph\u1ee5 ki\u1ec7n",
+    "otherItem": "M\u00f3n kh\u00e1c",
+    "categoryHint": "G\u1ee3i \u00fd danh m\u1ee5c"
+  },
   "publicFooter": {
     "tagline": "Mua s\u1eafm d\u1ec5 d\u00e0ng",
     "title": "T\u00ecm s\u1ea3n ph\u1ea9m, \u0111\u1eb7t h\u00e0ng, theo d\u00f5i giao h\u00e0ng v\u00e0 x\u00e1c nh\u1eadn thanh to\u00e1n trong c\u00f9ng m\u1ed9t n\u01a1i.",
