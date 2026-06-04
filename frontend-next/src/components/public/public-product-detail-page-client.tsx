@@ -576,14 +576,6 @@ export function PublicProductDetailPageClient({
                         >
                           {t("productDetail.buyNow")}
                         </button>
-                        <button
-                          type="button"
-                          onClick={handleOpenAiTryOn}
-                          className="w-full rounded-full border border-[var(--border)] bg-white px-5 py-3.5 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
-                          data-testid="product-ai-try-on-button"
-                        >
-                          {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
-                        </button>
                       </div>
 
                       <div className="mt-5 space-y-3 border-t border-[var(--border)] pt-5 text-sm text-[var(--muted)]">

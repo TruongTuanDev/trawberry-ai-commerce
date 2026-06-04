@@ -17,7 +17,6 @@ import {
 } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
-import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 
 type ProductsMeta = {
   page: number;
@@ -135,9 +134,7 @@ function ProductsPageContent({
     () =>
       [
         filters.q.trim() ? `${t("catalog.filterSummary.keyword")}: ${filters.q.trim()}` : null,
-        filters.categoryId || filters.categorySlug
-          ? `${t("catalog.filterSummary.category")}: ${selectedCategoryOption?.name ?? filters.categorySlug ?? filters.categoryId}`
-          : null,
+        filters.categorySlug ? `${t("catalog.filterSummary.category")}: ${filters.categorySlug}` : null,
         filters.brand.trim() ? `${t("catalog.filterSummary.brand")}: ${filters.brand.trim()}` : null,
         filters.color.trim() ? `${t("catalog.filterSummary.color")}: ${filters.color.trim()}` : null,
         filters.gender.trim() ? `${t("catalog.filterSummary.gender")}: ${filters.gender.trim()}` : null,
@@ -150,7 +147,7 @@ function ProductsPageContent({
         filters.maxPrice ? `${t("catalog.filterSummary.maxPrice")}: ${filters.maxPrice}` : null,
         filters.sort !== "newest" ? `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}` : null,
       ].filter(Boolean) as string[],
-    [filters, selectedCategoryOption, t],
+    [filters, t],
   );
 
   useEffect(() => {
@@ -719,7 +716,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "price" && (
-                        <div className={`${dropdownPanelClass} flex min-w-[240px] flex-col gap-3 p-4`}>
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[240px] flex flex-col gap-3">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.priceFilter")}</div>
                           <div className="flex items-center gap-2">
                             <div className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 flex flex-col">
@@ -794,7 +791,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "delivery" && (
-                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-2 p-4`}>
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.deliveryTime")}</div>
                           {["Завтра", "До 2 дней", "До 3 дней", "До 5 дней"].map((d) => (
                             <label key={d} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
@@ -829,7 +826,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "color" && (
-                        <div className={`${dropdownPanelClass} flex max-h-[300px] min-w-[220px] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin`} data-testid="catalog-filter-color-panel">
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[220px] max-h-[300px] overflow-y-auto scrollbar-thin flex flex-col gap-3">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseColor")}</div>
                           <input
                             value={filters.color}
@@ -913,7 +910,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "sizes" && (
-                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-2 p-4`}>
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.sizes")}</div>
                           <div className="grid grid-cols-3 gap-2">
                             {["42", "44", "46", "48", "50", "52"].map((s) => (
@@ -943,7 +940,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "height" && (
-                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-2 p-4`}>
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.childHeightTitle")}</div>
                           {["92-98", "104-110", "116-122", "128-134"].map((h) => (
                             <label key={h} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
@@ -977,7 +974,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "gender" && (
-                        <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-3 p-4`}>
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-3">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseGender")}</div>
                           <input
                             value={filters.gender}
@@ -1066,7 +1063,7 @@ function ProductsPageContent({
                         </svg>
                       </button>
                       {activeDropdown === "brand" && (
-                        <div className={`${dropdownPanelClass} flex max-h-[300px] min-w-[240px] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin`}>
+                        <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[240px] max-h-[300px] overflow-y-auto scrollbar-thin flex flex-col gap-3">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.chooseBrand")}</div>
                           <input
                             value={filters.brand}

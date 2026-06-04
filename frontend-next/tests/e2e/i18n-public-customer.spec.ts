@@ -15,12 +15,6 @@ async function newCleanPage(browser: Browser): Promise<Page> {
   return page;
 }
 
-async function chooseCustomerLocale(page: Page, locale: "ru" | "en") {
-  await page.getByTestId("language-switcher-customer").first().click();
-  await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
-  await page.getByTestId(`language-option-customer-${locale}`).first().click();
-}
-
 test("public customer flow languages: default to RU, only RU/EN, no VI, translates correctly", async ({
   browser,
 }) => {
@@ -43,21 +37,17 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   await expect(heading).toBeVisible();
 
   // 2. Check supported language choices in customer switcher
-  const switcher = page.getByTestId("language-switcher-customer").first();
+  const switcher = page.getByTestId("language-switcher-customer");
   await expect(switcher).toBeVisible();
-  await switcher.click();
 
   // Verify only RU and EN exist, and VI does NOT exist
-  const ruOption = page.getByTestId("language-option-customer-ru").first();
-  const enOption = page.getByTestId("language-option-customer-en").first();
+  const ruOption = page.getByTestId("language-option-customer-ru");
+  const enOption = page.getByTestId("language-option-customer-en");
   const viOption = page.getByTestId("language-option-customer-vi");
 
   await expect(ruOption).toBeVisible();
   await expect(enOption).toBeVisible();
   await expect(viOption).toHaveCount(0); // VI should not exist in the DOM for customer role
-  await expect(page.getByTestId("locale-flag-ru")).toBeVisible();
-  await expect(page.getByTestId("locale-flag-en")).toBeVisible();
-  await expect(page.getByTestId("locale-flag-vi")).toHaveCount(0);
 
   // 3. Switch to English (EN)
   console.log("Clicking EN option...");
@@ -84,7 +74,7 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   await expect(page.locator("h2").filter({ hasText: "Cart is empty" }).first()).toBeVisible();
 
   // Switch back to Russian
-  await chooseCustomerLocale(page, "ru");
+  await page.getByTestId("language-option-customer-ru").click();
   await page.waitForTimeout(500);
   await expect(page.locator("h2").filter({ hasText: "Корзина пуста" }).first()).toBeVisible();
 
@@ -96,7 +86,7 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   await expect(page.getByText("Отследить публичный заказ").first()).toBeVisible();
 
   // Switch to English
-  await chooseCustomerLocale(page, "en");
+  await page.getByTestId("language-option-customer-en").click();
   await page.waitForTimeout(500);
   await expect(page.getByText("Track a public order").first()).toBeVisible();
 });

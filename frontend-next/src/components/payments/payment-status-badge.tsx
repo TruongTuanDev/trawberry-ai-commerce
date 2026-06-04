@@ -1,6 +1,6 @@
 "use client";
 
-import { translate } from "@/i18n/translate";
+import { translate } from "@/i18n/use-i18n";
 import { useLocaleStore } from "@/i18n/locale-store";
 
 const toneByPaymentStatus: Record<string, string> = {
@@ -22,22 +22,8 @@ export function PaymentStatusBadge({
   testId?: string;
   role?: string;
 }) {
-  const { roleLocales, cookieLocale } = useLocaleStore();
-
-  let locale = cookieLocale;
-  if (role === "seller") {
-    locale = roleLocales.seller;
-  } else if (role === "admin") {
-    locale = roleLocales.admin;
-  } else if (role === "customer") {
-    locale = roleLocales.customer;
-  } else if (typeof window !== "undefined" && window.location.pathname.startsWith("/seller")) {
-    locale = roleLocales.seller;
-  } else if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
-    locale = roleLocales.admin;
-  }
-
-  locale = locale ?? "ru";
+  const { cookieLocale, roleLocales } = useLocaleStore();
+  const locale = cookieLocale ?? roleLocales.seller ?? "ru";
 
   return (
     <span

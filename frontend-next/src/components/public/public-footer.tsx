@@ -25,12 +25,12 @@ export function PublicFooter() {
             {t("publicFooter.explore")}
           </p>
           <div className="mt-4 flex flex-col gap-3 text-sm font-semibold text-[var(--foreground)]">
-            <Link href="/products" prefetch={false}>{t("publicFooter.shop")}</Link>
-            <Link href="/orders/track" prefetch={false}>{t("publicFooter.trackOrder")}</Link>
-            <Link href="/customer/login" prefetch={false}>{t("publicFooter.login")}</Link>
-            <Link href="/customer/register" prefetch={false}>{t("publicFooter.register")}</Link>
-            <Link href="/seller/register" prefetch={false}>{t("publicFooter.sellWithUs")}</Link>
-            <Link href="/seller/login" prefetch={false}>{t("publicFooter.sellerLogin")}</Link>
+            <Link href="/products">{t("publicFooter.shop")}</Link>
+            <Link href="/orders/track">{t("publicFooter.trackOrder")}</Link>
+            <Link href="/customer/login">{t("publicFooter.login")}</Link>
+            <Link href="/customer/register">{t("publicFooter.register")}</Link>
+            <Link href="/seller/register">{t("publicFooter.sellWithUs")}</Link>
+            <Link href="/seller/login">{t("publicFooter.sellerLogin")}</Link>
           </div>
         </div>
         <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
@@ -39,13 +39,6 @@ export function PublicFooter() {
           </p>
           <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
             {t("publicFooter.manualPaymentDesc")}
-          </p>
-        </div>
-      </div>
-      <div className="border-t border-[var(--border)]/70 bg-white/55">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <p className="text-xs leading-6 text-[var(--muted)]">
-            {t("publicFooter.disclaimer")}
           </p>
         </div>
       </div>
