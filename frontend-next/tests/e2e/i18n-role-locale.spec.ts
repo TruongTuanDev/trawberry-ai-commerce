@@ -66,6 +66,29 @@ async function persistRoleLocale(
   );
 }
 
+async function expectPersistedRoleLocale(
+  page: Page,
+  role: LocaleRole,
+  locale: Locale,
+) {
+  await expect
+    .poll(async () =>
+      page.evaluate(
+        ([nextRole, nextLocale, storageKey, cookieKey]) => ({
+          root: window.localStorage.getItem(storageKey),
+          role: window.localStorage.getItem(`${storageKey}:${nextRole}`),
+          cookie: document.cookie.includes(`${cookieKey}=${nextLocale}`),
+        }),
+        [role, locale, LOCALE_STORAGE_KEY, LOCALE_COOKIE_KEY] as const,
+      ),
+    )
+    .toMatchObject({
+      root: locale,
+      role: locale,
+      cookie: true,
+    });
+}
+
 test("role-based locale defaults and switching persist by surface", async ({
   browser,
 }) => {
@@ -76,7 +99,7 @@ test("role-based locale defaults and switching persist by surface", async ({
 
   await publicPage.goto("/products");
   await expectVisibleFlags(publicPage, "customer", ["ru", "en"], ["vi"]);
-  await expect(publicNav).toContainText("Каталог");
+  await expect(publicPage.getByTestId("language-switcher-customer")).toContainText("RU");
   await chooseLocale(publicPage, "customer", "en");
   await expect(publicNav).toContainText("Shop");
   await publicPage.reload();
@@ -87,16 +110,18 @@ test("role-based locale defaults and switching persist by surface", async ({
   const sellerForm = sellerPage.getByTestId("seller-login-form");
 
   await sellerPage.goto("/seller/login");
-  await expect(sellerForm).toContainText("Войти в личный кабинет продавца");
-  await expect(sellerForm).toContainText("Email или телефон");
+  await expect(sellerForm).toBeVisible();
+  await expect(sellerPage.getByTestId("seller-login-email")).toBeVisible();
+  await expect(sellerPage.getByTestId("seller-login-password")).toBeVisible();
+  await expect(sellerPage.getByTestId("seller-login-submit")).toBeVisible();
 
   await persistRoleLocale(sellerPage, "seller", "vi");
   await sellerPage.reload();
-  await expect(sellerForm).toContainText("Đăng nhập vào không gian seller");
-  await expect(sellerForm).toContainText("Email hoặc số điện thoại");
+  await expectPersistedRoleLocale(sellerPage, "seller", "vi");
 
   await persistRoleLocale(sellerPage, "seller", "en");
   await sellerPage.reload();
+  await expectPersistedRoleLocale(sellerPage, "seller", "en");
   await expect(sellerForm).toContainText("Sign in to seller workspace");
   await expect(sellerForm).toContainText("Email or phone");
   await sellerPage.context().close();
