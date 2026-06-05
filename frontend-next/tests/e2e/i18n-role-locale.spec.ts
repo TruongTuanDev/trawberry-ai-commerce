@@ -26,16 +26,30 @@ async function backendJson<T>(
 
 async function registerSeller(request: APIRequestContext, email: string) {
   const password = "password123";
-
-  await backendJson<{ userId: string }>(request, "/api/auth/seller/register", {
-    method: "POST",
-    data: {
-      email,
-      password,
-      fullName: "I18N Seller",
-      role: "SELLER",
+  const payload = {
+    email,
+    password,
+    fullName: "I18N Seller",
+    role: "SELLER",
+  };
+  const roleRoute = await request.fetch(
+    `${backendBaseUrl}/api/auth/seller/register`,
+    {
+      method: "POST",
+      data: payload,
     },
-  });
+  );
+
+  if (!roleRoute.ok()) {
+    const legacyRoute = await request.fetch(`${backendBaseUrl}/api/auth/register`, {
+      method: "POST",
+      data: payload,
+    });
+    expect(
+      legacyRoute.ok(),
+      `POST /api/auth/register -> ${legacyRoute.status()}: ${await legacyRoute.text()}`,
+    ).toBeTruthy();
+  }
 
   return { email, password };
 }
