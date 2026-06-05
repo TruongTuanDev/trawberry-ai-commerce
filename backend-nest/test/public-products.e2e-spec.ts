@@ -115,6 +115,15 @@ type UserCreateArgs = {
   };
 };
 
+type ShopFindUniqueArgs = {
+  where: {
+    id: string;
+  };
+  include?: {
+    sellerProfile?: boolean;
+  };
+};
+
 type ProductFindManyArgs = {
   where?: Record<string, unknown> & {
     id?: { in?: string[] };
@@ -222,6 +231,9 @@ describe('PublicProductsController contract (e2e)', () => {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
+    },
+    shop: {
+      findUnique: jest.fn(),
     },
     product: {
       findMany: jest.fn(),
@@ -434,6 +446,7 @@ describe('PublicProductsController contract (e2e)', () => {
 
     prismaMock.user.findUnique.mockReset();
     prismaMock.user.create.mockReset();
+    prismaMock.shop.findUnique.mockReset();
     prismaMock.product.findMany.mockReset();
     prismaMock.product.findFirst.mockReset();
     prismaMock.productVariant.updateMany.mockReset();
@@ -455,6 +468,30 @@ describe('PublicProductsController contract (e2e)', () => {
       guestUsers.push(created);
       return { id: created.id };
     });
+    prismaMock.shop.findUnique.mockImplementation(
+      ({ where, include }: ShopFindUniqueArgs) => {
+        const shop =
+          products.find((product) => product.shopId === where.id)?.shop ?? null;
+
+        if (!shop) {
+          return null;
+        }
+
+        if (include?.sellerProfile) {
+          return {
+            id: shop.id,
+            name: shop.name,
+            slug: shop.slug,
+            paymentInstructions: shop.paymentInstructions,
+            status: shop.status,
+            logoUrl: shop.logoUrl,
+            sellerProfile: shop.sellerProfile,
+          };
+        }
+
+        return shop;
+      },
+    );
     prismaMock.product.findMany.mockImplementation(
       ({ where }: ProductFindManyArgs) => {
         if (where?.id?.in) {

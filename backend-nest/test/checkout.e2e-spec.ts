@@ -573,14 +573,34 @@ describe('CheckoutController (e2e)', () => {
     prismaMock.shop.findUnique.mockImplementation(
       ({
         where,
+        include,
         select,
       }: {
         where: { id: string };
+        include?: { sellerProfile?: boolean };
         select?: Record<string, unknown>;
       }) => {
         const shop = shops.find((entry) => entry.id === where.id);
         if (!shop) {
           return null;
+        }
+
+        if (include?.sellerProfile) {
+          return {
+            id: shop.id,
+            name: shop.name,
+            paymentInstructions: shop.paymentInstructions,
+            bankName: shop.bankName ?? null,
+            accountHolderName: shop.accountHolderName ?? null,
+            accountNumber: shop.accountNumber ?? null,
+            recipientPhone: shop.recipientPhone ?? null,
+            sbpPhone: shop.sbpPhone ?? null,
+            staticQrImageUrl: shop.staticQrImageUrl ?? null,
+            paymentMode: shop.paymentMode ?? 'STATIC_QR',
+            paymentConfigStatus: shop.paymentConfigStatus ?? 'PENDING_REVIEW',
+            status: shop.status,
+            sellerProfile: shop.sellerProfile,
+          };
         }
 
         if (select?.sellerProfile) {
