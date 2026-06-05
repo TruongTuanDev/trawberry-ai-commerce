@@ -23,8 +23,8 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   // 1. Visit products catalog. Should default to Russian (RU).
   await page.goto("/products");
   
-  // Wait for loading to finish
-  await page.waitForLoadState("networkidle");
+  // Wait for visible catalog content instead of all background requests to stop.
+  await expect(page.locator("h2").first()).toBeVisible();
   
   console.log("--- Headings on initial load (RU) ---");
   const h2s = await page.locator("h2").all();
@@ -39,6 +39,7 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   // 2. Check supported language choices in customer switcher
   const switcher = page.getByTestId("language-switcher-customer");
   await expect(switcher).toBeVisible();
+  await switcher.getByTestId("language-switcher-trigger").click();
 
   // Verify only RU and EN exist, and VI does NOT exist
   const ruOption = page.getByTestId("language-option-customer-ru");
@@ -68,24 +69,32 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
 
   // 4. Visit the cart page (empty state)
   await page.goto("/cart");
-  await page.waitForLoadState("networkidle");
+  await expect(page.locator("h2").first()).toBeVisible();
   
   // In English, empty cart title should show
   await expect(page.locator("h2").filter({ hasText: "Cart is empty" }).first()).toBeVisible();
 
   // Switch back to Russian
+  await page
+    .getByTestId("language-switcher-customer")
+    .getByTestId("language-switcher-trigger")
+    .click();
   await page.getByTestId("language-option-customer-ru").click();
   await page.waitForTimeout(500);
   await expect(page.locator("h2").filter({ hasText: "Корзина пуста" }).first()).toBeVisible();
 
   // 5. Visit the order tracking page (lookup screen)
   await page.goto("/orders/track");
-  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("textbox").first()).toBeVisible();
 
   // In Russian first
   await expect(page.getByText("Отследить публичный заказ").first()).toBeVisible();
 
   // Switch to English
+  await page
+    .getByTestId("language-switcher-customer")
+    .getByTestId("language-switcher-trigger")
+    .click();
   await page.getByTestId("language-option-customer-en").click();
   await page.waitForTimeout(500);
   await expect(page.getByText("Track a public order").first()).toBeVisible();
