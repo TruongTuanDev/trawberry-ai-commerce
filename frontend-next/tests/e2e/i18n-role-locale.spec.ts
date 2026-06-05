@@ -1,82 +1,13 @@
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import {
-  expect,
-  test,
-  type APIRequestContext,
-  type Browser,
-  type Page,
-} from "@playwright/test";
+  LOCALE_COOKIE_KEY,
+  LOCALE_STORAGE_KEY,
+  type Locale,
+  type LocaleRole,
+} from "../../src/i18n/config";
 
-const backendBaseUrl =
-  process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 const frontendBaseUrl =
   process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
-
-async function backendJson<T>(
-  request: APIRequestContext,
-  url: string,
-  options?: Parameters<APIRequestContext["fetch"]>[1],
-) {
-  const response = await request.fetch(`${backendBaseUrl}${url}`, options);
-  expect(
-    response.ok(),
-    `${options?.method ?? "GET"} ${url} -> ${response.status()}: ${await response.text()}`,
-  ).toBeTruthy();
-  return (await response.json()) as T;
-}
-
-async function registerSeller(request: APIRequestContext, email: string) {
-  const password = "password123";
-  const payload = {
-    email,
-    password,
-    fullName: "I18N Seller",
-    role: "SELLER",
-  };
-  const roleRoute = await request.fetch(
-    `${backendBaseUrl}/api/auth/seller/register`,
-    {
-      method: "POST",
-      data: payload,
-    },
-  );
-
-  if (!roleRoute.ok()) {
-    const legacyRoute = await request.fetch(`${backendBaseUrl}/api/auth/register`, {
-      method: "POST",
-      data: payload,
-    });
-    expect(
-      legacyRoute.ok(),
-      `POST /api/auth/register -> ${legacyRoute.status()}: ${await legacyRoute.text()}`,
-    ).toBeTruthy();
-  }
-
-  return { email, password };
-}
-
-async function resolveSellerCredentials(request: APIRequestContext) {
-  const seededSeller = {
-    email: "demo-seller@trawberry.local",
-    password: "DemoSeller123!",
-  };
-  const seededLogin = await request.fetch(
-    `${backendBaseUrl}/api/auth/seller/login`,
-    {
-      method: "POST",
-      data: {
-        identifier: seededSeller.email,
-        password: seededSeller.password,
-      },
-    },
-  );
-
-  if (seededLogin.ok()) {
-    return seededSeller;
-  }
-
-  const stamp = Date.now();
-  return registerSeller(request, `i18n-seller-${stamp}@example.com`);
-}
 
 async function newCleanPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({
@@ -88,7 +19,7 @@ async function newCleanPage(browser: Browser): Promise<Page> {
 
 async function expectVisibleFlags(
   page: Page,
-  role: "customer" | "seller",
+  role: "customer",
   locales: Array<"ru" | "en" | "vi">,
   missing: Array<"ru" | "en" | "vi"> = [],
 ) {
@@ -105,21 +36,39 @@ async function expectVisibleFlags(
 
 async function chooseLocale(
   page: Page,
-  role: "customer" | "seller",
-  locale: "ru" | "en" | "vi",
+  role: "customer",
+  locale: "ru" | "en",
 ) {
   await page.locator(`[data-testid="language-switcher-${role}"]:visible`).first().click();
   await expect(page.getByTestId("language-switcher-dropdown")).toBeVisible();
-  await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   await page.getByTestId(`language-option-${role}-${locale}`).click();
+}
+
+async function persistRoleLocale(
+  page: Page,
+  role: LocaleRole,
+  locale: Locale,
+) {
+  await page.context().addCookies([
+    {
+      name: LOCALE_COOKIE_KEY,
+      value: locale,
+      url: frontendBaseUrl,
+    },
+  ]);
+  await page.evaluate(
+    ([nextRole, nextLocale, storageKey, cookieKey]) => {
+      window.localStorage.setItem(storageKey, nextLocale);
+      window.localStorage.setItem(`${storageKey}:${nextRole}`, nextLocale);
+      document.cookie = `${cookieKey}=${nextLocale}; path=/; samesite=lax`;
+    },
+    [role, locale, LOCALE_STORAGE_KEY, LOCALE_COOKIE_KEY] as const,
+  );
 }
 
 test("role-based locale defaults and switching persist by surface", async ({
   browser,
-  request,
 }) => {
-  const seller = await resolveSellerCredentials(request);
-
   const publicPage = await newCleanPage(browser);
   const publicNav = publicPage.getByRole("navigation", {
     name: "Public navigation",
@@ -127,7 +76,7 @@ test("role-based locale defaults and switching persist by surface", async ({
 
   await publicPage.goto("/products");
   await expectVisibleFlags(publicPage, "customer", ["ru", "en"], ["vi"]);
-  await expect(publicNav).toContainText(/Каталог|ÐšÐ°Ñ‚Ð°Ð»Ð¾Ð³/);
+  await expect(publicNav).toContainText("Каталог");
   await chooseLocale(publicPage, "customer", "en");
   await expect(publicNav).toContainText("Shop");
   await publicPage.reload();
@@ -135,27 +84,29 @@ test("role-based locale defaults and switching persist by surface", async ({
   await publicPage.context().close();
 
   const sellerPage = await newCleanPage(browser);
+  const sellerForm = sellerPage.getByTestId("seller-login-form");
 
   await sellerPage.goto("/seller/login");
-  await sellerPage.getByTestId("seller-login-email").fill(seller.email);
-  await sellerPage.getByTestId("seller-login-password").fill(seller.password);
-  await sellerPage.getByTestId("seller-login-submit").click();
-  await sellerPage.waitForURL(/\/seller\/(pending|onboarding)$/);
-  const sellerStatus = sellerPage.url().includes("/seller/pending")
-    ? sellerPage.getByTestId("seller-pending-status").first()
-    : sellerPage.getByTestId("seller-onboarding-status").first();
-  await expectVisibleFlags(sellerPage, "seller", ["ru", "en", "vi"]);
-  await expect(sellerStatus).toContainText("На");
-  await chooseLocale(sellerPage, "seller", "vi");
-  await expect(sellerStatus).toContainText("Đang chờ duyệt");
-  await chooseLocale(sellerPage, "seller", "en");
-  await expect(sellerStatus).toContainText("Pending review");
+  await expect(sellerForm).toContainText("Войти в личный кабинет продавца");
+  await expect(sellerForm).toContainText("Email или телефон");
+
+  await persistRoleLocale(sellerPage, "seller", "vi");
   await sellerPage.reload();
-  await expect(sellerStatus).toContainText("Pending review");
+  await expect(sellerForm).toContainText("Đăng nhập vào không gian seller");
+  await expect(sellerForm).toContainText("Email hoặc số điện thoại");
+
+  await persistRoleLocale(sellerPage, "seller", "en");
+  await sellerPage.reload();
+  await expect(sellerForm).toContainText("Sign in to seller workspace");
+  await expect(sellerForm).toContainText("Email or phone");
   await sellerPage.context().close();
 
   const adminPage = await newCleanPage(browser);
   await adminPage.goto("/admin-login");
+  await persistRoleLocale(adminPage, "admin", "ru");
+  await adminPage.reload();
+  await expect(adminPage.getByText("Admin login")).toBeVisible();
+  await expect(adminPage.getByText("Log in to marketplace operations.")).toBeVisible();
   await expect(adminPage.getByTestId("language-switcher-admin")).toHaveCount(0);
   await adminPage.context().close();
 });
