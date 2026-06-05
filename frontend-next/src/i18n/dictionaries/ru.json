@@ -1109,6 +1109,25 @@
     "MESSAGE_THREAD_CLOSED": "Этот диалог закрыт."
   },
   "seller": {
+    "auth": {
+      "badgeLabel": "Рабочая область продавца",
+      "roleLabel": "Продавец",
+      "loginTitle": "Вход для продавцов",
+      "loginSubtitle": "Доступ к товарам, импорту, заказам, платежам, доставке и онбордингу на",
+      "loadingLogin": "Загрузка формы входа...",
+      "title": "Войти в личный кабинет продавца",
+      "description": "Используйте ваш email или телефон продавца и пароль.",
+      "registeredNotice": "Аккаунт создан. Пожалуйста, войдите.",
+      "emailOrPhone": "Email или телефон",
+      "emailOrPhonePlaceholder": "name@example.com или +7XXXXXXXXXX",
+      "password": "Пароль",
+      "passwordLength": "Пароль должен содержать минимум 6 символов.",
+      "emailOrPhoneRequired": "Укажите email или телефон.",
+      "signingIn": "Входим...",
+      "signIn": "Войти",
+      "needAnotherAccount": "Нужен другой кабинет?",
+      "sellerAccountRequired": "Требуется аккаунт продавца."
+    },
     "products": {
       "catalog": "Каталог",
       "title": "Товары",

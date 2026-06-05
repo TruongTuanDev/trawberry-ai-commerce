@@ -575,6 +575,25 @@
     "MESSAGE_THREAD_CLOSED": "Cuộc trò chuyện này đã đóng."
   },
   "seller": {
+    "auth": {
+      "badgeLabel": "Khong gian lam viec seller",
+      "roleLabel": "Seller",
+      "loginTitle": "Dang nhap seller",
+      "loginSubtitle": "Truy cap san pham, import, don hang, thanh toan, giao hang va onboarding tren",
+      "loadingLogin": "Dang tai form dang nhap...",
+      "title": "Dang nhap vao khong gian seller",
+      "description": "Su dung email hoac so dien thoai seller va mat khau cua ban.",
+      "registeredNotice": "Tai khoan da duoc tao. Vui long dang nhap.",
+      "emailOrPhone": "Email hoac so dien thoai",
+      "emailOrPhonePlaceholder": "name@example.com hoac +7XXXXXXXXXX",
+      "password": "Mat khau",
+      "passwordLength": "Mat khau phai co it nhat 6 ky tu.",
+      "emailOrPhoneRequired": "Vui long nhap email hoac so dien thoai.",
+      "signingIn": "Dang dang nhap...",
+      "signIn": "Dang nhap",
+      "needAnotherAccount": "Can khu vuc tai khoan khac?",
+      "sellerAccountRequired": "Can tai khoan seller."
+    },
     "notifications": {
       "heading": "Việc cần xử lý",
       "emptyTitle": "Bạn chưa có việc cần xử lý",

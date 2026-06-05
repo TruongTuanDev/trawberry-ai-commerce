@@ -1038,6 +1038,25 @@
     }
   },
   "seller": {
+    "auth": {
+      "badgeLabel": "Seller workspace",
+      "roleLabel": "Seller",
+      "loginTitle": "Seller login",
+      "loginSubtitle": "Access products, imports, orders, payments, delivery, and onboarding on",
+      "loadingLogin": "Loading login form...",
+      "title": "Sign in to seller workspace",
+      "description": "Use your seller email or phone and password.",
+      "registeredNotice": "Account created. Please sign in.",
+      "emailOrPhone": "Email or phone",
+      "emailOrPhonePlaceholder": "name@example.com or +7XXXXXXXXXX",
+      "password": "Password",
+      "passwordLength": "Password must be at least 6 characters.",
+      "emailOrPhoneRequired": "Email or phone is required.",
+      "signingIn": "Signing in...",
+      "signIn": "Sign in",
+      "needAnotherAccount": "Need another account area?",
+      "sellerAccountRequired": "Seller account is required."
+    },
     "products": {
       "catalog": "Catalog",
       "title": "Products",
