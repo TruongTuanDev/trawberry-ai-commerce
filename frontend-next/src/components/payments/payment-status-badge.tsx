@@ -1,6 +1,6 @@
 "use client";
 
-import { translate } from "@/i18n/use-i18n";
+import { translate } from "@/i18n/translate";
 import { useLocaleStore } from "@/i18n/locale-store";
 
 const toneByPaymentStatus: Record<string, string> = {
@@ -16,11 +16,9 @@ const toneByPaymentStatus: Record<string, string> = {
 export function PaymentStatusBadge({
   status,
   testId,
-  role,
 }: {
   status: string;
   testId?: string;
-  role?: string;
 }) {
   const { cookieLocale, roleLocales } = useLocaleStore();
   const locale = cookieLocale ?? roleLocales.seller ?? "ru";

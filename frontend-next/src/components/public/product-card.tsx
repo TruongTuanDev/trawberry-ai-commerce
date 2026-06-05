@@ -18,7 +18,13 @@ import { StockBadge } from "@/components/public/stock-badge";
 import type { PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
-export function ProductCard({ product }: { product: PublicProduct }) {
+export function ProductCard({
+  product,
+  onProductNavigate,
+}: {
+  product: PublicProduct;
+  onProductNavigate?: () => void;
+}) {
   const { t } = useI18n("customer");
   const router = useRouter();
   const items = useCartStore((state) => state.items);

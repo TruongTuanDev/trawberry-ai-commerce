@@ -5,7 +5,7 @@ import { PromoSlider } from "@/components/public/promo-slider";
 import { PublicShell } from "@/components/public/public-shell";
 import { getPublicProducts, type PublicProduct } from "@/lib/public-api";
 import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
-import { translate } from "@/i18n/use-i18n";
+import { translate } from "@/i18n/translate";
 
 async function loadHomepageCatalog() {
   try {
@@ -40,7 +40,6 @@ async function loadHomepageCatalog() {
 }
 
 export default async function HomePage() {
-  const recommendationFlags = getRecommendationFlags();
   const { items, total } = await loadHomepageCatalog();
   const cookieStore = await cookies();
   const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_KEY)?.value) ?? "ru";

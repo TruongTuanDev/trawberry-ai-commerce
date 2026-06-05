@@ -15,6 +15,7 @@ import {
   type PublicHomepageSlide,
   type PublicProduct,
 } from "@/lib/public-api";
+import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
 
