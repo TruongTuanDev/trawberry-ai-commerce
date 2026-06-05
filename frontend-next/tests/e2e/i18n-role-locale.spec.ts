@@ -23,13 +23,14 @@ async function expectVisibleFlags(
   locales: Array<"ru" | "en" | "vi">,
   missing: Array<"ru" | "en" | "vi"> = [],
 ) {
-  await page.locator(`[data-testid="language-switcher-${role}"]:visible`).first().click();
-  await expect(page.getByTestId("language-switcher-dropdown")).toBeVisible();
+  const switcher = page.locator(`[data-testid="language-switcher-${role}"]:visible`).first();
+  await switcher.getByTestId("language-switcher-trigger").click();
+  await expect(switcher.getByTestId("language-switcher-dropdown")).toBeVisible();
   for (const locale of locales) {
-    await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
+    await expect(switcher.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   }
   for (const locale of missing) {
-    await expect(page.getByTestId(`locale-flag-${locale}`)).toHaveCount(0);
+    await expect(switcher.getByTestId(`locale-flag-${locale}`)).toHaveCount(0);
   }
   await page.keyboard.press("Escape");
 }
@@ -39,9 +40,10 @@ async function chooseLocale(
   role: "customer",
   locale: "ru" | "en",
 ) {
-  await page.locator(`[data-testid="language-switcher-${role}"]:visible`).first().click();
-  await expect(page.getByTestId("language-switcher-dropdown")).toBeVisible();
-  await page.getByTestId(`language-option-${role}-${locale}`).click();
+  const switcher = page.locator(`[data-testid="language-switcher-${role}"]:visible`).first();
+  await switcher.getByTestId("language-switcher-trigger").click();
+  await expect(switcher.getByTestId("language-switcher-dropdown")).toBeVisible();
+  await switcher.getByTestId(`language-option-${role}-${locale}`).click();
 }
 
 async function persistRoleLocale(
