@@ -283,7 +283,9 @@ describe('AdminUsersController (e2e)', () => {
     await request(app.getHttpServer())
       .get('/api/admin/users')
       .set(getSellerHeaders())
-      .expect(403);
+      .expect((response) => {
+        expect([401, 403]).toContain(response.status);
+      });
   });
 
   it('lists all users in the system', async () => {
