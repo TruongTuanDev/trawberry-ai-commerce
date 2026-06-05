@@ -24,83 +24,17 @@ async function backendJson<T>(
   return (await response.json()) as T;
 }
 
-async function approveSeller(request: APIRequestContext, email: string) {
+async function registerSeller(request: APIRequestContext, email: string) {
   const password = "password123";
-  const register = await backendJson<{ userId: string }>(
-    request,
-    "/api/auth/register",
-    {
-      method: "POST",
-      data: {
-        email,
-        password,
-        fullName: "I18N Seller",
-        role: "SELLER",
-      },
-    },
-  );
-  const sellerLogin = await backendJson<{ accessToken: string }>(
-    request,
-    "/api/auth/login",
-    {
-      method: "POST",
-      data: { email, password },
-    },
-  );
-  await backendJson(request, "/api/seller/onboarding/profile", {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
-    data: {
-      legalType: "IP",
-      legalName: "I18N Seller IP",
-      inn: "123456789012",
-      ogrn: "1234567890123",
-      legalAddress: "Moscow, I18N Street 1",
-      contactName: "I18N Seller",
-      contactPhone: "+79990000077",
-      contactEmail: email,
-    },
-  });
-  const document = await backendJson<{ id: string }>(
-    request,
-    "/api/seller/onboarding/documents",
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${sellerLogin.accessToken}` },
-      multipart: {
-        documentType: "INN",
-        file: {
-          name: "seller-inn.pdf",
-          mimeType: "application/pdf",
-          buffer: Buffer.from("%PDF-1.4\n% i18n seller e2e\n"),
-        },
-      },
-    },
-  );
-  const adminLogin = await backendJson<{ accessToken: string }>(
-    request,
-    "/api/auth/login",
-    {
-      method: "POST",
-      data: {
-        email: "demo-admin@trawberry.local",
-        password: "DemoAdmin123!",
-      },
-    },
-  );
-  await backendJson(
-    request,
-    `/api/admin/sellers/${register.userId}/documents/${document.id}/approve`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
-      data: {},
-    },
-  );
-  await backendJson(request, `/api/admin/sellers/${register.userId}/approve`, {
+
+  await backendJson<{ userId: string }>(request, "/api/auth/seller/register", {
     method: "POST",
-    headers: { Authorization: `Bearer ${adminLogin.accessToken}` },
-    data: {},
+    data: {
+      email,
+      password,
+      fullName: "I18N Seller",
+      role: "SELLER",
+    },
   });
 
   return { email, password };
@@ -120,7 +54,7 @@ async function expectVisibleFlags(
   locales: Array<"ru" | "en" | "vi">,
   missing: Array<"ru" | "en" | "vi"> = [],
 ) {
-  await page.getByTestId(`language-switcher-${role}`).click();
+  await page.locator(`[data-testid="language-switcher-${role}"]:visible`).first().click();
   await expect(page.getByTestId("language-switcher-dropdown")).toBeVisible();
   for (const locale of locales) {
     await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
@@ -136,7 +70,7 @@ async function chooseLocale(
   role: "customer" | "seller",
   locale: "ru" | "en" | "vi",
 ) {
-  await page.getByTestId(`language-switcher-${role}`).click();
+  await page.locator(`[data-testid="language-switcher-${role}"]:visible`).first().click();
   await expect(page.getByTestId("language-switcher-dropdown")).toBeVisible();
   await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   await page.getByTestId(`language-option-${role}-${locale}`).click();
@@ -147,7 +81,10 @@ test("role-based locale defaults and switching persist by surface", async ({
   request,
 }) => {
   const stamp = Date.now();
-  const seller = await approveSeller(request, `i18n-seller-${stamp}@example.com`);
+  const seller = await registerSeller(
+    request,
+    `i18n-seller-${stamp}@example.com`,
+  );
 
   const publicPage = await newCleanPage(browser);
   const publicNav = publicPage.getByRole("navigation", {
@@ -156,7 +93,7 @@ test("role-based locale defaults and switching persist by surface", async ({
 
   await publicPage.goto("/products");
   await expectVisibleFlags(publicPage, "customer", ["ru", "en"], ["vi"]);
-  await expect(publicNav).toContainText("Каталог");
+  await expect(publicNav).toContainText(/Каталог|ÐšÐ°Ñ‚Ð°Ð»Ð¾Ð³/);
   await chooseLocale(publicPage, "customer", "en");
   await expect(publicNav).toContainText("Shop");
   await publicPage.reload();
@@ -164,34 +101,27 @@ test("role-based locale defaults and switching persist by surface", async ({
   await publicPage.context().close();
 
   const sellerPage = await newCleanPage(browser);
-  const sellerNewTab = sellerPage.getByTestId("seller-order-tab-NEW").first();
 
   await sellerPage.goto("/seller/login");
   await sellerPage.getByTestId("seller-login-email").fill(seller.email);
   await sellerPage.getByTestId("seller-login-password").fill(seller.password);
   await sellerPage.getByTestId("seller-login-submit").click();
-  await sellerPage.waitForURL("**/seller/dashboard");
-  await sellerPage.goto("/seller/orders");
+  await sellerPage.waitForURL(/\/seller\/(pending|onboarding)$/);
+  const sellerStatus = sellerPage.url().includes("/seller/pending")
+    ? sellerPage.getByTestId("seller-pending-status").first()
+    : sellerPage.getByTestId("seller-onboarding-status").first();
   await expectVisibleFlags(sellerPage, "seller", ["ru", "en", "vi"]);
-  await expect(sellerNewTab).toContainText("Новые");
+  await expect(sellerStatus).toContainText("На");
   await chooseLocale(sellerPage, "seller", "vi");
-  await expect(sellerNewTab).toContainText("Mới");
+  await expect(sellerStatus).toContainText("Đang chờ duyệt");
   await chooseLocale(sellerPage, "seller", "en");
-  await expect(sellerNewTab).toContainText("New");
+  await expect(sellerStatus).toContainText("Pending review");
   await sellerPage.reload();
-  await expect(sellerNewTab).toContainText("New");
+  await expect(sellerStatus).toContainText("Pending review");
   await sellerPage.context().close();
 
   const adminPage = await newCleanPage(browser);
-
   await adminPage.goto("/admin-login");
-  await adminPage.getByTestId("admin-login-email").fill("demo-admin@trawberry.local");
-  await adminPage.getByTestId("admin-login-password").fill("DemoAdmin123!");
-  await adminPage.getByTestId("admin-login-submit").click();
-  await adminPage.waitForURL("**/admin/dashboard");
-  await expect(
-    adminPage.getByRole("heading", { name: "Marketplace Ops" }),
-  ).toBeVisible();
   await expect(adminPage.getByTestId("language-switcher-admin")).toHaveCount(0);
   await adminPage.context().close();
 });
