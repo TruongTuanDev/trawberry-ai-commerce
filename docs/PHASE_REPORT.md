@@ -3815,3 +3815,21 @@ Root cause summary:
 
 - The CI E2E job booted Docker services without seeding the demo admin account that seller-approval helpers depend on.
 - Multiple specs had drifted from the auth API contract and were still posting `email` to role-specific login endpoints that now expect `identifier`.
+
+# Phase Report: E2E Docker DB Bootstrap Fix
+
+Implemented:
+
+- Fixed the E2E workflow ordering so the Dockerized backend database schema is created before demo seeding runs.
+- Added a dedicated `Prepare database for E2E` step that executes `npx prisma db push` inside the `backend-nest` container.
+- Added `WB_CREDENTIAL_ENCRYPTION_KEY` to the E2E job environment so the Docker stack no longer boots with an empty encryption key warning.
+
+Verification:
+
+- `docker compose -f infra/docker-compose.yml exec -T backend-nest npx prisma db push`: pass
+- `docker compose -f infra/docker-compose.yml exec -T -e DEMO_SEED_CONFIRM=true backend-nest npm run seed:demo`: pass
+
+Root cause summary:
+
+- The Playwright E2E Docker stack starts from a blank Postgres instance.
+- Seeding was inserted before any schema bootstrap step existed in that stack, so `seed-demo.js` failed on missing tables such as `public.categories`.

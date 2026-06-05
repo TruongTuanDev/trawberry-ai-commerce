@@ -178,6 +178,7 @@ jobs:
       RUN_OPENAI_SMOKE: "false"
       AI_IMAGE_PROVIDER: mock
       STORAGE_DRIVER: mock
+      WB_CREDENTIAL_ENCRYPTION_KEY: ci-wb-credential-key-0123456789
 
     steps:
       - uses: actions/checkout@v4
@@ -208,6 +209,9 @@ jobs:
             sleep 2
           done
           exit 1
+
+      - name: Prepare database for E2E
+        run: docker compose -f infra/docker-compose.yml exec -T backend-nest npx prisma db push
 
       - name: Seed demo accounts for E2E
         run: docker compose -f infra/docker-compose.yml exec -T -e DEMO_SEED_CONFIRM=true backend-nest npm run seed:demo

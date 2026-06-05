@@ -1711,3 +1711,14 @@ Current status:
 Notes:
 
 - This closes the CI/runtime mismatch at the source rather than chasing single flaky assertions.
+
+# E2E Docker Bootstrap Status
+
+Current status:
+
+- The E2E GitHub Actions job now bootstraps Prisma schema inside the Dockerized backend before seeding demo accounts.
+- Demo seed now succeeds against a fresh Docker Postgres runtime instead of failing on missing tables.
+
+Notes:
+
+- This fixes the newer regression introduced by adding demo seeding into the E2E workflow without first creating the schema in that runtime.
