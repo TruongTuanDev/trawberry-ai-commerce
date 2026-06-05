@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ProtectedShell } from "@/components/auth/protected-shell";
-import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { PublicShell } from "@/components/public/public-shell";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { useI18n } from "@/i18n/use-i18n";
@@ -123,13 +122,11 @@ export function CustomerAccountShell({
                       {description}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <LanguageSwitcher
-                      role="customer"
-                      testId="language-switcher-customer-account"
-                    />
-                    {actions}
-                  </div>
+                  {actions ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      {actions}
+                    </div>
+                  ) : null}
                 </div>
               </header>
               {children}
