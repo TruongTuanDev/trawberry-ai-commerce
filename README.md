@@ -434,3 +434,8 @@ Tỷ lệ ảnh cho Mobile (Nếu upload ở trường Mobile Image URL):
 - The GitHub Actions Playwright public/customer batch seeds demo accounts before running E2E:
   - `docker compose -f infra/docker-compose.yml exec -T -e DEMO_SEED_CONFIRM=true backend-nest npm run seed:demo`
 - This is required because seller-approval setup in the Dockerized E2E flow depends on the demo admin account being present.
+
+## Deploy note for VPS workflow
+
+- The GitHub Actions deploy workflow uploads the repository `infra/` directory to the VPS over SSH before running production `docker compose`.
+- The VPS no longer needs `git fetch` access to the GitHub repository for routine deployments.

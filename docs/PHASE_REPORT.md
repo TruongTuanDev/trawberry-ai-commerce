@@ -3833,3 +3833,21 @@ Root cause summary:
 
 - The Playwright E2E Docker stack starts from a blank Postgres instance.
 - Seeding was inserted before any schema bootstrap step existed in that stack, so `seed-demo.js` failed on missing tables such as `public.categories`.
+
+# Phase Report: VPS Deploy Without Server Git Access
+
+Implemented:
+
+- Removed the production deploy workflow's dependency on `git fetch` / `git reset` running on the VPS.
+- Added repository checkout to the deploy job and uploaded the current `infra/` directory from the GitHub runner to the server before deployment.
+- Kept image rollout unchanged: deploy still uses the exact GHCR image tags built for the current commit.
+
+Verification:
+
+- `deploy.yml` now syncs `infra/` to `VPS_APP_DIR` over SSH before compose commands run.
+- The failing step no longer depends on GitHub repository access from the VPS host.
+
+Root cause summary:
+
+- The VPS deploy script assumed the server itself could read `origin/main`.
+- Once repo access on the server broke or was removed, deployment failed before any image pull or compose update could start.

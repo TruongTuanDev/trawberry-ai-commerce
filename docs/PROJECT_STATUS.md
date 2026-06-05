@@ -1722,3 +1722,14 @@ Current status:
 Notes:
 
 - This fixes the newer regression introduced by adding demo seeding into the E2E workflow without first creating the schema in that runtime.
+
+# VPS Deploy Transport Status
+
+Current status:
+
+- Production deploy no longer requires live Git repository access from the VPS.
+- The GitHub runner now uploads the current `infra/` deployment bundle over SSH before pulling images and running `docker compose`.
+
+Notes:
+
+- This removes the `Repository not found` failure mode from the server-side deploy path as long as SSH access and GHCR access remain valid.

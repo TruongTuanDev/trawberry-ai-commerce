@@ -144,6 +144,8 @@ jobs:
     environment:
       name: production
     steps:
+      - uses: actions/checkout@v4
+
       - name: Compute image namespace
         id: vars
         shell: bash
@@ -177,6 +179,18 @@ jobs:
           fi
           chmod 644 "$HOME/.ssh/known_hosts"
 
+      - name: Upload deploy bundle
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          set -euo pipefail
+          tar -czf - infra | ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+            "mkdir -p '$VPS_APP_DIR' && tar -xzf - -C '$VPS_APP_DIR' && chmod +x '$VPS_APP_DIR/infra/scripts/'*.sh"
+
       - name: Deploy over SSH
         shell: bash
         env:
@@ -200,9 +214,6 @@ jobs:
           cd "$VPS_APP_DIR"
 
           test -f infra/.env.production
-
-          git fetch origin main
-          git reset --hard origin/main
 
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
 
