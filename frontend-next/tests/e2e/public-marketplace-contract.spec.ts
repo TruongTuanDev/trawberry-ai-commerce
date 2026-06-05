@@ -33,10 +33,10 @@ async function approveSeller(request: APIRequestContext, email: string) {
   );
   const sellerLogin = await backendJson<{ accessToken: string }>(
     request,
-    "/api/auth/login",
+    "/api/auth/seller/login",
     {
       method: "POST",
-      data: { email, password },
+      data: { identifier: email, password },
     },
   );
   await backendJson(request, "/api/seller/onboarding/profile", {
@@ -71,11 +71,11 @@ async function approveSeller(request: APIRequestContext, email: string) {
   );
   const adminLogin = await backendJson<{ accessToken: string }>(
     request,
-    "/api/auth/login",
+    "/api/auth/admin/login",
     {
       method: "POST",
       data: {
-        email: "demo-admin@trawberry.local",
+        identifier: "demo-admin@trawberry.local",
         password: "DemoAdmin123!",
       },
     },

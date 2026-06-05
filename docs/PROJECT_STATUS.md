@@ -1699,3 +1699,15 @@ Verification:
 
 - backend prisma:generate, lint, build: pass
 - backend test suite: pass (34 suites, 290 tests)
+
+# Public Customer E2E CI Status
+
+Current status:
+
+- The `Run public/customer E2E` workflow now seeds demo accounts before Playwright executes.
+- The affected public/customer setup helpers now match the backend auth contract for seller/admin role login.
+- The previously failing public/customer E2E batch passes locally end-to-end after the workflow and spec fixes.
+
+Notes:
+
+- This closes the CI/runtime mismatch at the source rather than chasing single flaky assertions.

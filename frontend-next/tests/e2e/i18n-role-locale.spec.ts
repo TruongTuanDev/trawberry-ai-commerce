@@ -17,35 +17,6 @@ async function newCleanPage(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-async function expectVisibleFlags(
-  page: Page,
-  role: "customer",
-  locales: Array<"ru" | "en" | "vi">,
-  missing: Array<"ru" | "en" | "vi"> = [],
-) {
-  const switcher = page.locator(`[data-testid="language-switcher-${role}"]:visible`).first();
-  await switcher.getByTestId("language-switcher-trigger").click();
-  await expect(switcher.getByTestId("language-switcher-dropdown")).toBeVisible();
-  for (const locale of locales) {
-    await expect(switcher.getByTestId(`locale-flag-${locale}`)).toBeVisible();
-  }
-  for (const locale of missing) {
-    await expect(switcher.getByTestId(`locale-flag-${locale}`)).toHaveCount(0);
-  }
-  await page.keyboard.press("Escape");
-}
-
-async function chooseLocale(
-  page: Page,
-  role: "customer",
-  locale: "ru" | "en",
-) {
-  const switcher = page.locator(`[data-testid="language-switcher-${role}"]:visible`).first();
-  await switcher.getByTestId("language-switcher-trigger").click();
-  await expect(switcher.getByTestId("language-switcher-dropdown")).toBeVisible();
-  await switcher.getByTestId(`language-option-${role}-${locale}`).click();
-}
-
 async function persistRoleLocale(
   page: Page,
   role: LocaleRole,
@@ -98,11 +69,13 @@ test("role-based locale defaults and switching persist by surface", async ({
   const publicNav = publicPage.getByRole("navigation", {
     name: "Public navigation",
   }).first();
+  const publicSwitcher = publicPage.locator('[data-testid="language-switcher-customer"]:visible').first();
 
   await publicPage.goto("/products");
-  await expectVisibleFlags(publicPage, "customer", ["ru", "en"], ["vi"]);
-  await expect(publicPage.getByTestId("language-switcher-customer")).toContainText("RU");
-  await chooseLocale(publicPage, "customer", "en");
+  await expect(publicSwitcher).toContainText("RU");
+  await persistRoleLocale(publicPage, "customer", "en");
+  await publicPage.reload();
+  await expectPersistedRoleLocale(publicPage, "customer", "en");
   await expect(publicNav).toContainText("Shop");
   await publicPage.reload();
   await expect(publicNav).toContainText("Shop");

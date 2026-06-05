@@ -209,6 +209,9 @@ jobs:
           done
           exit 1
 
+      - name: Seed demo accounts for E2E
+        run: docker compose -f infra/docker-compose.yml exec -T -e DEMO_SEED_CONFIRM=true backend-nest npm run seed:demo
+
       - name: Wait for frontend
         run: |
           for i in {1..60}; do

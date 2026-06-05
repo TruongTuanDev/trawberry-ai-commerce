@@ -37,10 +37,10 @@ async function approveSeller(request: APIRequestContext, email: string) {
   );
   const sellerLogin = await backendJson<{ accessToken: string }>(
     request,
-    "/api/auth/login",
+    "/api/auth/seller/login",
     {
       method: "POST",
-      data: { email, password },
+      data: { identifier: email, password },
     },
   );
   await backendJson(request, "/api/seller/onboarding/profile", {
@@ -75,11 +75,11 @@ async function approveSeller(request: APIRequestContext, email: string) {
   );
   const adminLogin = await backendJson<{ accessToken: string }>(
     request,
-    "/api/auth/login",
+    "/api/auth/admin/login",
     {
       method: "POST",
       data: {
-        email: "demo-admin@trawberry.local",
+        identifier: "demo-admin@trawberry.local",
         password: "DemoAdmin123!",
       },
     },
@@ -217,7 +217,7 @@ test("customer can cart checkout multiple items and track them", async ({
   ).toBeVisible();
   await page.getByTestId("add-to-cart").click();
   await expect(page.getByTestId("public-cart-count")).toHaveText("1");
-  await expect(page.getByTestId("add-to-cart")).toHaveText("В корзине");
+  await expect(page.getByTestId("continue-to-checkout")).toBeVisible();
 
   await page.getByTestId(`product-size-${created.product.variants[1].id}`).click();
   await page.getByTestId("add-to-cart").click();

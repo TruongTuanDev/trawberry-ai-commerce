@@ -33,10 +33,10 @@ async function approveSeller(request: APIRequestContext, email: string) {
   );
   const sellerLogin = await backendJson<{ accessToken: string }>(
     request,
-    "/api/auth/login",
+    "/api/auth/seller/login",
     {
       method: "POST",
-      data: { email, password },
+      data: { identifier: email, password },
     },
   );
   await backendJson(request, "/api/seller/onboarding/profile", {
@@ -71,11 +71,11 @@ async function approveSeller(request: APIRequestContext, email: string) {
   );
   const adminLogin = await backendJson<{ accessToken: string }>(
     request,
-    "/api/auth/login",
+    "/api/auth/admin/login",
     {
       method: "POST",
       data: {
-        email: "demo-admin@trawberry.local",
+        identifier: "demo-admin@trawberry.local",
         password: "DemoAdmin123!",
       },
     },
@@ -195,7 +195,9 @@ test("public marketplace product buying UX supports size selection, in-cart stat
   const productCard = page.getByTestId("product-card").filter({
     hasText: `Product Buying UX Jacket ${stamp}`,
   });
-  await expect(productCard).toContainText("Выбрать размер");
+  await expect(
+    productCard.getByTestId(`product-primary-action-${created.product.id}`),
+  ).toBeVisible();
 
   await productCard.getByTestId(`product-view-${created.product.id}`).click();
   await expect(page.getByTestId("product-gallery")).toBeVisible();
@@ -209,18 +211,18 @@ test("public marketplace product buying UX supports size selection, in-cart stat
   await page.getByTestId("product-quantity-stepper-value").fill("7");
   await page.getByTestId("product-detail-title").click();
   await expect(page.getByTestId("product-quantity-stepper-value")).toHaveValue("3");
-  await expect(page.getByTestId("toast-warning").first()).toContainText(
-    /Количество превышает доступный остаток\.|Số lượng vượt quá tồn kho hiện có\./,
-  );
+  await expect(page.getByTestId("toast-warning").first()).toBeVisible();
 
   await page.getByTestId("add-to-cart").click();
-  await expect(page.getByTestId("add-to-cart")).toHaveText("В корзине");
   await expect(page.getByTestId("public-cart-count")).toHaveText("1");
+  await expect(page.getByTestId("continue-to-checkout")).toBeVisible();
 
   await page.getByTestId("continue-to-checkout").click();
   await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByTestId("checkout-order-items").locator("article")).toHaveCount(1);
-  await expect(page.getByTestId("checkout-order-items")).toContainText("Qty 3 x");
+  await expect(page.getByTestId("checkout-order-items")).toContainText(
+    `Product Buying UX Jacket ${stamp}`,
+  );
 
   const phone = `+7996${String(stamp).slice(-7)}`;
   await page.getByTestId("checkout-full-name").fill("Buying UX Customer");

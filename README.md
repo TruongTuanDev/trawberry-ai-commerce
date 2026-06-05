@@ -429,3 +429,8 @@ Kích thước lý tưởng nhất (Tỷ lệ 2.57 : 1):
 Tỷ lệ ảnh cho Mobile (Nếu upload ở trường Mobile Image URL):
 
 900 × 1200 px hoặc 1080 × 1350 px (Tỷ lệ đứng 3:4 hoặc 4:5 để tối ưu không gian hiển thị trên màn hình điện thoại).
+## CI note for public/customer E2E
+
+- The GitHub Actions Playwright public/customer batch seeds demo accounts before running E2E:
+  - `docker compose -f infra/docker-compose.yml exec -T -e DEMO_SEED_CONFIRM=true backend-nest npm run seed:demo`
+- This is required because seller-approval setup in the Dockerized E2E flow depends on the demo admin account being present.

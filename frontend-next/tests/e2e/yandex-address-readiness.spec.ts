@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { LOCALE_COOKIE_KEY, LOCALE_STORAGE_KEY } from "../../src/i18n/config";
 
 test("customer can promote address from manual-ready to api-ready with manual coordinates", async ({ page }) => {
   test.setTimeout(180000);
@@ -17,6 +18,21 @@ test("customer can promote address from manual-ready to api-ready with manual co
   await page.getByTestId("customer-login-password").fill(password);
   await page.getByTestId("customer-login-submit").click();
   await page.waitForURL("**/customer/orders");
+  await page.context().addCookies([
+    {
+      name: LOCALE_COOKIE_KEY,
+      value: "en",
+      url: "http://127.0.0.1:3000",
+    },
+  ]);
+  await page.evaluate(
+    ([storageKey, cookieKey]) => {
+      window.localStorage.setItem(storageKey, "en");
+      window.localStorage.setItem(`${storageKey}:customer`, "en");
+      document.cookie = `${cookieKey}=en; path=/; samesite=lax`;
+    },
+    [LOCALE_STORAGE_KEY, LOCALE_COOKIE_KEY] as const,
+  );
 
   await page.goto("/customer/account/addresses");
   await page.getByTestId("customer-address-fullName").fill("Address Readiness Customer");

@@ -26,9 +26,9 @@ async function approveSeller(request: APIRequestContext, email: string, fullName
     method: "POST",
     data: { email, password, fullName, role: "SELLER" },
   });
-  const sellerLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
+  const sellerLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/seller/login", {
     method: "POST",
-    data: { email, password },
+    data: { identifier: email, password },
   });
   await backendJson(request, "/api/seller/onboarding/profile", {
     method: "PUT",
@@ -56,9 +56,9 @@ async function approveSeller(request: APIRequestContext, email: string, fullName
       },
     },
   });
-  const adminLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/login", {
+  const adminLogin = await backendJson<{ accessToken: string }>(request, "/api/auth/admin/login", {
     method: "POST",
-    data: { email: "demo-admin@trawberry.local", password: "DemoAdmin123!" },
+    data: { identifier: "demo-admin@trawberry.local", password: "DemoAdmin123!" },
   });
   await backendJson(request, `/api/admin/sellers/${register.userId}/documents/${document.id}/approve`, {
     method: "POST",
