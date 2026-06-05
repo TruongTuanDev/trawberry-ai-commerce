@@ -54,6 +54,30 @@ async function registerSeller(request: APIRequestContext, email: string) {
   return { email, password };
 }
 
+async function resolveSellerCredentials(request: APIRequestContext) {
+  const seededSeller = {
+    email: "demo-seller@trawberry.local",
+    password: "DemoSeller123!",
+  };
+  const seededLogin = await request.fetch(
+    `${backendBaseUrl}/api/auth/seller/login`,
+    {
+      method: "POST",
+      data: {
+        identifier: seededSeller.email,
+        password: seededSeller.password,
+      },
+    },
+  );
+
+  if (seededLogin.ok()) {
+    return seededSeller;
+  }
+
+  const stamp = Date.now();
+  return registerSeller(request, `i18n-seller-${stamp}@example.com`);
+}
+
 async function newCleanPage(browser: Browser): Promise<Page> {
   const context = await browser.newContext({
     baseURL: frontendBaseUrl,
@@ -94,11 +118,7 @@ test("role-based locale defaults and switching persist by surface", async ({
   browser,
   request,
 }) => {
-  const stamp = Date.now();
-  const seller = await registerSeller(
-    request,
-    `i18n-seller-${stamp}@example.com`,
-  );
+  const seller = await resolveSellerCredentials(request);
 
   const publicPage = await newCleanPage(browser);
   const publicNav = publicPage.getByRole("navigation", {
