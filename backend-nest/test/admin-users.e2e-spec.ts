@@ -4,10 +4,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
 import { readBody } from './test-helpers';
 
 type StoredUser = {
@@ -65,14 +65,6 @@ describe('AdminUsersController (e2e)', () => {
       count: jest.fn(),
     },
     $transaction: jest.fn(),
-  };
-
-  const JWT_SECRET = 'dev-access-secret';
-
-  const signToken = (userId: string, email: string, role: string) => {
-    return jwt.sign({ sub: email, userId, email, role }, JWT_SECRET, {
-      expiresIn: '15m',
-    });
   };
 
   beforeEach(async () => {
@@ -265,33 +257,47 @@ describe('AdminUsersController (e2e)', () => {
     jest.clearAllMocks();
   });
 
-  const getAdminHeaders = () => {
-    const token = signToken(ADMIN_ID, 'admin@trawberry.local', 'ADMIN');
+  const getAdminHeaders = async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/admin/login')
+      .send({
+        identifier: 'admin@trawberry.local',
+        password: 'Password123!',
+      })
+      .expect(200);
+
     return {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${readBody<AuthResponseDto>(response).accessToken}`,
     };
   };
 
-  const getSellerHeaders = () => {
-    const token = signToken(SELLER_ID, 'seller@trawberry.local', 'SELLER');
+  const getSellerHeaders = async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/seller/login')
+      .send({
+        identifier: 'seller@trawberry.local',
+        password: 'Password123!',
+      })
+      .expect(200);
+
     return {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${readBody<AuthResponseDto>(response).accessToken}`,
     };
   };
 
   it('rejects non-admin access to users API', async () => {
+    const sellerHeaders = await getSellerHeaders();
     await request(app.getHttpServer())
       .get('/api/admin/users')
-      .set(getSellerHeaders())
-      .expect((response) => {
-        expect([401, 403]).toContain(response.status);
-      });
+      .set(sellerHeaders)
+      .expect(403);
   });
 
   it('lists all users in the system', async () => {
+    const adminHeaders = await getAdminHeaders();
     const res = await request(app.getHttpServer())
       .get('/api/admin/users')
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .expect(200);
 
     const body = readBody<any>(res);
@@ -301,9 +307,10 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('filters users by role', async () => {
+    const adminHeaders = await getAdminHeaders();
     const res = await request(app.getHttpServer())
       .get('/api/admin/users?role=SELLER')
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .expect(200);
 
     const body = readBody<any>(res);
@@ -312,9 +319,10 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('searches users by email or fullName', async () => {
+    const adminHeaders = await getAdminHeaders();
     const res = await request(app.getHttpServer())
       .get('/api/admin/users?q=customer')
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .expect(200);
 
     const body = readBody<any>(res);
@@ -323,6 +331,7 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('creates a new user and hashes password', async () => {
+    const adminHeaders = await getAdminHeaders();
     const payload = {
       fullName: 'New Customer',
       email: 'newcustomer@trawberry.local',
@@ -333,7 +342,7 @@ describe('AdminUsersController (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .post('/api/admin/users')
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send(payload)
       .expect(201);
 
@@ -359,6 +368,7 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('creates a seller and creates pending seller profile', async () => {
+    const adminHeaders = await getAdminHeaders();
     const payload = {
       fullName: 'New Seller',
       email: 'newseller@trawberry.local',
@@ -369,7 +379,7 @@ describe('AdminUsersController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/admin/users')
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send(payload)
       .expect(201);
 
@@ -384,6 +394,7 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('rejects user creation with duplicate email', async () => {
+    const adminHeaders = await getAdminHeaders();
     const payload = {
       email: 'customer@trawberry.local', // duplicate
       role: 'CUSTOMER',
@@ -392,12 +403,13 @@ describe('AdminUsersController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/admin/users')
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send(payload)
       .expect(409);
   });
 
   it('updates user successfully', async () => {
+    const adminHeaders = await getAdminHeaders();
     const payload = {
       fullName: 'Updated Name',
       status: 'DISABLED',
@@ -405,7 +417,7 @@ describe('AdminUsersController (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .patch(`/api/admin/users/${CUSTOMER_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send(payload)
       .expect(200);
 
@@ -415,13 +427,14 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('resets user password successfully', async () => {
+    const adminHeaders = await getAdminHeaders();
     const payload = {
       password: 'newsecretpassword',
     };
 
     await request(app.getHttpServer())
       .patch(`/api/admin/users/${CUSTOMER_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send(payload)
       .expect(200);
 
@@ -432,21 +445,23 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('prevents demoting or disabling the last active admin', async () => {
+    const adminHeaders = await getAdminHeaders();
     // Only admin-1 is active admin in the mock database
     await request(app.getHttpServer())
       .patch(`/api/admin/users/${ADMIN_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send({ role: 'CUSTOMER' })
       .expect(400);
 
     await request(app.getHttpServer())
       .patch(`/api/admin/users/${ADMIN_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send({ status: 'DISABLED' })
       .expect(400);
   });
 
   it('prevents disabling self even if there is another admin', async () => {
+    const adminHeaders = await getAdminHeaders();
     // Add another admin
     users.push({
       id: randomUUID(),
@@ -462,24 +477,26 @@ describe('AdminUsersController (e2e)', () => {
     // admin-1 tries to disable admin-1
     await request(app.getHttpServer())
       .patch(`/api/admin/users/${ADMIN_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .send({ status: 'DISABLED' })
       .expect(400);
   });
 
   it('prevents deleting self', async () => {
+    const adminHeaders = await getAdminHeaders();
     await request(app.getHttpServer())
       .delete(`/api/admin/users/${ADMIN_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .expect(400);
   });
 
   it('rejects deleting a user with dependencies', async () => {
+    const adminHeaders = await getAdminHeaders();
     mockOrderCount = 1;
 
     const res = await request(app.getHttpServer())
       .delete(`/api/admin/users/${CUSTOMER_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .expect(400);
 
     const body = readBody<any>(res);
@@ -487,6 +504,7 @@ describe('AdminUsersController (e2e)', () => {
   });
 
   it('successfully deletes a user without dependencies', async () => {
+    const adminHeaders = await getAdminHeaders();
     mockOrderCount = 0;
     mockCheckoutCount = 0;
     mockShopCount = 0;
@@ -494,7 +512,7 @@ describe('AdminUsersController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete(`/api/admin/users/${CUSTOMER_ID}`)
-      .set(getAdminHeaders())
+      .set(adminHeaders)
       .expect(200);
 
     const found = users.find((u) => u.id === CUSTOMER_ID);
