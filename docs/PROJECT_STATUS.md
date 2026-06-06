@@ -1,5 +1,43 @@
 # Project Status
 
+## Seller Center Navigation UX Refactor - 2026-06-06
+
+- Status: implemented in `frontend-next`
+- seller sidebar is now config-driven and grouped instead of a single long flat list
+- current groups:
+  - Overview
+  - Catalog
+  - Sales
+  - Delivery & operations
+  - Payments & finance
+  - Settings
+- route behavior is preserved:
+  - no seller routes were removed
+  - no redirects were introduced
+  - nested routes still highlight the correct parent section
+- sidebar UX improvements:
+  - collapsible groups with localStorage persistence
+  - current route group always expands
+  - compact search field for section filtering
+  - mobile drawer menu with hamburger trigger
+- current limitation:
+  - this phase changes only navigation UX; it does not consolidate or merge seller pages themselves
+  - several seller locale strings outside the navigation scope still rely on English fallback in older screens
+
+## Role i18n Guardrails and Base Coverage - 2026-06-06
+
+- Status: implemented in `frontend-next`
+- Root-cause cleanup completed for the recurring "raw i18n key on UI" regression across customer, seller, and admin surfaces.
+- `translate()` now resolves in this order:
+  - active locale
+  - English base dictionary
+  - human-readable fallback label
+- `frontend-next/scripts/check-i18n-keys.mjs` now audits every used translation key under `src/app` and `src/components`.
+- `npm run check:i18n` now passes with zero missing English base keys for active frontend code paths.
+- seller dashboard namespace coverage was repaired for `seller.dashboard.*`.
+- Current limitation:
+  - `ru` and `vi` still rely on English fallback in many older screens, so locale completeness is not finished yet even though raw keys are now blocked from leaking into the UI.
+
 ## Public Commerce i18n Completion (Phase 1) - 2026-05-25
 
 - Status: implemented in `frontend-next`
@@ -1733,3 +1771,15 @@ Current status:
 Notes:
 
 - This removes the `Repository not found` failure mode from the server-side deploy path as long as SSH access and GHCR access remain valid.
+
+# Seller Center Navigation UX Status
+
+Current status:
+
+- Seller Center navigation now uses grouped, collapsible sections shared by desktop sidebar and mobile drawer views.
+- All existing seller routes remain intact, and nested seller pages now inherit the correct active state from the matching section item.
+- Seller shell search and grouped navigation labels are localized through the shared dictionaries instead of hardcoded copy.
+
+Notes:
+
+- This phase fixes both the navigation usability problem and the recurring seller raw-key issue by keeping route structure config-driven and by backfilling missing seller navigation/dashboard i18n keys.

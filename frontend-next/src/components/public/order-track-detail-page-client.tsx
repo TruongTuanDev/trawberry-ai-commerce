@@ -9,11 +9,20 @@ import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { PublicShell } from "@/components/public/public-shell";
 import {
   trackOrderById,
+  type CheckoutPaymentMethod,
   uploadPaymentProof,
   type PublicTrackedOrder,
 } from "@/lib/public-api";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
 import { useI18n } from "@/i18n/use-i18n";
+
+const paymentMethodTranslationKeys: Partial<
+  Record<CheckoutPaymentMethod, string>
+> = {
+  PREPAID_SELLER_QR: "checkout.prepaidSellerQrLabel",
+  PAY_ON_DELIVERY_SELLER_QR: "checkout.podSellerQrLabel",
+  DEPOSIT_THEN_DELIVERY_PAYMENT: "checkout.depositLabel",
+};
 
 export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const { t } = useI18n("customer");
@@ -28,6 +37,18 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
   const { run: runUpload, isRunning: uploading } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const formatPaymentMethodLabel = (
+    method: string | null | undefined,
+    fallbackLabel: string | null | undefined,
+  ) => {
+    if (method && method in paymentMethodTranslationKeys) {
+      return t(
+        paymentMethodTranslationKeys[method as CheckoutPaymentMethod] as string,
+      );
+    }
+
+    return fallbackLabel ?? method ?? t("common.unknown");
+  };
   const isPayOnDeliverySellerQr =
     order?.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
   const fulfillmentStatus = order ? getBuyerFulfillmentStatus(order, t) : null;
@@ -229,9 +250,10 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                         : t("orderTrack.pendingReview")}
                     </Metric>
                     <Metric label={t("orderTrack.paymentMethod")}>
-                      {order.paymentMethodLabel ??
-                        order.paymentMethod ??
-                        t("common.unknown")}
+                      {formatPaymentMethodLabel(
+                        order.paymentMethod,
+                        order.paymentMethodLabel,
+                      )}
                     </Metric>
                     <Metric label={t("seller.paymentDetail.total")}>{order.totalAmount}</Metric>
                   </div>

@@ -65,6 +65,20 @@ CI safety defaults:
 - no production secrets required
 - no real Wildberries or carrier API calls in default CI
 
+## Frontend i18n Guardrails
+
+The active frontend i18n contract now has two safety layers:
+
+- `src/i18n/translate.ts` falls back to English first, then to a human-readable label instead of exposing raw keys like `seller.dashboard.title`
+- `npm run check:i18n` audits all `t("...")` / `translate(..., "...")` usages in `frontend-next/src` and fails when any used key is missing from `en.json`
+
+Recommended local check:
+
+```bash
+cd frontend-next
+npm run check:i18n
+```
+
 ## Category Backfill Script
 
 When historical products still have `categoryName` / `sourceCategoryName` but no linked `categoryId`, run:

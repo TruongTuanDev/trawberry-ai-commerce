@@ -1,5 +1,54 @@
 # Phase Report
 
+## 2026-06-06 Seller Center Navigation UX Refactor
+
+- Status: Implemented on current branch
+- Root UX issue:
+  - seller sidebar had grown into one long flat list, mixing catalog, sales, payments, onboarding, and settings in a way that made scanning and mobile use harder
+  - route depth such as `/seller/products/[id]`, `/seller/payments/[orderId]`, and `/seller/orders/[id]/shipping-label` also needed clearer parent highlighting without changing route behavior
+- Implemented fix:
+  - extracted seller navigation into config-driven groups in `frontend-next/src/components/seller/seller-nav-config.ts`
+  - grouped navigation into:
+    - Overview
+    - Catalog
+    - Sales
+    - Delivery & operations
+    - Payments & finance
+    - Settings
+  - added collapsible sections with localStorage persistence for collapse state
+  - ensured the active route group auto-expands and child routes highlight the correct parent item
+  - added a compact sidebar search field for section filtering
+  - added a mobile hamburger/drawer navigation while preserving desktop sticky sidebar behavior
+  - preserved all existing seller routes and access logic; only the menu presentation changed
+- Verification:
+  - `frontend-next npm run check:i18n`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+- Notes:
+  - no checkout/order/payment/shipping/WB sync/AI Try-On business logic or API contracts were changed
+
+## 2026-06-06 Role i18n Root-Cause Cleanup and Guardrails
+
+- Status: Implemented on current branch
+- Root cause:
+  - `translate()` previously returned the raw key whenever both the active locale and `en` were missing a path.
+  - frontend dictionaries had drifted from code usage, especially across mixed namespaces like `seller.*`, `adminShell.*`, `adminUsers.*`, `catalog.*`, `public.*`, and `aiTryOn.*`.
+  - this created repeated UI regressions where seller/admin/customer screens exposed keys such as `seller.dashboard.title` directly in production.
+- Implemented fix:
+  - added a readable final fallback in `frontend-next/src/i18n/translate.ts` so missing keys no longer leak raw i18n ids into the UI
+  - added `frontend-next/scripts/check-i18n-keys.mjs` plus `npm run check:i18n` to audit all used translation keys in `src/app` and `src/components`
+  - backfilled all currently used missing English base keys so `en` is now the complete fallback source for active frontend code paths
+  - added missing `seller.dashboard.*` translations used by the seller dashboard and preserved earlier admin/public fixes
+- Verification:
+  - `frontend-next node scripts/check-i18n-keys.mjs --write-en`: pass
+  - `frontend-next npm run check:i18n`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+- Remaining gap:
+  - `ru` and `vi` still have large fallback coverage gaps, but they now fall back to readable English instead of raw keys
+  - future locale-completion work should focus on `seller.aiImages.*`, `adminAiSettings.*`, `catalog.*`, `public.shop.*`, and `aiTryOn.*`
+
 ## 2026-06-04 Visual Product Search Phase 1
 
 - Status: Implemented on current branch
@@ -3851,3 +3900,26 @@ Root cause summary:
 
 - The VPS deploy script assumed the server itself could read `origin/main`.
 - Once repo access on the server broke or was removed, deployment failed before any image pull or compose update could start.
+
+# Phase Report: Seller Center Navigation UX Refactor
+
+Implemented:
+
+- Replaced the flat seller sidebar with grouped, collapsible navigation driven by a shared config.
+- Preserved all existing seller routes and role access while improving active-state handling for nested seller pages.
+- Added a seller sidebar search box so sellers can quickly filter sections and links without changing routes.
+- Added a mobile drawer version of the grouped seller navigation with the same route coverage and active-state logic.
+- Added the missing `seller.dashboard.*` and `sellerShell.groups.*` labels required by the refactored seller shell.
+- Corrected corrupted Russian and Vietnamese `seller.orderDetail.*` strings so seller i18n E2E checks no longer fail on garbled text.
+
+Verification:
+
+- `frontend-next npm run check:i18n`: pass
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/i18n-seller-operations.spec.ts --workers=1`: pass
+
+Root cause summary:
+
+- The seller shell had drifted into a hardcoded flat navigation tree, so active states and mobile behavior were brittle and hard to extend.
+- Seller-facing dictionary coverage had also drifted from the code, causing raw keys and corrupted localized labels to appear in seller routes even when the i18n runtime itself was working.

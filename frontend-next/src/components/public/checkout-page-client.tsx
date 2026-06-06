@@ -53,6 +53,14 @@ type ShopCheckoutGroup = {
   subtotal: number;
 };
 
+const paymentMethodTranslationKeys: Partial<
+  Record<CheckoutPaymentMethod, string>
+> = {
+  PREPAID_SELLER_QR: "checkout.prepaidSellerQrLabel",
+  PAY_ON_DELIVERY_SELLER_QR: "checkout.podSellerQrLabel",
+  DEPOSIT_THEN_DELIVERY_PAYMENT: "checkout.depositLabel",
+};
+
 function groupItemsByShop(
   items: CartItem[],
   lineTotals: Map<string, number>,
@@ -109,6 +117,19 @@ export function CheckoutPageClient({
   const [validationRequestKey, setValidationRequestKey] = useState(0);
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
+
+  const formatPaymentMethodLabel = (
+    method: string | null | undefined,
+    fallbackLabel: string | null | undefined,
+  ) => {
+    if (method && method in paymentMethodTranslationKeys) {
+      return t(
+        paymentMethodTranslationKeys[method as CheckoutPaymentMethod] as string,
+      );
+    }
+
+    return fallbackLabel ?? method ?? t("common.unknown");
+  };
 
   useEffect(() => {
     hydrateCart();
@@ -509,9 +530,12 @@ export function CheckoutPageClient({
                         - {t("orderTrack.orderId")} {splitOrder.orderId} - {t("checkout.itemsCountText", { count: splitOrder.itemsCount })} -{" "}
                         {splitOrder.totalAmount}
                       </p>
-                      {splitOrder.paymentMethodLabel ? (
+                      {splitOrder.paymentMethodLabel || splitOrder.paymentMethod ? (
                         <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                          {splitOrder.paymentMethodLabel}
+                          {formatPaymentMethodLabel(
+                            splitOrder.paymentMethod,
+                            splitOrder.paymentMethodLabel,
+                          )}
                         </p>
                       ) : null}
                       <PaymentDetailsPanel

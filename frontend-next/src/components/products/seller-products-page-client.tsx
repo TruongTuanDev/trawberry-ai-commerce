@@ -8,10 +8,10 @@ import { ProductTable } from "@/components/products/product-table";
 import {
   bulkUpdateShopProducts,
   createSellerShop,
-  createShopProduct,
   deleteShopProduct,
   getShopProductById,
   getShopProducts,
+  saveWbSyncCredentials,
   updateShopProduct,
   updateShopProductInventory,
   type BulkProductVariantMode,
@@ -52,16 +52,7 @@ export function SellerProductsPageClient() {
     [t],
   );
 
-  const [shopForm, setShopForm] = useState({ name: "", slug: "" });
-  const [productForm, setProductForm] = useState({
-    title: "",
-    description: "",
-    brand: "",
-    categoryId: "",
-    categoryName: "",
-    price: "100",
-    stockQuantity: "5",
-  });
+  const [shopForm, setShopForm] = useState({ name: "", apiKey: "" });
   const [filters, setFilters] = useState({
     search: searchParams.get("search") ?? "",
     status: searchParams.get("status") ?? "",
@@ -77,7 +68,6 @@ export function SellerProductsPageClient() {
     error: string | null;
   }>({ items: [], meta: null, loading: false, error: null });
   const { run: runShop, isRunning: creatingShop } = useActionFeedback();
-  const { run: runCreate, isRunning: creatingProduct } = useActionFeedback();
   const { run: runBulk, isRunning: bulkSaving } = useActionFeedback();
   const { run: runProductAction } = useActionFeedback();
   const [bulkEditMode, setBulkEditMode] = useState<BulkEditMode>(null);
@@ -349,65 +339,24 @@ export function SellerProductsPageClient() {
     setCreateError(null);
     await runShop({
       action: async () => {
+        const trimmedName = shopForm.name.trim();
+        const trimmedApiKey = shopForm.apiKey.trim();
         const created = await createSellerShop({
-          name: shopForm.name.trim(),
-          slug: shopForm.slug.trim(),
+          name: trimmedName,
+          slug: buildShopSlug(trimmedName),
           paymentInstructions: "Manual transfer after checkout. Seller confirms payment proof in seller center.",
         });
+
+        await saveWbSyncCredentials(created.id, trimmedApiKey);
         await loadShops();
         selectShop(created.id);
         setCreateMessage(t("seller.products.messages.shopCreatedNamed", { name: created.name }));
-        setShopForm({ name: "", slug: "" });
+        setShopForm({ name: "", apiKey: "" });
         router.refresh();
         return created;
       },
       successMessage: t("seller.products.messages.shopCreated"),
       errorMessage: t("seller.products.messages.shopCreateFailed"),
-    }).catch((error) => {
-      setCreateError(error.message);
-    });
-  };
-
-  const handleCreateProduct = async () => {
-    if (!currentShopId) {
-      return;
-    }
-
-    setCreateMessage(null);
-    setCreateError(null);
-    await runCreate({
-      action: async () => {
-        const stamp = Date.now();
-        const title = productForm.title.trim();
-        const created = await createShopProduct(currentShopId, {
-          wbNmId: Number(String(stamp).slice(-9)),
-          wbTitle: title,
-          localTitle: title,
-          wbDescription: productForm.description.trim() || undefined,
-          localDescription: productForm.description.trim() || undefined,
-          brand: productForm.brand.trim() || undefined,
-          categoryId: productForm.categoryId ? Number(productForm.categoryId) : undefined,
-          categoryName: productForm.categoryName.trim() || "Seller Created",
-          wbVendorCode: `UI-${stamp}`,
-          seoSlug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-          visibility: "ACTIVE",
-          variants: [{
-            chrtId: Number(String(stamp).slice(-10)),
-            techSize: "ONE",
-            wbSize: "One size",
-            basePrice: Math.max(1, Number(productForm.price) || 1),
-            stockQuantity: Math.max(0, Number(productForm.stockQuantity) || 0),
-            lowStockThreshold: 2,
-            trackInventory: true,
-          }],
-        });
-        setProductForm({ title: "", description: "", brand: "", categoryId: "", categoryName: "", price: "100", stockQuantity: "5" });
-        router.push(`/seller/products/${created.id}`);
-        router.refresh();
-        return created;
-      },
-      successMessage: t("seller.products.messages.productCreated"),
-      errorMessage: t("seller.products.messages.productCreateFailed"),
     }).catch((error) => {
       setCreateError(error.message);
     });
@@ -420,61 +369,27 @@ export function SellerProductsPageClient() {
           {createMessage ? <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{createMessage}</div> : null}
           {createError ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{createError}</div> : null}
 
-          {!currentShopId ? (
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-shop-panel">
-              <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.products.createFirstShop")}</p>
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-shop-panel">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                {currentShopId ? t("seller.products.addAnotherShop") : t("seller.products.createFirstShop")}
+              </p>
               <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
                   <span>{t("seller.products.shopName")}</span>
                   <input value={shopForm.name} onChange={(event) => setShopForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-shop-name" />
                 </label>
                 <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                  <span>{t("seller.products.shopSlug")}</span>
-                  <input value={shopForm.slug} onChange={(event) => setShopForm((current) => ({ ...current, slug: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-shop-slug" />
+                  <span>{t("seller.products.shopApiKey")}</span>
+                  <input value={shopForm.apiKey} onChange={(event) => setShopForm((current) => ({ ...current, apiKey: event.target.value }))} placeholder={t("seller.wbSync.apiKeyPlaceholder")} type="password" className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-shop-api-key" />
                 </label>
-                <button type="button" onClick={() => void handleCreateShop()} disabled={creatingShop || !shopForm.name.trim() || !shopForm.slug.trim()} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="create-shop-submit">
-                  {creatingShop ? t("common.loading") : t("seller.products.createFirstShop")}
+                <button type="button" onClick={() => void handleCreateShop()} disabled={creatingShop || !shopForm.name.trim() || !shopForm.apiKey.trim()} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="create-shop-submit">
+                  {creatingShop ? t("common.loading") : t("seller.products.addShop")}
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5" data-testid="create-product-panel">
-              <p className="text-sm font-semibold text-[var(--foreground)]">{t("seller.products.createProduct")}</p>
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                <CreateInput label={t("seller.products.name")} value={productForm.title} onChange={(value) => setProductForm((current) => ({ ...current, title: value }))} testId="create-product-name" />
-                <CreateInput label={t("seller.products.brand")} value={productForm.brand} onChange={(value) => setProductForm((current) => ({ ...current, brand: value }))} testId="create-product-brand" />
-                <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
-                  <span>{t("seller.products.internalCategory")}</span>
-                  <select
-                    value={productForm.categoryId}
-                    onChange={(event) => {
-                      const selected = allCategories.find((category) => category.id === event.target.value);
-                      setProductForm((current) => ({ ...current, categoryId: event.target.value, categoryName: selected?.name ?? current.categoryName }));
-                    }}
-                    className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
-                    data-testid="create-product-category-id"
-                  >
-                    <option value="">{t("seller.products.noInternalCategory")}</option>
-                    {allCategories.map((category) => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
-                    ))}
-                  </select>
-                </label>
-                <CreateInput label={t("seller.products.category")} value={productForm.categoryName} onChange={(value) => setProductForm((current) => ({ ...current, categoryName: value }))} testId="create-product-category" />
-                <CreateInput label={t("seller.products.price")} type="number" value={productForm.price} onChange={(value) => setProductForm((current) => ({ ...current, price: value }))} testId="create-product-price" />
-                <CreateInput label={t("seller.products.initialStock")} type="number" value={productForm.stockQuantity} onChange={(value) => setProductForm((current) => ({ ...current, stockQuantity: value }))} testId="create-product-stock" />
-                <label className="space-y-2 text-sm font-semibold text-[var(--foreground)] lg:col-span-3">
-                  <span>{t("seller.products.description")}</span>
-                  <textarea value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="create-product-description" />
-                </label>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button type="button" onClick={() => void handleCreateProduct()} disabled={creatingProduct || !productForm.title.trim()} className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60" data-testid="create-product-submit">
-                  {creatingProduct ? t("common.loading") : t("seller.products.createProduct")}
-                </button>
-              </div>
-            </div>
-          )}
+              <p className="mt-3 text-sm text-[var(--muted)]">
+                {t("seller.products.shopCreateHelper")}
+              </p>
+          </div>
 
           <div className="flex flex-wrap gap-2">
             {catalogTabs.map((tab) => (
@@ -669,3 +584,12 @@ function CreateInput({
     </label>
   );
 }
+  const buildShopSlug = (name: string) => {
+    const base = name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    return base.length >= 3 ? `${base}-${Date.now().toString().slice(-6)}` : `shop-${Date.now().toString().slice(-8)}`;
+  };
