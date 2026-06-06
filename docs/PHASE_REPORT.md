@@ -1,5 +1,85 @@
 # Phase Report
 
+## 2026-06-07 Final V1 Report and Demo Freeze Phase 4.5
+
+- Status: Implemented on current branch
+- Scope:
+  - froze the V1 feature set for final demo/reporting without adding major new features
+  - verified the stable V1 loop remains intact:
+    - seller wallet dev funding
+    - campaign create and edit
+    - campaign target add and remove
+    - campaign activation
+    - sponsored recommendation boost
+    - sponsored click attribution
+    - CPC billing ledger write
+    - wallet-limit blocking
+    - budget-exhaustion blocking
+  - added a final regression for `budget_exhausted` sponsored click protection
+  - polished seller campaign copy so the demo more clearly explains:
+    - status
+    - budget
+    - remaining budget
+    - spend readiness
+    - impressions and clicks in performance
+  - updated final V1 docs for:
+    - demo script
+    - completed feature list
+    - intentionally excluded feature list
+    - post-V1 roadmap
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, AI Try-On, or legacy strawberry business logic was modified
+  - no new payment gateway, invoice, fraud, or analytics platform work was introduced
+  - public recommendation APIs remain backward compatible and still avoid leaking private billing or campaign internals
+- Final demo script:
+  1. log in as seller
+  2. open `/seller/billing`
+  3. add demo wallet credit
+  4. open `/seller/campaigns`
+  5. create a campaign
+  6. add product targets
+  7. activate the campaign
+  8. open a public page with recommendations
+  9. click a sponsored recommendation
+  10. return to `/seller/billing` and show the charge ledger row
+  11. return to `/seller/campaigns` and show campaign spend plus performance
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass
+  - `git ls-files data.xlsx`: pass
+- Completed V1 features:
+  - recommendation and ranking
+  - recommendation QA
+  - sponsored ranking
+  - campaign management
+  - campaign product targets
+  - seller wallet
+  - billing ledger
+  - sponsored CPC attribution
+  - campaign spend tracking
+  - budget and wallet limits
+  - safe dev/demo wallet funding
+  - seller billing UI
+  - seller campaign UI
+- Intentionally excluded from V1:
+  - real payment gateway
+  - invoice flow
+  - fraud prevention
+  - advanced campaign analytics
+  - CPM batching
+  - admin finance review
+  - production monitoring
+  - campaign moderation
+- Next recommended phase:
+  - Post-V1 production hardening and operational rollout planning
+
 ## 2026-06-07 V1 Demo Readiness and Safe Dev Funding Phase 4.4
 
 - Status: Implemented on current branch
@@ -58,6 +138,7 @@
   - demo funding is still intentionally local/dev-only
 - Next recommended phase:
   - Phase 4.5: demo fixture polish, safer reconciliation guardrails, or broader reporting handoff support
+
 ## 2026-06-07 Campaign Billing V1 Completion Phase 4.3
 
 - Status: Implemented on current branch

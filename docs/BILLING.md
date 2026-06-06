@@ -1,5 +1,41 @@
 # Billing
 
+## Phase 4.5 final V1 demo freeze
+
+Phase 4.5 freezes the wallet and ledger demo flow for final reporting.
+
+Final V1 billing demo checklist:
+
+1. Log in as seller.
+2. Open `/seller/billing`.
+3. Show wallet balance, reserved balance, and available balance.
+4. Explain that the funding action is demo/dev only, not a real payment flow.
+5. Add a small demo wallet credit when the dev flag is enabled.
+6. Confirm the `Dev/demo funding` ledger entry appears.
+7. Trigger a sponsored recommendation click from the public storefront.
+8. Return to `/seller/billing`.
+9. Show the campaign-linked charge row in the ledger.
+10. Explain the wallet movement and how it connects to campaign spend.
+
+Final V1 completed billing-side features:
+
+- seller wallet summary
+- reserved balance tracking
+- available balance tracking
+- immutable ledger history
+- campaign-linked CPC charge rows
+- safe local demo funding
+- no leakage of user/session/private billing internals on public APIs
+
+Intentionally excluded from V1:
+
+- real payment gateway top-up
+- invoices
+- fraud controls
+- automated finance review
+- advanced billing analytics
+- customer-facing billing changes
+
 ## Phase 4.4 V1 demo readiness and safe dev funding
 
 Phase 4.4 makes the seller billing foundation demo-ready without introducing a real payment provider or changing checkout behavior.

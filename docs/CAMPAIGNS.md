@@ -1,5 +1,53 @@
 # Campaigns
 
+## Phase 4.5 final V1 demo freeze
+
+Phase 4.5 freezes the campaign feature set for final reporting and demo use.
+
+Final V1 campaign demo checklist:
+
+1. Log in as seller.
+2. Open `/seller/billing`.
+3. Add a small demo wallet credit when dev funding is enabled.
+4. Open `/seller/campaigns`.
+5. Create a draft campaign.
+6. Add one or more published product targets from the same shop.
+7. Set `cpc` billing mode and an optional `budgetLimit`.
+8. Activate the campaign.
+9. Open a public recommendation surface.
+10. Click a sponsored recommendation.
+11. Return to `/seller/campaigns`.
+12. Show:
+  - campaign status
+  - budget
+  - remaining budget
+  - charged clicks
+  - impressions or events when available
+  - wallet blocked / budget exhausted state if relevant
+
+Final V1 completed campaign-side features:
+
+- campaign draft/create/edit/archive
+- product targeting by seller shop
+- activation safety checks
+- bounded sponsored boost eligibility
+- campaign spend tracking
+- charged click visibility
+- remaining budget visibility
+- wallet blocked visibility
+- budget exhausted visibility
+- recent sponsored event visibility
+
+Intentionally excluded from V1:
+
+- auction bidding
+- real seller funding
+- invoice workflow
+- fraud tooling
+- advanced analytics
+- campaign moderation workflow
+- production finance review workflow
+
 ## Phase 4.3 V1 completion
 
 Phase 4.3 completes the first demo-ready sponsored campaign loop for the active `backend-nest` + `frontend-next` stack.

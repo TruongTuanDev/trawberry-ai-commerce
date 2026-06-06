@@ -1,5 +1,50 @@
 # Project Status
 
+## Final V1 Report and Demo Freeze Phase 4.5 - 2026-06-07
+
+- Status: demo-ready and frozen for final reporting in `backend-nest` and `frontend-next`
+- Final V1 completed features:
+  - public recommendation ranking with backward-compatible APIs
+  - internal recommendation QA and explainability tooling
+  - sponsored ranking with bounded boosts
+  - seller campaign management and product targeting
+  - seller wallet and billing ledger foundation
+  - sponsored CPC attribution and transactional ledger charging
+  - campaign spend tracking with wallet and budget protection
+  - safe dev/demo wallet funding for local reporting
+  - seller billing UI at `/seller/billing`
+  - seller campaign UI at `/seller/campaigns`
+- Intentionally excluded from V1:
+  - real payment gateway or seller top-up
+  - invoice generation
+  - fraud detection
+  - advanced campaign analytics
+  - CPM batching and settlement
+  - production finance review workflows
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - targeted campaign and billing regression coverage: pass
+- Remaining gaps:
+  - V1 remains demo-grade and internal in funding mode
+  - production monitoring, moderation, finance review, and reconciliation are still future work
+- Post-V1 roadmap:
+  - real payment gateway and seller top-up
+  - invoices and finance review
+  - fraud prevention
+  - advanced campaign analytics
+  - CPM batching
+  - production monitoring
+  - campaign moderation
+  - safer reconciliation and operational tooling
+- Next recommended phase:
+  - Post-V1 production hardening and operational rollout planning
+
 ## V1 Demo Readiness and Safe Dev Funding Phase 4.4 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`
@@ -25,6 +70,7 @@
   - demo funding remains intentionally local/dev-only
 - Next recommended phase:
   - Phase 4.5: stronger V1 reporting polish, seller demo fixture setup, or safer funding/reconciliation guardrails
+
 ## Campaign Billing V1 Completion Phase 4.3 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

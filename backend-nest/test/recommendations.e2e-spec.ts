@@ -10,6 +10,8 @@ import { BillingService } from '../src/modules/billing/billing.service';
 import { RecommendationsService } from '../src/modules/recommendations/recommendations.service';
 import { readBody } from './test-helpers';
 
+jest.setTimeout(30000);
+
 type StoredProduct = {
   id: string;
   shopId: string;
@@ -2266,6 +2268,135 @@ describe('RecommendationsController (e2e)', () => {
     ).toEqual(
       expect.objectContaining({
         chargeStatus: 'insufficient_wallet',
+      }),
+    );
+  });
+
+  it('marks sponsored clicks as budget_exhausted when the campaign budget is already consumed', async () => {
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+    recommendationsService = app.get(RecommendationsService);
+
+    const sponsoredProduct = products[1];
+    recommendationEvents.push({
+      id: 'charged-budget-event-1',
+      campaignId: 'campaign-budget-1',
+      productId: sponsoredProduct.id,
+      type: 'click',
+      placement: 'home',
+      scenarioType: 'home',
+      algorithm: 'rule_based_v2',
+      sponsored: true,
+      charged: true,
+      chargeStatus: 'charged',
+      billingMode: 'cpc',
+      cost: new Prisma.Decimal('1.00'),
+      ledgerEntryId: 'ledger-budget-1',
+      createdAt: new Date('2026-06-07T00:00:00Z'),
+    });
+
+    prismaMock.sellerWallet.findMany.mockResolvedValue([
+      {
+        shopId: sponsoredProduct.shopId,
+        balance: new Prisma.Decimal('50'),
+        reservedBalance: new Prisma.Decimal('0'),
+        status: 'active',
+      },
+    ]);
+    prismaMock.sellerWallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      shopId: sponsoredProduct.shopId,
+      balance: new Prisma.Decimal('50'),
+      reservedBalance: new Prisma.Decimal('0'),
+      currency: 'RUB',
+      status: 'active',
+      createdAt: new Date('2026-06-07T00:00:00Z'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+    });
+    prismaMock.sponsoredCampaign.findMany.mockResolvedValue([
+      {
+        id: 'campaign-budget-1',
+        shopId: sponsoredProduct.shopId,
+        name: 'Budget Exhausted Campaign',
+        description: null,
+        status: 'active',
+        scenarioTypes: ['home'],
+        startAt: new Date('2026-06-01T00:00:00Z'),
+        endAt: new Date('2026-06-30T00:00:00Z'),
+        budgetLimit: new Prisma.Decimal('1.00'),
+        billingMode: 'cpc',
+        maxBoost: new Prisma.Decimal('4'),
+        updatedAt: new Date('2026-06-07T00:00:00Z'),
+        targets: [
+          {
+            id: 'target-budget-1',
+            campaignId: 'campaign-budget-1',
+            productId: sponsoredProduct.id,
+            boost: new Prisma.Decimal('4'),
+            status: 'active',
+            createdAt: new Date('2026-06-07T00:00:00Z'),
+            updatedAt: new Date('2026-06-07T00:00:00Z'),
+            product: {
+              id: sponsoredProduct.id,
+              shopId: sponsoredProduct.shopId,
+              wbTitle: sponsoredProduct.wbTitle,
+              localTitle: sponsoredProduct.localTitle,
+              seoSlug: sponsoredProduct.seoSlug,
+            },
+          },
+        ],
+      },
+    ]);
+    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
+      id: 'campaign-budget-1',
+      shopId: sponsoredProduct.shopId,
+      status: 'active',
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('1.00'),
+      billingMode: 'cpc',
+    });
+
+    const recommendationsResponse = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3')
+      .expect(200);
+    const recommendationsBody = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+        trackingToken?: string | null;
+      }>;
+    }>(recommendationsResponse);
+    const sponsoredItem = recommendationsBody.items.find(
+      (item) => item.product.id === sponsoredProduct.id,
+    );
+
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        idempotencyKey: 'click-budget-exhausted-1',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(0);
+    expect(
+      prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
+    ).toEqual(
+      expect.objectContaining({
+        chargeStatus: 'budget_exhausted',
       }),
     );
   });

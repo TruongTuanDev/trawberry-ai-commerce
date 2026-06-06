@@ -42,12 +42,12 @@ const CAMPAIGN_COPY = {
   createEyebrow: "Create",
   createTitle: "Create a campaign draft",
   createDescription:
-    "Start with a draft, then attach product targets before moving the campaign to active.",
+    "Start with a draft, attach product targets, set the budget and billing mode, then move the campaign to active for the demo flow.",
   createAction: "Create campaign",
   listEyebrow: "Manage",
   listTitle: "Campaign list",
   listDescription:
-    "Edit lifecycle, targeting, and safe billing placeholders without exposing anything on public pages.",
+    "Review campaign status, budget, spend, remaining budget, targets, and safe billing behavior without exposing anything on public pages.",
   empty: "No campaigns yet for this shop.",
   saveCampaign: "Save campaign",
   archiveCampaign: "Archive campaign",
@@ -72,8 +72,8 @@ const CAMPAIGN_COPY = {
     descriptionPlaceholder:
       "Explain what this campaign should promote and what QA should watch.",
     scenarioTypes: "Scenario types",
-    billingMode: "Billing mode placeholder",
-    budgetLimit: "Budget limit placeholder",
+    billingMode: "Billing mode",
+    budgetLimit: "Budget limit",
     maxBoost: "Max boost",
     status: "Status",
     startAt: "Start at",
@@ -974,7 +974,7 @@ export function SellerCampaignsPageClient() {
                     <p className="mt-2 text-sm text-[var(--muted)]">
                       {copy.billingPanelDescription}
                     </p>
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <div className="mt-4 grid gap-3 md:grid-cols-4">
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Mode</p>
                         <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.mode}</p>
@@ -985,7 +985,7 @@ export function SellerCampaignsPageClient() {
                           {campaign.billing.budgetLimit ?? "Unlimited"}
                         </p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          Remaining {campaign.billing.remainingBudget ?? "∞"}
+                          Remaining {campaign.billing.remainingBudget ?? "Unlimited"}
                         </p>
                       </article>
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
@@ -993,6 +993,15 @@ export function SellerCampaignsPageClient() {
                         <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.cpcAmount}</p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
                           Charged clicks {campaign.billing.chargedClicks} / total billed {campaign.billing.totalChargedEvents}
+                        </p>
+                      </article>
+                      <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Readiness</p>
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                          Wallet {campaign.billing.walletBlocked ? "blocked" : "ready"}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Budget {campaign.billing.budgetExhausted ? "exhausted" : "available"}
                         </p>
                       </article>
                     </div>
@@ -1006,9 +1015,15 @@ export function SellerCampaignsPageClient() {
                         <p className="text-sm font-semibold text-[var(--foreground)]">{copy.performanceTitle}</p>
                         {performanceByCampaign[campaign.id] ? (
                           <>
-                            <div className="mt-3 grid gap-3 md:grid-cols-4">
+                            <div className="mt-3 grid gap-3 md:grid-cols-6">
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
                                 Events {performanceByCampaign[campaign.id].summary.totalEvents}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                Impressions {performanceByCampaign[campaign.id].summary.billableImpressions}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                Clicks {performanceByCampaign[campaign.id].summary.billableClicks}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
                                 Sponsored {performanceByCampaign[campaign.id].summary.servedAsSponsored ? "Yes" : "No"}
