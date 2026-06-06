@@ -401,6 +401,25 @@
     "noPaymentActivity": "No payment activity recorded yet.",
     "timelineLabel": "Timeline"
   },
+  "public": {
+    "reviews": {
+      "sectionKicker": "Buyer feedback",
+      "title": "Reviews",
+      "emptyLong": "No reviews yet for this product.",
+      "loading": "Loading reviews...",
+      "loadFailed": "Unable to load reviews.",
+      "verifiedPurchase": "Verified purchase",
+      "sellerReply": "Seller reply",
+      "filters": {
+        "all": "All reviews"
+      },
+      "fit": {
+        "RUNS_SMALL": "Runs small",
+        "TRUE_TO_SIZE": "True to size",
+        "RUNS_LARGE": "Runs large"
+      }
+    }
+  },
   "home": {
     "catalogTitle": "Marketplace catalog",
     "allProducts": "All published products",

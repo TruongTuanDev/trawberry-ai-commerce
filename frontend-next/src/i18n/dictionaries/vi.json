@@ -331,6 +331,25 @@
     "action2": "Xem lại line item, tổng tiền và hướng dẫn thanh toán.",
     "action3": "Tải lên minh chứng thanh toán sau để seller review thủ công."
   },
+  "public": {
+    "reviews": {
+      "sectionKicker": "ÄÃ¡nh giÃ¡ tá»« ngÆ°á»i mua",
+      "title": "ÄÃ¡nh giÃ¡",
+      "emptyLong": "Sáº£n pháº©m nÃ y chÆ°a cÃ³ Ä‘Ã¡nh giÃ¡ nÃ o.",
+      "loading": "Äang táº£i Ä‘Ã¡nh giÃ¡...",
+      "loadFailed": "KhÃ´ng thá»ƒ táº£i Ä‘Ã¡nh giÃ¡.",
+      "verifiedPurchase": "ÄÃ£ mua xÃ¡c minh",
+      "sellerReply": "Pháº£n há»“i tá»« seller",
+      "filters": {
+        "all": "Táº¥t cáº£ Ä‘Ã¡nh giÃ¡"
+      },
+      "fit": {
+        "RUNS_SMALL": "Form nhá»",
+        "TRUE_TO_SIZE": "ÄÃºng size",
+        "RUNS_LARGE": "Form rá»™ng"
+      }
+    }
+  },
   "sellerShell": {
     "brand": "Strawberry",
     "title": "Trung tâm seller",
