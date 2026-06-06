@@ -25,10 +25,17 @@ import {
 import {
   DEFAULT_RECOMMENDATION_SPONSORED_PRESET_ID,
   RECOMMENDATION_SPONSORED_PRESETS,
+  toSafeSponsoredCampaignMetadata,
   toSafeSponsoredPresetMetadata,
+  type RecommendationCampaignReadinessMetadata,
+  type RecommendationSponsoredBillingMode,
+  type RecommendationSponsoredCampaignContract,
+  type RecommendationSponsoredCampaignMetadata,
   type RecommendationSponsoredPresetDefinition,
   type RecommendationSponsoredPresetId,
   type RecommendationSponsoredPresetMetadata,
+  type RecommendationSponsoredRolloutMode,
+  type RecommendationSponsoredSponsorType,
   type RecommendationSponsoredScenarioType,
 } from './recommendation-sponsored-config';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
@@ -59,6 +66,8 @@ type RecommendationApiItem = {
     scoreBreakdown: RecommendationScoreBreakdown | null;
     sponsoredReason?: string | null;
     sponsoredPreset?: RecommendationSponsoredPresetMetadata | null;
+    campaignReadiness?: RecommendationCampaignReadinessMetadata | null;
+    sponsoredCampaign?: RecommendationSponsoredCampaignMetadata | null;
   };
 };
 
@@ -70,6 +79,8 @@ type RecommendationRankedItem = {
     scoreBreakdown: RecommendationScoreBreakdown | null;
     sponsoredReason: string | null;
     sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
+    campaignReadiness: RecommendationCampaignReadinessMetadata;
+    sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
   };
 };
 
@@ -81,6 +92,8 @@ type RecommendationAlgorithmSnapshot = {
   scoreBreakdown: RecommendationScoreBreakdown | null;
   sponsoredReason: string | null;
   sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
+  campaignReadiness: RecommendationCampaignReadinessMetadata | null;
+  sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
 };
 
 type RecommendationQaProductSummary = {
@@ -569,6 +582,17 @@ export class RecommendationsService {
           scoreBreakdown: null,
           sponsoredReason: null,
           sponsoredPreset: null,
+          campaignReadiness: {
+            sponsoredEligible: false,
+            sponsoredBoostApplied: false,
+            sponsoredBoostScore: 0,
+            sponsoredReason: null,
+            sponsoredPresetId: null,
+            campaignReadinessStatus: 'disabled',
+            billingMode: 'none',
+            rolloutMode: 'disabled',
+          } as const,
+          sponsoredCampaign: null,
         },
       }));
   }
@@ -645,6 +669,17 @@ export class RecommendationsService {
           scoreBreakdown: null,
           sponsoredReason: null,
           sponsoredPreset: null,
+          campaignReadiness: {
+            sponsoredEligible: false,
+            sponsoredBoostApplied: false,
+            sponsoredBoostScore: 0,
+            sponsoredReason: null,
+            sponsoredPresetId: null,
+            campaignReadinessStatus: 'disabled',
+            billingMode: 'none',
+            rolloutMode: 'disabled',
+          } as const,
+          sponsoredCampaign: null,
         },
       }));
   }
@@ -837,6 +872,8 @@ export class RecommendationsService {
           scoreBreakdown: item.scored.scoreBreakdown ?? null,
           sponsoredReason: item.scored.sponsoredReason,
           sponsoredPreset: item.scored.sponsoredPreset,
+          campaignReadiness: item.scored.campaignReadiness,
+          sponsoredCampaign: item.scored.sponsoredCampaign,
         };
       }
 
@@ -994,6 +1031,12 @@ export class RecommendationsService {
         : null,
       sponsoredPreset: includeExplainability
         ? item.scored.sponsoredPreset
+        : null,
+      campaignReadiness: includeExplainability
+        ? item.scored.campaignReadiness
+        : null,
+      sponsoredCampaign: includeExplainability
+        ? item.scored.sponsoredCampaign
         : null,
     };
   }
@@ -1522,6 +1565,7 @@ export class RecommendationsService {
     const scenarioAllowed =
       preset?.allowedScenarioTypes.includes(scenarioType) ?? false;
     const enabled = rankingEnabled && scenarioAllowed;
+    const rolloutMode = this.resolveSponsoredRolloutMode(rankingEnabled);
     const maxSponsoredBoost = this.readNumberFlag(
       'RECOMMENDATION_SPONSORED_MAX_BOOST',
       preset?.maxSponsoredBoost ??
@@ -1536,14 +1580,33 @@ export class RecommendationsService {
     const maxBusinessBoost =
       preset?.maxBusinessBoost ??
       RECOMMENDATION_SPONSORED_RANKING_LIMITS.businessBoostDefault;
+    const sponsoredProductIds = rankingEnabled
+      ? this.readStringListFlag('RECOMMENDATION_SPONSORED_PRODUCT_IDS')
+      : [];
+    const campaign: RecommendationSponsoredCampaignContract = {
+      campaignId:
+        this.configService
+          .get<string>('RECOMMENDATION_SPONSORED_CAMPAIGN_ID')
+          ?.trim() || null,
+      sponsorType: this.readEnumFlag<RecommendationSponsoredSponsorType>(
+        'RECOMMENDATION_SPONSORED_SPONSOR_TYPE',
+        ['none', 'campaign', 'business_boost', 'hybrid'],
+        sponsoredProductIds.length > 0 ? 'campaign' : 'none',
+      ),
+      sponsoredProductIds,
+      maxBoost: maxSponsoredBoost,
+      scenarioType,
+      billingMode: this.readEnumFlag<RecommendationSponsoredBillingMode>(
+        'RECOMMENDATION_SPONSORED_BILLING_MODE',
+        ['none', 'cpc', 'cpm', 'fixed'],
+        'none',
+      ),
+      rolloutMode,
+    };
 
     return {
       enabled,
-      sponsoredProductIds: new Set(
-        rankingEnabled
-          ? this.readStringListFlag('RECOMMENDATION_SPONSORED_PRODUCT_IDS')
-          : [],
-      ),
+      sponsoredProductIds: new Set(sponsoredProductIds),
       businessBoostShopIds: new Set(
         rankingEnabled
           ? this.readStringListFlag('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS')
@@ -1569,6 +1632,7 @@ export class RecommendationsService {
       maxSponsoredBoost,
       maxBusinessBoost,
       preset: preset ? toSafeSponsoredPresetMetadata(preset) : null,
+      campaign: toSafeSponsoredCampaignMetadata(campaign),
     };
   }
 
@@ -1590,6 +1654,20 @@ export class RecommendationsService {
     );
   }
 
+  private resolveSponsoredRolloutMode(
+    rankingEnabled: boolean,
+  ): RecommendationSponsoredRolloutMode {
+    if (!rankingEnabled) {
+      return 'disabled';
+    }
+
+    return this.readEnumFlag<RecommendationSponsoredRolloutMode>(
+      'RECOMMENDATION_SPONSORED_ROLLOUT_MODE',
+      ['disabled', 'internal', 'limited', 'public'],
+      'internal',
+    );
+  }
+
   private readFlag(name: string, fallback: boolean) {
     const raw = this.configService.get<string>(name);
     if (raw === undefined) {
@@ -1604,6 +1682,19 @@ export class RecommendationsService {
       .split(',')
       .map((item) => item.trim())
       .filter((item) => item.length > 0);
+  }
+
+  private readEnumFlag<T extends string>(
+    name: string,
+    allowed: readonly T[],
+    fallback: T,
+  ) {
+    const raw = this.configService.get<string>(name)?.trim().toLowerCase();
+    if (!raw) {
+      return fallback;
+    }
+
+    return allowed.find((item) => item === raw) ?? fallback;
   }
 
   private readNumberFlag(

@@ -177,6 +177,7 @@ describe('RecommendationScoringService', () => {
     expect(scored.scoreBreakdown.businessBoostScore).toBe(0);
     expect(scored.sponsoredReason).toBeNull();
     expect(scored.sponsoredPreset?.id).toBe('balanced');
+    expect(scored.campaignReadiness.campaignReadinessStatus).toBe('disabled');
   });
 
   it('keeps sponsored boost bounded by the configured safety cap', () => {
@@ -202,6 +203,8 @@ describe('RecommendationScoringService', () => {
         scored.scoreBreakdown.businessBoostScore,
     ).toBeLessThanOrEqual(5);
     expect(scored.scoreBreakdown.maxSponsoredBoost).toBe(5);
+    expect(scored.campaignReadiness.sponsoredBoostApplied).toBe(true);
+    expect(scored.campaignReadiness.billingMode).toBe('none');
   });
 
   it('clamps business boost against its own preset cap before the total cap', () => {
@@ -225,6 +228,27 @@ describe('RecommendationScoringService', () => {
 
     expect(scored.scoreBreakdown.businessBoostScore).toBeLessThanOrEqual(2);
     expect(scored.scoreBreakdown.sponsoredBoostScore).toBeGreaterThan(0);
+  });
+
+  it('keeps campaign-readiness as not_targeted when the product is eligible but not targeted', () => {
+    const candidate = buildProduct({
+      id: 'candidate-not-targeted',
+      feedbackCount: 12,
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsoredConfig({
+        sponsoredProductIds: ['different-product'],
+      }),
+    );
+
+    expect(scored.campaignReadiness.sponsoredEligible).toBe(true);
+    expect(scored.campaignReadiness.sponsoredBoostApplied).toBe(false);
+    expect(scored.campaignReadiness.campaignReadinessStatus).toBe(
+      'not_targeted',
+    );
   });
 
   it('does not let sponsored boost fully override a clearly stronger organic result', () => {
@@ -285,6 +309,7 @@ describe('RecommendationScoringService', () => {
     expect(scored.scoreBreakdown.sponsoredBoostScore).toBe(0);
     expect(scored.scoreBreakdown.businessBoostScore).toBe(0);
     expect(scored.sponsoredReason).toBeNull();
+    expect(scored.campaignReadiness.campaignReadinessStatus).toBe('ineligible');
   });
 });
 
@@ -327,6 +352,14 @@ function sponsoredConfig(
       maxBusinessBoost: overrides?.maxBusinessBoost ?? 2,
       allowedScenarioTypes: ['home', 'similar', 'search'],
       notes: 'Test preset only',
+    },
+    campaign: {
+      campaignId: 'campaign-test',
+      sponsorType: 'campaign',
+      maxBoost: overrides?.maxSponsoredBoost ?? 5,
+      scenarioType: 'home',
+      billingMode: 'none',
+      rolloutMode: overrides?.enabled === false ? 'disabled' : 'internal',
     },
   };
 }

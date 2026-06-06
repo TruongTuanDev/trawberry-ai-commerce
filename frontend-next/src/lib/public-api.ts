@@ -93,6 +93,31 @@ export type RecommendationSponsoredPresetCatalog = {
   presets: RecommendationSponsoredPreset[];
 };
 
+export type RecommendationSponsoredCampaign = {
+  campaignId: string | null;
+  sponsorType: "none" | "campaign" | "business_boost" | "hybrid";
+  maxBoost: number;
+  scenarioType: RecommendationSponsoredScenarioType;
+  billingMode: "none" | "cpc" | "cpm" | "fixed";
+  rolloutMode: "disabled" | "internal" | "limited" | "public";
+};
+
+export type RecommendationCampaignReadiness = {
+  sponsoredEligible: boolean;
+  sponsoredBoostApplied: boolean;
+  sponsoredBoostScore: number;
+  sponsoredReason: string | null;
+  sponsoredPresetId: RecommendationSponsoredPreset["id"] | null;
+  campaignReadinessStatus:
+    | "disabled"
+    | "not_targeted"
+    | "ineligible"
+    | "eligible"
+    | "boosted";
+  billingMode: "none" | "cpc" | "cpm" | "fixed";
+  rolloutMode: "disabled" | "internal" | "limited" | "public";
+};
+
 export type VisualSearchEventType = "impression" | "click";
 
 export type RecommendationProductItem = {
@@ -119,6 +144,8 @@ export type RecommendationProductItem = {
     } | null;
     sponsoredReason?: string | null;
     sponsoredPreset?: RecommendationSponsoredPreset | null;
+    campaignReadiness?: RecommendationCampaignReadiness | null;
+    sponsoredCampaign?: RecommendationSponsoredCampaign | null;
   };
 };
 
@@ -154,6 +181,8 @@ export type RecommendationQaAlgorithmSnapshot = {
   } | null;
   sponsoredReason: string | null;
   sponsoredPreset: RecommendationSponsoredPreset | null;
+  campaignReadiness: RecommendationCampaignReadiness | null;
+  sponsoredCampaign: RecommendationSponsoredCampaign | null;
 };
 
 export type RecommendationQaComparisonItem = {

@@ -64,6 +64,59 @@ class RecommendationQaSponsoredPresetDto {
   notes!: string;
 }
 
+class RecommendationQaSponsoredCampaignDto {
+  @ApiProperty({ nullable: true })
+  campaignId!: string | null;
+
+  @ApiProperty({ enum: ['none', 'campaign', 'business_boost', 'hybrid'] })
+  sponsorType!: 'none' | 'campaign' | 'business_boost' | 'hybrid';
+
+  @ApiProperty()
+  maxBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'] })
+  scenarioType!: 'home' | 'similar' | 'search';
+
+  @ApiProperty({ enum: ['none', 'cpc', 'cpm', 'fixed'] })
+  billingMode!: 'none' | 'cpc' | 'cpm' | 'fixed';
+
+  @ApiProperty({ enum: ['disabled', 'internal', 'limited', 'public'] })
+  rolloutMode!: 'disabled' | 'internal' | 'limited' | 'public';
+}
+
+class RecommendationQaCampaignReadinessDto {
+  @ApiProperty()
+  sponsoredEligible!: boolean;
+
+  @ApiProperty()
+  sponsoredBoostApplied!: boolean;
+
+  @ApiProperty()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty({ nullable: true })
+  sponsoredReason!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sponsoredPresetId!: string | null;
+
+  @ApiProperty({
+    enum: ['disabled', 'not_targeted', 'ineligible', 'eligible', 'boosted'],
+  })
+  campaignReadinessStatus!:
+    | 'disabled'
+    | 'not_targeted'
+    | 'ineligible'
+    | 'eligible'
+    | 'boosted';
+
+  @ApiProperty({ enum: ['none', 'cpc', 'cpm', 'fixed'] })
+  billingMode!: 'none' | 'cpc' | 'cpm' | 'fixed';
+
+  @ApiProperty({ enum: ['disabled', 'internal', 'limited', 'public'] })
+  rolloutMode!: 'disabled' | 'internal' | 'limited' | 'public';
+}
+
 class RecommendationQaSponsoredRankingDto {
   @ApiProperty()
   sponsoredRankingEnabled!: boolean;
@@ -104,6 +157,20 @@ class RecommendationQaAlgorithmSnapshotDto {
     required: false,
   })
   sponsoredPreset!: RecommendationQaSponsoredPresetDto | null;
+
+  @ApiProperty({
+    type: RecommendationQaCampaignReadinessDto,
+    nullable: true,
+    required: false,
+  })
+  campaignReadiness!: RecommendationQaCampaignReadinessDto | null;
+
+  @ApiProperty({
+    type: RecommendationQaSponsoredCampaignDto,
+    nullable: true,
+    required: false,
+  })
+  sponsoredCampaign!: RecommendationQaSponsoredCampaignDto | null;
 }
 
 class RecommendationQaComparisonItemDto {

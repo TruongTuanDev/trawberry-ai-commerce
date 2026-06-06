@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { RecommendationSponsoredPresetMetadata } from './recommendation-sponsored-config';
+import type {
+  RecommendationCampaignReadinessMetadata,
+  RecommendationSponsoredCampaignMetadata,
+  RecommendationSponsoredPresetMetadata,
+} from './recommendation-sponsored-config';
 
 export type RecommendationProductRecord = {
   id: string;
@@ -120,6 +124,8 @@ export type ScoredRecommendation = {
   scoreBreakdown: RecommendationScoreBreakdown;
   sponsoredReason: string | null;
   sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
+  campaignReadiness: RecommendationCampaignReadinessMetadata;
+  sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
 };
 
 export type RecommendationSponsoredRankingConfig = {
@@ -131,6 +137,7 @@ export type RecommendationSponsoredRankingConfig = {
   maxSponsoredBoost: number;
   maxBusinessBoost: number;
   preset: RecommendationSponsoredPresetMetadata | null;
+  campaign: RecommendationSponsoredCampaignMetadata | null;
 };
 
 export const RECOMMENDATION_SCORING_WEIGHTS = {
@@ -299,6 +306,10 @@ export class RecommendationScoringService {
       sponsoredPreset: input.sponsoredRanking?.enabled
         ? input.sponsoredRanking.preset
         : null,
+      campaignReadiness: sponsoredBoost.campaignReadiness,
+      sponsoredCampaign: input.sponsoredRanking?.enabled
+        ? input.sponsoredRanking.campaign
+        : null,
     };
   }
 
@@ -306,16 +317,56 @@ export class RecommendationScoringService {
     candidate: RecommendationProductRecord,
     organicScore: number,
     config?: RecommendationSponsoredRankingConfig,
-  ) {
-    const disabledResult = {
+  ): {
+    sponsoredBoostScore: number;
+    businessBoostScore: number;
+    maxSponsoredBoost: number;
+    sponsoredReason: string | null;
+    campaignReadiness: RecommendationCampaignReadinessMetadata;
+  } {
+    const disabledResult: {
+      sponsoredBoostScore: number;
+      businessBoostScore: number;
+      maxSponsoredBoost: number;
+      sponsoredReason: string | null;
+      campaignReadiness: RecommendationCampaignReadinessMetadata;
+    } = {
       sponsoredBoostScore: 0,
       businessBoostScore: 0,
       maxSponsoredBoost: config?.enabled ? config.maxSponsoredBoost : 0,
       sponsoredReason: null as string | null,
+      campaignReadiness: {
+        sponsoredEligible: false,
+        sponsoredBoostApplied: false,
+        sponsoredBoostScore: 0,
+        sponsoredReason: null,
+        sponsoredPresetId: config?.preset?.id ?? null,
+        campaignReadinessStatus: 'disabled',
+        billingMode: config?.campaign?.billingMode ?? 'none',
+        rolloutMode: config?.campaign?.rolloutMode ?? 'disabled',
+      },
     };
 
-    if (!config?.enabled || !this.isBoostEligible(candidate)) {
+    if (!config?.enabled) {
       return disabledResult;
+    }
+
+    const sponsoredEligible = this.isBoostEligible(candidate);
+    if (!sponsoredEligible) {
+      return {
+        ...disabledResult,
+        maxSponsoredBoost: config.maxSponsoredBoost,
+        campaignReadiness: {
+          sponsoredEligible: false,
+          sponsoredBoostApplied: false,
+          sponsoredBoostScore: 0,
+          sponsoredReason: null,
+          sponsoredPresetId: config.preset?.id ?? null,
+          campaignReadinessStatus: 'ineligible',
+          billingMode: config.campaign?.billingMode ?? 'none',
+          rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+        },
+      };
     }
 
     const baseSponsoredBoost = config.sponsoredProductIds.has(candidate.id)
@@ -326,7 +377,20 @@ export class RecommendationScoringService {
       : 0;
     const rawBoost = baseSponsoredBoost + baseBusinessBoost;
     if (rawBoost <= 0) {
-      return disabledResult;
+      return {
+        ...disabledResult,
+        maxSponsoredBoost: config.maxSponsoredBoost,
+        campaignReadiness: {
+          sponsoredEligible: true,
+          sponsoredBoostApplied: false,
+          sponsoredBoostScore: 0,
+          sponsoredReason: null,
+          sponsoredPresetId: config.preset?.id ?? null,
+          campaignReadinessStatus: 'not_targeted',
+          billingMode: config.campaign?.billingMode ?? 'none',
+          rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+        },
+      };
     }
 
     const effectiveCap = Math.min(
@@ -339,21 +403,49 @@ export class RecommendationScoringService {
       ),
     );
     if (effectiveCap <= 0) {
-      return disabledResult;
+      return {
+        ...disabledResult,
+        maxSponsoredBoost: config.maxSponsoredBoost,
+        campaignReadiness: {
+          sponsoredEligible: true,
+          sponsoredBoostApplied: false,
+          sponsoredBoostScore: 0,
+          sponsoredReason: null,
+          sponsoredPresetId: config.preset?.id ?? null,
+          campaignReadinessStatus: 'eligible',
+          billingMode: config.campaign?.billingMode ?? 'none',
+          rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+        },
+      };
     }
 
     const scale = Math.min(1, effectiveCap / rawBoost);
     const sponsoredBoostScore = Number((baseSponsoredBoost * scale).toFixed(2));
     const businessBoostScore = Number((baseBusinessBoost * scale).toFixed(2));
 
+    const sponsoredReason = this.resolveSponsoredReason(
+      sponsoredBoostScore,
+      businessBoostScore,
+    );
+    const totalBoostScore = Number(
+      (sponsoredBoostScore + businessBoostScore).toFixed(2),
+    );
+
     return {
       sponsoredBoostScore,
       businessBoostScore,
       maxSponsoredBoost: config.maxSponsoredBoost,
-      sponsoredReason: this.resolveSponsoredReason(
-        sponsoredBoostScore,
-        businessBoostScore,
-      ),
+      sponsoredReason,
+      campaignReadiness: {
+        sponsoredEligible: true,
+        sponsoredBoostApplied: totalBoostScore > 0,
+        sponsoredBoostScore: totalBoostScore,
+        sponsoredReason,
+        sponsoredPresetId: config.preset?.id ?? null,
+        campaignReadinessStatus: totalBoostScore > 0 ? 'boosted' : 'eligible',
+        billingMode: config.campaign?.billingMode ?? 'none',
+        rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+      },
     };
   }
 

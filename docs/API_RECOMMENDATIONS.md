@@ -1,8 +1,8 @@
 # API Recommendations
 
-## Phase 2 and Phase 3.2 Scope
+## Phase 2 and Phase 3.3 Scope
 
-This document covers the Phase 2 smart ranking rollout plus the Phase 3 sponsored ranking foundation through Phase 3.2 managed internal preset catalogs for public product recommendations.
+This document covers the Phase 2 smart ranking rollout plus the Phase 3 sponsored ranking foundation through Phase 3.3 campaign-readiness contract finalization for public product recommendations.
 
 Safety guarantees:
 
@@ -156,6 +156,33 @@ Managed sponsored rollout presets:
   - raw env var names or values
 - internal explainability and QA can show safe preset metadata only when internal flags allow it
 
+Campaign and billing readiness contract:
+
+- Phase 3.3 does not add campaign CRUD, billing ledgers, budget deduction, or seller ads UI
+- instead, it stabilizes the internal recommendation-side contract that future campaign and billing modules can plug into
+- internal-only sponsored contract fields now include placeholders such as:
+  - `campaignId`
+  - `sponsorType`
+  - `scenarioType`
+  - `billingMode`
+  - `rolloutMode`
+  - `maxBoost`
+- internal-only campaign-readiness fields now include:
+  - `sponsoredEligible`
+  - `sponsoredBoostApplied`
+  - `sponsoredBoostScore`
+  - `sponsoredReason`
+  - `sponsoredPresetId`
+  - `campaignReadinessStatus`
+  - `billingMode`
+  - `rolloutMode`
+- these fields are placeholders for future integration only:
+  - no billing charges are created
+  - no wallet or ledger rows are created
+  - no impression pricing or click pricing is enforced yet
+  - no budget throttling is enforced yet
+- normal public recommendation payloads still do not expose campaign or billing internals
+
 Internal QA comparison mode:
 
 - ranking comparison is disabled by default
@@ -291,6 +318,24 @@ Internal explainability example:
           "maxBusinessBoost": 2,
           "allowedScenarioTypes": ["home", "similar", "search"],
           "notes": "Recommended preset for most QA comparisons and initial staged rollout checks."
+        },
+        "campaignReadiness": {
+          "sponsoredEligible": true,
+          "sponsoredBoostApplied": false,
+          "sponsoredBoostScore": 0,
+          "sponsoredReason": null,
+          "sponsoredPresetId": "balanced",
+          "campaignReadinessStatus": "eligible",
+          "billingMode": "none",
+          "rolloutMode": "internal"
+        },
+        "sponsoredCampaign": {
+          "campaignId": null,
+          "sponsorType": "campaign",
+          "maxBoost": 5,
+          "scenarioType": "home",
+          "billingMode": "none",
+          "rolloutMode": "internal"
         }
       }
     }
@@ -425,8 +470,11 @@ Behavior:
 - when `export=true`, the same internal workflow returns a QA snapshot payload instead of the default compare response
 - exported snapshots only include public product summary fields plus ranking metadata needed for QA review
 - compare and snapshot responses can include safe root-level sponsored ranking metadata for QA:
-  - `sponsoredRankingEnabled`
-  - `activePreset`
+      - `sponsoredRankingEnabled`
+      - `activePreset`
+- item-level explainability can also include campaign-readiness placeholders only in internal mode:
+  - `campaignReadiness`
+  - `sponsoredCampaign`
 
 Response example:
 
@@ -491,6 +539,24 @@ Response example:
           "maxBusinessBoost": 2,
           "allowedScenarioTypes": ["home", "similar", "search"],
           "notes": "Recommended preset for most QA comparisons and initial staged rollout checks."
+        },
+        "campaignReadiness": {
+          "sponsoredEligible": true,
+          "sponsoredBoostApplied": false,
+          "sponsoredBoostScore": 0,
+          "sponsoredReason": null,
+          "sponsoredPresetId": "balanced",
+          "campaignReadinessStatus": "eligible",
+          "billingMode": "none",
+          "rolloutMode": "internal"
+        },
+        "sponsoredCampaign": {
+          "campaignId": null,
+          "sponsorType": "campaign",
+          "maxBoost": 5,
+          "scenarioType": "home",
+          "billingMode": "none",
+          "rolloutMode": "internal"
         }
       }
     }
@@ -572,6 +638,24 @@ Snapshot export example:
           "maxBusinessBoost": 1,
           "allowedScenarioTypes": ["search"],
           "notes": "Use for keyword-driven recommendation audits where intent stability matters most."
+        },
+        "campaignReadiness": {
+          "sponsoredEligible": true,
+          "sponsoredBoostApplied": false,
+          "sponsoredBoostScore": 0,
+          "sponsoredReason": null,
+          "sponsoredPresetId": "search-safe",
+          "campaignReadinessStatus": "eligible",
+          "billingMode": "none",
+          "rolloutMode": "internal"
+        },
+        "sponsoredCampaign": {
+          "campaignId": null,
+          "sponsorType": "campaign",
+          "maxBoost": 3,
+          "scenarioType": "search",
+          "billingMode": "none",
+          "rolloutMode": "internal"
         }
       }
     }
@@ -987,6 +1071,27 @@ Local sponsored preset QA workflow:
 9. Export snapshots and diff them with the existing Phase 2 QA workflow.
 10. Never expose preset/catalog metadata on public storefront pages or seller-facing tooling.
 
+Campaign and billing integration handoff:
+
+- Recommendation is now ready for future Campaign/Billing integration on the recommendation side.
+- Implemented now:
+  - bounded sponsored ranking hooks
+  - internal sponsored preset contract
+  - internal campaign-readiness placeholder contract
+  - internal explainability and QA visibility for those placeholders
+  - continued public response backward compatibility
+- Intentionally not implemented yet:
+  - campaign CRUD
+  - seller ads UI
+  - wallet or billing ledger
+  - impression/click charging
+  - budget enforcement
+  - billing reconciliation
+- Backward-compatible APIs that must stay stable:
+  - `GET /api/public/recommendations/home`
+  - `GET /api/public/recommendations/products/:productId/similar`
+  - `GET /api/public/recommendations/search?q=...&limit=12`
+
 Phase 2.8 readiness notes:
 
 - treat preset and catalog `version` fields as the lightweight audit handle when sharing internal QA results
@@ -1061,10 +1166,18 @@ Future Phase 3 topics:
 - richer session intent modeling
 - rollout-safe ranking configuration management beyond code-managed internal presets
 
-Phase 3.2 out of scope:
+Phase 3.3 out of scope:
 
 - no full ads management dashboard
 - no billing, budget pacing, campaign scheduling, or auction logic
 - no seller self-serve ads UI
 - no public disclosure of sponsored configuration internals
 - no checkout, order, cart, payment, shipping, WB sync, AI Try-On, or legacy app changes
+
+Recommended Phase 4 roadmap:
+
+- Phase 4.1: Campaign Management Foundation
+- Phase 4.2: Seller Wallet / Billing Ledger
+- Phase 4.3: Sponsored Impression/Click Attribution
+- Phase 4.4: Budget Enforcement
+- Phase 4.5: Campaign Analytics Dashboard

@@ -65,6 +65,59 @@ class RecommendationSponsoredPresetDto {
   notes!: string;
 }
 
+class RecommendationSponsoredCampaignDto {
+  @ApiProperty({ nullable: true })
+  campaignId!: string | null;
+
+  @ApiProperty({ enum: ['none', 'campaign', 'business_boost', 'hybrid'] })
+  sponsorType!: 'none' | 'campaign' | 'business_boost' | 'hybrid';
+
+  @ApiProperty()
+  maxBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'] })
+  scenarioType!: 'home' | 'similar' | 'search';
+
+  @ApiProperty({ enum: ['none', 'cpc', 'cpm', 'fixed'] })
+  billingMode!: 'none' | 'cpc' | 'cpm' | 'fixed';
+
+  @ApiProperty({ enum: ['disabled', 'internal', 'limited', 'public'] })
+  rolloutMode!: 'disabled' | 'internal' | 'limited' | 'public';
+}
+
+class RecommendationCampaignReadinessDto {
+  @ApiProperty()
+  sponsoredEligible!: boolean;
+
+  @ApiProperty()
+  sponsoredBoostApplied!: boolean;
+
+  @ApiProperty()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty({ nullable: true })
+  sponsoredReason!: string | null;
+
+  @ApiProperty({ nullable: true })
+  sponsoredPresetId!: string | null;
+
+  @ApiProperty({
+    enum: ['disabled', 'not_targeted', 'ineligible', 'eligible', 'boosted'],
+  })
+  campaignReadinessStatus!:
+    | 'disabled'
+    | 'not_targeted'
+    | 'ineligible'
+    | 'eligible'
+    | 'boosted';
+
+  @ApiProperty({ enum: ['none', 'cpc', 'cpm', 'fixed'] })
+  billingMode!: 'none' | 'cpc' | 'cpm' | 'fixed';
+
+  @ApiProperty({ enum: ['disabled', 'internal', 'limited', 'public'] })
+  rolloutMode!: 'disabled' | 'internal' | 'limited' | 'public';
+}
+
 class RecommendationScoreExplanationDto {
   @ApiProperty()
   algorithm!: string;
@@ -91,6 +144,20 @@ class RecommendationScoreExplanationDto {
     required: false,
   })
   sponsoredPreset?: RecommendationSponsoredPresetDto | null;
+
+  @ApiProperty({
+    type: RecommendationCampaignReadinessDto,
+    nullable: true,
+    required: false,
+  })
+  campaignReadiness?: RecommendationCampaignReadinessDto | null;
+
+  @ApiProperty({
+    type: RecommendationSponsoredCampaignDto,
+    nullable: true,
+    required: false,
+  })
+  sponsoredCampaign?: RecommendationSponsoredCampaignDto | null;
 }
 
 class RecommendationResponseItemDto {

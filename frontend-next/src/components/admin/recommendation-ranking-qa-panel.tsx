@@ -267,6 +267,12 @@ export function RecommendationRankingQaPanel({
                         <p className="mt-1">
                           v1 preset: {item.ruleBasedV1?.sponsoredPreset?.id ?? "n/a"}
                         </p>
+                        <p className="mt-1">
+                          v1 readiness: {item.ruleBasedV1?.campaignReadiness?.campaignReadinessStatus ?? "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v1 billing: {item.ruleBasedV1?.campaignReadiness?.billingMode ?? "n/a"}
+                        </p>
                         <p className="mt-2">v2 breakdown:</p>
                         <p>
                           {item.ruleBasedV2?.scoreBreakdown
@@ -278,6 +284,15 @@ export function RecommendationRankingQaPanel({
                         </p>
                         <p className="mt-1">
                           v2 preset: {item.ruleBasedV2?.sponsoredPreset?.id ?? "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v2 readiness: {item.ruleBasedV2?.campaignReadiness?.campaignReadinessStatus ?? "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v2 billing: {item.ruleBasedV2?.campaignReadiness?.billingMode ?? "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v2 rollout: {item.ruleBasedV2?.campaignReadiness?.rolloutMode ?? "n/a"}
                         </p>
                       </div>
                     </div>

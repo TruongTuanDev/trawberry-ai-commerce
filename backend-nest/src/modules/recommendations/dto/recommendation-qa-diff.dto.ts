@@ -98,6 +98,76 @@ class RecommendationQaDiffSponsoredPresetDto {
   notes!: string;
 }
 
+class RecommendationQaDiffSponsoredCampaignDto {
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @Allow()
+  campaignId!: string | null;
+
+  @ApiProperty({ enum: ['none', 'campaign', 'business_boost', 'hybrid'] })
+  @IsString()
+  sponsorType!: 'none' | 'campaign' | 'business_boost' | 'hybrid';
+
+  @ApiProperty()
+  @IsNumber()
+  maxBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'] })
+  @IsString()
+  scenarioType!: 'home' | 'similar' | 'search';
+
+  @ApiProperty({ enum: ['none', 'cpc', 'cpm', 'fixed'] })
+  @IsString()
+  billingMode!: 'none' | 'cpc' | 'cpm' | 'fixed';
+
+  @ApiProperty({ enum: ['disabled', 'internal', 'limited', 'public'] })
+  @IsString()
+  rolloutMode!: 'disabled' | 'internal' | 'limited' | 'public';
+}
+
+class RecommendationQaDiffCampaignReadinessDto {
+  @ApiProperty()
+  @IsBoolean()
+  sponsoredEligible!: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  sponsoredBoostApplied!: boolean;
+
+  @ApiProperty()
+  @IsNumber()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @Allow()
+  sponsoredReason!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @Allow()
+  sponsoredPresetId!: string | null;
+
+  @ApiProperty({
+    enum: ['disabled', 'not_targeted', 'ineligible', 'eligible', 'boosted'],
+  })
+  @IsString()
+  campaignReadinessStatus!:
+    | 'disabled'
+    | 'not_targeted'
+    | 'ineligible'
+    | 'eligible'
+    | 'boosted';
+
+  @ApiProperty({ enum: ['none', 'cpc', 'cpm', 'fixed'] })
+  @IsString()
+  billingMode!: 'none' | 'cpc' | 'cpm' | 'fixed';
+
+  @ApiProperty({ enum: ['disabled', 'internal', 'limited', 'public'] })
+  @IsString()
+  rolloutMode!: 'disabled' | 'internal' | 'limited' | 'public';
+}
+
 class RecommendationQaDiffSponsoredRankingDto {
   @ApiProperty()
   @IsBoolean()
@@ -157,6 +227,26 @@ class RecommendationQaDiffAlgorithmSnapshotDto {
   @ValidateNested()
   @Type(() => RecommendationQaDiffSponsoredPresetDto)
   sponsoredPreset!: RecommendationQaDiffSponsoredPresetDto | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffCampaignReadinessDto,
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffCampaignReadinessDto)
+  campaignReadiness!: RecommendationQaDiffCampaignReadinessDto | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffSponsoredCampaignDto,
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffSponsoredCampaignDto)
+  sponsoredCampaign!: RecommendationQaDiffSponsoredCampaignDto | null;
 }
 
 class RecommendationQaDiffSnapshotProductDto {

@@ -96,6 +96,8 @@ function buildSnapshotItem(
       },
       sponsoredReason: null,
       sponsoredPreset: null,
+      campaignReadiness: null,
+      sponsoredCampaign: null,
     },
   };
 }

@@ -340,6 +340,9 @@ describe('RecommendationsController (e2e)', () => {
             maxSponsoredBoost: number;
           } | null;
           sponsoredReason?: string | null;
+          campaignReadiness?: {
+            campaignReadinessStatus: string;
+          } | null;
         };
       }>;
     }>(response);
@@ -358,6 +361,9 @@ describe('RecommendationsController (e2e)', () => {
       targetItem?.scoreExplanation?.scoreBreakdown?.maxSponsoredBoost,
     ).toBe(0);
     expect(targetItem?.scoreExplanation?.sponsoredReason).toBeNull();
+    expect(
+      targetItem?.scoreExplanation?.campaignReadiness?.campaignReadinessStatus,
+    ).toBe('disabled');
   });
 
   it('applies bounded sponsored boosts only when the env flag is enabled', async () => {
@@ -388,6 +394,20 @@ describe('RecommendationsController (e2e)', () => {
             maxSponsoredBoost: number;
           } | null;
           sponsoredReason?: string | null;
+          campaignReadiness?: {
+            sponsoredEligible: boolean;
+            sponsoredBoostApplied: boolean;
+            sponsoredBoostScore: number;
+            sponsoredPresetId: string | null;
+            campaignReadinessStatus: string;
+            billingMode: string;
+          } | null;
+          sponsoredCampaign?: {
+            campaignId: string | null;
+            sponsorType: string;
+            billingMode: string;
+            rolloutMode: string;
+          } | null;
         };
       }>;
     }>(response);
@@ -413,6 +433,18 @@ describe('RecommendationsController (e2e)', () => {
     expect(sponsoredItem?.scoreExplanation?.sponsoredReason).toContain(
       'Internal sponsored',
     );
+    expect(sponsoredItem?.scoreExplanation?.campaignReadiness).toMatchObject({
+      sponsoredEligible: true,
+      sponsoredBoostApplied: true,
+      sponsoredPresetId: 'balanced',
+      campaignReadinessStatus: 'boosted',
+      billingMode: 'none',
+    });
+    expect(sponsoredItem?.scoreExplanation?.sponsoredCampaign).toMatchObject({
+      sponsorType: 'campaign',
+      billingMode: 'none',
+      rolloutMode: 'internal',
+    });
   });
 
   it('keeps recommendation QA comparison disabled by default', async () => {
@@ -492,6 +524,9 @@ describe('RecommendationsController (e2e)', () => {
           finalScore: number | null;
           reasons: string[];
           scoreBreakdown: Record<string, number> | null;
+          campaignReadiness?: {
+            campaignReadinessStatus: string;
+          } | null;
         } | null;
         ruleBasedV2: {
           algorithm: string;
@@ -499,6 +534,10 @@ describe('RecommendationsController (e2e)', () => {
           finalScore: number | null;
           reasons: string[];
           scoreBreakdown: Record<string, number> | null;
+          campaignReadiness?: {
+            campaignReadinessStatus: string;
+            billingMode: string;
+          } | null;
         } | null;
       }>;
     }>(response);
@@ -511,6 +550,9 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.items[0]?.ruleBasedV1?.algorithm).toBe('rule_based_v1');
     expect(body.items[0]?.ruleBasedV2?.algorithm).toBe('rule_based_v2');
     expect(body.items[0]?.ruleBasedV2?.scoreBreakdown).toBeTruthy();
+    expect(body.items[0]?.ruleBasedV2?.campaignReadiness).toMatchObject({
+      billingMode: 'none',
+    });
   });
 
   it('calculates rank movement and avoids leaking session or customer data', async () => {
@@ -1424,6 +1466,10 @@ describe('RecommendationsController (e2e)', () => {
     expect(serialized).not.toContain('maxSponsoredBoost');
     expect(serialized).not.toContain('sponsoredReason');
     expect(serialized).not.toContain('sponsoredPreset');
+    expect(serialized).not.toContain('campaignReadiness');
+    expect(serialized).not.toContain('sponsoredCampaign');
+    expect(serialized).not.toContain('billingMode');
+    expect(serialized).not.toContain('campaignId');
     expect(serialized).not.toContain('RECOMMENDATION_SPONSORED_PRODUCT_IDS');
     expect(serialized).not.toContain('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS');
   });
@@ -1517,6 +1563,24 @@ describe('RecommendationsController (e2e)', () => {
             maxBusinessBoost: number;
             allowedScenarioTypes: string[];
           } | null;
+          campaignReadiness?: {
+            sponsoredEligible: boolean;
+            sponsoredBoostApplied: boolean;
+            sponsoredBoostScore: number;
+            sponsoredReason: string | null;
+            sponsoredPresetId: string | null;
+            campaignReadinessStatus: string;
+            billingMode: string;
+            rolloutMode: string;
+          } | null;
+          sponsoredCampaign?: {
+            campaignId: string | null;
+            sponsorType: string;
+            maxBoost: number;
+            scenarioType: string;
+            billingMode: string;
+            rolloutMode: string;
+          } | null;
         };
       }>;
     }>(response);
@@ -1530,6 +1594,16 @@ describe('RecommendationsController (e2e)', () => {
       id: 'balanced',
       version: '1.0.0',
       stability: 'stable',
+    });
+    expect(body.items[0]?.scoreExplanation?.campaignReadiness).toMatchObject({
+      sponsoredEligible: true,
+      sponsoredPresetId: 'balanced',
+      billingMode: 'none',
+    });
+    expect(body.items[0]?.scoreExplanation?.sponsoredCampaign).toMatchObject({
+      sponsorType: 'campaign',
+      scenarioType: 'home',
+      billingMode: 'none',
     });
     expect(
       body.items[0]?.scoreExplanation?.scoreBreakdown?.sponsoredBoostScore,
@@ -1980,6 +2054,8 @@ function buildSnapshotItem(
       },
       sponsoredReason: null,
       sponsoredPreset: null,
+      campaignReadiness: null,
+      sponsoredCampaign: null,
     },
   };
 }

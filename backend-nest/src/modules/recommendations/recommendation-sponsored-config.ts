@@ -14,6 +14,61 @@ export type RecommendationSponsoredPresetStability =
   | 'stable'
   | 'deprecated';
 
+export type RecommendationSponsoredSponsorType =
+  | 'none'
+  | 'campaign'
+  | 'business_boost'
+  | 'hybrid';
+
+export type RecommendationSponsoredBillingMode =
+  | 'none'
+  | 'cpc'
+  | 'cpm'
+  | 'fixed';
+
+export type RecommendationSponsoredRolloutMode =
+  | 'disabled'
+  | 'internal'
+  | 'limited'
+  | 'public';
+
+export type RecommendationCampaignReadinessStatus =
+  | 'disabled'
+  | 'not_targeted'
+  | 'ineligible'
+  | 'eligible'
+  | 'boosted';
+
+export type RecommendationSponsoredCampaignContract = {
+  campaignId: string | null;
+  sponsorType: RecommendationSponsoredSponsorType;
+  sponsoredProductIds: string[];
+  maxBoost: number;
+  scenarioType: RecommendationSponsoredScenarioType;
+  billingMode: RecommendationSponsoredBillingMode;
+  rolloutMode: RecommendationSponsoredRolloutMode;
+};
+
+export type RecommendationSponsoredCampaignMetadata = {
+  campaignId: string | null;
+  sponsorType: RecommendationSponsoredSponsorType;
+  maxBoost: number;
+  scenarioType: RecommendationSponsoredScenarioType;
+  billingMode: RecommendationSponsoredBillingMode;
+  rolloutMode: RecommendationSponsoredRolloutMode;
+};
+
+export type RecommendationCampaignReadinessMetadata = {
+  sponsoredEligible: boolean;
+  sponsoredBoostApplied: boolean;
+  sponsoredBoostScore: number;
+  sponsoredReason: string | null;
+  sponsoredPresetId: RecommendationSponsoredPresetId | null;
+  campaignReadinessStatus: RecommendationCampaignReadinessStatus;
+  billingMode: RecommendationSponsoredBillingMode;
+  rolloutMode: RecommendationSponsoredRolloutMode;
+};
+
 export type RecommendationSponsoredPresetMetadata = {
   id: RecommendationSponsoredPresetId;
   name: string;
@@ -84,6 +139,19 @@ export function toSafeSponsoredPresetMetadata(
     maxBusinessBoost: preset.maxBusinessBoost,
     allowedScenarioTypes: [...preset.allowedScenarioTypes],
     notes: preset.notes,
+  };
+}
+
+export function toSafeSponsoredCampaignMetadata(
+  contract: RecommendationSponsoredCampaignContract,
+): RecommendationSponsoredCampaignMetadata {
+  return {
+    campaignId: contract.campaignId,
+    sponsorType: contract.sponsorType,
+    maxBoost: contract.maxBoost,
+    scenarioType: contract.scenarioType,
+    billingMode: contract.billingMode,
+    rolloutMode: contract.rolloutMode,
   };
 }
 

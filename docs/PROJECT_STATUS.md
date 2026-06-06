@@ -1,5 +1,27 @@
 # Project Status
 
+## Finalize Recommendation for Campaign and Billing Integration Phase 3.3 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack is now ready for Campaign/Billing integration on the recommendation side with:
+  - internal-only sponsored campaign placeholder contracts
+  - internal campaign-readiness metadata in explainability and QA output
+  - continued bounded sponsored ranking behavior
+  - continued public API backward compatibility and backend-returned algorithm tracking
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - no campaign CRUD, billing ledger, attribution charging, or budget enforcement exists yet by design
+  - the new contract is internal-only and serves as a handoff foundation for future Phase 4 work
+- Next recommended phase:
+  - Phase 4.1: Campaign Management Foundation
+
 ## Managed Sponsored Config Catalogs and Rollout Presets Phase 3.2 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

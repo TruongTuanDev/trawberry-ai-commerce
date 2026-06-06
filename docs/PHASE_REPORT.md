@@ -1,5 +1,79 @@
 # Phase Report
 
+## 2026-06-07 Finalize Recommendation for Campaign and Billing Integration Phase 3.3
+
+- Status: Implemented on current branch
+- Scope:
+  - finalized the recommendation-side sponsored contract for future campaign and billing integration in the active NestJS + Next.js stack only
+  - added internal-only campaign-readiness contract fields for sponsored ranking, including safe placeholders for:
+    - `campaignId`
+    - `sponsorType`
+    - `scenarioType`
+    - `billingMode`
+    - `rolloutMode`
+    - `maxBoost`
+  - extended internal explainability and QA output with campaign-readiness metadata:
+    - `sponsoredEligible`
+    - `sponsoredBoostApplied`
+    - `sponsoredBoostScore`
+    - `sponsoredReason`
+    - `sponsoredPresetId`
+    - `campaignReadinessStatus`
+    - `billingMode`
+    - `rolloutMode`
+  - kept these fields internal-only and unavailable in normal public recommendation payloads
+  - kept sponsored ranking:
+    - disabled by default
+    - additive and bounded
+    - unable to override core relevance fully
+    - blocked for out-of-stock or inactive products
+  - kept recommendation tracking on backend-returned algorithm names without exposing campaign internals publicly
+  - added regression coverage for:
+    - disabled-by-default sponsored ranking
+    - bounded boosts
+    - ineligible product rejection
+    - internal-only campaign-readiness explainability
+    - no public leakage of campaign or billing placeholders
+    - backward-compatible recommendation APIs and fallback behavior
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no billing, wallet, budget deduction, campaign CRUD, or seller ads UI was added
+  - no legacy `strawberry-*` apps were modified
+- Handoff:
+  - Recommendation is now ready for Campaign/Billing integration on the recommendation side.
+  - Implemented:
+    - safe sponsored preset resolution
+    - internal campaign/billing placeholder contract
+    - internal campaign-readiness explainability and QA metadata
+    - backward-compatible public recommendation APIs
+  - Intentionally not implemented:
+    - campaign CRUD
+    - billing charges
+    - wallet or ledger writes
+    - sponsored attribution charging
+    - budget enforcement
+    - campaign analytics dashboard
+  - Public APIs that must remain backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - campaign and billing placeholders are recommendation-only contracts for now, not real campaign or billing modules
+  - no sponsored impression/click attribution storage changes exist yet by design
+- Next recommended phase:
+  - Phase 4.1: Campaign Management Foundation
+
 ## 2026-06-07 Managed Sponsored Config Catalogs and Rollout Presets Phase 3.2
 
 - Status: Implemented on current branch
