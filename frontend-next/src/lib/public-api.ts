@@ -222,9 +222,13 @@ export type RecommendationQaPack = {
   candidateSnapshot: RecommendationQaSnapshotResponse;
   expectedSummaryThresholds?: {
     maxMovedDownCount?: number;
+    maxMovedUpCount?: number;
     maxAddedCount?: number;
     maxRemovedCount?: number;
     maxScoreDelta?: number;
+    maxAbsoluteRankMovement?: number;
+    minUnchangedCount?: number;
+    maxTotalChangedCount?: number;
   };
 };
 
@@ -232,6 +236,36 @@ export type RecommendationQaPackValidationResponse = {
   valid: boolean;
   pack: RecommendationQaPack;
   notices: string[];
+  evaluation: {
+    overallStatus: "pass" | "fail" | "not_evaluated";
+    summary: {
+      totalItemsCompared: number;
+      movedUpCount: number;
+      movedDownCount: number;
+      addedCount: number;
+      removedCount: number;
+      unchangedCount: number;
+      totalChangedCount: number;
+      maxScoreDelta: number;
+      maxAbsoluteRankMovement: number;
+    };
+    thresholds: Array<{
+      key:
+        | "maxMovedDownCount"
+        | "maxMovedUpCount"
+        | "maxAddedCount"
+        | "maxRemovedCount"
+        | "maxScoreDelta"
+        | "maxAbsoluteRankMovement"
+        | "minUnchangedCount"
+        | "maxTotalChangedCount";
+      status: "pass" | "fail";
+      operator: "<=" | ">=";
+      actualValue: number;
+      expectedValue: number;
+      message: string;
+    }>;
+  };
 };
 
 export type VisualSearchResponse = {

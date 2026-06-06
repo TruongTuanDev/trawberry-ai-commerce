@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { ChangeEvent } from "react";
+import { useState } from "react";
 import {
   diffRecommendationRankingSnapshots,
   validateRecommendationQaPack,
@@ -10,27 +10,10 @@ import {
   type RecommendationQaPackValidationResponse,
   type RecommendationQaSnapshotResponse,
 } from "@/lib/public-api";
-import { SAMPLE_RECOMMENDATION_QA_PACK } from "@/lib/recommendation-qa-sample-pack";
-
-const SAMPLE_BASELINE_CATALOG = [
-  {
-    id: "home-baseline-v2",
-    label: "Home baseline",
-    scenario: "Run `/admin/recommendations-qa?placement=home&limit=8` before tuning.",
-  },
-  {
-    id: "search-jacket-v2",
-    label: "Search baseline",
-    scenario:
-      "Run `/admin/recommendations-qa?placement=search&q=jacket&limit=8` before tuning.",
-  },
-  {
-    id: "similar-known-product",
-    label: "Similar products baseline",
-    scenario:
-      "Run `/admin/recommendations-qa?placement=product_detail&productId=<public-product-id>&limit=8` for a stable public product.",
-  },
-];
+import {
+  RECOMMENDATION_QA_BASELINE_FIXTURES,
+  RECOMMENDATION_QA_SAMPLE_PACKS,
+} from "@/lib/recommendation-qa-fixtures";
 
 function formatSignedNumber(value: number | null) {
   if (value === null) {
@@ -63,8 +46,31 @@ function parseQaPack(value: string) {
   return parsed;
 }
 
+function formatThresholdLabel(
+  key: RecommendationQaPackValidationResponse["evaluation"]["thresholds"][number]["key"],
+) {
+  switch (key) {
+    case "maxMovedDownCount":
+      return "Max moved down";
+    case "maxMovedUpCount":
+      return "Max moved up";
+    case "maxAddedCount":
+      return "Max added";
+    case "maxRemovedCount":
+      return "Max removed";
+    case "maxScoreDelta":
+      return "Max score delta";
+    case "maxAbsoluteRankMovement":
+      return "Max rank movement";
+    case "minUnchangedCount":
+      return "Min unchanged";
+    case "maxTotalChangedCount":
+      return "Max total changed";
+  }
+}
+
 function buildMarkdownSummary(
-  pack: RecommendationQaPackValidationResponse["pack"] | null,
+  packValidation: RecommendationQaPackValidationResponse | null,
   diff: RecommendationQaDiffResponse,
 ) {
   const topMovedUp = diff.items.filter((item) => item.status === "moved_up").slice(0, 5);
@@ -73,12 +79,20 @@ function buildMarkdownSummary(
     .slice(0, 5);
   const added = diff.items.filter((item) => item.status === "added").slice(0, 5);
   const removed = diff.items.filter((item) => item.status === "removed").slice(0, 5);
+  const evaluation = packValidation?.evaluation ?? null;
+
+  const thresholdLines = evaluation?.thresholds.length
+    ? evaluation.thresholds.map(
+        (threshold) =>
+          `- ${formatThresholdLabel(threshold.key)}: ${threshold.status.toUpperCase()} (${threshold.actualValue} ${threshold.operator} ${threshold.expectedValue}) - ${threshold.message}`,
+      )
+    : ["- none"];
 
   const lines = [
     `# Recommendation QA Diff Summary`,
     ``,
-    `- Pack: ${pack?.packName ?? "Manual snapshot diff"}`,
-    `- Scenario: ${pack?.scenarioType ?? diff.scenario.baseline.scenarioType}`,
+    `- Pack: ${packValidation?.pack.packName ?? "Manual snapshot diff"}`,
+    `- Scenario: ${packValidation?.pack.scenarioType ?? diff.scenario.baseline.scenarioType}`,
     `- Baseline generatedAt: ${diff.scenario.baseline.generatedAt}`,
     `- Candidate generatedAt: ${diff.scenario.candidate.generatedAt}`,
     `- Total compared: ${diff.summary.totalItemsCompared}`,
@@ -87,6 +101,17 @@ function buildMarkdownSummary(
     `- Added: ${diff.summary.addedCount}`,
     `- Removed: ${diff.summary.removedCount}`,
     `- Unchanged: ${diff.summary.unchangedCount}`,
+    ``,
+    `## Threshold evaluation`,
+    `- Overall status: ${evaluation?.overallStatus ?? "not_evaluated"}`,
+    ...(evaluation
+      ? [
+          `- Total changed: ${evaluation.summary.totalChangedCount}`,
+          `- Max score delta: ${evaluation.summary.maxScoreDelta}`,
+          `- Max absolute rank movement: ${evaluation.summary.maxAbsoluteRankMovement}`,
+        ]
+      : []),
+    ...thresholdLines,
     ``,
     `## Top moved_up`,
     ...(topMovedUp.length
@@ -132,7 +157,7 @@ export function RecommendationRankingSnapshotDiffPanel() {
   const [isValidatingPack, setIsValidatingPack] = useState(false);
 
   const markdownSummary =
-    diffResult ? buildMarkdownSummary(validatedPack?.pack ?? null, diffResult) : "";
+    diffResult ? buildMarkdownSummary(validatedPack, diffResult) : "";
 
   async function handleCompare() {
     try {
@@ -209,7 +234,8 @@ export function RecommendationRankingSnapshotDiffPanel() {
         </h2>
         <p className="max-w-3xl text-sm leading-7 text-[var(--muted)]">
           Paste or import snapshot A and snapshot B, then let the internal API
-          calculate moved-up, moved-down, added, removed, and unchanged items.
+          calculate moved-up, moved-down, added, removed, unchanged, and QA pack
+          threshold results.
         </p>
       </div>
 
@@ -225,21 +251,20 @@ export function RecommendationRankingSnapshotDiffPanel() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                const sampleText = JSON.stringify(
-                  SAMPLE_RECOMMENDATION_QA_PACK,
-                  null,
-                  2,
-                );
-                setPackText(sampleText);
-                void handleValidatePack(sampleText);
-              }}
-              className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
-            >
-              Load sample pack
-            </button>
+            {RECOMMENDATION_QA_SAMPLE_PACKS.map((fixture) => (
+              <button
+                key={fixture.id}
+                type="button"
+                onClick={() => {
+                  const sampleText = JSON.stringify(fixture.pack, null, 2);
+                  setPackText(sampleText);
+                  void handleValidatePack(sampleText);
+                }}
+                className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+              >
+                {fixture.label}
+              </button>
+            ))}
             <label className="cursor-pointer rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
               Import pack JSON
               <input
@@ -266,23 +291,94 @@ export function RecommendationRankingSnapshotDiffPanel() {
           className="mt-4 min-h-56 w-full rounded-[1.25rem] border border-[var(--border)] bg-white p-4 font-mono text-xs leading-6 text-[var(--foreground)]"
         />
         {validatedPack ? (
-          <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-white p-4 text-sm">
-            <p className="font-semibold text-[var(--foreground)]">
-              Pack validated: {validatedPack.pack.packName}
-            </p>
-            <p className="mt-2 text-[var(--muted)]">
-              {validatedPack.pack.description}
-            </p>
-            <p className="mt-2 text-[var(--muted)]">
-              Scenario: {validatedPack.pack.scenarioType} · limit {validatedPack.pack.limit}
-            </p>
-            {validatedPack.notices.length ? (
-              <div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
-                {validatedPack.notices.map((notice) => (
-                  <p key={notice}>{notice}</p>
-                ))}
+          <div className="mt-4 space-y-4 rounded-[1.25rem] border border-[var(--border)] bg-white p-4 text-sm">
+            <div>
+              <p className="font-semibold text-[var(--foreground)]">
+                Pack validated: {validatedPack.pack.packName}
+              </p>
+              <p className="mt-2 text-[var(--muted)]">
+                {validatedPack.pack.description}
+              </p>
+              <p className="mt-2 text-[var(--muted)]">
+                Scenario: {validatedPack.pack.scenarioType} · limit {validatedPack.pack.limit}
+              </p>
+              {validatedPack.notices.length ? (
+                <div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
+                  {validatedPack.notices.map((notice) => (
+                    <p key={notice}>{notice}</p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                    Threshold evaluation
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Overall status:{" "}
+                    <span className="font-semibold text-[var(--foreground)]">
+                      {validatedPack.evaluation.overallStatus}
+                    </span>
+                  </p>
+                </div>
+                <div className="grid gap-3 text-sm sm:grid-cols-3">
+                  <p className="rounded-full border border-[var(--border)] bg-white px-3 py-2">
+                    Total changed: {validatedPack.evaluation.summary.totalChangedCount}
+                  </p>
+                  <p className="rounded-full border border-[var(--border)] bg-white px-3 py-2">
+                    Max score delta: {validatedPack.evaluation.summary.maxScoreDelta}
+                  </p>
+                  <p className="rounded-full border border-[var(--border)] bg-white px-3 py-2">
+                    Max rank movement: {validatedPack.evaluation.summary.maxAbsoluteRankMovement}
+                  </p>
+                </div>
               </div>
-            ) : null}
+
+              {validatedPack.evaluation.thresholds.length ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full border-separate border-spacing-0 text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                        <th className="border-b border-[var(--border)] px-3 py-3">Threshold</th>
+                        <th className="border-b border-[var(--border)] px-3 py-3">Status</th>
+                        <th className="border-b border-[var(--border)] px-3 py-3">Actual</th>
+                        <th className="border-b border-[var(--border)] px-3 py-3">Rule</th>
+                        <th className="border-b border-[var(--border)] px-3 py-3">Message</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {validatedPack.evaluation.thresholds.map((threshold) => (
+                        <tr key={threshold.key}>
+                          <td className="border-b border-[var(--border)] px-3 py-3 font-semibold text-[var(--foreground)]">
+                            {formatThresholdLabel(threshold.key)}
+                          </td>
+                          <td className="border-b border-[var(--border)] px-3 py-3">
+                            {threshold.status}
+                          </td>
+                          <td className="border-b border-[var(--border)] px-3 py-3">
+                            {threshold.actualValue}
+                          </td>
+                          <td className="border-b border-[var(--border)] px-3 py-3 font-mono">
+                            {threshold.operator} {threshold.expectedValue}
+                          </td>
+                          <td className="border-b border-[var(--border)] px-3 py-3 text-[var(--muted)]">
+                            {threshold.message}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-[var(--muted)]">
+                  This pack does not define thresholds yet, so the evaluation stays
+                  in `not_evaluated`.
+                </p>
+              )}
+            </div>
           </div>
         ) : null}
       </section>
@@ -364,15 +460,15 @@ export function RecommendationRankingSnapshotDiffPanel() {
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-            Baseline catalog
+            Baseline fixture library
           </p>
           <p className="text-sm leading-7 text-[var(--muted)]">
-            Use these safe internal baseline scenarios when building repeatable
+            Use these safe internal fixture scenarios when building repeatable
             before-and-after ranking audits.
           </p>
         </div>
         <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          {SAMPLE_BASELINE_CATALOG.map((item) => (
+          {RECOMMENDATION_QA_BASELINE_FIXTURES.map((item) => (
             <article
               key={item.id}
               className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4"
@@ -382,6 +478,12 @@ export function RecommendationRankingSnapshotDiffPanel() {
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 {item.scenario}
+              </p>
+              <p className="mt-3 text-xs text-[var(--muted)]">
+                {item.scenarioType}
+                {item.query ? ` · q=${item.query}` : ""}
+                {item.productId ? ` · productId=${item.productId}` : ""}
+                {` · limit=${item.limit}`}
               </p>
             </article>
           ))}

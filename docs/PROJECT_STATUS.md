@@ -1,5 +1,28 @@
 # Project Status
 
+## Recommendation QA Threshold Evaluation and Fixture Library Phase 2.6 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - internal QA pack threshold pass/fail evaluation
+  - safe evaluated summary metrics such as total changed count, max score delta, and max absolute rank movement
+  - per-threshold status rows with actual value, expected threshold, and human-readable message
+  - a lightweight safe fixture library for home, search, and similar-product ranking audits
+  - Markdown and print exports that include threshold evaluation
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - fixture packs are still local mock artifacts and are not shared across environments automatically
+  - QA tooling remains intentionally internal-only and requires explicit flags
+- Next recommended phase:
+  - Phase 2.7: add optional persisted baseline catalogs or threshold presets for broader team QA reuse
+
 ## Recommendation QA Baseline Packs and Visual Diff Export Phase 2.5 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`

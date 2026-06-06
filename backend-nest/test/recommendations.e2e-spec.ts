@@ -677,10 +677,25 @@ describe('RecommendationsController (e2e)', () => {
         candidateSnapshot: { generatedAt: string };
         expectedSummaryThresholds?: {
           maxMovedDownCount?: number;
+          maxMovedUpCount?: number;
           maxScoreDelta?: number;
         };
       };
       notices: string[];
+      evaluation: {
+        overallStatus: string;
+        summary: {
+          totalChangedCount: number;
+          maxScoreDelta: number;
+          maxAbsoluteRankMovement: number;
+        };
+        thresholds: Array<{
+          key: string;
+          status: string;
+          actualValue: number;
+          expectedValue: number;
+        }>;
+      };
     }>(response);
     const serialized = JSON.stringify(body);
 
@@ -689,10 +704,218 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.pack.scenarioType).toBe('home');
     expect(body.pack.limit).toBe(5);
     expect(body.pack.expectedSummaryThresholds?.maxMovedDownCount).toBe(2);
+    expect(body.evaluation.overallStatus).toBe('pass');
+    expect(body.evaluation.summary.totalChangedCount).toBe(4);
+    expect(body.evaluation.summary.maxScoreDelta).toBe(4);
+    expect(body.evaluation.summary.maxAbsoluteRankMovement).toBe(2);
+    expect(body.evaluation.thresholds).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'maxMovedDownCount',
+          status: 'pass',
+          actualValue: 1,
+          expectedValue: 2,
+        }),
+      ]),
+    );
     expect(Array.isArray(body.notices)).toBe(true);
     expect(serialized).not.toContain('guestSessionId');
     expect(serialized).not.toContain('customerId');
     expect(serialized).not.toContain('paymentInstructions');
+  });
+
+  it('marks QA pack evaluation as not_evaluated when thresholds are omitted', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const payload = buildQaPackPayload();
+    delete payload.expectedSummaryThresholds;
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send(payload)
+      .expect(201);
+
+    const body = readBody<{
+      evaluation: {
+        overallStatus: string;
+        thresholds: unknown[];
+      };
+    }>(response);
+
+    expect(body.evaluation.overallStatus).toBe('not_evaluated');
+    expect(body.evaluation.thresholds).toEqual([]);
+  });
+
+  it('passes QA pack threshold evaluation when every configured threshold stays within range', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send(
+        buildQaPackPayload({
+          maxMovedDownCount: 1,
+          maxMovedUpCount: 1,
+          maxAddedCount: 1,
+          maxRemovedCount: 1,
+          maxScoreDelta: 4,
+          maxAbsoluteRankMovement: 2,
+          minUnchangedCount: 1,
+          maxTotalChangedCount: 4,
+        }),
+      )
+      .expect(201);
+
+    const body = readBody<{
+      evaluation: {
+        overallStatus: string;
+        summary: {
+          movedUpCount: number;
+          movedDownCount: number;
+          addedCount: number;
+          removedCount: number;
+          unchangedCount: number;
+          totalChangedCount: number;
+          maxScoreDelta: number;
+          maxAbsoluteRankMovement: number;
+        };
+        thresholds: Array<{
+          key: string;
+          status: string;
+          actualValue: number;
+          expectedValue: number;
+          operator: string;
+        }>;
+      };
+    }>(response);
+
+    expect(body.evaluation.overallStatus).toBe('pass');
+    expect(body.evaluation.summary).toMatchObject({
+      movedUpCount: 1,
+      movedDownCount: 1,
+      addedCount: 1,
+      removedCount: 1,
+      unchangedCount: 1,
+      totalChangedCount: 4,
+      maxScoreDelta: 4,
+      maxAbsoluteRankMovement: 2,
+    });
+    expect(body.evaluation.thresholds).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'maxMovedDownCount',
+          status: 'pass',
+          actualValue: 1,
+          expectedValue: 1,
+          operator: '<=',
+        }),
+        expect.objectContaining({
+          key: 'maxMovedUpCount',
+          status: 'pass',
+          actualValue: 1,
+          expectedValue: 1,
+          operator: '<=',
+        }),
+        expect.objectContaining({
+          key: 'maxAddedCount',
+          status: 'pass',
+          actualValue: 1,
+          expectedValue: 1,
+          operator: '<=',
+        }),
+        expect.objectContaining({
+          key: 'maxRemovedCount',
+          status: 'pass',
+          actualValue: 1,
+          expectedValue: 1,
+          operator: '<=',
+        }),
+        expect.objectContaining({
+          key: 'maxScoreDelta',
+          status: 'pass',
+          actualValue: 4,
+          expectedValue: 4,
+          operator: '<=',
+        }),
+        expect.objectContaining({
+          key: 'maxAbsoluteRankMovement',
+          status: 'pass',
+          actualValue: 2,
+          expectedValue: 2,
+          operator: '<=',
+        }),
+        expect.objectContaining({
+          key: 'minUnchangedCount',
+          status: 'pass',
+          actualValue: 1,
+          expectedValue: 1,
+          operator: '>=',
+        }),
+        expect.objectContaining({
+          key: 'maxTotalChangedCount',
+          status: 'pass',
+          actualValue: 4,
+          expectedValue: 4,
+          operator: '<=',
+        }),
+      ]),
+    );
+  });
+
+  it('fails QA pack threshold evaluation when any configured threshold is exceeded', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send(
+        buildQaPackPayload({
+          maxMovedDownCount: 0,
+          minUnchangedCount: 2,
+          maxTotalChangedCount: 3,
+        }),
+      )
+      .expect(201);
+
+    const body = readBody<{
+      evaluation: {
+        overallStatus: string;
+        thresholds: Array<{
+          key: string;
+          status: string;
+          actualValue: number;
+          expectedValue: number;
+        }>;
+      };
+    }>(response);
+
+    expect(body.evaluation.overallStatus).toBe('fail');
+    expect(body.evaluation.thresholds).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'maxMovedDownCount',
+          status: 'fail',
+          actualValue: 1,
+          expectedValue: 0,
+        }),
+        expect.objectContaining({
+          key: 'minUnchangedCount',
+          status: 'fail',
+          actualValue: 1,
+          expectedValue: 2,
+        }),
+        expect.objectContaining({
+          key: 'maxTotalChangedCount',
+          status: 'fail',
+          actualValue: 4,
+          expectedValue: 3,
+        }),
+      ]),
+    );
   });
 
   it('rejects malformed QA pack payloads', async () => {
@@ -706,6 +929,21 @@ describe('RecommendationsController (e2e)', () => {
         packName: 'Broken pack',
         scenarioType: 'search',
       })
+      .expect(400);
+  });
+
+  it('rejects malformed QA pack threshold payloads', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send(
+        buildQaPackPayload({
+          maxMovedUpCount: -1,
+        }),
+      )
       .expect(400);
   });
 
@@ -1057,7 +1295,16 @@ function buildSnapshotDiffPayload() {
   };
 }
 
-function buildQaPackPayload() {
+function buildQaPackPayload(expectedSummaryThresholds?: {
+  maxMovedDownCount?: number;
+  maxMovedUpCount?: number;
+  maxAddedCount?: number;
+  maxRemovedCount?: number;
+  maxScoreDelta?: number;
+  maxAbsoluteRankMovement?: number;
+  minUnchangedCount?: number;
+  maxTotalChangedCount?: number;
+}) {
   return {
     packName: 'Sample home QA pack',
     description:
@@ -1068,7 +1315,7 @@ function buildQaPackPayload() {
     limit: 5,
     baselineSnapshot: buildSnapshotDiffPayload().baseline,
     candidateSnapshot: buildSnapshotDiffPayload().candidate,
-    expectedSummaryThresholds: {
+    expectedSummaryThresholds: expectedSummaryThresholds ?? {
       maxMovedDownCount: 2,
       maxRemovedCount: 1,
       maxScoreDelta: 5,

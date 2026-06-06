@@ -82,6 +82,56 @@ type RecommendationQaComparisonRow = {
 type RecommendationQaSnapshotItemLike =
   RecommendationQaSnapshotDto['items'][number];
 
+type RecommendationQaDiffResult = {
+  scenario: {
+    baseline: RecommendationQaDiffRequestDto['baseline'];
+    candidate: RecommendationQaDiffRequestDto['candidate'];
+  };
+  summary: {
+    totalItemsCompared: number;
+    movedUpCount: number;
+    movedDownCount: number;
+    addedCount: number;
+    removedCount: number;
+    unchangedCount: number;
+  };
+  items: Array<{
+    productId: string;
+    productName: string;
+    status: 'unchanged' | 'moved_up' | 'moved_down' | 'added' | 'removed';
+    oldRank: number | null;
+    newRank: number | null;
+    rankMovement: number | null;
+    oldScore: number | null;
+    newScore: number | null;
+    scoreDelta: number | null;
+    reasonDelta: {
+      added: string[];
+      removed: string[];
+    } | null;
+    scoreBreakdownDelta: {
+      categoryScore: number;
+      textScore: number;
+      popularityScore: number;
+      freshnessScore: number;
+      ratingScore: number;
+      stockScore: number;
+      shopScore: number;
+      penaltyScore: number;
+    } | null;
+  }>;
+};
+
+type RecommendationQaPackThresholdKey =
+  | 'maxMovedDownCount'
+  | 'maxMovedUpCount'
+  | 'maxAddedCount'
+  | 'maxRemovedCount'
+  | 'maxScoreDelta'
+  | 'maxAbsoluteRankMovement'
+  | 'minUnchangedCount'
+  | 'maxTotalChangedCount';
+
 @Injectable()
 export class RecommendationsService {
   constructor(
@@ -217,91 +267,7 @@ export class RecommendationsService {
       throw new NotFoundException();
     }
 
-    const baselineItems = new Map(
-      body.baseline.items.map((item) => [item.product.id, item]),
-    );
-    const candidateItems = new Map(
-      body.candidate.items.map((item) => [item.product.id, item]),
-    );
-    const orderedIds = [
-      ...body.baseline.items.map((item) => item.product.id),
-      ...body.candidate.items
-        .map((item) => item.product.id)
-        .filter((id) => !baselineItems.has(id)),
-    ];
-
-    const items = orderedIds.map((productId) => {
-      const baselineItem = baselineItems.get(productId) ?? null;
-      const candidateItem = candidateItems.get(productId) ?? null;
-      const oldSnapshot = this.resolvePreferredSnapshot(baselineItem);
-      const newSnapshot = this.resolvePreferredSnapshot(candidateItem);
-      const oldRank = oldSnapshot?.rank ?? null;
-      const newRank = newSnapshot?.rank ?? null;
-      const rankMovement =
-        oldRank !== null && newRank !== null ? oldRank - newRank : null;
-      const oldScore = oldSnapshot?.finalScore ?? null;
-      const newScore = newSnapshot?.finalScore ?? null;
-      const productName =
-        candidateItem?.product.name ?? baselineItem?.product.name ?? productId;
-
-      let status:
-        | 'unchanged'
-        | 'moved_up'
-        | 'moved_down'
-        | 'added'
-        | 'removed' = 'unchanged';
-      if (!baselineItem && candidateItem) {
-        status = 'added';
-      } else if (baselineItem && !candidateItem) {
-        status = 'removed';
-      } else if (rankMovement !== null && rankMovement > 0) {
-        status = 'moved_up';
-      } else if (rankMovement !== null && rankMovement < 0) {
-        status = 'moved_down';
-      }
-
-      return {
-        productId,
-        productName,
-        status,
-        oldRank,
-        newRank,
-        rankMovement,
-        oldScore,
-        newScore,
-        scoreDelta:
-          oldScore !== null && newScore !== null ? newScore - oldScore : null,
-        reasonDelta:
-          baselineItem || candidateItem
-            ? this.buildReasonDelta(
-                oldSnapshot?.reasons ?? [],
-                newSnapshot?.reasons ?? [],
-              )
-            : null,
-        scoreBreakdownDelta: this.buildScoreBreakdownDelta(
-          oldSnapshot?.scoreBreakdown ?? null,
-          newSnapshot?.scoreBreakdown ?? null,
-        ),
-      };
-    });
-
-    return {
-      scenario: {
-        baseline: body.baseline,
-        candidate: body.candidate,
-      },
-      summary: {
-        totalItemsCompared: items.length,
-        movedUpCount: items.filter((item) => item.status === 'moved_up').length,
-        movedDownCount: items.filter((item) => item.status === 'moved_down')
-          .length,
-        addedCount: items.filter((item) => item.status === 'added').length,
-        removedCount: items.filter((item) => item.status === 'removed').length,
-        unchangedCount: items.filter((item) => item.status === 'unchanged')
-          .length,
-      },
-      items,
-    };
+    return this.buildSnapshotDiffResult(body);
   }
 
   validateQaPack(body: RecommendationQaPackDto) {
@@ -333,10 +299,20 @@ export class RecommendationsService {
       );
     }
 
+    const diff = this.buildSnapshotDiffResult({
+      baseline: body.baselineSnapshot,
+      candidate: body.candidateSnapshot,
+    });
+    const evaluation = this.evaluateQaPackThresholds(
+      diff,
+      body.expectedSummaryThresholds,
+    );
+
     return {
       valid: true,
       pack: body,
       notices,
+      evaluation,
     };
   }
 
@@ -926,6 +902,236 @@ export class RecommendationsService {
         (newBreakdown?.shopScore ?? 0) - (oldBreakdown?.shopScore ?? 0),
       penaltyScore:
         (newBreakdown?.penaltyScore ?? 0) - (oldBreakdown?.penaltyScore ?? 0),
+    };
+  }
+
+  private buildSnapshotDiffResult(
+    body: RecommendationQaDiffRequestDto,
+  ): RecommendationQaDiffResult {
+    const baselineItems = new Map(
+      body.baseline.items.map((item) => [item.product.id, item]),
+    );
+    const candidateItems = new Map(
+      body.candidate.items.map((item) => [item.product.id, item]),
+    );
+    const orderedIds = [
+      ...body.baseline.items.map((item) => item.product.id),
+      ...body.candidate.items
+        .map((item) => item.product.id)
+        .filter((id) => !baselineItems.has(id)),
+    ];
+
+    const items = orderedIds.map((productId) => {
+      const baselineItem = baselineItems.get(productId) ?? null;
+      const candidateItem = candidateItems.get(productId) ?? null;
+      const oldSnapshot = this.resolvePreferredSnapshot(baselineItem);
+      const newSnapshot = this.resolvePreferredSnapshot(candidateItem);
+      const oldRank = oldSnapshot?.rank ?? null;
+      const newRank = newSnapshot?.rank ?? null;
+      const rankMovement =
+        oldRank !== null && newRank !== null ? oldRank - newRank : null;
+      const oldScore = oldSnapshot?.finalScore ?? null;
+      const newScore = newSnapshot?.finalScore ?? null;
+      const productName =
+        candidateItem?.product.name ?? baselineItem?.product.name ?? productId;
+
+      let status:
+        | 'unchanged'
+        | 'moved_up'
+        | 'moved_down'
+        | 'added'
+        | 'removed' = 'unchanged';
+      if (!baselineItem && candidateItem) {
+        status = 'added';
+      } else if (baselineItem && !candidateItem) {
+        status = 'removed';
+      } else if (rankMovement !== null && rankMovement > 0) {
+        status = 'moved_up';
+      } else if (rankMovement !== null && rankMovement < 0) {
+        status = 'moved_down';
+      }
+
+      return {
+        productId,
+        productName,
+        status,
+        oldRank,
+        newRank,
+        rankMovement,
+        oldScore,
+        newScore,
+        scoreDelta:
+          oldScore !== null && newScore !== null ? newScore - oldScore : null,
+        reasonDelta:
+          baselineItem || candidateItem
+            ? this.buildReasonDelta(
+                oldSnapshot?.reasons ?? [],
+                newSnapshot?.reasons ?? [],
+              )
+            : null,
+        scoreBreakdownDelta: this.buildScoreBreakdownDelta(
+          oldSnapshot?.scoreBreakdown ?? null,
+          newSnapshot?.scoreBreakdown ?? null,
+        ),
+      };
+    });
+
+    return {
+      scenario: {
+        baseline: body.baseline,
+        candidate: body.candidate,
+      },
+      summary: {
+        totalItemsCompared: items.length,
+        movedUpCount: items.filter((item) => item.status === 'moved_up').length,
+        movedDownCount: items.filter((item) => item.status === 'moved_down')
+          .length,
+        addedCount: items.filter((item) => item.status === 'added').length,
+        removedCount: items.filter((item) => item.status === 'removed').length,
+        unchangedCount: items.filter((item) => item.status === 'unchanged')
+          .length,
+      },
+      items,
+    };
+  }
+
+  private evaluateQaPackThresholds(
+    diff: RecommendationQaDiffResult,
+    thresholds?: RecommendationQaPackDto['expectedSummaryThresholds'],
+  ) {
+    const summary = {
+      ...diff.summary,
+      totalChangedCount:
+        diff.summary.movedUpCount +
+        diff.summary.movedDownCount +
+        diff.summary.addedCount +
+        diff.summary.removedCount,
+      maxScoreDelta: Math.max(
+        0,
+        ...diff.items.map((item) => Math.abs(item.scoreDelta ?? 0)),
+      ),
+      maxAbsoluteRankMovement: Math.max(
+        0,
+        ...diff.items.map((item) => Math.abs(item.rankMovement ?? 0)),
+      ),
+    };
+
+    if (!thresholds || !Object.keys(thresholds).length) {
+      return {
+        overallStatus: 'not_evaluated' as const,
+        summary,
+        thresholds: [],
+      };
+    }
+
+    const evaluations: Array<{
+      key: RecommendationQaPackThresholdKey;
+      status: 'pass' | 'fail';
+      operator: '<=' | '>=';
+      actualValue: number;
+      expectedValue: number;
+      message: string;
+    }> = [];
+    const evaluateMaxThreshold = (
+      key: RecommendationQaPackThresholdKey,
+      label: string,
+      actualValue: number,
+      expectedValue: number | undefined,
+    ) => {
+      if (expectedValue === undefined) {
+        return;
+      }
+
+      evaluations.push({
+        key,
+        status: actualValue <= expectedValue ? 'pass' : 'fail',
+        operator: '<=',
+        actualValue,
+        expectedValue,
+        message:
+          actualValue <= expectedValue
+            ? `${label} stayed within the threshold.`
+            : `${label} exceeded the threshold.`,
+      });
+    };
+    const evaluateMinThreshold = (
+      key: RecommendationQaPackThresholdKey,
+      label: string,
+      actualValue: number,
+      expectedValue: number | undefined,
+    ) => {
+      if (expectedValue === undefined) {
+        return;
+      }
+
+      evaluations.push({
+        key,
+        status: actualValue >= expectedValue ? 'pass' : 'fail',
+        operator: '>=',
+        actualValue,
+        expectedValue,
+        message:
+          actualValue >= expectedValue
+            ? `${label} met the minimum threshold.`
+            : `${label} fell below the minimum threshold.`,
+      });
+    };
+
+    evaluateMaxThreshold(
+      'maxMovedDownCount',
+      'Moved-down count',
+      summary.movedDownCount,
+      thresholds.maxMovedDownCount,
+    );
+    evaluateMaxThreshold(
+      'maxMovedUpCount',
+      'Moved-up count',
+      summary.movedUpCount,
+      thresholds.maxMovedUpCount,
+    );
+    evaluateMaxThreshold(
+      'maxAddedCount',
+      'Added count',
+      summary.addedCount,
+      thresholds.maxAddedCount,
+    );
+    evaluateMaxThreshold(
+      'maxRemovedCount',
+      'Removed count',
+      summary.removedCount,
+      thresholds.maxRemovedCount,
+    );
+    evaluateMaxThreshold(
+      'maxScoreDelta',
+      'Maximum absolute score delta',
+      summary.maxScoreDelta,
+      thresholds.maxScoreDelta,
+    );
+    evaluateMaxThreshold(
+      'maxAbsoluteRankMovement',
+      'Maximum absolute rank movement',
+      summary.maxAbsoluteRankMovement,
+      thresholds.maxAbsoluteRankMovement,
+    );
+    evaluateMinThreshold(
+      'minUnchangedCount',
+      'Unchanged count',
+      summary.unchangedCount,
+      thresholds.minUnchangedCount,
+    );
+    evaluateMaxThreshold(
+      'maxTotalChangedCount',
+      'Total changed count',
+      summary.totalChangedCount,
+      thresholds.maxTotalChangedCount,
+    );
+
+    return {
+      overallStatus: evaluations.every((item) => item.status === 'pass')
+        ? ('pass' as const)
+        : ('fail' as const),
+      summary,
+      thresholds: evaluations,
     };
   }
 

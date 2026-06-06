@@ -105,6 +105,12 @@ Internal QA comparison mode:
   - cookies
   - private tracking payloads
   - private shop/internal-only fields
+- QA pack evaluation also never returns:
+  - user ids
+  - session ids
+  - cookies
+  - private tracking payloads
+  - private shop/internal-only fields
 - QA packs committed to the repo must contain only safe mock/sample snapshot data
 
 ## Read APIs
@@ -568,6 +574,17 @@ QA pack structure:
 - `candidateSnapshot`
 - optional `expectedSummaryThresholds`
 
+Supported threshold keys:
+
+- `maxMovedDownCount`
+- `maxMovedUpCount`
+- `maxAddedCount`
+- `maxRemovedCount`
+- `maxScoreDelta`
+- `maxAbsoluteRankMovement`
+- `minUnchangedCount`
+- `maxTotalChangedCount`
+
 QA pack example:
 
 ```json
@@ -601,10 +618,64 @@ QA pack example:
   "expectedSummaryThresholds": {
     "maxMovedDownCount": 2,
     "maxRemovedCount": 1,
-    "maxScoreDelta": 5
+    "maxScoreDelta": 5,
+    "minUnchangedCount": 1
   }
 }
 ```
+
+QA pack validation response now also includes:
+
+- `evaluation.overallStatus`
+  - `pass`
+  - `fail`
+  - `not_evaluated`
+- `evaluation.summary`
+  - `totalItemsCompared`
+  - `movedUpCount`
+  - `movedDownCount`
+  - `addedCount`
+  - `removedCount`
+  - `unchangedCount`
+  - `totalChangedCount`
+  - `maxScoreDelta`
+  - `maxAbsoluteRankMovement`
+- `evaluation.thresholds[]`
+  - `key`
+  - `status`
+  - `operator`
+  - `actualValue`
+  - `expectedValue`
+  - `message`
+
+Threshold interpretation:
+
+- `max*` thresholds pass when the actual value is `<= expectedValue`
+- `minUnchangedCount` passes when the actual value is `>= expectedValue`
+- if no thresholds are provided, `overallStatus` becomes `not_evaluated`
+
+Local QA threshold workflow:
+
+1. Enable internal QA flags:
+   - `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+2. Optional explainability:
+   - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+3. Start backend and frontend locally.
+4. Open `/admin/recommendations-qa`.
+5. Load one of the safe sample QA packs:
+   - home ranking stability
+   - search intent stability
+   - similar products stability
+6. Review the validation result:
+   - `overallStatus`
+   - per-threshold `actualValue`
+   - per-threshold `expectedValue`
+   - per-threshold `message`
+7. Run the snapshot diff using the hydrated baseline/candidate snapshots.
+8. Export the Markdown summary or print view for internal review.
+9. After future weight changes, repeat the same fixture pack or scenario and compare whether thresholds still pass.
 
 ## Rollout
 
@@ -619,6 +690,7 @@ QA pack example:
    - optional QA snapshot export: call `GET /api/internal/recommendations/compare?export=true&format=json` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA snapshot diff: call `POST /api/internal/recommendations/diff` with two safe snapshot payloads after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA pack validation: call `POST /api/internal/recommendations/packs/validate` with a safe QA pack payload after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - optional QA threshold evaluation: inspect `evaluation.overallStatus` and `evaluation.thresholds[]` from the same QA pack validation response
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.
 5. Monitor recommendation event volume and storefront render behavior.
 

@@ -1,5 +1,74 @@
 # Phase Report
 
+## 2026-06-06 Recommendation QA Threshold Evaluation and Fixture Library Phase 2.6
+
+- Status: Implemented on current branch
+- Scope:
+  - extended internal-only QA pack validation at `POST /api/internal/recommendations/packs/validate`
+  - QA pack validation now returns safe threshold evaluation with:
+    - `evaluation.overallStatus`
+    - `evaluation.summary`
+    - `evaluation.thresholds[]`
+  - supported threshold keys now include:
+    - `maxMovedDownCount`
+    - `maxMovedUpCount`
+    - `maxAddedCount`
+    - `maxRemovedCount`
+    - `maxScoreDelta`
+    - `maxAbsoluteRankMovement`
+    - `minUnchangedCount`
+    - `maxTotalChangedCount`
+  - added backend regression coverage for:
+    - omitted thresholds -> `not_evaluated`
+    - all thresholds passing -> `pass`
+    - any threshold failing -> `fail`
+    - malformed threshold payload rejection
+    - no user/session/private leakage
+    - existing public recommendation endpoint compatibility
+  - organized a lightweight internal fixture library with safe mock sample QA packs for:
+    - home ranking stability
+    - search intent ranking stability
+    - similar products ranking stability
+  - enhanced `/admin/recommendations-qa` with:
+    - multiple sample QA pack buttons
+    - visible overall pass/fail/not-evaluated status
+    - per-threshold table with actual value, expected threshold, and message
+    - Markdown and print export including threshold evaluation
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - threshold evaluation remains internal-only behind QA flags
+  - committed fixtures use safe mock/sample data only
+- Local QA workflow:
+  - set `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - set `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - optional explainability:
+    - set `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - set `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - open `/admin/recommendations-qa`
+  - load one of the safe fixture packs
+  - validate the pack and review:
+    - `overallStatus`
+    - threshold rows
+    - total changed count
+    - max score delta
+    - max rank movement
+  - run the snapshot diff and export the Markdown or print summary
+  - repeat the same fixture after future weight changes to see whether thresholds still pass
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - threshold fixture libraries are still repo-local mock artifacts rather than shared/persisted QA assets
+  - the internal QA page is intentionally not linked in public navigation
+
 ## 2026-06-06 Recommendation QA Baseline Packs and Visual Diff Export Phase 2.5
 
 - Status: Implemented on current branch
