@@ -1,5 +1,23 @@
 # Project Status
 
+## Recommendation Smart Ranking Phase 2 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now supports:
+  - `rule_based_v2` scoring with explicit category, text, popularity, freshness, rating, stock, shop, and penalty components
+  - personalized homepage recommendations from recent guest/customer views and searches
+  - smarter similar products ranking with category, color, and brand preference
+  - additive search recommendation block via `GET /api/public/recommendations/search`
+  - richer recommendation payloads with `rank`, `score`, and `reasonCodes`
+  - best-effort impression/click tracking with `algorithm`, `rank`, and `score`
+- Frontend coverage now includes recommendation sections on:
+  - homepage
+  - public product detail
+  - catalog search results
+- Current limitation:
+  - this is still rule-based scoring, not ML ranking
+  - sponsored/ad ranking remains future Phase 3 work
+
 ## Seller Center Navigation UX Refactor - 2026-06-06
 
 - Status: implemented in `frontend-next`

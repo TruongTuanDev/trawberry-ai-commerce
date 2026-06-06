@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { PublicRecommendationSection } from "@/components/public/public-recommendation-section";
 import { ProductCard } from "@/components/public/product-card";
 import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
 import {
+  getHomeRecommendations,
   getPublicHomepageSlides,
   getPublicProducts,
+  type RecommendationProductItem,
   type PublicHomepageSlide,
   type PublicProduct,
 } from "@/lib/public-api";
 import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
 import { translate } from "@/i18n/translate";
+import { getRecommendationFlags } from "@/lib/recommendation-flags";
 
 async function loadHomepageCatalog() {
   try {
@@ -52,9 +56,26 @@ async function loadHomepageSlides() {
   }
 }
 
+async function loadHomepageRecommendations(enabled: boolean) {
+  if (!enabled) {
+    return [] as RecommendationProductItem[];
+  }
+
+  try {
+    const response = await getHomeRecommendations(8);
+    return response.items;
+  } catch {
+    return [] as RecommendationProductItem[];
+  }
+}
+
 export default async function HomePage() {
+  const recommendationFlags = getRecommendationFlags();
   const { items, total } = await loadHomepageCatalog();
   const slides = await loadHomepageSlides();
+  const recommendationItems = await loadHomepageRecommendations(
+    recommendationFlags.publicRecommendationsEnabled,
+  );
   const cookieStore = await cookies();
   const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_KEY)?.value) ?? "ru";
 
@@ -63,6 +84,15 @@ export default async function HomePage() {
       <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-7xl space-y-8">
           <PublicHomepageHeroSlider initialSlides={slides} />
+
+          {recommendationItems.length ? (
+            <PublicRecommendationSection
+              titleKey="recommendedForYou"
+              items={recommendationItems}
+              placement="home"
+              trackingEnabled={recommendationFlags.recommendationTrackingEnabled}
+            />
+          ) : null}
 
           <section className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

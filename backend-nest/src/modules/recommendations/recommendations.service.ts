@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, type ProductImage, type ProductVariant } from '@prisma/client';
-import type { Request } from 'express';
+import { Prisma, type ProductVariant } from '@prisma/client';
 import { createHash } from 'crypto';
+import type { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { ProductReadinessService } from '../products/product-readiness.service';
@@ -10,52 +10,19 @@ import { RecommendationQueryDto } from './dto/recommendation-query.dto';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
 import { TrackSearchDto } from './dto/track-search.dto';
+import {
+  RecommendationPreferenceProfile,
+  RecommendationProductRecord,
+  RecommendationScoringService,
+  type RecommendationVariantRecord,
+  type RecommendationPlacement,
+} from './recommendation-scoring.service';
 
-type RecommendationProductRecord = {
-  id: string;
-  shopId: string;
-  wbTitle: string;
-  localTitle: string | null;
-  wbDescription: string | null;
-  localDescription: string | null;
-  brand: string | null;
-  color: string | null;
-  gender: string | null;
-  composition: string | null;
-  sellerSku: string | null;
-  seoSlug: string | null;
-  categoryName: string | null;
-  sourceCategoryName: string | null;
-  aiTryOnEnabled: boolean;
-  visibility: string | null;
-  catalogStatus: string;
-  averageRating: Prisma.Decimal | null;
-  feedbackCount: number | null;
-  categoryId: bigint | null;
-  subjectId: bigint | null;
-  createdAt: Date;
-  publishedAt: Date | null;
-  unpublishedAt: Date | null;
-  updatedAt: Date;
-  archivedAt: Date | null;
-  images: ProductImage[];
-  variants: ProductVariant[];
-  shop: {
-    id: string;
-    name: string;
-    slug: string;
-    logoUrl: string | null;
-    paymentInstructions: string | null;
-    status: string;
-    sellerProfile: {
-      approvalStatus: string;
-    };
-  };
-  category: {
-    id: bigint;
-    name: string;
-    slug: string | null;
-  } | null;
+type RecommendationApiItem = {
+  product: ReturnType<RecommendationsService['mapProduct']>;
+  rank: number;
+  score: number | null;
+  reasonCodes: string[];
 };
 
 @Injectable()
@@ -64,39 +31,55 @@ export class RecommendationsService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly productReadiness: ProductReadinessService,
+    private readonly scoring: RecommendationScoringService,
   ) {}
 
-  async getHomeRecommendations(query: RecommendationQueryDto) {
+  async getHomeRecommendations(
+    query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
     if (!this.isPublicRecommendationsEnabled()) {
-      return { algorithm: 'rule_based_v1', items: [] };
+      return this.emptyResponse('home');
+    }
+
+    if (!this.isSmartRankingEnabled()) {
+      return this.getHomeRecommendationsV1(query);
     }
 
     try {
-      const products = await this.prisma.product.findMany({
-        where: this.buildPublicVisibilityWhere(),
-        include: this.getProductInclude(),
-        take: 120,
-        orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
-      });
+      const [products, preferenceProfile] = await Promise.all([
+        this.prisma.product.findMany({
+          where: this.buildPublicVisibilityWhere(),
+          include: this.getProductInclude(),
+          take: 150,
+          orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+        }),
+        this.buildPreferenceProfile(query, request, user),
+      ]);
 
       const items = products
         .filter((product) => this.isPublicVisible(product))
-        .sort(
-          (left, right) =>
-            this.scoreHomeProduct(right) - this.scoreHomeProduct(left),
-        )
-        .slice(0, query.limit)
-        .map((item) => this.mapProduct(item));
+        .map((product) => ({
+          product,
+          scored: this.scoring.scoreHomeProduct(product, preferenceProfile),
+        }))
+        .sort((left, right) => right.scored.score - left.scored.score)
+        .slice(0, query.limit);
 
-      return { algorithm: 'rule_based_v1', items };
+      return this.buildResponse('home', 'rule_based_v2', items, query.debug);
     } catch {
-      return { algorithm: 'rule_based_v1', items: [] };
+      return this.emptyResponse('home');
     }
   }
 
   async getSimilarProducts(productId: string, query: RecommendationQueryDto) {
     if (!this.isPublicRecommendationsEnabled()) {
-      return { algorithm: 'rule_based_v1', items: [] };
+      return this.emptyResponse('product_detail');
+    }
+
+    if (!this.isSmartRankingEnabled()) {
+      return this.getSimilarProductsV1(productId, query);
     }
 
     try {
@@ -109,55 +92,98 @@ export class RecommendationsService {
       });
 
       if (!sourceProduct || !this.isPublicVisible(sourceProduct)) {
-        return { algorithm: 'rule_based_v1', items: [] };
+        return this.emptyResponse('product_detail');
       }
 
-      const candidateWhere: Prisma.ProductWhereInput = {
-        ...this.buildPublicVisibilityWhere(),
-        id: {
-          not: productId,
-        },
-      };
+      const candidates = await this.loadSimilarCandidates(
+        sourceProduct,
+        query.limit,
+      );
 
-      const or: Prisma.ProductWhereInput[] = [];
-      if (sourceProduct.categoryId) {
-        or.push({ categoryId: sourceProduct.categoryId });
-      }
-      if (sourceProduct.categoryName?.trim()) {
-        or.push({ categoryName: sourceProduct.categoryName.trim() });
-      }
-      if (sourceProduct.sourceCategoryName?.trim()) {
-        or.push({
-          sourceCategoryName: sourceProduct.sourceCategoryName.trim(),
-        });
-      }
-      if (sourceProduct.brand?.trim()) {
-        or.push({ brand: sourceProduct.brand.trim() });
-      }
-      if (sourceProduct.color?.trim()) {
-        or.push({ color: sourceProduct.color.trim() });
+      const items = candidates
+        .filter(
+          (product) =>
+            this.isPublicVisible(product) && product.id !== productId,
+        )
+        .map((product) => ({
+          product,
+          scored: this.scoring.scoreSimilarProduct(sourceProduct, product),
+        }))
+        .sort((left, right) => right.scored.score - left.scored.score)
+        .slice(0, query.limit);
+
+      return this.buildResponse(
+        'product_detail',
+        'rule_based_v2',
+        items,
+        query.debug,
+      );
+    } catch {
+      return this.emptyResponse('product_detail');
+    }
+  }
+
+  async getSearchRecommendations(query: RecommendationQueryDto) {
+    const searchQuery = query.q?.trim() ?? '';
+    if (!this.isPublicRecommendationsEnabled() || !searchQuery) {
+      return this.emptyResponse('search');
+    }
+
+    if (!this.isSmartRankingEnabled()) {
+      return this.emptyResponse('search');
+    }
+
+    try {
+      const tokens = this.normalizeQuery(searchQuery)
+        .split(' ')
+        .filter((token) => token.length >= 2);
+      const or: Prisma.ProductWhereInput[] = [
+        { wbTitle: { contains: searchQuery, mode: 'insensitive' } },
+        { localTitle: { contains: searchQuery, mode: 'insensitive' } },
+        { wbDescription: { contains: searchQuery, mode: 'insensitive' } },
+        { localDescription: { contains: searchQuery, mode: 'insensitive' } },
+        { categoryName: { contains: searchQuery, mode: 'insensitive' } },
+        { sourceCategoryName: { contains: searchQuery, mode: 'insensitive' } },
+        { brand: { contains: searchQuery, mode: 'insensitive' } },
+        { color: { contains: searchQuery, mode: 'insensitive' } },
+      ];
+
+      for (const token of tokens) {
+        or.push(
+          { wbTitle: { contains: token, mode: 'insensitive' } },
+          { localTitle: { contains: token, mode: 'insensitive' } },
+          { wbDescription: { contains: token, mode: 'insensitive' } },
+          { localDescription: { contains: token, mode: 'insensitive' } },
+          { categoryName: { contains: token, mode: 'insensitive' } },
+          { sourceCategoryName: { contains: token, mode: 'insensitive' } },
+          { brand: { contains: token, mode: 'insensitive' } },
+          { color: { contains: token, mode: 'insensitive' } },
+        );
       }
 
       const candidates = await this.prisma.product.findMany({
-        where: or.length ? { ...candidateWhere, OR: or } : candidateWhere,
+        where: {
+          ...this.buildPublicVisibilityWhere(),
+          OR: or,
+        },
         include: this.getProductInclude(),
-        take: 120,
-        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 150,
+        orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
       });
 
       const items = candidates
         .filter((product) => this.isPublicVisible(product))
-        .sort(
-          (left, right) =>
-            this.scoreSimilarProduct(sourceProduct, right) -
-            this.scoreSimilarProduct(sourceProduct, left),
-        )
-        .slice(0, query.limit)
-        .map((item) => this.mapProduct(item));
+        .map((product) => ({
+          product,
+          scored: this.scoring.scoreSearchProduct(searchQuery, product),
+        }))
+        .filter((item) => item.scored.score > 0)
+        .sort((left, right) => right.scored.score - left.scored.score)
+        .slice(0, query.limit);
 
-      return { algorithm: 'rule_based_v1', items };
+      return this.buildResponse('search', 'rule_based_v2', items, query.debug);
     } catch {
-      return { algorithm: 'rule_based_v1', items: [] };
+      return this.emptyResponse('search');
     }
   }
 
@@ -250,7 +276,7 @@ export class RecommendationsService {
             dto.guestSessionId,
             request,
           ),
-          algorithm: dto.algorithm?.trim() || 'rule_based_v1',
+          algorithm: dto.algorithm?.trim() || 'rule_based_v2',
           rank: dto.rank ?? null,
           score:
             typeof dto.score === 'number'
@@ -263,11 +289,300 @@ export class RecommendationsService {
     }
   }
 
+  private async getHomeRecommendationsV1(query: RecommendationQueryDto) {
+    try {
+      const products = await this.prisma.product.findMany({
+        where: this.buildPublicVisibilityWhere(),
+        include: this.getProductInclude(),
+        take: 120,
+        orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+      });
+
+      const items = products
+        .filter((product) => this.isPublicVisible(product))
+        .sort(
+          (left, right) =>
+            this.scoreHomeProductV1(right) - this.scoreHomeProductV1(left),
+        )
+        .slice(0, query.limit)
+        .map((product) => ({
+          product,
+          scored: { score: null, reasonCodes: [] as string[] },
+        }));
+
+      return this.buildResponse('home', 'rule_based_v1', items, false);
+    } catch {
+      return this.emptyResponse('home');
+    }
+  }
+
+  private async getSimilarProductsV1(
+    productId: string,
+    query: RecommendationQueryDto,
+  ) {
+    try {
+      const sourceProduct = await this.prisma.product.findFirst({
+        where: {
+          id: productId,
+          ...this.buildPublicVisibilityWhere(),
+        },
+        include: this.getProductInclude(),
+      });
+
+      if (!sourceProduct || !this.isPublicVisible(sourceProduct)) {
+        return this.emptyResponse('product_detail');
+      }
+
+      const candidates = await this.loadSimilarCandidates(
+        sourceProduct,
+        query.limit,
+      );
+
+      const items = candidates
+        .filter(
+          (product) =>
+            this.isPublicVisible(product) && product.id !== productId,
+        )
+        .sort(
+          (left, right) =>
+            this.scoreSimilarProductV1(sourceProduct, right) -
+            this.scoreSimilarProductV1(sourceProduct, left),
+        )
+        .slice(0, query.limit)
+        .map((product) => ({
+          product,
+          scored: { score: null, reasonCodes: [] as string[] },
+        }));
+
+      return this.buildResponse(
+        'product_detail',
+        'rule_based_v1',
+        items,
+        false,
+      );
+    } catch {
+      return this.emptyResponse('product_detail');
+    }
+  }
+
+  private async loadSimilarCandidates(
+    sourceProduct: RecommendationProductRecord,
+    limit: number,
+  ) {
+    const candidateWhere: Prisma.ProductWhereInput = {
+      ...this.buildPublicVisibilityWhere(),
+      id: {
+        not: sourceProduct.id,
+      },
+    };
+
+    const or: Prisma.ProductWhereInput[] = [];
+    if (sourceProduct.categoryId) {
+      or.push({ categoryId: sourceProduct.categoryId });
+    }
+    if (sourceProduct.categoryName?.trim()) {
+      or.push({ categoryName: sourceProduct.categoryName.trim() });
+    }
+    if (sourceProduct.sourceCategoryName?.trim()) {
+      or.push({
+        sourceCategoryName: sourceProduct.sourceCategoryName.trim(),
+      });
+    }
+    if (sourceProduct.brand?.trim()) {
+      or.push({ brand: sourceProduct.brand.trim() });
+    }
+    if (sourceProduct.color?.trim()) {
+      or.push({ color: sourceProduct.color.trim() });
+    }
+
+    const primaryCandidates = await this.prisma.product.findMany({
+      where: or.length ? { ...candidateWhere, OR: or } : candidateWhere,
+      include: this.getProductInclude(),
+      take: 120,
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    if (primaryCandidates.length >= limit) {
+      return primaryCandidates;
+    }
+
+    const fallbackCandidates = await this.prisma.product.findMany({
+      where: candidateWhere,
+      include: this.getProductInclude(),
+      take: 120,
+      orderBy: [
+        { feedbackCount: 'desc' },
+        { publishedAt: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    });
+
+    const seen = new Set(primaryCandidates.map((item) => item.id));
+    return [
+      ...primaryCandidates,
+      ...fallbackCandidates.filter((item) => !seen.has(item.id)),
+    ];
+  }
+
+  private buildResponse(
+    placement: RecommendationPlacement,
+    algorithm: string,
+    items: Array<{
+      product: RecommendationProductRecord;
+      scored: {
+        score: number | null;
+        reasonCodes: string[];
+        debug?: Record<string, number>;
+      };
+    }>,
+    debug = false,
+  ) {
+    const mappedItems: RecommendationApiItem[] = items.map((item, index) => ({
+      product: this.mapProduct(item.product),
+      rank: index + 1,
+      score: debug ? item.scored.score : item.scored.score,
+      reasonCodes: item.scored.reasonCodes,
+    }));
+
+    return {
+      algorithm,
+      placement,
+      items: mappedItems,
+      products: mappedItems.map((item) => item.product),
+    };
+  }
+
+  private emptyResponse(placement: RecommendationPlacement) {
+    return {
+      algorithm: this.isSmartRankingEnabled()
+        ? 'rule_based_v2'
+        : 'rule_based_v1',
+      placement,
+      items: [] as RecommendationApiItem[],
+      products: [] as ReturnType<RecommendationsService['mapProduct']>[],
+    };
+  }
+
+  private async buildPreferenceProfile(
+    query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ): Promise<RecommendationPreferenceProfile> {
+    const customerId = user?.userId ?? null;
+    const guestSessionId = this.resolveGuestSessionId(
+      query.guestSessionId,
+      request,
+    );
+
+    if (!customerId && !guestSessionId) {
+      return {
+        categoryIds: new Set<string>(),
+        categoryTerms: new Set<string>(),
+        brands: new Set<string>(),
+        colors: new Set<string>(),
+        searchTerms: [],
+      };
+    }
+
+    const actorWhere = customerId ? { customerId } : { guestSessionId };
+
+    const [views, searches] = await Promise.all([
+      this.prisma.productViewLog.findMany({
+        where: actorWhere,
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: {
+          productId: true,
+        },
+      }),
+      this.prisma.searchLog.findMany({
+        where: actorWhere,
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: {
+          query: true,
+          normalizedQuery: true,
+        },
+      }),
+    ]);
+
+    const categoryIds = new Set<string>();
+    const categoryTerms = new Set<string>();
+    const brands = new Set<string>();
+    const colors = new Set<string>();
+    const searchTerms = new Set<string>();
+
+    const viewedProductIds = views
+      .map((view) => view.productId)
+      .filter((value): value is string => Boolean(value));
+    const viewedProducts = viewedProductIds.length
+      ? await this.prisma.product.findMany({
+          where: {
+            id: {
+              in: viewedProductIds,
+            },
+          },
+          select: {
+            categoryId: true,
+            categoryName: true,
+            sourceCategoryName: true,
+            brand: true,
+            color: true,
+            category: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        })
+      : [];
+
+    for (const product of viewedProducts) {
+      if (!product) {
+        continue;
+      }
+      if (product.categoryId) {
+        categoryIds.add(product.categoryId.toString());
+      }
+      [product.category?.name, product.categoryName, product.sourceCategoryName]
+        .map((value) => this.normalizeQuery(value ?? ''))
+        .filter(Boolean)
+        .forEach((value) => categoryTerms.add(value));
+      if (product.brand?.trim()) {
+        brands.add(this.normalizeQuery(product.brand));
+      }
+      if (product.color?.trim()) {
+        colors.add(this.normalizeQuery(product.color));
+      }
+    }
+
+    for (const search of searches) {
+      const normalized =
+        search.normalizedQuery ?? this.normalizeQuery(search.query);
+      normalized
+        .split(' ')
+        .filter((token) => token.length >= 2)
+        .forEach((token) => searchTerms.add(token));
+    }
+
+    return {
+      categoryIds,
+      categoryTerms,
+      brands,
+      colors,
+      searchTerms: [...searchTerms],
+    };
+  }
+
   private isPublicRecommendationsEnabled() {
     return (
       this.readFlag('RECOMMENDATIONS_ENABLED', true) &&
       this.readFlag('PUBLIC_RECOMMENDATIONS_ENABLED', true)
     );
+  }
+
+  private isSmartRankingEnabled() {
+    return this.readFlag('RECOMMENDATION_SMART_RANKING_ENABLED', true);
   }
 
   private isTrackingEnabled() {
@@ -409,22 +724,30 @@ export class RecommendationsService {
     };
   }
 
-  private resolveVariantPrice(variant: ProductVariant) {
+  private resolveVariantPrice(
+    variant: ProductVariant | RecommendationVariantRecord,
+  ) {
     return variant.discountPrice ?? variant.basePrice ?? null;
   }
 
-  private resolveVariantAvailableQuantity(variant: ProductVariant) {
+  private resolveVariantAvailableQuantity(
+    variant: ProductVariant | RecommendationVariantRecord,
+  ) {
     return variant.trackInventory ? Math.max(0, variant.stockQuantity) : 999999;
   }
 
-  private resolveAvailableQuantity(variants: ProductVariant[]) {
+  private resolveAvailableQuantity(
+    variants: Array<ProductVariant | RecommendationVariantRecord>,
+  ) {
     return variants.reduce(
       (sum, variant) => sum + this.resolveVariantAvailableQuantity(variant),
       0,
     );
   }
 
-  private resolvePrice(variants: ProductVariant[]) {
+  private resolvePrice(
+    variants: Array<ProductVariant | RecommendationVariantRecord>,
+  ) {
     const pricedVariants = variants
       .map((variant) => this.resolveVariantPrice(variant))
       .filter((value): value is Prisma.Decimal => value !== null);
@@ -435,7 +758,9 @@ export class RecommendationsService {
     return pricedVariants.sort((left, right) => left.comparedTo(right))[0];
   }
 
-  private resolveOriginalPrice(variants: ProductVariant[]) {
+  private resolveOriginalPrice(
+    variants: Array<ProductVariant | RecommendationVariantRecord>,
+  ) {
     const originalPrices = variants
       .map((variant) => variant.basePrice ?? null)
       .filter((value): value is Prisma.Decimal => value !== null);
@@ -446,7 +771,7 @@ export class RecommendationsService {
     return originalPrices.sort((left, right) => left.comparedTo(right))[0];
   }
 
-  private scoreSimilarProduct(
+  private scoreSimilarProductV1(
     source: RecommendationProductRecord,
     candidate: RecommendationProductRecord,
   ) {
@@ -489,12 +814,12 @@ export class RecommendationsService {
 
     score += Number(candidate.averageRating?.toString() ?? '0') * 4;
     score += candidate.feedbackCount ?? 0;
-    score += this.recencyScore(candidate);
+    score += this.recencyScoreV1(candidate);
 
     return score;
   }
 
-  private scoreHomeProduct(product: RecommendationProductRecord) {
+  private scoreHomeProductV1(product: RecommendationProductRecord) {
     let score = 0;
 
     if (this.resolveAvailableQuantity(product.variants) > 0) {
@@ -505,12 +830,12 @@ export class RecommendationsService {
     }
     score += Number(product.averageRating?.toString() ?? '0') * 5;
     score += Math.min(product.feedbackCount ?? 0, 25);
-    score += this.recencyScore(product);
+    score += this.recencyScoreV1(product);
 
     return score;
   }
 
-  private recencyScore(product: RecommendationProductRecord) {
+  private recencyScoreV1(product: RecommendationProductRecord) {
     const reference =
       product.publishedAt ?? product.updatedAt ?? product.createdAt;
     const ageDays = Math.max(

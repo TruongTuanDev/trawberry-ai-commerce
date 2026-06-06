@@ -5,6 +5,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { RecommendationsService } from '../src/modules/recommendations/recommendations.service';
 import { readBody } from './test-helpers';
 
 type StoredProduct = {
@@ -77,6 +78,7 @@ type StoredProduct = {
 
 describe('RecommendationsController (e2e)', () => {
   let app: INestApplication<App>;
+  let recommendationsService: RecommendationsService;
   let products: StoredProduct[];
   const originalEnv = { ...process.env };
 
@@ -88,9 +90,11 @@ describe('RecommendationsController (e2e)', () => {
     },
     productViewLog: {
       create: jest.fn(),
+      findMany: jest.fn(),
     },
     searchLog: {
       create: jest.fn(),
+      findMany: jest.fn(),
     },
     recommendationEvent: {
       create: jest.fn(),
@@ -122,6 +126,7 @@ describe('RecommendationsController (e2e)', () => {
     process.env.RECOMMENDATIONS_ENABLED = 'true';
     process.env.PUBLIC_RECOMMENDATIONS_ENABLED = 'true';
     process.env.RECOMMENDATION_TRACKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SMART_RANKING_ENABLED = 'true';
 
     products = [
       buildProduct({
@@ -172,9 +177,12 @@ describe('RecommendationsController (e2e)', () => {
       },
     );
     prismaMock.productViewLog.create.mockResolvedValue({});
+    prismaMock.productViewLog.findMany.mockResolvedValue([]);
     prismaMock.searchLog.create.mockResolvedValue({});
+    prismaMock.searchLog.findMany.mockResolvedValue([]);
     prismaMock.recommendationEvent.create.mockResolvedValue({});
     app = await buildApp();
+    recommendationsService = app.get(RecommendationsService);
   });
 
   afterEach(async () => {
@@ -190,12 +198,19 @@ describe('RecommendationsController (e2e)', () => {
       .get('/api/public/recommendations/home?limit=8')
       .expect(200);
 
-    expect(readBody<{ items: unknown[]; algorithm: string }>(response)).toEqual(
-      {
-        algorithm: 'rule_based_v1',
-        items: [],
-      },
-    );
+    expect(
+      readBody<{
+        items: unknown[];
+        products: unknown[];
+        algorithm: string;
+        placement: string;
+      }>(response),
+    ).toEqual({
+      algorithm: 'rule_based_v2',
+      placement: 'home',
+      items: [],
+      products: [],
+    });
   });
 
   it('returns similar products without including the source product', async () => {
@@ -205,16 +220,72 @@ describe('RecommendationsController (e2e)', () => {
       )
       .expect(200);
 
-    const body = readBody<{ items: Array<{ id: string; name: string }> }>(
-      response,
-    );
+    const body = readBody<{
+      algorithm: string;
+      placement: string;
+      items: Array<{
+        product: { id: string; name: string };
+        rank: number;
+        score: number | null;
+        reasonCodes: string[];
+      }>;
+      products: Array<{ id: string; name: string }>;
+    }>(response);
     expect(body.items).toHaveLength(2);
-    expect(body.items[0]?.id).toBe('00000000-0000-0000-0000-000000000002');
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.placement).toBe('product_detail');
+    expect(body.items[0]?.product.id).toBe(
+      '00000000-0000-0000-0000-000000000002',
+    );
+    expect(body.items[0]?.reasonCodes).toContain('same_category');
+    expect(body.products[0]?.id).toBe('00000000-0000-0000-0000-000000000002');
     expect(
       body.items.some(
-        (item) => item.id === '00000000-0000-0000-0000-000000000001',
+        (item) => item.product.id === '00000000-0000-0000-0000-000000000001',
       ),
     ).toBe(false);
+  });
+
+  it('returns safe empty recommendations when public recommendations are disabled', async () => {
+    process.env.PUBLIC_RECOMMENDATIONS_ENABLED = 'false';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=8')
+      .expect(200);
+
+    expect(
+      readBody<{
+        algorithm: string;
+        placement: string;
+        items: unknown[];
+        products: unknown[];
+      }>(response),
+    ).toEqual({
+      algorithm: 'rule_based_v2',
+      placement: 'home',
+      items: [],
+      products: [],
+    });
+  });
+
+  it('returns search recommendations for matching products', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/search?q=similar%20jacket&limit=2')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      placement: string;
+      items: Array<{ product: { id: string; name: string } }>;
+      products: Array<{ id: string; name: string }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.placement).toBe('search');
+    expect(body.items[0]?.product.name).toContain('Similar jacket');
+    expect(body.products[0]?.name).toContain('Similar jacket');
   });
 
   it('returns 204 and skips writes when tracking is disabled', async () => {
@@ -232,6 +303,33 @@ describe('RecommendationsController (e2e)', () => {
 
     expect(response.text).toBe('');
     expect(prismaMock.searchLog.create).not.toHaveBeenCalled();
+  });
+
+  it('swallows recommendation tracking persistence failures', async () => {
+    prismaMock.recommendationEvent.create.mockRejectedValueOnce(
+      new Error('boom'),
+    );
+
+    await expect(
+      recommendationsService.trackRecommendationEvent(
+        {
+          type: 'click',
+          placement: 'search',
+          productId: '00000000-0000-0000-0000-000000000002',
+          algorithm: 'rule_based_v2',
+          rank: 1,
+          score: 12.5,
+        },
+        {
+          get: () => undefined,
+          headers: {},
+          ip: '127.0.0.1',
+          socket: { remoteAddress: '127.0.0.1' },
+        } as never,
+        null,
+      ),
+    ).resolves.toBeUndefined();
+    expect(prismaMock.recommendationEvent.create).toHaveBeenCalledTimes(1);
   });
 });
 

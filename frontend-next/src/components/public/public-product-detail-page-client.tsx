@@ -29,6 +29,7 @@ import {
   trackProductView,
   type PublicAiTryOnConfig,
   type PublicProduct,
+  type RecommendationProductItem,
 } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -44,7 +45,7 @@ export function PublicProductDetailPageClient({
   const { locale, t } = useI18n("customer");
   const router = useRouter();
   const [product, setProduct] = useState<PublicProduct | null>(null);
-  const [similarProducts, setSimilarProducts] = useState<PublicProduct[]>([]);
+  const [similarProducts, setSimilarProducts] = useState<RecommendationProductItem[]>([]);
   const [aiTryOnConfig, setAiTryOnConfig] = useState<PublicAiTryOnConfig | null>(null);
   const [aiTryOnOpen, setAiTryOnOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
@@ -147,7 +148,7 @@ export function PublicProductDetailPageClient({
         const response = await getSimilarProductRecommendations(product.id, 8);
         if (mounted) {
           setSimilarProducts(
-            response.items.filter((item) => item.id !== product.id),
+            response.items.filter((item) => item.product.id !== product.id),
           );
         }
       } catch {

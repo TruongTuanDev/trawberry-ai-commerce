@@ -10,14 +10,17 @@ import {
   getGuestSessionId,
   getPublicHomepageSlides,
   getPublicProducts,
+  getSearchProductRecommendations,
   trackSearch,
   type PaginatedPublicProducts,
   type PublicHomepageSlide,
   type PublicProduct,
+  type RecommendationProductItem,
 } from "@/lib/public-api";
 import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
+import { PublicRecommendationSection } from "@/components/public/public-recommendation-section";
 
 type ProductsMeta = {
   page: number;
@@ -85,6 +88,9 @@ function ProductsPageContent({
   const [meta, setMeta] = useState<ProductsMeta>(initialMeta);
   const [filters, setFilters] = useState(() => readFilters(searchParams));
   const [facets, setFacets] = useState<PaginatedPublicProducts["filters"]>();
+  const [searchRecommendations, setSearchRecommendations] = useState<
+    RecommendationProductItem[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestKey, setRequestKey] = useState(0);
@@ -288,6 +294,39 @@ function ProductsPageContent({
       guestSessionId: getGuestSessionId(),
     });
   }, [error, filters.q, loading, meta.total, page]);
+
+  useEffect(() => {
+    const query = filters.q.trim();
+    const { publicRecommendationsEnabled } = readRecommendationFlagsFromDocument();
+    if (!query || !publicRecommendationsEnabled) {
+      return;
+    }
+
+    let mounted = true;
+
+    const run = async () => {
+      try {
+        const response = await getSearchProductRecommendations(query, 8);
+        if (mounted) {
+          setSearchRecommendations(response.items);
+        }
+      } catch {
+        if (mounted) {
+          setSearchRecommendations([]);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [filters.q]);
+
+  const visibleSearchRecommendations = filters.q.trim()
+    ? searchRecommendations
+    : [];
 
   const applyFilters = (targetFilters = filters) => {
     const params = new URLSearchParams();
@@ -1287,6 +1326,18 @@ function ProductsPageContent({
               </div>
             </section>
           )}
+
+          {visibleSearchRecommendations.length ? (
+            <PublicRecommendationSection
+              titleKey="similarBySearch"
+              items={visibleSearchRecommendations}
+              placement="search"
+              trackingEnabled={
+                readRecommendationFlagsFromDocument()
+                  .recommendationTrackingEnabled
+              }
+            />
+          ) : null}
 
           <div className="public-muted-card flex flex-col gap-4 rounded-[1.5rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[var(--muted)]">

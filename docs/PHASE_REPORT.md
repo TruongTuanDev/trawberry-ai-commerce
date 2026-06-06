@@ -1,5 +1,31 @@
 # Phase Report
 
+## 2026-06-06 Recommendation Smart Ranking Phase 2
+
+- Status: Implemented on current branch
+- Scope:
+  - added `rule_based_v2` scoring via `backend-nest/src/modules/recommendations/recommendation-scoring.service.ts`
+  - upgraded home and similar-product recommendation APIs to return ranked recommendation items plus backward-compatible flat `products`
+  - added `GET /api/public/recommendations/search?q=...&limit=12`
+  - personalized home ranking from recent `ProductViewLog` and `SearchLog` when a customer or guest session is available
+  - expanded frontend recommendation blocks to homepage, product detail, and search results
+  - upgraded recommendation impression/click tracking to send `rule_based_v2`, rank, and score best-effort
+  - updated recommendation i18n keys in `en`, `ru`, and `vi`
+- Feature flags:
+  - `RECOMMENDATIONS_ENABLED`
+  - `PUBLIC_RECOMMENDATIONS_ENABLED`
+  - `RECOMMENDATION_TRACKING_ENABLED`
+  - `RECOMMENDATION_SMART_RANKING_ENABLED`
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - disabled recommendation flags still return safe empty payloads or Phase 1 fallback behavior
+- Verification:
+  - pending final run in this phase section until backend/frontend checks finish
+- Future Phase 3:
+  - sponsored ranking
+  - ad inventory and campaign controls
+  - richer session intent weighting
+
 ## 2026-06-06 Seller Center Navigation UX Refactor
 
 - Status: Implemented on current branch

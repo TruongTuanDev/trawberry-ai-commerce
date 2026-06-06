@@ -34,10 +34,19 @@ export class RecommendationsController {
   ) {}
 
   @Get('recommendations/home')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get safe homepage recommendations.' })
   @ApiOkResponse({ type: RecommendationProductsResponseDto })
-  getHomeRecommendations(@Query() query: RecommendationQueryDto) {
-    return this.recommendationsService.getHomeRecommendations(query);
+  getHomeRecommendations(
+    @Query() query: RecommendationQueryDto,
+    @Req() request: Request,
+    @CurrentUser() user?: AuthenticatedUser | null,
+  ) {
+    return this.recommendationsService.getHomeRecommendations(
+      query,
+      request,
+      user,
+    );
   }
 
   @Get('recommendations/products/:productId/similar')
@@ -50,6 +59,14 @@ export class RecommendationsController {
     @Query() query: RecommendationQueryDto,
   ) {
     return this.recommendationsService.getSimilarProducts(productId, query);
+  }
+
+  @Get('recommendations/search')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Get keyword-based recommendation suggestions.' })
+  @ApiOkResponse({ type: RecommendationProductsResponseDto })
+  getSearchRecommendations(@Query() query: RecommendationQueryDto) {
+    return this.recommendationsService.getSearchRecommendations(query);
   }
 
   @Post('tracking/product-view')

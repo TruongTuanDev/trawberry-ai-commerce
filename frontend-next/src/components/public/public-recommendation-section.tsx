@@ -6,7 +6,8 @@ import { useI18n } from "@/i18n/use-i18n";
 import {
   getGuestSessionId,
   trackRecommendationEvent,
-  type PublicProduct,
+  type RecommendationPlacement,
+  type RecommendationProductItem,
 } from "@/lib/public-api";
 
 export function PublicRecommendationSection({
@@ -16,9 +17,9 @@ export function PublicRecommendationSection({
   sourceProductId,
   trackingEnabled,
 }: {
-  titleKey: "recommendedForYou" | "similarProducts";
-  items: PublicProduct[];
-  placement: "home" | "product_detail";
+  titleKey: "recommendedForYou" | "similarProducts" | "similarBySearch";
+  items: RecommendationProductItem[];
+  placement: RecommendationPlacement;
   sourceProductId?: string;
   trackingEnabled: boolean;
 }) {
@@ -30,7 +31,7 @@ export function PublicRecommendationSection({
       return;
     }
 
-    const impressionKey = `${placement}:${sourceProductId ?? "none"}:${items.map((item) => item.id).join(",")}`;
+    const impressionKey = `${placement}:${sourceProductId ?? "none"}:${items.map((item) => item.product.id).join(",")}`;
     if (impressionKeyRef.current === impressionKey) {
       return;
     }
@@ -41,10 +42,11 @@ export function PublicRecommendationSection({
       void trackRecommendationEvent({
         type: "impression",
         placement,
-        productId: item.id,
+        productId: item.product.id,
         sourceProductId,
-        algorithm: "rule_based_v1",
-        rank: index,
+        algorithm: "rule_based_v2",
+        rank: item.rank ?? index + 1,
+        score: item.score ?? undefined,
         guestSessionId,
       });
     });
@@ -72,10 +74,10 @@ export function PublicRecommendationSection({
         className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4"
         data-testid={`recommendation-grid-${placement}`}
       >
-        {items.map((product, index) => (
+        {items.map((item, index) => (
           <ProductCard
-            key={`${placement}-${product.id}`}
-            product={product}
+            key={`${placement}-${item.product.id}`}
+            product={item.product}
             onProductNavigate={() => {
               if (!trackingEnabled) {
                 return;
@@ -84,10 +86,11 @@ export function PublicRecommendationSection({
               void trackRecommendationEvent({
                 type: "click",
                 placement,
-                productId: product.id,
+                productId: item.product.id,
                 sourceProductId,
-                algorithm: "rule_based_v1",
-                rank: index,
+                algorithm: "rule_based_v2",
+                rank: item.rank ?? index + 1,
+                score: item.score ?? undefined,
                 guestSessionId: getGuestSessionId(),
               });
             }}

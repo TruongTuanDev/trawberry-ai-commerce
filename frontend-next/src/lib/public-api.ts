@@ -61,13 +61,27 @@ export type PublicProduct = {
   };
 };
 
-export type RecommendationPlacement = "home" | "product_detail" | "cart" | "search";
+export type RecommendationPlacement =
+  | "home"
+  | "product_detail"
+  | "search"
+  | "cart"
+  | "cart_later_reserved";
 
 export type VisualSearchEventType = "impression" | "click";
 
+export type RecommendationProductItem = {
+  product: PublicProduct;
+  rank: number;
+  score: number | null;
+  reasonCodes: string[];
+};
+
 export type RecommendationProductsResponse = {
   algorithm: string;
-  items: PublicProduct[];
+  placement: RecommendationPlacement;
+  items: RecommendationProductItem[];
+  products: PublicProduct[];
 };
 
 export type VisualSearchResponse = {
@@ -567,24 +581,54 @@ export async function getPublicProduct(productId: string) {
 }
 
 export async function getHomeRecommendations(limit = 12) {
-  return apiRequest<RecommendationProductsResponse>(
+  const response = await apiRequest<RecommendationProductsResponse | {
+    algorithm: string;
+    placement?: RecommendationPlacement;
+    items: Array<PublicProduct | RecommendationProductItem>;
+    products?: PublicProduct[];
+  }>(
     `/api/public/recommendations/home?limit=${limit}`,
     {
       method: "GET",
     },
   );
+  return normalizeRecommendationResponse(response, "home");
 }
 
 export async function getSimilarProductRecommendations(
   productId: string,
   limit = 12,
 ) {
-  return apiRequest<RecommendationProductsResponse>(
+  const response = await apiRequest<RecommendationProductsResponse | {
+    algorithm: string;
+    placement?: RecommendationPlacement;
+    items: Array<PublicProduct | RecommendationProductItem>;
+    products?: PublicProduct[];
+  }>(
     `/api/public/recommendations/products/${productId}/similar?limit=${limit}`,
     {
       method: "GET",
     },
   );
+  return normalizeRecommendationResponse(response, "product_detail");
+}
+
+export async function getSearchProductRecommendations(
+  q: string,
+  limit = 12,
+) {
+  const params = new URLSearchParams();
+  params.set("q", q);
+  params.set("limit", String(limit));
+  const response = await apiRequest<RecommendationProductsResponse | {
+    algorithm: string;
+    placement?: RecommendationPlacement;
+    items: Array<PublicProduct | RecommendationProductItem>;
+    products?: PublicProduct[];
+  }>(`/api/public/recommendations/search?${params.toString()}`, {
+    method: "GET",
+  });
+  return normalizeRecommendationResponse(response, "search");
 }
 
 type TrackProductViewPayload = {
@@ -676,6 +720,40 @@ export async function trackRecommendationEvent(
   payload: TrackRecommendationEventPayload,
 ) {
   await swallowTrackingRequest("/api/public/recommendations/events", payload);
+}
+
+function normalizeRecommendationResponse(
+  response:
+    | RecommendationProductsResponse
+    | {
+        algorithm: string;
+        placement?: RecommendationPlacement;
+        items: Array<PublicProduct | RecommendationProductItem>;
+        products?: PublicProduct[];
+      },
+  fallbackPlacement: RecommendationPlacement,
+): RecommendationProductsResponse {
+  const normalizedItems = response.items.map((item, index) => {
+    if ("product" in item) {
+      return item;
+    }
+
+    return {
+      product: item,
+      rank: index + 1,
+      score: null,
+      reasonCodes: [],
+    };
+  });
+
+  return {
+    algorithm: response.algorithm,
+    placement: response.placement ?? fallbackPlacement,
+    items: normalizedItems,
+    products:
+      response.products ??
+      normalizedItems.map((item) => item.product),
+  };
 }
 
 export async function createVisualSearch(payload: CreateVisualSearchPayload) {

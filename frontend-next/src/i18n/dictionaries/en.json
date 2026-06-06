@@ -2522,7 +2522,12 @@
     "weight": "Weight"
   },
   "recommendations": {
-    "kicker": "Kicker"
+    "kicker": "Smart picks",
+    "recommendedForYou": "Recommended for you",
+    "similarProducts": "Similar products",
+    "basedOnWhatYouViewed": "Based on what you viewed",
+    "popularNow": "Popular now",
+    "similarBySearch": "Similar to your search"
   },
   "visualSearch": {
     "categoryHint": "Category hint",

@@ -1770,5 +1770,13 @@
     "confirmDisable": "Вы уверены, что хотите отключить этого пользователя?",
     "id": "ID",
     "actions": "Действия"
+  },
+  "recommendations": {
+    "kicker": "Умные рекомендации",
+    "recommendedForYou": "Рекомендуем для вас",
+    "similarProducts": "Похожие товары",
+    "basedOnWhatYouViewed": "На основе ваших просмотров",
+    "popularNow": "Популярно сейчас",
+    "similarBySearch": "Похоже по запросу"
   }
 }
