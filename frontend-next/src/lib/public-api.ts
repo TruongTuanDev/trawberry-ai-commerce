@@ -99,6 +99,41 @@ export type RecommendationProductsResponse = {
   products: PublicProduct[];
 };
 
+export type RecommendationQaPlacement =
+  | "home"
+  | "product_detail"
+  | "search";
+
+export type RecommendationQaAlgorithmSnapshot = {
+  algorithm: "rule_based_v1" | "rule_based_v2";
+  rank: number | null;
+  finalScore: number | null;
+  reasons: string[];
+  scoreBreakdown: {
+    categoryScore: number;
+    textScore: number;
+    popularityScore: number;
+    freshnessScore: number;
+    ratingScore: number;
+    stockScore: number;
+    shopScore: number;
+    penaltyScore: number;
+  } | null;
+};
+
+export type RecommendationQaComparisonItem = {
+  productId: string;
+  productName: string;
+  rankMovement: number | null;
+  ruleBasedV1: RecommendationQaAlgorithmSnapshot | null;
+  ruleBasedV2: RecommendationQaAlgorithmSnapshot | null;
+};
+
+export type RecommendationQaComparisonResponse = {
+  placement: RecommendationQaPlacement;
+  items: RecommendationQaComparisonItem[];
+};
+
 export type VisualSearchResponse = {
   analysis: {
     category: string | null;
@@ -668,6 +703,34 @@ export async function getSearchProductRecommendations(
     method: "GET",
   });
   return normalizeRecommendationResponse(response, "search");
+}
+
+export async function getRecommendationRankingComparison(query?: {
+  placement?: RecommendationQaPlacement;
+  productId?: string;
+  q?: string;
+  limit?: number;
+  debug?: boolean;
+}) {
+  const params = new URLSearchParams();
+  params.set("placement", query?.placement ?? "home");
+  params.set("limit", String(query?.limit ?? 12));
+  if (query?.productId) {
+    params.set("productId", query.productId);
+  }
+  if (query?.q) {
+    params.set("q", query.q);
+  }
+  if (query?.debug) {
+    params.set("debug", "true");
+  }
+
+  return apiRequest<RecommendationQaComparisonResponse>(
+    `/api/internal/recommendations/compare?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 type TrackProductViewPayload = {

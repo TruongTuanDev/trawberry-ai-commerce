@@ -1,5 +1,27 @@
 # Project Status
 
+## Recommendation Internal Ranking Comparison QA Tools Phase 2.2 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - internal-only rank comparison between `rule_based_v1` and `rule_based_v2`
+  - backend QA compare API at `/api/internal/recommendations/compare`
+  - frontend QA page at `/admin/recommendations-qa`
+  - rank movement calculation for QA review
+  - optional explainability inside the compare workflow when debug mode is enabled
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - compare tooling is internal-only and requires explicit flags
+- Next recommended phase:
+  - Phase 2.3: add snapshot export or saved QA scenarios for repeated ranking audits across known products and search terms
+
 ## Recommendation Explainability and Safer Weight Tuning Phase 2.1 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`

@@ -154,6 +154,18 @@ describe('RecommendationsController (e2e)', () => {
 
     prismaMock.product.findMany.mockImplementation(
       ({ where }: { where?: Record<string, unknown> }) => {
+        const includedIds =
+          where &&
+          typeof where.id === 'object' &&
+          where.id !== null &&
+          'in' in where.id &&
+          Array.isArray((where.id as { in?: unknown[] }).in)
+            ? new Set(
+                ((where.id as { in?: unknown[] }).in ?? []).map((value) =>
+                  String(value),
+                ),
+              )
+            : null;
         const excludedId =
           where &&
           typeof where.id === 'object' &&
@@ -162,7 +174,11 @@ describe('RecommendationsController (e2e)', () => {
             ? String((where.id as { not?: string }).not)
             : null;
 
-        return products.filter((product) => product.id !== excludedId);
+        return products.filter(
+          (product) =>
+            product.id !== excludedId &&
+            (!includedIds || includedIds.has(product.id)),
+        );
       },
     );
     prismaMock.product.findFirst.mockImplementation(
@@ -298,6 +314,118 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.items[0]?.score).toBeNull();
     expect(body.items[0]?.reasonCodes).toEqual([]);
     expect(body.products).toHaveLength(2);
+  });
+
+  it('keeps recommendation QA comparison disabled by default', async () => {
+    await request(app.getHttpServer())
+      .get('/api/internal/recommendations/compare?placement=home&limit=2')
+      .expect(404);
+  });
+
+  it('returns internal ranking comparison when the QA tools flag is enabled', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/internal/recommendations/compare?placement=home&limit=2&debug=true',
+      )
+      .expect(200);
+
+    const body = readBody<{
+      placement: string;
+      items: Array<{
+        productId: string;
+        productName: string;
+        rankMovement: number | null;
+        ruleBasedV1: {
+          algorithm: string;
+          rank: number | null;
+          finalScore: number | null;
+          reasons: string[];
+          scoreBreakdown: Record<string, number> | null;
+        } | null;
+        ruleBasedV2: {
+          algorithm: string;
+          rank: number | null;
+          finalScore: number | null;
+          reasons: string[];
+          scoreBreakdown: Record<string, number> | null;
+        } | null;
+      }>;
+    }>(response);
+
+    expect(body.placement).toBe('home');
+    expect(typeof body.items[0]?.productId).toBe('string');
+    expect(typeof body.items[0]?.productName).toBe('string');
+    expect(body.items[0]?.ruleBasedV1?.algorithm).toBe('rule_based_v1');
+    expect(body.items[0]?.ruleBasedV2?.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.ruleBasedV2?.scoreBreakdown).toBeTruthy();
+  });
+
+  it('calculates rank movement and avoids leaking session or customer data', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    products = [
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000001',
+        title: 'Source jacket',
+        categoryId: 11n,
+        categoryName: 'Jackets',
+        brand: 'North Berry',
+        feedbackCount: 25,
+      }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000002',
+        title: 'Popular jacket',
+        categoryId: 11n,
+        categoryName: 'Jackets',
+        brand: 'North Berry',
+        feedbackCount: 25,
+      }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000003',
+        title: 'Viewed shoes',
+        categoryId: 22n,
+        categoryName: 'Shoes',
+        brand: 'City Berry',
+        feedbackCount: 0,
+        averageRating: '4.0',
+      }),
+    ];
+    prismaMock.productViewLog.findMany.mockResolvedValue([
+      { productId: '00000000-0000-0000-0000-000000000003' },
+    ]);
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/internal/recommendations/compare?placement=home&limit=3&debug=true&guestSessionId=guest-qa',
+      )
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        productId: string;
+        rankMovement: number | null;
+        ruleBasedV1: { rank: number | null } | null;
+        ruleBasedV2: { rank: number | null } | null;
+      }>;
+    }>(response);
+    const viewedShoes = body.items.find(
+      (item) => item.productId === '00000000-0000-0000-0000-000000000003',
+    );
+    const serialized = JSON.stringify(body);
+
+    expect(viewedShoes?.ruleBasedV1?.rank).toBe(3);
+    expect(viewedShoes?.ruleBasedV2?.rank).toBe(1);
+    expect(viewedShoes?.rankMovement).toBe(2);
+    expect(serialized).not.toContain('guestSessionId');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('searchTerms');
   });
 
   it('returns search recommendations for matching products', async () => {
@@ -443,12 +571,16 @@ function buildProduct({
   categoryId,
   categoryName,
   brand,
+  feedbackCount = 12,
+  averageRating = '4.7',
 }: {
   id: string;
   title: string;
   categoryId: bigint;
   categoryName: string;
   brand: string;
+  feedbackCount?: number;
+  averageRating?: string;
 }): StoredProduct {
   return {
     id,
@@ -468,8 +600,8 @@ function buildProduct({
     aiTryOnEnabled: false,
     visibility: 'ACTIVE',
     catalogStatus: 'PUBLISHED',
-    averageRating: new Prisma.Decimal('4.7'),
-    feedbackCount: 12,
+    averageRating: new Prisma.Decimal(averageRating),
+    feedbackCount,
     categoryId,
     subjectId: 1n,
     createdAt: new Date('2026-06-01T00:00:00.000Z'),

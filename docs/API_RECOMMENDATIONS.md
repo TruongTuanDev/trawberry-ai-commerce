@@ -19,6 +19,8 @@ Feature flags:
 - `RECOMMENDATION_SMART_RANKING_ENABLED`
 - `RECOMMENDATION_EXPLAINABILITY_ENABLED`
 - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED`
+- `RECOMMENDATION_QA_TOOLS_ENABLED`
+- `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED`
 
 If `RECOMMENDATION_SMART_RANKING_ENABLED=false`:
 
@@ -78,6 +80,21 @@ Explainability mode:
   - request query includes `debug=true`
   - backend runtime sets `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
 - explainability never returns customer IDs, guest session IDs, raw search queries, or raw view history
+
+Internal QA comparison mode:
+
+- ranking comparison is disabled by default
+- to enable comparison tooling locally:
+  - set `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - set `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+- comparison can optionally include explainability only when:
+  - `debug=true`
+  - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+- comparison response never returns:
+  - `customerId`
+  - `guestSessionId`
+  - raw search history
+  - raw viewed-product history
 
 ## Read APIs
 
@@ -256,6 +273,86 @@ Notes:
 - tracking failures are swallowed
 - rank/score are optional and safe to omit
 
+## Internal QA API
+
+### `GET /api/internal/recommendations/compare`
+
+Purpose:
+
+- compare ranking output between `rule_based_v1` and `rule_based_v2`
+- support internal QA without changing the public recommendation contract
+
+Query params:
+
+- `placement=home|product_detail|search`
+- `limit=1..24`
+- `productId` required when `placement=product_detail`
+- `q` required when `placement=search`
+- `debug=true` optional for explainability
+
+Behavior:
+
+- returns `404` when `RECOMMENDATION_QA_TOOLS_ENABLED` is off
+- compares both algorithms side by side for:
+  - `home`
+  - `product_detail`
+- for `search`, `rule_based_v1` intentionally acts as the legacy empty baseline and `rule_based_v2` shows ranked results
+- rank movement is calculated as:
+  - `rule_based_v1.rank - rule_based_v2.rank`
+  - positive value means the product moved up in `rule_based_v2`
+
+Response example:
+
+```json
+{
+  "placement": "home",
+  "items": [
+    {
+      "productId": "uuid",
+      "productName": "Product title",
+      "rankMovement": 2,
+      "ruleBasedV1": {
+        "algorithm": "rule_based_v1",
+        "rank": 3,
+        "finalScore": 104.5,
+        "reasons": [],
+        "scoreBreakdown": null
+      },
+      "ruleBasedV2": {
+        "algorithm": "rule_based_v2",
+        "rank": 1,
+        "finalScore": 62.2,
+        "reasons": [
+          "Aligned with recent viewed category interest",
+          "Recently published or updated item"
+        ],
+        "scoreBreakdown": {
+          "categoryScore": 24,
+          "textScore": 0,
+          "popularityScore": 0,
+          "freshnessScore": 9.33,
+          "ratingScore": 8,
+          "stockScore": 2.8,
+          "shopScore": 2,
+          "penaltyScore": 0
+        }
+      }
+    }
+  ]
+}
+```
+
+Local QA UI:
+
+- frontend internal page: `/admin/recommendations-qa`
+- this page only renders when `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+- recommended local workflow:
+  - start backend on `127.0.0.1:3001`
+  - start frontend on `127.0.0.1:3000`
+  - enable QA and explainability flags
+  - open `/admin/recommendations-qa`
+  - compare `home`, `search`, and `product_detail` scenarios
+
 ## Rollout
 
 1. Deploy backend and frontend with the new additive code.
@@ -265,6 +362,7 @@ Notes:
    - `GET /api/public/recommendations/products/:id/similar`
    - `GET /api/public/recommendations/search?q=...`
    - optional internal QA: repeat the same calls with `debug=true` after enabling `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+   - optional QA comparison: call `GET /api/internal/recommendations/compare` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.
 5. Monitor recommendation event volume and storefront render behavior.
 

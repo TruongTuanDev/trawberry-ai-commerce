@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type ProductVariant } from '@prisma/client';
 import { createHash } from 'crypto';
@@ -6,6 +6,7 @@ import type { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { ProductReadinessService } from '../products/product-readiness.service';
+import { RecommendationQaCompareQueryDto } from './dto/recommendation-qa-compare-query.dto';
 import { RecommendationQueryDto } from './dto/recommendation-query.dto';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
@@ -34,6 +35,23 @@ type RecommendationApiItem = {
   };
 };
 
+type RecommendationRankedItem = {
+  product: RecommendationProductRecord;
+  scored: {
+    score: number | null;
+    reasonCodes: RecommendationReasonCode[];
+    scoreBreakdown: RecommendationScoreBreakdown | null;
+  };
+};
+
+type RecommendationAlgorithmSnapshot = {
+  algorithm: 'rule_based_v1' | 'rule_based_v2';
+  rank: number | null;
+  finalScore: number | null;
+  reasons: string[];
+  scoreBreakdown: RecommendationScoreBreakdown | null;
+};
+
 @Injectable()
 export class RecommendationsService {
   constructor(
@@ -52,30 +70,15 @@ export class RecommendationsService {
       return this.emptyResponse('home');
     }
 
-    if (!this.isSmartRankingEnabled()) {
-      return this.getHomeRecommendationsV1(query);
-    }
-
     try {
-      const [products, preferenceProfile] = await Promise.all([
-        this.prisma.product.findMany({
-          where: this.buildPublicVisibilityWhere(),
-          include: this.getProductInclude(),
-          take: 150,
-          orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
-        }),
-        this.buildPreferenceProfile(query, request, user),
-      ]);
+      if (!this.isSmartRankingEnabled()) {
+        const items = await this.loadHomeRecommendationsV1(query);
+        return this.buildResponse('home', 'rule_based_v1', items, query.debug, {
+          hideScores: true,
+        });
+      }
 
-      const items = products
-        .filter((product) => this.isPublicVisible(product))
-        .map((product) => ({
-          product,
-          scored: this.scoring.scoreHomeProduct(product, preferenceProfile),
-        }))
-        .sort((left, right) => right.scored.score - left.scored.score)
-        .slice(0, query.limit);
-
+      const items = await this.loadHomeRecommendationsV2(query, request, user);
       return this.buildResponse('home', 'rule_based_v2', items, query.debug);
     } catch {
       return this.emptyResponse('home');
@@ -87,40 +90,19 @@ export class RecommendationsService {
       return this.emptyResponse('product_detail');
     }
 
-    if (!this.isSmartRankingEnabled()) {
-      return this.getSimilarProductsV1(productId, query);
-    }
-
     try {
-      const sourceProduct = await this.prisma.product.findFirst({
-        where: {
-          id: productId,
-          ...this.buildPublicVisibilityWhere(),
-        },
-        include: this.getProductInclude(),
-      });
-
-      if (!sourceProduct || !this.isPublicVisible(sourceProduct)) {
-        return this.emptyResponse('product_detail');
+      if (!this.isSmartRankingEnabled()) {
+        const items = await this.loadSimilarRecommendationsV1(productId, query);
+        return this.buildResponse(
+          'product_detail',
+          'rule_based_v1',
+          items,
+          query.debug,
+          { hideScores: true },
+        );
       }
 
-      const candidates = await this.loadSimilarCandidates(
-        sourceProduct,
-        query.limit,
-      );
-
-      const items = candidates
-        .filter(
-          (product) =>
-            this.isPublicVisible(product) && product.id !== productId,
-        )
-        .map((product) => ({
-          product,
-          scored: this.scoring.scoreSimilarProduct(sourceProduct, product),
-        }))
-        .sort((left, right) => right.scored.score - left.scored.score)
-        .slice(0, query.limit);
-
+      const items = await this.loadSimilarRecommendationsV2(productId, query);
       return this.buildResponse(
         'product_detail',
         'rule_based_v2',
@@ -143,57 +125,56 @@ export class RecommendationsService {
     }
 
     try {
-      const tokens = this.normalizeQuery(searchQuery)
-        .split(' ')
-        .filter((token) => token.length >= 2);
-      const or: Prisma.ProductWhereInput[] = [
-        { wbTitle: { contains: searchQuery, mode: 'insensitive' } },
-        { localTitle: { contains: searchQuery, mode: 'insensitive' } },
-        { wbDescription: { contains: searchQuery, mode: 'insensitive' } },
-        { localDescription: { contains: searchQuery, mode: 'insensitive' } },
-        { categoryName: { contains: searchQuery, mode: 'insensitive' } },
-        { sourceCategoryName: { contains: searchQuery, mode: 'insensitive' } },
-        { brand: { contains: searchQuery, mode: 'insensitive' } },
-        { color: { contains: searchQuery, mode: 'insensitive' } },
-      ];
-
-      for (const token of tokens) {
-        or.push(
-          { wbTitle: { contains: token, mode: 'insensitive' } },
-          { localTitle: { contains: token, mode: 'insensitive' } },
-          { wbDescription: { contains: token, mode: 'insensitive' } },
-          { localDescription: { contains: token, mode: 'insensitive' } },
-          { categoryName: { contains: token, mode: 'insensitive' } },
-          { sourceCategoryName: { contains: token, mode: 'insensitive' } },
-          { brand: { contains: token, mode: 'insensitive' } },
-          { color: { contains: token, mode: 'insensitive' } },
-        );
-      }
-
-      const candidates = await this.prisma.product.findMany({
-        where: {
-          ...this.buildPublicVisibilityWhere(),
-          OR: or,
-        },
-        include: this.getProductInclude(),
-        take: 150,
-        orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
-      });
-
-      const items = candidates
-        .filter((product) => this.isPublicVisible(product))
-        .map((product) => ({
-          product,
-          scored: this.scoring.scoreSearchProduct(searchQuery, product),
-        }))
-        .filter((item) => item.scored.score > 0)
-        .sort((left, right) => right.scored.score - left.scored.score)
-        .slice(0, query.limit);
-
+      const items = await this.loadSearchRecommendationsV2(query);
       return this.buildResponse('search', 'rule_based_v2', items, query.debug);
     } catch {
       return this.emptyResponse('search');
     }
+  }
+
+  async getRankingComparison(
+    query: RecommendationQaCompareQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
+    if (!this.isQaToolsEnabled()) {
+      throw new NotFoundException();
+    }
+
+    const debug = query.debug ?? false;
+    const normalizedQuery: RecommendationQueryDto = {
+      limit: query.limit,
+      guestSessionId: query.guestSessionId,
+      q: query.q,
+      debug,
+    };
+
+    let v1Items: RecommendationRankedItem[] = [];
+    let v2Items: RecommendationRankedItem[] = [];
+
+    switch (query.placement) {
+      case 'home':
+        [v1Items, v2Items] = await Promise.all([
+          this.loadHomeRecommendationsV1(normalizedQuery),
+          this.loadHomeRecommendationsV2(normalizedQuery, request, user),
+        ]);
+        break;
+      case 'product_detail':
+        [v1Items, v2Items] = await Promise.all([
+          this.loadSimilarRecommendationsV1(query.productId!, normalizedQuery),
+          this.loadSimilarRecommendationsV2(query.productId!, normalizedQuery),
+        ]);
+        break;
+      case 'search':
+        v1Items = [];
+        v2Items = await this.loadSearchRecommendationsV2(normalizedQuery);
+        break;
+    }
+
+    return {
+      placement: query.placement,
+      items: this.buildComparisonItems(v1Items, v2Items, debug),
+    };
   }
 
   async trackProductView(
@@ -298,88 +279,188 @@ export class RecommendationsService {
     }
   }
 
-  private async getHomeRecommendationsV1(query: RecommendationQueryDto) {
-    try {
-      const products = await this.prisma.product.findMany({
-        where: this.buildPublicVisibilityWhere(),
-        include: this.getProductInclude(),
-        take: 120,
-        orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
-      });
+  private async loadHomeRecommendationsV1(query: RecommendationQueryDto) {
+    const products = await this.prisma.product.findMany({
+      where: this.buildPublicVisibilityWhere(),
+      include: this.getProductInclude(),
+      take: 120,
+      orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
 
-      const items = products
-        .filter((product) => this.isPublicVisible(product))
-        .sort(
-          (left, right) =>
-            this.scoreHomeProductV1(right) - this.scoreHomeProductV1(left),
-        )
-        .slice(0, query.limit)
-        .map((product) => ({
-          product,
-          scored: {
-            score: null,
-            reasonCodes: [] as RecommendationReasonCode[],
-            scoreBreakdown: null,
-          },
-        }));
-
-      return this.buildResponse('home', 'rule_based_v1', items, query.debug);
-    } catch {
-      return this.emptyResponse('home');
-    }
+    return products
+      .filter((product) => this.isPublicVisible(product))
+      .sort(
+        (left, right) =>
+          this.scoreHomeProductV1(right) - this.scoreHomeProductV1(left),
+      )
+      .slice(0, query.limit)
+      .map((product) => ({
+        product,
+        scored: {
+          score: this.scoreHomeProductV1(product),
+          reasonCodes: [] as RecommendationReasonCode[],
+          scoreBreakdown: null,
+        },
+      }));
   }
 
-  private async getSimilarProductsV1(
+  private async loadHomeRecommendationsV2(
+    query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
+    const [products, preferenceProfile] = await Promise.all([
+      this.prisma.product.findMany({
+        where: this.buildPublicVisibilityWhere(),
+        include: this.getProductInclude(),
+        take: 150,
+        orderBy: [{ publishedAt: 'desc' }, { updatedAt: 'desc' }],
+      }),
+      this.buildPreferenceProfile(query, request, user),
+    ]);
+
+    return products
+      .filter((product) => this.isPublicVisible(product))
+      .map((product) => ({
+        product,
+        scored: {
+          ...this.scoring.scoreHomeProduct(product, preferenceProfile),
+        },
+      }))
+      .sort((left, right) => right.scored.score - left.scored.score)
+      .slice(0, query.limit);
+  }
+
+  private async loadSimilarRecommendationsV1(
     productId: string,
     query: RecommendationQueryDto,
   ) {
-    try {
-      const sourceProduct = await this.prisma.product.findFirst({
-        where: {
-          id: productId,
-          ...this.buildPublicVisibilityWhere(),
-        },
-        include: this.getProductInclude(),
-      });
+    const sourceProduct = await this.prisma.product.findFirst({
+      where: {
+        id: productId,
+        ...this.buildPublicVisibilityWhere(),
+      },
+      include: this.getProductInclude(),
+    });
 
-      if (!sourceProduct || !this.isPublicVisible(sourceProduct)) {
-        return this.emptyResponse('product_detail');
-      }
-
-      const candidates = await this.loadSimilarCandidates(
-        sourceProduct,
-        query.limit,
-      );
-
-      const items = candidates
-        .filter(
-          (product) =>
-            this.isPublicVisible(product) && product.id !== productId,
-        )
-        .sort(
-          (left, right) =>
-            this.scoreSimilarProductV1(sourceProduct, right) -
-            this.scoreSimilarProductV1(sourceProduct, left),
-        )
-        .slice(0, query.limit)
-        .map((product) => ({
-          product,
-          scored: {
-            score: null,
-            reasonCodes: [] as RecommendationReasonCode[],
-            scoreBreakdown: null,
-          },
-        }));
-
-      return this.buildResponse(
-        'product_detail',
-        'rule_based_v1',
-        items,
-        query.debug,
-      );
-    } catch {
-      return this.emptyResponse('product_detail');
+    if (!sourceProduct || !this.isPublicVisible(sourceProduct)) {
+      return [] as RecommendationRankedItem[];
     }
+
+    const candidates = await this.loadSimilarCandidates(
+      sourceProduct,
+      query.limit,
+    );
+
+    return candidates
+      .filter(
+        (product) => this.isPublicVisible(product) && product.id !== productId,
+      )
+      .sort(
+        (left, right) =>
+          this.scoreSimilarProductV1(sourceProduct, right) -
+          this.scoreSimilarProductV1(sourceProduct, left),
+      )
+      .slice(0, query.limit)
+      .map((product) => ({
+        product,
+        scored: {
+          score: this.scoreSimilarProductV1(sourceProduct, product),
+          reasonCodes: [] as RecommendationReasonCode[],
+          scoreBreakdown: null,
+        },
+      }));
+  }
+
+  private async loadSimilarRecommendationsV2(
+    productId: string,
+    query: RecommendationQueryDto,
+  ) {
+    const sourceProduct = await this.prisma.product.findFirst({
+      where: {
+        id: productId,
+        ...this.buildPublicVisibilityWhere(),
+      },
+      include: this.getProductInclude(),
+    });
+
+    if (!sourceProduct || !this.isPublicVisible(sourceProduct)) {
+      return [] as RecommendationRankedItem[];
+    }
+
+    const candidates = await this.loadSimilarCandidates(
+      sourceProduct,
+      query.limit,
+    );
+
+    return candidates
+      .filter(
+        (product) => this.isPublicVisible(product) && product.id !== productId,
+      )
+      .map((product) => ({
+        product,
+        scored: {
+          ...this.scoring.scoreSimilarProduct(sourceProduct, product),
+        },
+      }))
+      .sort((left, right) => right.scored.score - left.scored.score)
+      .slice(0, query.limit);
+  }
+
+  private async loadSearchRecommendationsV2(query: RecommendationQueryDto) {
+    const searchQuery = query.q?.trim() ?? '';
+    if (!searchQuery) {
+      return [] as RecommendationRankedItem[];
+    }
+
+    const tokens = this.normalizeQuery(searchQuery)
+      .split(' ')
+      .filter((token) => token.length >= 2);
+    const or: Prisma.ProductWhereInput[] = [
+      { wbTitle: { contains: searchQuery, mode: 'insensitive' } },
+      { localTitle: { contains: searchQuery, mode: 'insensitive' } },
+      { wbDescription: { contains: searchQuery, mode: 'insensitive' } },
+      { localDescription: { contains: searchQuery, mode: 'insensitive' } },
+      { categoryName: { contains: searchQuery, mode: 'insensitive' } },
+      { sourceCategoryName: { contains: searchQuery, mode: 'insensitive' } },
+      { brand: { contains: searchQuery, mode: 'insensitive' } },
+      { color: { contains: searchQuery, mode: 'insensitive' } },
+    ];
+
+    for (const token of tokens) {
+      or.push(
+        { wbTitle: { contains: token, mode: 'insensitive' } },
+        { localTitle: { contains: token, mode: 'insensitive' } },
+        { wbDescription: { contains: token, mode: 'insensitive' } },
+        { localDescription: { contains: token, mode: 'insensitive' } },
+        { categoryName: { contains: token, mode: 'insensitive' } },
+        { sourceCategoryName: { contains: token, mode: 'insensitive' } },
+        { brand: { contains: token, mode: 'insensitive' } },
+        { color: { contains: token, mode: 'insensitive' } },
+      );
+    }
+
+    const candidates = await this.prisma.product.findMany({
+      where: {
+        ...this.buildPublicVisibilityWhere(),
+        OR: or,
+      },
+      include: this.getProductInclude(),
+      take: 150,
+      orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
+    });
+
+    return candidates
+      .filter((product) => this.isPublicVisible(product))
+      .map((product) => ({
+        product,
+        scored: {
+          ...this.scoring.scoreSearchProduct(searchQuery, product),
+        },
+      }))
+      .filter((item) => (item.scored.score ?? 0) > 0)
+      .sort((left, right) => right.scored.score - left.scored.score)
+      .slice(0, query.limit);
   }
 
   private async loadSimilarCandidates(
@@ -444,22 +525,18 @@ export class RecommendationsService {
   private buildResponse(
     placement: RecommendationPlacement,
     algorithm: string,
-    items: Array<{
-      product: RecommendationProductRecord;
-      scored: {
-        score: number | null;
-        reasonCodes: RecommendationReasonCode[];
-        scoreBreakdown?: RecommendationScoreBreakdown | null;
-      };
-    }>,
+    items: RecommendationRankedItem[],
     debug = false,
+    options?: {
+      hideScores?: boolean;
+    },
   ) {
     const includeExplainability = this.shouldIncludeExplainability(debug);
     const mappedItems: RecommendationApiItem[] = items.map((item, index) => {
       const mappedItem: RecommendationApiItem = {
         product: this.mapProduct(item.product),
         rank: index + 1,
-        score: item.scored.score,
+        score: options?.hideScores ? null : item.scored.score,
         reasonCodes: item.scored.reasonCodes,
       };
 
@@ -482,6 +559,99 @@ export class RecommendationsService {
       placement,
       items: mappedItems,
       products: mappedItems.map((item) => item.product),
+    };
+  }
+
+  private buildComparisonItems(
+    v1Items: RecommendationRankedItem[],
+    v2Items: RecommendationRankedItem[],
+    debug = false,
+  ) {
+    const includeExplainability = this.shouldIncludeExplainability(debug);
+    const byProductId = new Map<
+      string,
+      {
+        productId: string;
+        productName: string;
+        ruleBasedV1: RecommendationAlgorithmSnapshot | null;
+        ruleBasedV2: RecommendationAlgorithmSnapshot | null;
+        sortRank: number;
+      }
+    >();
+
+    v1Items.forEach((item, index) => {
+      const mappedProduct = this.mapProduct(item.product);
+      const existing = byProductId.get(mappedProduct.id);
+      byProductId.set(mappedProduct.id, {
+        productId: mappedProduct.id,
+        productName: mappedProduct.name,
+        ruleBasedV1: this.buildComparisonSnapshot(
+          'rule_based_v1',
+          index + 1,
+          item,
+          includeExplainability,
+        ),
+        ruleBasedV2: existing?.ruleBasedV2 ?? null,
+        sortRank: Math.min(
+          existing?.sortRank ?? Number.MAX_SAFE_INTEGER,
+          index + 1,
+        ),
+      });
+    });
+
+    v2Items.forEach((item, index) => {
+      const mappedProduct = this.mapProduct(item.product);
+      const existing = byProductId.get(mappedProduct.id);
+      byProductId.set(mappedProduct.id, {
+        productId: mappedProduct.id,
+        productName: mappedProduct.name,
+        ruleBasedV1: existing?.ruleBasedV1 ?? null,
+        ruleBasedV2: this.buildComparisonSnapshot(
+          'rule_based_v2',
+          index + 1,
+          item,
+          includeExplainability,
+        ),
+        sortRank: Math.min(
+          existing?.sortRank ?? Number.MAX_SAFE_INTEGER,
+          index + 1,
+        ),
+      });
+    });
+
+    return [...byProductId.values()]
+      .sort((left, right) => left.sortRank - right.sortRank)
+      .map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        rankMovement:
+          item.ruleBasedV1?.rank !== null &&
+          item.ruleBasedV1?.rank !== undefined &&
+          item.ruleBasedV2?.rank !== null &&
+          item.ruleBasedV2?.rank !== undefined
+            ? item.ruleBasedV1.rank - item.ruleBasedV2.rank
+            : null,
+        ruleBasedV1: item.ruleBasedV1,
+        ruleBasedV2: item.ruleBasedV2,
+      }));
+  }
+
+  private buildComparisonSnapshot(
+    algorithm: 'rule_based_v1' | 'rule_based_v2',
+    rank: number,
+    item: RecommendationRankedItem,
+    includeExplainability: boolean,
+  ): RecommendationAlgorithmSnapshot {
+    return {
+      algorithm,
+      rank,
+      finalScore: item.scored.score,
+      reasons: includeExplainability
+        ? item.scored.reasonCodes.map(
+            (reasonCode) => RECOMMENDATION_REASON_LABELS[reasonCode],
+          )
+        : [],
+      scoreBreakdown: includeExplainability ? item.scored.scoreBreakdown : null,
     };
   }
 
@@ -629,6 +799,10 @@ export class RecommendationsService {
     return (
       debug && this.readFlag('RECOMMENDATION_EXPLAINABILITY_ENABLED', false)
     );
+  }
+
+  private isQaToolsEnabled() {
+    return this.readFlag('RECOMMENDATION_QA_TOOLS_ENABLED', false);
   }
 
   private readFlag(name: string, fallback: boolean) {

@@ -1,5 +1,62 @@
 # Phase Report
 
+## 2026-06-06 Recommendation Internal Ranking Comparison QA Tools Phase 2.2
+
+- Status: Implemented on current branch
+- Scope:
+  - added `GET /api/internal/recommendations/compare` for internal-only ranking comparison
+  - added `RECOMMENDATION_QA_TOOLS_ENABLED` gating on the backend compare workflow
+  - added `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED` gating on the frontend internal QA page
+  - comparison output now supports safe side-by-side snapshots for:
+    - `rule_based_v1`
+    - `rule_based_v2`
+  - comparison rows include:
+    - `productId`
+    - `productName`
+    - `rankMovement`
+    - `ruleBasedV1`
+    - `ruleBasedV2`
+  - when explainability is enabled, each algorithm snapshot can also include:
+    - `reasons`
+    - `scoreBreakdown`
+  - added internal frontend QA route:
+    - `/admin/recommendations-qa`
+  - added backend regression coverage for:
+    - QA comparison disabled by default
+    - QA comparison enabled behind internal flag
+    - comparison shape for `rule_based_v1` vs `rule_based_v2`
+    - rank movement calculation
+    - no session/customer data leakage
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no public recommendation endpoint contracts were broken
+  - the compare workflow is opt-in and internal-only
+- Local QA workflow:
+  - set `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - set `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - optional explainability:
+    - set `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - set `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - start backend and frontend locally
+  - open `/admin/recommendations-qa`
+  - compare:
+    - `placement=home`
+    - `placement=search&q=...`
+    - `placement=product_detail&productId=...`
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - the internal QA page is intentionally not linked in public navigation
+
 ## 2026-06-06 Recommendation Explainability and Safer Weight Tuning Phase 2.1
 
 - Status: Implemented on current branch

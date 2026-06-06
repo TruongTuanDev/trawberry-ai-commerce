@@ -36,6 +36,9 @@ export default async function RootLayout({
         data-recommendation-explainability-enabled={String(
           recommendationFlags.recommendationExplainabilityEnabled,
         )}
+        data-recommendation-qa-tools-enabled={String(
+          recommendationFlags.recommendationQaToolsEnabled,
+        )}
         data-public-visual-search-enabled={String(
           visualSearchFlags.publicVisualSearchEnabled,
         )}
