@@ -1,5 +1,30 @@
 # Project Status
 
+## Campaign Management Foundation Phase 4.1 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Campaign stack now supports:
+  - shop-scoped seller campaign persistence with `SponsoredCampaign` and `SponsoredCampaignProduct`
+  - seller CRUD and target management guarded by existing seller auth + shop ownership
+  - safe lifecycle validation for draft, active, paused, ended, and archived states
+  - safe placeholder billing metadata with no charging or spend tracking enabled
+  - an internal read-only recommendation bridge for future sponsored targeting integration
+  - seller UI at `/seller/campaigns` for campaign draft creation, editing, targeting, and archive flows
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - no wallet, billing ledger, spend charging, or budget consumption exists yet by design
+  - recommendation ranking still does not consume live campaigns in production flows
+- Next recommended phase:
+  - Phase 4.2: Seller Wallet and Billing Ledger Foundation
+
 ## Finalize Recommendation for Campaign and Billing Integration Phase 3.3 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

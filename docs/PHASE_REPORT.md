@@ -1,5 +1,90 @@
 # Phase Report
 
+## 2026-06-07 Campaign Management Foundation Phase 4.1
+
+- Status: Implemented on current branch
+- Scope:
+  - added a shop-scoped seller campaign management foundation for the active NestJS + Next.js stack only
+  - added Prisma-backed campaign tables:
+    - `SponsoredCampaign`
+    - `SponsoredCampaignProduct`
+  - added seller campaign APIs under:
+    - `GET /api/seller/shops/:shopId/campaigns`
+    - `POST /api/seller/shops/:shopId/campaigns`
+    - `GET /api/seller/shops/:shopId/campaigns/:campaignId`
+    - `PATCH /api/seller/shops/:shopId/campaigns/:campaignId`
+    - `POST /api/seller/shops/:shopId/campaigns/:campaignId/archive`
+    - `DELETE /api/seller/shops/:shopId/campaigns/:campaignId`
+    - `POST /api/seller/shops/:shopId/campaigns/:campaignId/targets`
+    - `DELETE /api/seller/shops/:shopId/campaigns/:campaignId/targets/:targetId`
+  - reused existing seller auth plus `ShopAccessGuard` patterns so sellers can only access campaigns for their own shops
+  - enforced safe activation and lifecycle rules:
+    - invalid status transitions rejected
+    - active campaigns require valid targets
+    - targets must belong to the same shop
+    - active campaigns reject non-public-safe products
+    - target boost cannot exceed campaign `maxBoost`
+    - `endAt < startAt` is rejected
+  - added safe placeholder billing metadata only:
+    - `billingMode`
+    - `budgetLimit`
+    - non-charging billing summary with `chargingEnabled=false`
+    - `spendTracked=false`
+  - added a read-only internal recommendation bridge method for future targeting integration without changing public recommendation APIs
+  - added seller UI at `/seller/campaigns` for:
+    - create
+    - list
+    - edit
+    - archive
+    - add/remove targets
+    - viewing placeholder billing notes
+  - added regression coverage for:
+    - create/list ownership boundaries
+    - activation with valid targets
+    - invalid no-target activation
+    - invalid date window rejection
+    - invalid ownership / boost rejection
+    - remove/archive flows and invalid transitions
+    - public recommendation backward compatibility and no campaign leakage
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no real billing, wallet deduction, spend charging, or auction behavior was introduced
+  - no public recommendation payload now exposes campaign or billing internals
+  - no legacy `strawberry-*` apps were modified
+- Handoff:
+  - Phase 4.1 provides the persistence, lifecycle, and ownership baseline needed for future wallet and billing work.
+  - Implemented:
+    - campaign data model
+    - seller CRUD / target management
+    - lifecycle validation
+    - internal bridge for future recommendation use
+    - seller UI foundation
+  - Intentionally not implemented:
+    - wallet balance
+    - billing ledger
+    - click/impression attribution charging
+    - budget consumption
+    - invoice generation
+    - seller ad auction workflow
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - campaign billing is still placeholder-only and intentionally non-charging
+  - no wallet, spend ledger, or attribution events exist yet
+  - the recommendation bridge is internal-only and not wired into live ranking yet
+- Next recommended phase:
+  - Phase 4.2: Seller Wallet and Billing Ledger Foundation
+
 ## 2026-06-07 Finalize Recommendation for Campaign and Billing Integration Phase 3.3
 
 - Status: Implemented on current branch

@@ -272,6 +272,7 @@ model Shop {
   wbCredentials         ShopWbCredential?
   wbSyncRuns            WbSyncRun[]
   commissionSettings    ShopCommissionSetting[]
+  sponsoredCampaigns    SponsoredCampaign[]
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
   sellerMonthlyInvoices SellerMonthlyInvoice[]
   returnRefundCases     ReturnRefundCase[]
@@ -374,11 +375,51 @@ model Product {
   aiTryOnUsageLogs  AiTryOnUsageLog[]
   productReviews    ProductReview[]
   messageThreads    ShopMessageThread[]
+  sponsoredCampaignTargets SponsoredCampaignProduct[]
   aiTryOnEnabled    Boolean            @default(false) @map("ai_try_on_enabled")
 
   @@unique([shopId, wbNmId])
   @@unique([shopId, sellerSku])
   @@map("products")
+}
+
+model SponsoredCampaign {
+  id            String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId        String                     @map("shop_id") @db.Uuid
+  name          String                     @db.VarChar(255)
+  description   String?                    @db.VarChar(1000)
+  status        String                     @default("draft") @db.VarChar(50)
+  scenarioTypes String[]                   @default([]) @map("scenario_types")
+  startAt       DateTime?                  @map("start_at") @db.Timestamptz(6)
+  endAt         DateTime?                  @map("end_at") @db.Timestamptz(6)
+  budgetLimit   Decimal?                   @map("budget_limit") @db.Decimal(12, 2)
+  billingMode   String                     @default("none") @map("billing_mode") @db.VarChar(50)
+  maxBoost      Decimal                    @default(0) @map("max_boost") @db.Decimal(6, 2)
+  createdAt     DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop          Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  targets       SponsoredCampaignProduct[]
+
+  @@index([shopId, status, updatedAt])
+  @@index([shopId, createdAt])
+  @@map("sponsored_campaigns")
+}
+
+model SponsoredCampaignProduct {
+  id         String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  campaignId String            @map("campaign_id") @db.Uuid
+  productId  String            @map("product_id") @db.Uuid
+  boost      Decimal           @default(0) @db.Decimal(6, 2)
+  status     String            @default("active") @db.VarChar(50)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  campaign   SponsoredCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+  @@index([campaignId, status, updatedAt])
+  @@index([productId, status])
+  @@map("sponsored_campaign_products")
 }
 
 model ProductViewLog {

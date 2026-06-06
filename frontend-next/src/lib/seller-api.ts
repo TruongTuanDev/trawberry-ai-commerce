@@ -323,6 +323,67 @@ export type SellerFinanceInvoice = {
   updatedAt: string;
 };
 
+export type SellerCampaignScenarioType = "home" | "similar" | "search";
+export type SellerCampaignStatus =
+  | "draft"
+  | "active"
+  | "paused"
+  | "ended"
+  | "archived";
+export type SellerCampaignBillingMode = "none" | "cpc" | "cpm" | "fixed";
+export type SellerCampaignTargetStatus = "active" | "paused" | "removed";
+
+export type SellerCampaignTargetProductSummary = {
+  id: string;
+  name: string;
+  seoSlug: string | null;
+  brand: string | null;
+  categoryName: string | null;
+  catalogStatus: string;
+  visibility: string | null;
+};
+
+export type SellerCampaignTarget = {
+  id: string;
+  campaignId: string;
+  productId: string;
+  boost: string;
+  status: SellerCampaignTargetStatus | string;
+  createdAt: string;
+  updatedAt: string;
+  product: SellerCampaignTargetProductSummary;
+};
+
+export type SellerCampaign = {
+  id: string;
+  shopId: string;
+  name: string;
+  description: string | null;
+  status: SellerCampaignStatus | string;
+  scenarioTypes: SellerCampaignScenarioType[];
+  startAt: string | null;
+  endAt: string | null;
+  budgetLimit: string | null;
+  billingMode: SellerCampaignBillingMode | string;
+  maxBoost: string;
+  createdAt: string;
+  updatedAt: string;
+  billing: {
+    mode: SellerCampaignBillingMode | string;
+    budgetLimit: string | null;
+    chargingEnabled: boolean;
+    spendTracked: boolean;
+    notes: string[];
+  };
+  summary: {
+    totalTargets: number;
+    activeTargets: number;
+    pausedTargets: number;
+    removedTargets: number;
+  };
+  targets: SellerCampaignTarget[];
+};
+
 export type SellerOrderListItem = {
   id: string;
   orderNumber: string;
@@ -1281,6 +1342,129 @@ export async function getSellerFinanceInvoices(
     `/api/seller/shops/${shopId}/invoices`,
     {
       method: "GET",
+      token,
+    },
+  );
+}
+
+export async function listSellerCampaigns(
+  shopId: string,
+  query?: {
+    status?: SellerCampaignStatus;
+    scenarioType?: SellerCampaignScenarioType;
+  },
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (query?.status) {
+    params.set("status", query.status);
+  }
+  if (query?.scenarioType) {
+    params.set("scenarioType", query.scenarioType);
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<SellerCampaign[]>(
+    `/api/seller/shops/${shopId}/campaigns${suffix}`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function createSellerCampaign(
+  shopId: string,
+  payload: {
+    name: string;
+    description?: string;
+    status?: SellerCampaignStatus;
+    scenarioTypes: SellerCampaignScenarioType[];
+    startAt?: string | null;
+    endAt?: string | null;
+    budgetLimit?: number | null;
+    billingMode?: SellerCampaignBillingMode;
+    maxBoost: number;
+  },
+  token?: string,
+) {
+  return apiRequest<SellerCampaign>(`/api/seller/shops/${shopId}/campaigns`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateSellerCampaign(
+  shopId: string,
+  campaignId: string,
+  payload: {
+    name?: string;
+    description?: string | null;
+    status?: SellerCampaignStatus;
+    scenarioTypes?: SellerCampaignScenarioType[];
+    startAt?: string | null;
+    endAt?: string | null;
+    budgetLimit?: number | null;
+    billingMode?: SellerCampaignBillingMode;
+    maxBoost?: number;
+  },
+  token?: string,
+) {
+  return apiRequest<SellerCampaign>(
+    `/api/seller/shops/${shopId}/campaigns/${campaignId}`,
+    {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function archiveSellerCampaign(
+  shopId: string,
+  campaignId: string,
+  token?: string,
+) {
+  return apiRequest<SellerCampaign>(
+    `/api/seller/shops/${shopId}/campaigns/${campaignId}/archive`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export async function upsertSellerCampaignTarget(
+  shopId: string,
+  campaignId: string,
+  payload: {
+    productId: string;
+    boost: number;
+    status?: SellerCampaignTargetStatus;
+  },
+  token?: string,
+) {
+  return apiRequest<SellerCampaign>(
+    `/api/seller/shops/${shopId}/campaigns/${campaignId}/targets`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function removeSellerCampaignTarget(
+  shopId: string,
+  campaignId: string,
+  targetId: string,
+  token?: string,
+) {
+  return apiRequest<SellerCampaign>(
+    `/api/seller/shops/${shopId}/campaigns/${campaignId}/targets/${targetId}`,
+    {
+      method: "DELETE",
       token,
     },
   );
