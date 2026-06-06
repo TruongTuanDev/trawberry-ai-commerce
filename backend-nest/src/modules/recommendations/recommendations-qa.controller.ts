@@ -27,6 +27,10 @@ import {
   RecommendationQaDiffRequestDto,
   RecommendationQaDiffResponseDto,
 } from './dto/recommendation-qa-diff.dto';
+import {
+  RecommendationQaPackDto,
+  RecommendationQaPackValidationResponseDto,
+} from './dto/recommendation-qa-pack.dto';
 import { RecommendationsService } from './recommendations.service';
 
 @ApiTags('internal-recommendations-qa')
@@ -34,6 +38,7 @@ import { RecommendationsService } from './recommendations.service';
   RecommendationQaCompareResponseDto,
   RecommendationQaSnapshotResponseDto,
   RecommendationQaDiffResponseDto,
+  RecommendationQaPackValidationResponseDto,
 )
 @Controller('api/internal/recommendations')
 export class RecommendationsQaController {
@@ -76,5 +81,15 @@ export class RecommendationsQaController {
   @ApiOkResponse({ type: RecommendationQaDiffResponseDto })
   diffRankingSnapshots(@Body() body: RecommendationQaDiffRequestDto) {
     return this.recommendationsService.diffRankingSnapshots(body);
+  }
+
+  @Post('packs/validate')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'Validate an internal recommendation QA pack payload.',
+  })
+  @ApiOkResponse({ type: RecommendationQaPackValidationResponseDto })
+  validateQaPack(@Body() body: RecommendationQaPackDto) {
+    return this.recommendationsService.validateQaPack(body);
   }
 }

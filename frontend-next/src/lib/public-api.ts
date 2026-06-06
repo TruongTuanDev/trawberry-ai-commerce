@@ -211,6 +211,29 @@ export type RecommendationQaDiffResponse = {
   }>;
 };
 
+export type RecommendationQaPack = {
+  packName: string;
+  description: string;
+  scenarioType: "home" | "similar" | "search";
+  query?: string | null;
+  productId?: string | null;
+  limit: number;
+  baselineSnapshot: RecommendationQaSnapshotResponse;
+  candidateSnapshot: RecommendationQaSnapshotResponse;
+  expectedSummaryThresholds?: {
+    maxMovedDownCount?: number;
+    maxAddedCount?: number;
+    maxRemovedCount?: number;
+    maxScoreDelta?: number;
+  };
+};
+
+export type RecommendationQaPackValidationResponse = {
+  valid: boolean;
+  pack: RecommendationQaPack;
+  notices: string[];
+};
+
 export type VisualSearchResponse = {
   analysis: {
     category: string | null;
@@ -846,6 +869,16 @@ export async function diffRecommendationRankingSnapshots(payload: {
 }) {
   return apiRequest<RecommendationQaDiffResponse>(
     "/api/internal/recommendations/diff",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function validateRecommendationQaPack(payload: RecommendationQaPack) {
+  return apiRequest<RecommendationQaPackValidationResponse>(
+    "/api/internal/recommendations/packs/validate",
     {
       method: "POST",
       body: JSON.stringify(payload),

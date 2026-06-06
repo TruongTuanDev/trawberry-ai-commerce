@@ -1,5 +1,60 @@
 # Phase Report
 
+## 2026-06-06 Recommendation QA Baseline Packs and Visual Diff Export Phase 2.5
+
+- Status: Implemented on current branch
+- Scope:
+  - added internal-only QA pack validation at `POST /api/internal/recommendations/packs/validate`
+  - QA packs now support:
+    - `packName`
+    - `description`
+    - `scenarioType`
+    - `query` or `productId`
+    - `limit`
+    - `baselineSnapshot`
+    - `candidateSnapshot`
+    - optional `expectedSummaryThresholds`
+  - committed a safe mock/sample QA pack for internal tooling only
+  - enhanced `/admin/recommendations-qa` with:
+    - sample QA pack loading
+    - pasted/imported QA pack JSON
+    - backend pack validation
+    - pack-driven baseline/candidate snapshot hydration
+    - Markdown visual summary export
+    - print-friendly visual summary workflow
+  - added backend regression coverage for:
+    - QA pack validation with safe mock data
+    - rejecting malformed QA pack payloads
+    - no user/session/private data leakage
+    - existing snapshot diff behavior still works
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no public recommendation endpoint contracts were broken
+  - only safe mock/sample QA pack data is committed
+- Local QA workflow:
+  - create baseline snapshot A from `/admin/recommendations-qa`
+  - tune ranking weights
+  - create candidate snapshot B from the same scenario
+  - build a QA pack with scenario metadata plus snapshots A/B
+  - import or paste the QA pack JSON
+  - validate the QA pack
+  - run snapshot diff using the pack snapshots
+  - export the visual Markdown summary or print the diff review
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - QA pack fixtures are lightweight and file-based, not centrally managed
+  - the internal QA page is intentionally not linked in public navigation
+
 ## 2026-06-06 Recommendation Snapshot Diffing and Baseline Catalog Phase 2.4
 
 - Status: Implemented on current branch

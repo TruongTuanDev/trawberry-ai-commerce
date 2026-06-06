@@ -337,6 +337,13 @@ describe('RecommendationsController (e2e)', () => {
       .expect(404);
   });
 
+  it('keeps recommendation QA pack validation disabled by default', async () => {
+    await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send(buildQaPackPayload())
+      .expect(404);
+  });
+
   it('returns internal ranking comparison when the QA tools flag is enabled', async () => {
     process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
@@ -646,6 +653,60 @@ describe('RecommendationsController (e2e)', () => {
     expect(serialized).not.toContain('customerId');
     expect(serialized).not.toContain('paymentInstructions');
     expect(serialized).not.toContain('approvalStatus');
+  });
+
+  it('validates a safe QA pack payload when the internal flag is enabled', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send(buildQaPackPayload())
+      .expect(201);
+
+    const body = readBody<{
+      valid: boolean;
+      pack: {
+        packName: string;
+        description: string;
+        scenarioType: string;
+        query: string | null;
+        limit: number;
+        baselineSnapshot: { generatedAt: string };
+        candidateSnapshot: { generatedAt: string };
+        expectedSummaryThresholds?: {
+          maxMovedDownCount?: number;
+          maxScoreDelta?: number;
+        };
+      };
+      notices: string[];
+    }>(response);
+    const serialized = JSON.stringify(body);
+
+    expect(body.valid).toBe(true);
+    expect(body.pack.packName).toBe('Sample home QA pack');
+    expect(body.pack.scenarioType).toBe('home');
+    expect(body.pack.limit).toBe(5);
+    expect(body.pack.expectedSummaryThresholds?.maxMovedDownCount).toBe(2);
+    expect(Array.isArray(body.notices)).toBe(true);
+    expect(serialized).not.toContain('guestSessionId');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('paymentInstructions');
+  });
+
+  it('rejects malformed QA pack payloads', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send({
+        packName: 'Broken pack',
+        scenarioType: 'search',
+      })
+      .expect(400);
   });
 
   it('returns search recommendations for matching products', async () => {
@@ -992,6 +1053,25 @@ function buildSnapshotDiffPayload() {
           penaltyScore: 0,
         }),
       ],
+    },
+  };
+}
+
+function buildQaPackPayload() {
+  return {
+    packName: 'Sample home QA pack',
+    description:
+      'Safe mock QA pack for repeatable home ranking audits with sample data only.',
+    scenarioType: 'home',
+    query: null,
+    productId: null,
+    limit: 5,
+    baselineSnapshot: buildSnapshotDiffPayload().baseline,
+    candidateSnapshot: buildSnapshotDiffPayload().candidate,
+    expectedSummaryThresholds: {
+      maxMovedDownCount: 2,
+      maxRemovedCount: 1,
+      maxScoreDelta: 5,
     },
   };
 }

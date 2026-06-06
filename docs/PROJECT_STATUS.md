@@ -1,5 +1,27 @@
 # Project Status
 
+## Recommendation QA Baseline Packs and Visual Diff Export Phase 2.5 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - internal QA pack validation for safe mock/sample ranking audit bundles
+  - sample QA pack loading plus imported pack validation on `/admin/recommendations-qa`
+  - pack-driven snapshot diff workflows
+  - visual diff export via Markdown copy and print-friendly summary
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - QA packs are lightweight file-based artifacts rather than centrally managed fixtures
+  - visual export is intentionally lightweight and does not generate PDF/image artifacts
+- Next recommended phase:
+  - Phase 2.6: add threshold pass/fail evaluation and optional baseline fixture library organization for broader QA reuse
+
 ## Recommendation Snapshot Diffing and Baseline Catalog Phase 2.4 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`

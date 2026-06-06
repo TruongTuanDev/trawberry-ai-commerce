@@ -4,9 +4,13 @@ import { useState } from "react";
 import type { ChangeEvent } from "react";
 import {
   diffRecommendationRankingSnapshots,
+  validateRecommendationQaPack,
   type RecommendationQaDiffResponse,
+  type RecommendationQaPack,
+  type RecommendationQaPackValidationResponse,
   type RecommendationQaSnapshotResponse,
 } from "@/lib/public-api";
+import { SAMPLE_RECOMMENDATION_QA_PACK } from "@/lib/recommendation-qa-sample-pack";
 
 const SAMPLE_BASELINE_CATALOG = [
   {
@@ -46,14 +50,89 @@ function parseSnapshot(value: string) {
   return parsed;
 }
 
+function parseQaPack(value: string) {
+  const parsed = JSON.parse(value) as RecommendationQaPack;
+  if (
+    !parsed ||
+    typeof parsed.packName !== "string" ||
+    !parsed.baselineSnapshot ||
+    !parsed.candidateSnapshot
+  ) {
+    throw new Error("QA pack JSON is missing required pack fields.");
+  }
+  return parsed;
+}
+
+function buildMarkdownSummary(
+  pack: RecommendationQaPackValidationResponse["pack"] | null,
+  diff: RecommendationQaDiffResponse,
+) {
+  const topMovedUp = diff.items.filter((item) => item.status === "moved_up").slice(0, 5);
+  const topMovedDown = diff.items
+    .filter((item) => item.status === "moved_down")
+    .slice(0, 5);
+  const added = diff.items.filter((item) => item.status === "added").slice(0, 5);
+  const removed = diff.items.filter((item) => item.status === "removed").slice(0, 5);
+
+  const lines = [
+    `# Recommendation QA Diff Summary`,
+    ``,
+    `- Pack: ${pack?.packName ?? "Manual snapshot diff"}`,
+    `- Scenario: ${pack?.scenarioType ?? diff.scenario.baseline.scenarioType}`,
+    `- Baseline generatedAt: ${diff.scenario.baseline.generatedAt}`,
+    `- Candidate generatedAt: ${diff.scenario.candidate.generatedAt}`,
+    `- Total compared: ${diff.summary.totalItemsCompared}`,
+    `- Moved up: ${diff.summary.movedUpCount}`,
+    `- Moved down: ${diff.summary.movedDownCount}`,
+    `- Added: ${diff.summary.addedCount}`,
+    `- Removed: ${diff.summary.removedCount}`,
+    `- Unchanged: ${diff.summary.unchangedCount}`,
+    ``,
+    `## Top moved_up`,
+    ...(topMovedUp.length
+      ? topMovedUp.map(
+          (item) =>
+            `- ${item.productName} (${item.productId}) old rank ${item.oldRank ?? "n/a"} -> new rank ${item.newRank ?? "n/a"} score delta ${formatSignedNumber(item.scoreDelta)}`,
+        )
+      : ["- none"]),
+    ``,
+    `## Top moved_down`,
+    ...(topMovedDown.length
+      ? topMovedDown.map(
+          (item) =>
+            `- ${item.productName} (${item.productId}) old rank ${item.oldRank ?? "n/a"} -> new rank ${item.newRank ?? "n/a"} score delta ${formatSignedNumber(item.scoreDelta)}`,
+        )
+      : ["- none"]),
+    ``,
+    `## Added`,
+    ...(added.length
+      ? added.map((item) => `- ${item.productName} (${item.productId})`)
+      : ["- none"]),
+    ``,
+    `## Removed`,
+    ...(removed.length
+      ? removed.map((item) => `- ${item.productName} (${item.productId})`)
+      : ["- none"]),
+  ];
+
+  return lines.join("\n");
+}
+
 export function RecommendationRankingSnapshotDiffPanel() {
   const [baselineText, setBaselineText] = useState("");
   const [candidateText, setCandidateText] = useState("");
+  const [packText, setPackText] = useState("");
+  const [validatedPack, setValidatedPack] =
+    useState<RecommendationQaPackValidationResponse | null>(null);
   const [diffResult, setDiffResult] = useState<RecommendationQaDiffResponse | null>(
     null,
   );
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidatingPack, setIsValidatingPack] = useState(false);
+
+  const markdownSummary =
+    diffResult ? buildMarkdownSummary(validatedPack?.pack ?? null, diffResult) : "";
 
   async function handleCompare() {
     try {
@@ -78,9 +157,30 @@ export function RecommendationRankingSnapshotDiffPanel() {
     }
   }
 
+  async function handleValidatePack(nextPackText?: string) {
+    try {
+      setIsValidatingPack(true);
+      setError(null);
+      const pack = parseQaPack(nextPackText ?? packText);
+      const validation = await validateRecommendationQaPack(pack);
+      setValidatedPack(validation);
+      setBaselineText(JSON.stringify(validation.pack.baselineSnapshot, null, 2));
+      setCandidateText(JSON.stringify(validation.pack.candidateSnapshot, null, 2));
+    } catch (nextError) {
+      setValidatedPack(null);
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : "Failed to validate QA pack.",
+      );
+    } finally {
+      setIsValidatingPack(false);
+    }
+  }
+
   async function handleImport(
     event: ChangeEvent<HTMLInputElement>,
-    target: "baseline" | "candidate",
+    target: "baseline" | "candidate" | "pack",
   ) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -90,8 +190,10 @@ export function RecommendationRankingSnapshotDiffPanel() {
     const text = await file.text();
     if (target === "baseline") {
       setBaselineText(text);
-    } else {
+    } else if (target === "candidate") {
       setCandidateText(text);
+    } else {
+      setPackText(text);
     }
     event.target.value = "";
   }
@@ -110,6 +212,80 @@ export function RecommendationRankingSnapshotDiffPanel() {
           calculate moved-up, moved-down, added, removed, and unchanged items.
         </p>
       </div>
+
+      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              QA packs
+            </p>
+            <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+              Load a safe sample pack or paste/import a QA pack JSON that bundles
+              scenario metadata, baseline snapshot, candidate snapshot, and optional thresholds.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const sampleText = JSON.stringify(
+                  SAMPLE_RECOMMENDATION_QA_PACK,
+                  null,
+                  2,
+                );
+                setPackText(sampleText);
+                void handleValidatePack(sampleText);
+              }}
+              className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+            >
+              Load sample pack
+            </button>
+            <label className="cursor-pointer rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
+              Import pack JSON
+              <input
+                type="file"
+                accept="application/json,.json"
+                onChange={(event) => handleImport(event, "pack")}
+                className="hidden"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => void handleValidatePack()}
+              disabled={isValidatingPack || !packText.trim()}
+              className="inline-flex rounded-full bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isValidatingPack ? "Validating pack..." : "Validate pack"}
+            </button>
+          </div>
+        </div>
+        <textarea
+          value={packText}
+          onChange={(event) => setPackText(event.target.value)}
+          placeholder="Paste QA pack JSON here"
+          className="mt-4 min-h-56 w-full rounded-[1.25rem] border border-[var(--border)] bg-white p-4 font-mono text-xs leading-6 text-[var(--foreground)]"
+        />
+        {validatedPack ? (
+          <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-white p-4 text-sm">
+            <p className="font-semibold text-[var(--foreground)]">
+              Pack validated: {validatedPack.pack.packName}
+            </p>
+            <p className="mt-2 text-[var(--muted)]">
+              {validatedPack.pack.description}
+            </p>
+            <p className="mt-2 text-[var(--muted)]">
+              Scenario: {validatedPack.pack.scenarioType} · limit {validatedPack.pack.limit}
+            </p>
+            {validatedPack.notices.length ? (
+              <div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
+                {validatedPack.notices.map((notice) => (
+                  <p key={notice}>{notice}</p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="space-y-3">
@@ -172,6 +348,8 @@ export function RecommendationRankingSnapshotDiffPanel() {
           onClick={() => {
             setBaselineText("");
             setCandidateText("");
+            setPackText("");
+            setValidatedPack(null);
             setDiffResult(null);
             setError(null);
           }}
@@ -212,6 +390,44 @@ export function RecommendationRankingSnapshotDiffPanel() {
 
       {diffResult ? (
         <div className="space-y-4">
+          <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Visual export
+                </p>
+                <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
+                  Export a lightweight Markdown summary or print this QA diff for internal review.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(markdownSummary);
+                    } catch {
+                      setError("Could not copy the Markdown summary to clipboard.");
+                    }
+                  }}
+                  className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                >
+                  Copy Markdown summary
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                >
+                  Print summary
+                </button>
+              </div>
+            </div>
+            <pre className="mt-4 overflow-x-auto rounded-[1.25rem] border border-[var(--border)] bg-white p-4 text-xs leading-6 text-[var(--foreground)]">
+              {markdownSummary}
+            </pre>
+          </section>
+
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">

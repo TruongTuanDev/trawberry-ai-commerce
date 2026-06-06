@@ -105,6 +105,7 @@ Internal QA comparison mode:
   - cookies
   - private tracking payloads
   - private shop/internal-only fields
+- QA packs committed to the repo must contain only safe mock/sample snapshot data
 
 ## Read APIs
 
@@ -423,6 +424,9 @@ Local QA UI:
     - `similar products`
   - compare custom `home`, `search`, and `product_detail` scenarios
   - export the current comparison as JSON when you want a repeatable audit artifact
+  - load the sample QA pack or import a QA pack JSON
+  - validate the QA pack before diffing
+  - copy a Markdown summary or print the visual diff review
 
 QA snapshot guide:
 
@@ -441,13 +445,24 @@ QA snapshot guide:
 6. Click `Export JSON snapshot`.
 7. Change or tune ranking weights in the recommendation scoring service.
 8. Export snapshot B from the same scenario after the change.
-9. Paste or import snapshot A and snapshot B into the snapshot diff panel on `/admin/recommendations-qa`.
-10. Interpret the diff output:
+9. Build a QA pack with:
+   - pack name
+   - description
+   - scenario metadata
+   - baseline snapshot
+   - candidate snapshot
+   - optional thresholds
+10. Load the sample QA pack or paste/import your QA pack JSON into `/admin/recommendations-qa`.
+11. Validate the QA pack.
+12. Run snapshot diff from the pack-loaded baseline and candidate snapshots.
+13. Export the visual summary using Markdown copy or print.
+14. Interpret the diff output and thresholds:
    - `moved_up`: candidate rank improved
    - `moved_down`: candidate rank dropped
    - `added`: candidate introduced a new result
    - `removed`: candidate lost a prior result
    - `unchanged`: item rank stayed stable
+   - thresholds help QA decide whether moved-down count or score deltas exceed the acceptable audit envelope
 
 ### `POST /api/internal/recommendations/diff`
 
@@ -528,6 +543,69 @@ Diff response example:
 }
 ```
 
+### `POST /api/internal/recommendations/packs/validate`
+
+Purpose:
+
+- validate an internal recommendation QA pack structure
+- support repeatable baseline/candidate audits with safe mock or imported snapshot bundles
+
+Behavior:
+
+- returns `404` when `RECOMMENDATION_QA_TOOLS_ENABLED` is off
+- rejects malformed QA pack payloads with `400`
+- returns normalized notices when scenario metadata and snapshot metadata drift
+- QA packs committed to the repository must use safe mock/sample data only
+
+QA pack structure:
+
+- `packName`
+- `description`
+- `scenarioType`
+- `query` or `productId` when applicable
+- `limit`
+- `baselineSnapshot`
+- `candidateSnapshot`
+- optional `expectedSummaryThresholds`
+
+QA pack example:
+
+```json
+{
+  "packName": "Sample home QA pack",
+  "description": "Safe mock QA pack for repeatable home ranking audits.",
+  "scenarioType": "home",
+  "query": null,
+  "productId": null,
+  "limit": 5,
+  "baselineSnapshot": {
+    "scenarioType": "home",
+    "placement": "home",
+    "productId": null,
+    "query": null,
+    "limit": 5,
+    "generatedAt": "2026-06-06T13:00:00.000Z",
+    "comparedAlgorithms": ["rule_based_v1", "rule_based_v2"],
+    "items": []
+  },
+  "candidateSnapshot": {
+    "scenarioType": "home",
+    "placement": "home",
+    "productId": null,
+    "query": null,
+    "limit": 5,
+    "generatedAt": "2026-06-06T13:30:00.000Z",
+    "comparedAlgorithms": ["rule_based_v1", "rule_based_v2"],
+    "items": []
+  },
+  "expectedSummaryThresholds": {
+    "maxMovedDownCount": 2,
+    "maxRemovedCount": 1,
+    "maxScoreDelta": 5
+  }
+}
+```
+
 ## Rollout
 
 1. Deploy backend and frontend with the new additive code.
@@ -540,6 +618,7 @@ Diff response example:
    - optional QA comparison: call `GET /api/internal/recommendations/compare` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA snapshot export: call `GET /api/internal/recommendations/compare?export=true&format=json` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA snapshot diff: call `POST /api/internal/recommendations/diff` with two safe snapshot payloads after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - optional QA pack validation: call `POST /api/internal/recommendations/packs/validate` with a safe QA pack payload after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.
 5. Monitor recommendation event volume and storefront render behavior.
 

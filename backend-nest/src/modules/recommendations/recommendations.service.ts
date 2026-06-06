@@ -11,6 +11,7 @@ import {
   RecommendationQaDiffRequestDto,
   RecommendationQaSnapshotDto,
 } from './dto/recommendation-qa-diff.dto';
+import { RecommendationQaPackDto } from './dto/recommendation-qa-pack.dto';
 import { RecommendationQueryDto } from './dto/recommendation-query.dto';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
@@ -300,6 +301,42 @@ export class RecommendationsService {
           .length,
       },
       items,
+    };
+  }
+
+  validateQaPack(body: RecommendationQaPackDto) {
+    if (!this.isQaToolsEnabled()) {
+      throw new NotFoundException();
+    }
+
+    const notices: string[] = [];
+    if (body.scenarioType === 'search' && !body.query?.trim()) {
+      notices.push('Search QA packs should include a query string.');
+    }
+    if (body.scenarioType === 'similar' && !body.productId?.trim()) {
+      notices.push('Similar-product QA packs should include a productId.');
+    }
+    if (body.baselineSnapshot.limit !== body.limit) {
+      notices.push('Baseline snapshot limit differs from the QA pack limit.');
+    }
+    if (body.candidateSnapshot.limit !== body.limit) {
+      notices.push('Candidate snapshot limit differs from the QA pack limit.');
+    }
+    if (body.baselineSnapshot.scenarioType !== body.scenarioType) {
+      notices.push(
+        'Baseline snapshot scenarioType differs from the QA pack scenarioType.',
+      );
+    }
+    if (body.candidateSnapshot.scenarioType !== body.scenarioType) {
+      notices.push(
+        'Candidate snapshot scenarioType differs from the QA pack scenarioType.',
+      );
+    }
+
+    return {
+      valid: true,
+      pack: body,
+      notices,
     };
   }
 
