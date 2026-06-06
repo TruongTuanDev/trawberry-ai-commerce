@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 
 type PrismaExecutor = PrismaService | Prisma.TransactionClient;
 type BillingPrismaExecutor = PrismaExecutor & {
@@ -68,10 +70,18 @@ type LedgerRecord = {
 
 const DEFAULT_CURRENCY = 'RUB';
 const MUTABLE_WALLET_STATUSES = new Set(['active']);
+const DEV_FUNDING_DESCRIPTION = 'Dev/demo funding';
+const DEV_FUNDING_REFERENCE_TYPE = 'dev_demo_funding';
+const BILLING_DEV_TOOLS_FLAG = 'BILLING_DEV_TOOLS_ENABLED';
+const BILLING_DEV_TOOLS_MAX_CREDIT_FLAG = 'BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT';
+const DEFAULT_DEV_FUNDING_MAX_AMOUNT = 50000;
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   private asBillingExecutor(prisma: PrismaExecutor): BillingPrismaExecutor {
     return prisma;
@@ -144,6 +154,48 @@ export class BillingService {
     return this.applyMutation(shopId, {
       ...input,
       type: 'refund',
+    });
+  }
+
+  async devCreditWallet(
+    shopId: string,
+    amount: number | string | Prisma.Decimal,
+    user: AuthenticatedUser,
+  ) {
+    if (!this.readFlag(BILLING_DEV_TOOLS_FLAG, false)) {
+      throw new NotFoundException(
+        'Seller billing dev funding is not enabled for this environment.',
+      );
+    }
+
+    const maxAmount = this.readNumberFlag(
+      BILLING_DEV_TOOLS_MAX_CREDIT_FLAG,
+      DEFAULT_DEV_FUNDING_MAX_AMOUNT,
+    );
+    const normalizedAmount = this.toMoney(amount);
+
+    if (normalizedAmount.lte(0)) {
+      throw new BadRequestException(
+        'Dev funding amount must be greater than zero.',
+      );
+    }
+
+    if (normalizedAmount.gt(maxAmount)) {
+      throw new BadRequestException(
+        `Dev funding amount exceeds the max allowed amount of ${maxAmount.toFixed(2)}.`,
+      );
+    }
+
+    await this.assertSellerOwnsShop(shopId, user.userId);
+
+    return this.credit(shopId, {
+      amount: normalizedAmount,
+      description: DEV_FUNDING_DESCRIPTION,
+      referenceType: DEV_FUNDING_REFERENCE_TYPE,
+      referenceId: shopId,
+      metadata: {
+        source: 'dev_demo_funding',
+      },
     });
   }
 
@@ -282,6 +334,30 @@ export class BillingService {
     );
   }
 
+  private async assertSellerOwnsShop(shopId: string, userId: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        sellerProfile: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!shop) {
+      throw new NotFoundException(`Shop ${shopId} was not found.`);
+    }
+
+    if (shop.sellerProfile.userId !== userId) {
+      throw new BadRequestException(
+        `Shop ${shopId} does not belong to seller ${userId}.`,
+      );
+    }
+  }
+
   private async belongsToShopCampaign(
     shopId: string,
     campaignId: string,
@@ -344,6 +420,33 @@ export class BillingService {
     const decimal =
       value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value);
     return new Prisma.Decimal(decimal.toDecimalPlaces(2).toString());
+  }
+
+  private readFlag(name: string, fallback: boolean) {
+    const value = this.configService.get<string | boolean | undefined>(name);
+    if (value === undefined || value === null || value === '') {
+      return fallback;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+    return fallback;
+  }
+
+  private readNumberFlag(name: string, fallback: number) {
+    const raw = this.configService.get<string | number | undefined>(name);
+    if (raw === undefined || raw === null || raw === '') {
+      return fallback;
+    }
+    const value = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
   }
 
   private mapWallet(wallet: WalletRecord) {

@@ -46,9 +46,30 @@ V1 demo flow:
 4. Set billing mode to `cpc`
 5. Set an optional `budgetLimit`
 6. Activate the campaign
-7. Trigger recommendation impressions/clicks from public recommendation sections
-8. Confirm `/seller/campaigns` shows spend and recent event activity
-9. Confirm `/seller/billing` shows the corresponding ledger row for charged clicks
+7. If local demo funding is enabled, open `/seller/billing` and add a small demo wallet balance
+8. Trigger recommendation impressions/clicks from public recommendation sections
+9. Confirm `/seller/campaigns` shows spend and recent event activity
+10. Confirm `/seller/billing` shows the corresponding ledger row for charged clicks
+
+## Phase 4.4 demo readiness notes
+
+Phase 4.4 does not change campaign lifecycle or recommendation serving rules. It adds a safer local demo path so campaign spend can be demonstrated without a real payment gateway.
+
+Demo readiness additions:
+
+- `/seller/billing` can now expose a local dev/demo funding action when:
+  - `BILLING_DEV_TOOLS_ENABLED=true`
+  - `NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED=true`
+- the funding action is explicitly labeled dev/demo only
+- campaign performance and wallet deductions can now be shown end-to-end in a local V1 reporting demo
+
+Still intentionally out of scope for V1:
+
+- seller self-serve real top-up
+- payment gateway funding
+- invoices
+- fraud systems
+- advanced spend analytics
 
 ## Phase 4.1 scope
 

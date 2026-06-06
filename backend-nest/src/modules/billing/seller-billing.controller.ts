@@ -1,14 +1,19 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
+import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { BillingService } from './billing.service';
 import { BillingLedgerEntryResponseDto } from './dto/billing-ledger-entry-response.dto';
+import { DevCreditWalletDto } from './dto/dev-credit-wallet.dto';
+import { DevCreditWalletResponseDto } from './dto/dev-credit-wallet-response.dto';
 import { SellerWalletResponseDto } from './dto/seller-wallet-response.dto';
 
 @ApiTags('seller-billing')
@@ -32,5 +37,18 @@ export class SellerBillingController {
   @ApiOkResponse({ type: BillingLedgerEntryResponseDto, isArray: true })
   listLedger(@Param('shopId') shopId: string) {
     return this.billingService.listLedgerForShop(shopId);
+  }
+
+  @Post('wallet/dev-credit')
+  @ApiOperation({
+    summary: 'Credit the current seller wallet for local dev/demo use only.',
+  })
+  @ApiCreatedResponse({ type: DevCreditWalletResponseDto })
+  devCredit(
+    @Param('shopId') shopId: string,
+    @Body() dto: DevCreditWalletDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.billingService.devCreditWallet(shopId, dto.amount, user);
   }
 }

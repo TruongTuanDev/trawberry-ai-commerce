@@ -29,13 +29,13 @@ const CAMPAIGN_COPY = {
   eyebrow: "Campaigns",
   title: "Sponsored campaign manager",
   description:
-    "Create, target, activate, and review sponsored campaigns with bounded recommendation boosts and CPC spend tracking.",
+    "Create, target, activate, and review sponsored campaigns with bounded recommendation boosts, CPC spend tracking, and a clear V1 demo path through seller billing.",
   currentShop: "Current shop",
   pickShop: "Pick a seller shop to manage campaigns.",
   totalCampaigns: "Campaign count",
   placeholderBilling: "Campaign billing",
   placeholderBillingDescription:
-    "CPC recommendation click charging, spend tracking, and budget enforcement are now available for the V1 demo flow.",
+    "CPC recommendation click charging, spend tracking, and budget enforcement are now available for the V1 demo flow. Use /seller/billing demo funding only when the internal dev flag is enabled.",
   loading: "Loading campaigns...",
   loadFailed: "Unable to load seller campaigns.",
   submitting: "Saving...",

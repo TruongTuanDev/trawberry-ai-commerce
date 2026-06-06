@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call */
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { BillingService } from '../src/modules/billing/billing.service';
 
@@ -58,6 +59,9 @@ describe('BillingService', () => {
       findFirst: jest.fn(),
     },
     $transaction: jest.fn(),
+  };
+  const configServiceMock = {
+    get: jest.fn(),
   };
 
   beforeEach(() => {
@@ -161,8 +165,20 @@ describe('BillingService', () => {
     prismaMock.$transaction.mockImplementation((callback) =>
       Promise.resolve(callback(prismaMock)),
     );
+    configServiceMock.get.mockImplementation(
+      (name: string) =>
+        (
+          ({
+            BILLING_DEV_TOOLS_ENABLED: 'false',
+            BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT: '50000',
+          }) as Record<string, string | undefined>
+        )[name],
+    );
 
-    service = new BillingService(prismaMock as never);
+    service = new BillingService(
+      prismaMock as never,
+      configServiceMock as unknown as ConfigService,
+    );
   });
 
   afterEach(() => {
@@ -287,6 +303,94 @@ describe('BillingService', () => {
     await expect(
       service.getOrCreateWalletForShop('shop-x'),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('credits a wallet through dev funding when enabled and caps the amount', async () => {
+    configServiceMock.get.mockImplementation(
+      (name: string) =>
+        (
+          ({
+            BILLING_DEV_TOOLS_ENABLED: 'true',
+            BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT: '250',
+          }) as Record<string, string | undefined>
+        )[name],
+    );
+    prismaMock.shop.findUnique.mockImplementation(({ where, select }) => {
+      if (!shopIds.includes(where.id)) {
+        return Promise.resolve(null);
+      }
+      if (select?.sellerProfile) {
+        return Promise.resolve({
+          id: where.id,
+          sellerProfile: { userId: 'seller-user-1' },
+        });
+      }
+      return Promise.resolve({ id: where.id });
+    });
+
+    const result = await service.devCreditWallet('shop-1', 120, {
+      sub: 'seller-user-1',
+      userId: 'seller-user-1',
+      email: 'seller1@example.com',
+      role: 'SELLER',
+    });
+
+    expect(result.wallet.balance).toBe('120');
+    expect(result.entry.type).toBe('credit');
+    expect(result.entry.referenceType).toBe('dev_demo_funding');
+    expect(result.entry.description).toBe('Dev/demo funding');
+
+    await expect(
+      service.devCreditWallet('shop-1', 251, {
+        sub: 'seller-user-1',
+        userId: 'seller-user-1',
+        email: 'seller1@example.com',
+        role: 'SELLER',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects dev funding when disabled or when the shop is owned by another seller', async () => {
+    prismaMock.shop.findUnique.mockImplementation(({ where, select }) => {
+      if (!shopIds.includes(where.id)) {
+        return Promise.resolve(null);
+      }
+      if (select?.sellerProfile) {
+        return Promise.resolve({
+          id: where.id,
+          sellerProfile: { userId: 'seller-user-2' },
+        });
+      }
+      return Promise.resolve({ id: where.id });
+    });
+
+    await expect(
+      service.devCreditWallet('shop-1', 50, {
+        sub: 'seller-user-1',
+        userId: 'seller-user-1',
+        email: 'seller1@example.com',
+        role: 'SELLER',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    configServiceMock.get.mockImplementation(
+      (name: string) =>
+        (
+          ({
+            BILLING_DEV_TOOLS_ENABLED: 'true',
+            BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT: '50000',
+          }) as Record<string, string | undefined>
+        )[name],
+    );
+
+    await expect(
+      service.devCreditWallet('shop-1', 50, {
+        sub: 'seller-user-1',
+        userId: 'seller-user-1',
+        email: 'seller1@example.com',
+        role: 'SELLER',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 

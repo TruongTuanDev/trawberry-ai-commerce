@@ -1,5 +1,98 @@
 # Billing
 
+## Phase 4.4 V1 demo readiness and safe dev funding
+
+Phase 4.4 makes the seller billing foundation demo-ready without introducing a real payment provider or changing checkout behavior.
+
+Added in this phase:
+
+- a dev/demo-only seller wallet funding path:
+  - `POST /api/seller/shops/:shopId/billing/wallet/dev-credit`
+- strict gating behind:
+  - backend `BILLING_DEV_TOOLS_ENABLED=true`
+  - frontend `NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED=true`
+- positive-amount-only validation
+- max demo funding cap via:
+  - `BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT`
+- same-shop ownership enforcement for the current seller
+- immutable `BillingLedgerEntry` creation with safe demo labeling:
+  - `referenceType: dev_demo_funding`
+  - `description: Dev/demo funding`
+- seller billing UI guidance for:
+  - current wallet state
+  - demo funding
+  - recent charged recommendation clicks
+
+Still intentionally not included:
+
+- real top-up flow
+- payment gateway integration
+- invoice generation for wallet funding
+- customer-visible billing
+- checkout or order payment changes
+
+### Dev funding API behavior
+
+- Disabled by default.
+- Returns `404` when the backend flag is off.
+- Only the current seller can fund their own shop wallet.
+- Amount must be greater than `0`.
+- Amount must not exceed the configured max cap.
+- Writes wallet + ledger in one transaction through the existing billing service.
+- Does not expose user id, session id, cookies, or internal metadata in the seller response.
+
+### Safe seller response
+
+The dev funding response keeps the same safe data model style:
+
+- `wallet`
+  - `id`
+  - `shopId`
+  - `balance`
+  - `reservedBalance`
+  - `availableBalance`
+  - `currency`
+  - `status`
+  - `createdAt`
+  - `updatedAt`
+- `entry`
+  - `id`
+  - `walletId`
+  - `shopId`
+  - `type`
+  - `amount`
+  - `currency`
+  - `balanceBefore`
+  - `balanceAfter`
+  - `reservedBefore`
+  - `reservedAfter`
+  - `referenceType`
+  - `referenceId`
+  - `description`
+  - `campaign`
+  - `createdAt`
+
+### Local demo script
+
+1. Set `BILLING_DEV_TOOLS_ENABLED=true` in the backend runtime.
+2. Set `BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT=50000` or another safe local cap.
+3. Set `NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED=true` in the frontend runtime.
+4. Open `/seller/billing`.
+5. Pick the seller shop used for the sponsored campaign demo.
+6. Use the demo funding panel to add a small safe amount, for example `250`.
+7. Confirm a `Dev/demo funding` ledger row appears.
+8. Open `/seller/campaigns` and confirm the campaign is active with `cpc` billing.
+9. Trigger a sponsored recommendation click from the public storefront.
+10. Return to `/seller/billing` and `/seller/campaigns` to confirm the charged click reduced wallet balance and increased campaign spend safely.
+
+### Post-V1 roadmap
+
+- real seller funding workflow
+- payment gateway integration
+- invoice and reconciliation tooling
+- fraud controls and audit trails
+- richer campaign analytics
+- optional CPM batching and scheduled billing
 ## Phase 4.3 V1 completion
 
 Phase 4.3 connects the seller wallet foundation to sponsored recommendation click charging.

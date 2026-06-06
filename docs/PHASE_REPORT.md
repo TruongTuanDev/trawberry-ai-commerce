@@ -1,5 +1,63 @@
 # Phase Report
 
+## 2026-06-07 V1 Demo Readiness and Safe Dev Funding Phase 4.4
+
+- Status: Implemented on current branch
+- Scope:
+  - added a safe seller dev/demo wallet funding path for the active NestJS + Next.js stack only
+  - added seller API:
+    - `POST /api/seller/shops/:shopId/billing/wallet/dev-credit`
+  - gated backend dev funding behind:
+    - `BILLING_DEV_TOOLS_ENABLED=true`
+    - optional `BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT`
+  - gated frontend demo funding visibility behind:
+    - `NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED=true`
+  - enforced demo funding safety rules:
+    - disabled by default
+    - seller can only fund their own wallet
+    - positive amount only
+    - capped max amount
+    - immutable ledger write with `Dev/demo funding` labeling
+  - upgraded seller UI:
+    - `/seller/billing` now includes a demo-only funding action and clearer V1 reporting guidance
+    - `/seller/campaigns` now explains how billing demo funding fits into the sponsored campaign walkthrough
+  - added regression coverage for:
+    - dev funding disabled by default
+    - dev funding enabled by flag
+    - wallet and ledger mutation after funding
+    - invalid amount rejection
+    - oversize amount rejection
+    - ownership protection
+    - sponsored CPC charging still works after funding
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, AI Try-On, or legacy strawberry app business logic was modified
+  - no real payment gateway or public top-up flow was introduced
+  - seller responses still avoid exposing user id, session id, cookies, or raw metadata
+- Demo flow:
+  1. enable backend `BILLING_DEV_TOOLS_ENABLED=true`
+  2. enable frontend `NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED=true`
+  3. open `/seller/billing`
+  4. credit a small demo amount into the seller wallet
+  5. open `/seller/campaigns` and confirm an active `cpc` campaign
+  6. trigger a sponsored recommendation click from the public storefront
+  7. return to `/seller/billing` and `/seller/campaigns`
+  8. confirm ledger balance movement and campaign spend update safely
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass
+  - `git ls-files data.xlsx`: pass
+- Remaining gaps:
+  - no real seller funding, payment gateway, invoice, or fraud layer exists yet
+  - demo funding is still intentionally local/dev-only
+- Next recommended phase:
+  - Phase 4.5: demo fixture polish, safer reconciliation guardrails, or broader reporting handoff support
 ## 2026-06-07 Campaign Billing V1 Completion Phase 4.3
 
 - Status: Implemented on current branch

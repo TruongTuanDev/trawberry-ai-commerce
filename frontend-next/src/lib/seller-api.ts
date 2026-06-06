@@ -365,6 +365,11 @@ export type SellerBillingLedgerEntry = {
   createdAt: string;
 };
 
+export type SellerBillingDevCreditResult = {
+  wallet: SellerBillingWallet;
+  entry: SellerBillingLedgerEntry;
+};
+
 export type SellerCampaignScenarioType = "home" | "similar" | "search";
 export type SellerCampaignStatus =
   | "draft"
@@ -1451,6 +1456,21 @@ export async function getSellerBillingLedger(shopId: string, token?: string) {
     {
       method: "GET",
       token,
+    },
+  );
+}
+
+export async function devCreditSellerBillingWallet(
+  shopId: string,
+  payload: { amount: number },
+  token?: string,
+) {
+  return apiRequest<SellerBillingDevCreditResult>(
+    `/api/seller/shops/${shopId}/billing/wallet/dev-credit`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
     },
   );
 }

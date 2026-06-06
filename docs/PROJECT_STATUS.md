@@ -1,5 +1,30 @@
 # Project Status
 
+## V1 Demo Readiness and Safe Dev Funding Phase 4.4 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Billing + campaign demo stack now also supports:
+  - a seller-scoped dev/demo wallet credit path at:
+    - `/api/seller/shops/:shopId/billing/wallet/dev-credit`
+  - backend gating with `BILLING_DEV_TOOLS_ENABLED`
+  - frontend gating with `NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED`
+  - capped positive-only demo funding with immutable ledger rows
+  - safer `/seller/billing` demo messaging and funding action for local reporting
+  - clearer `/seller/campaigns` copy for the V1 demo flow
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - no real wallet funding or payment gateway exists yet
+  - no invoice, fraud, or advanced campaign analytics layer exists yet
+  - demo funding remains intentionally local/dev-only
+- Next recommended phase:
+  - Phase 4.5: stronger V1 reporting polish, seller demo fixture setup, or safer funding/reconciliation guardrails
 ## Campaign Billing V1 Completion Phase 4.3 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

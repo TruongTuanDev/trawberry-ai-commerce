@@ -70,6 +70,7 @@ describe('Billing (e2e)', () => {
   let shops: StoredShop[];
   let wallets: StoredWallet[];
   let ledger: StoredLedger[];
+  const originalEnv = { ...process.env };
 
   const prismaMock = {
     user: { findUnique: jest.fn() },
@@ -80,6 +81,7 @@ describe('Billing (e2e)', () => {
       update: jest.fn(),
     },
     billingLedgerEntry: {
+      create: jest.fn(),
       findMany: jest.fn(),
     },
     sponsoredCampaign: {
@@ -89,6 +91,8 @@ describe('Billing (e2e)', () => {
   };
 
   beforeEach(async () => {
+    process.env.BILLING_DEV_TOOLS_ENABLED = 'false';
+    process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '50000';
     const now = new Date('2026-06-07T10:00:00Z');
 
     users = [
@@ -223,32 +227,42 @@ describe('Billing (e2e)', () => {
           })),
       );
     });
+    prismaMock.billingLedgerEntry.create.mockImplementation(({ data }) => {
+      const entry: StoredLedger = {
+        id: `ledger-${ledger.length + 1}`,
+        walletId: data.walletId,
+        shopId: data.shopId,
+        campaignId: data.campaignId ?? null,
+        type: data.type,
+        amount: cloneDecimal(data.amount),
+        currency: data.currency,
+        balanceBefore: cloneDecimal(data.balanceBefore),
+        balanceAfter: cloneDecimal(data.balanceAfter),
+        reservedBefore: cloneDecimal(data.reservedBefore),
+        reservedAfter: cloneDecimal(data.reservedAfter),
+        referenceType: data.referenceType ?? null,
+        referenceId: data.referenceId ?? null,
+        description: data.description ?? null,
+        createdAt: now,
+      };
+      ledger.push(entry);
+      return Promise.resolve({
+        ...entry,
+        campaign: null,
+      });
+    });
 
     prismaMock.sponsoredCampaign.findFirst.mockResolvedValue(null);
     prismaMock.$transaction.mockImplementation((callback) =>
       Promise.resolve(callback(prismaMock)),
     );
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(PrismaService)
-      .useValue(prismaMock)
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        transform: true,
-        forbidNonWhitelisted: true,
-      }),
-    );
-    await app.init();
+    app = await buildTestApp(prismaMock);
   });
 
   afterEach(async () => {
     await app.close();
+    process.env = { ...originalEnv };
     jest.restoreAllMocks();
     jest.clearAllMocks();
   });
@@ -340,7 +354,101 @@ describe('Billing (e2e)', () => {
       .set('Authorization', `Bearer ${otherSellerToken}`)
       .expect(403);
   });
+
+  it('keeps dev credit disabled by default', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-1/billing/wallet/dev-credit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: 100 })
+      .expect(404);
+  });
+
+  it('credits the owning seller wallet in dev mode and keeps the ledger response safe', async () => {
+    process.env.BILLING_DEV_TOOLS_ENABLED = 'true';
+    process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '250';
+    await app.close();
+    app = await buildTestApp(prismaMock);
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-1/billing/wallet/dev-credit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: 125.5 })
+      .expect(201);
+
+    const body = readBody<{
+      wallet: { shopId: string; balance: string; availableBalance: string };
+      entry: { type: string; amount: string; description: string | null };
+    }>(response);
+
+    expect(body.wallet).toEqual(
+      expect.objectContaining({
+        shopId: 'shop-1',
+        balance: '125.5',
+        availableBalance: '125.5',
+      }),
+    );
+    expect(body.entry).toEqual(
+      expect.objectContaining({
+        type: 'credit',
+        amount: '125.5',
+        description: 'Dev/demo funding',
+      }),
+    );
+    expect(JSON.stringify(body)).not.toContain('seller-user-1');
+    expect(JSON.stringify(body)).not.toContain('metadata');
+  });
+
+  it('rejects invalid or oversized dev credit amounts and cannot fund another seller shop', async () => {
+    process.env.BILLING_DEV_TOOLS_ENABLED = 'true';
+    process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '100';
+    await app.close();
+    app = await buildTestApp(prismaMock);
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-1/billing/wallet/dev-credit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: 0 })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-1/billing/wallet/dev-credit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: 101 })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-2/billing/wallet/dev-credit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amount: 50 })
+      .expect(403);
+  });
 });
+
+async function buildTestApp(prismaMock: Record<string, unknown>) {
+  const moduleFixture: TestingModule = await Test.createTestingModule({
+    imports: [AppModule],
+  })
+    .overrideProvider(PrismaService)
+    .useValue(prismaMock)
+    .compile();
+
+  const nextApp = moduleFixture.createNestApplication();
+  nextApp.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+  await nextApp.init();
+  return nextApp;
+}
 
 async function loginAndGetToken(
   app: INestApplication<App>,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return */
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
@@ -5,6 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { BillingService } from '../src/modules/billing/billing.service';
 import { RecommendationsService } from '../src/modules/recommendations/recommendations.service';
 import { readBody } from './test-helpers';
 
@@ -78,6 +80,7 @@ type StoredProduct = {
 
 describe('RecommendationsController (e2e)', () => {
   let app: INestApplication<App>;
+  let billingService: BillingService;
   let recommendationsService: RecommendationsService;
   let products: StoredProduct[];
   let recommendationEvents: Array<Record<string, unknown>>;
@@ -184,13 +187,21 @@ describe('RecommendationsController (e2e)', () => {
       updatedAt: new Date('2026-06-07T00:00:00Z'),
     };
 
-    prismaMock.shop.findUnique.mockImplementation(({ where }) =>
-      Promise.resolve(
+    prismaMock.shop.findUnique.mockImplementation(({ where, select }) => {
+      if (
+        where.id === 'shop-1' ||
         products.some((product) => product.shopId === where.id)
-          ? { id: where.id }
-          : null,
-      ),
-    );
+      ) {
+        if (select?.sellerProfile) {
+          return Promise.resolve({
+            id: where.id,
+            sellerProfile: { userId: 'seller-user-1' },
+          });
+        }
+        return Promise.resolve({ id: where.id });
+      }
+      return Promise.resolve(null);
+    });
     prismaMock.product.findMany.mockImplementation(
       ({ where }: { where?: Record<string, unknown> }) => {
         const includedIds =
@@ -237,16 +248,18 @@ describe('RecommendationsController (e2e)', () => {
     prismaMock.searchLog.findMany.mockResolvedValue([]);
     prismaMock.sellerWallet.findMany.mockImplementation(({ where }) =>
       Promise.resolve(
-        where?.shopId?.in?.includes('shop-1') ? [walletState] : [],
+        where?.shopId?.in?.includes(walletState.shopId) ? [walletState] : [],
       ),
     );
     prismaMock.sellerWallet.findUnique.mockImplementation(({ where }) =>
-      Promise.resolve(where.shopId === 'shop-1' ? walletState : null),
+      Promise.resolve(where.shopId === walletState.shopId ? walletState : null),
     );
     prismaMock.sellerWallet.create.mockImplementation(({ data }) => {
       walletState.shopId = data.shopId;
       walletState.balance = new Prisma.Decimal(data.balance ?? 0);
-      walletState.reservedBalance = new Prisma.Decimal(data.reservedBalance ?? 0);
+      walletState.reservedBalance = new Prisma.Decimal(
+        data.reservedBalance ?? 0,
+      );
       walletState.currency = data.currency;
       walletState.status = data.status;
       return Promise.resolve({ ...walletState });
@@ -280,7 +293,9 @@ describe('RecommendationsController (e2e)', () => {
           (event) => event.idempotencyKey === data.idempotencyKey,
         )
       ) {
-        return Promise.reject({ code: 'P2002' });
+        const duplicateError = new Error('Duplicate recommendation event');
+        Object.assign(duplicateError, { code: 'P2002' });
+        return Promise.reject(duplicateError);
       }
       const created = {
         id: `event-${recommendationEvents.length + 1}`,
@@ -290,13 +305,15 @@ describe('RecommendationsController (e2e)', () => {
       recommendationEvents.push(created);
       return Promise.resolve(created);
     });
-    prismaMock.recommendationEvent.update.mockImplementation(({ where, data }) => {
-      const event = recommendationEvents.find((item) => item.id === where.id);
-      if (event) {
-        Object.assign(event, data);
-      }
-      return Promise.resolve(event ?? { id: where.id, ...data });
-    });
+    prismaMock.recommendationEvent.update.mockImplementation(
+      ({ where, data }) => {
+        const event = recommendationEvents.find((item) => item.id === where.id);
+        if (event) {
+          Object.assign(event, data);
+        }
+        return Promise.resolve(event ?? { id: where.id, ...data });
+      },
+    );
     prismaMock.recommendationEvent.findMany.mockImplementation(({ where }) => {
       return Promise.resolve(
         recommendationEvents.filter((event) => {
@@ -310,8 +327,11 @@ describe('RecommendationsController (e2e)', () => {
         }),
       );
     });
-    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.$transaction.mockImplementation((callback) =>
+      callback(prismaMock),
+    );
     app = await buildApp();
+    billingService = app.get(BillingService);
     recommendationsService = app.get(RecommendationsService);
   });
 
@@ -2006,6 +2026,118 @@ describe('RecommendationsController (e2e)', () => {
     );
 
     expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(1);
+    expect(
+      prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
+    ).toEqual(
+      expect.objectContaining({
+        charged: true,
+        chargeStatus: 'charged',
+      }),
+    );
+  });
+
+  it('still charges sponsored CPC clicks after dev funding credits the wallet', async () => {
+    process.env.BILLING_DEV_TOOLS_ENABLED = 'true';
+    process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '1000';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRESET_ID = 'balanced';
+    await app.close();
+    app = await buildApp();
+    billingService = app.get(BillingService);
+    recommendationsService = app.get(RecommendationsService);
+
+    const sponsoredProduct = products[1];
+
+    await billingService.devCreditWallet(sponsoredProduct.shopId, 75, {
+      sub: 'seller-user-1',
+      userId: 'seller-user-1',
+      email: 'seller1@example.com',
+      role: 'SELLER',
+    });
+
+    const activeCampaign = {
+      id: 'campaign-dev-funding',
+      shopId: sponsoredProduct.shopId,
+      name: 'Dev Funding Campaign',
+      description: null,
+      status: 'active',
+      scenarioTypes: ['home'],
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('100'),
+      billingMode: 'cpc',
+      maxBoost: new Prisma.Decimal('4'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+      targets: [
+        {
+          id: 'target-dev-funding',
+          campaignId: 'campaign-dev-funding',
+          productId: sponsoredProduct.id,
+          boost: new Prisma.Decimal('4'),
+          status: 'active',
+          createdAt: new Date('2026-06-07T00:00:00Z'),
+          updatedAt: new Date('2026-06-07T00:00:00Z'),
+          product: {
+            id: sponsoredProduct.id,
+            shopId: sponsoredProduct.shopId,
+            wbTitle: sponsoredProduct.wbTitle,
+            localTitle: sponsoredProduct.localTitle,
+            seoSlug: sponsoredProduct.seoSlug,
+          },
+        },
+      ],
+    };
+
+    prismaMock.sponsoredCampaign.findMany.mockResolvedValue([activeCampaign]);
+    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
+      id: 'campaign-dev-funding',
+      shopId: sponsoredProduct.shopId,
+      status: 'active',
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('100'),
+      billingMode: 'cpc',
+    });
+
+    const recommendationsResponse = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3')
+      .expect(200);
+
+    const recommendationsBody = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+        sponsored?: boolean;
+        trackingToken?: string | null;
+      }>;
+    }>(recommendationsResponse);
+
+    const sponsoredItem = recommendationsBody.items.find(
+      (item) => item.sponsored,
+    );
+    expect(sponsoredItem?.trackingToken).toBeTruthy();
+
+    await recommendationsService.trackRecommendationEvent(
+      {
+        productId: sponsoredProduct.id,
+        type: 'click',
+        placement: 'home',
+        algorithm: recommendationsBody.algorithm,
+        rank: 1,
+        idempotencyKey: 'click-dev-funded-wallet-1',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalled();
     expect(
       prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
     ).toEqual(
