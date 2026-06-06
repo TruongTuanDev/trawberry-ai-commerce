@@ -1,5 +1,33 @@
 # Project Status
 
+## Campaign Billing V1 Completion Phase 4.3 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation + campaign + billing stack now supports:
+  - live active-campaign sponsored recommendation boosts with bounded additive ranking
+  - safe public sponsored markers and opaque tracking tokens
+  - sponsored recommendation event attribution into `RecommendationEvent`
+  - CPC click charging into `BillingLedgerEntry`
+  - campaign spend, remaining budget, wallet-blocked, and budget-exhausted visibility
+  - seller campaign performance APIs and seller-side recent event history
+  - seller campaign UI metrics at `/seller/campaigns`
+  - seller billing UI visibility for campaign charge ledger rows at `/seller/billing`
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npx prisma db push --accept-data-loss`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pending final rerun
+- Remaining gaps:
+  - no real wallet funding/top-up flow yet
+  - no invoices, CPM batching, fraud prevention, or advanced analytics yet
+  - campaign charging is V1 demo-grade rather than a full ads platform
+- Next recommended phase:
+  - Phase 4.4: seller funding path and stronger campaign analytics/budget tooling
+
 ## Seller Wallet and Billing Ledger Foundation Phase 4.2 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

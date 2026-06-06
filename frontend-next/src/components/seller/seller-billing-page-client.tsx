@@ -12,9 +12,9 @@ import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const BILLING_COPY = {
   eyebrow: "Billing",
-  title: "Seller wallet foundation",
+  title: "Seller wallet and campaign billing",
   description:
-    "Phase 4.2 adds wallet and ledger primitives only. No payment gateway, automatic top-up, campaign charging, or budget deduction is live yet.",
+    "Review the current seller wallet, recent ledger entries, and campaign charge activity for the V1 sponsored recommendation flow.",
   currentShop: "Current shop",
   selectShop: "Pick a seller shop to view the billing foundation.",
   walletStatus: "Wallet status",
@@ -24,17 +24,17 @@ const BILLING_COPY = {
   currency: "Currency",
   foundationTitle: "Foundation scope",
   foundationDescription:
-    "This page is a safe accounting foundation for future sponsored billing. It does not collect money, deduct campaign spend, or replace checkout/payment flows.",
+    "This wallet remains internal-only. It powers sponsored recommendation charging without changing checkout, payment, or customer-facing billing flows.",
   loading: "Loading billing foundation...",
   loadFailed: "Unable to load seller billing foundation.",
   walletEyebrow: "Wallet",
   walletTitle: "Wallet summary",
   walletDescription:
-    "The wallet is shop-scoped and stays internal to seller operations until later billing phases connect real attribution and charging.",
+    "The wallet is shop-scoped and campaign CPC charges debit it transactionally when attributed recommendation clicks are billable.",
   ledgerEyebrow: "Ledger",
   ledgerTitle: "Ledger history",
   ledgerDescription:
-    "Each future wallet mutation will write a transactional ledger entry. For now this view helps QA and seller admins inspect the foundation safely.",
+    "Ledger rows show balance transitions after wallet mutations, including campaign recommendation click charges.",
   noLedger: "No ledger entries yet.",
   columns: {
     date: "Date",

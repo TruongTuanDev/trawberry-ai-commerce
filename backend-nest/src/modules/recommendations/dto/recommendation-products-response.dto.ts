@@ -173,6 +173,12 @@ class RecommendationResponseItemDto {
   @ApiProperty({ type: String, isArray: true })
   reasonCodes!: string[];
 
+  @ApiProperty({ required: false, nullable: true })
+  sponsored?: boolean;
+
+  @ApiProperty({ required: false, nullable: true })
+  trackingToken?: string | null;
+
   @ApiProperty({
     type: RecommendationScoreExplanationDto,
     required: false,

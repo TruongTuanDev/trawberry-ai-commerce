@@ -1,5 +1,38 @@
 # Billing
 
+## Phase 4.3 V1 completion
+
+Phase 4.3 connects the seller wallet foundation to sponsored recommendation click charging.
+
+Added in this phase:
+
+- sponsored CPC clicks can debit the shop wallet transactionally
+- each successful charge writes a `BillingLedgerEntry`
+- ledger rows can reference the related campaign
+- insufficient available balance prevents the charge and leaves the event safely tracked as uncharged
+- campaign budget checks run before the CPC debit
+
+Current V1 charging rules:
+
+- `cpc`: charge on sponsored recommendation click
+- `cpm`: record impression events only, no auto-charge yet
+- `fixed`: stored only, no auto-charge
+- `none`: no auto-charge
+
+Current seller-visible outcome:
+
+- `/seller/billing` now reflects campaign charge ledger entries
+- `/seller/campaigns` shows campaign spend, charged click counts, remaining budget, and wallet-blocked/budget-exhausted states
+
+Still not implemented:
+
+- real top-up flow
+- payment gateway
+- invoices for this wallet layer
+- CPM batching
+- fraud prevention
+- seller self-serve billing complexity beyond the current demo flow
+
 ## Phase 4.2 scope
 
 Phase 4.2 adds seller wallet and billing ledger foundations for the active `backend-nest` + `frontend-next` stack only.

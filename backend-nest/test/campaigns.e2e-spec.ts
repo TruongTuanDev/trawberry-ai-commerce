@@ -122,6 +122,23 @@ type StoredCampaignTarget = {
   updatedAt: Date;
 };
 
+type StoredRecommendationEvent = {
+  id: string;
+  campaignId: string | null;
+  productId: string;
+  type: string;
+  placement: string;
+  scenarioType: string | null;
+  algorithm: string | null;
+  sponsored: boolean;
+  charged: boolean;
+  chargeStatus: string;
+  billingMode: string | null;
+  cost: Prisma.Decimal | null;
+  ledgerEntryId: string | null;
+  createdAt: Date;
+};
+
 describe('Campaigns (e2e)', () => {
   let app: INestApplication<App>;
   let users: StoredUser[];
@@ -129,11 +146,14 @@ describe('Campaigns (e2e)', () => {
   let products: StoredProduct[];
   let campaigns: StoredCampaign[];
   let targets: StoredCampaignTarget[];
+  let recommendationEvents: StoredRecommendationEvent[];
 
   const prismaMock = {
     user: { findUnique: jest.fn() },
     shop: { findUnique: jest.fn() },
     product: { findFirst: jest.fn(), findMany: jest.fn() },
+    sellerWallet: { findMany: jest.fn() },
+    recommendationEvent: { findMany: jest.fn() },
     sponsoredCampaign: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -230,6 +250,7 @@ describe('Campaigns (e2e)', () => {
 
     campaigns = [];
     targets = [];
+    recommendationEvents = [];
 
     prismaMock.user.findUnique.mockImplementation(({ where, include }) => {
       const user = users.find((entry) =>
@@ -306,6 +327,20 @@ describe('Campaigns (e2e)', () => {
       }
 
       return Promise.resolve(rows);
+    });
+    prismaMock.sellerWallet.findMany.mockResolvedValue([]);
+    prismaMock.recommendationEvent.findMany.mockImplementation(({ where }) => {
+      return Promise.resolve(
+        recommendationEvents.filter((event) => {
+          if (where?.campaignId?.in) {
+            return where.campaignId.in.includes(event.campaignId);
+          }
+          if (where?.campaignId) {
+            return event.campaignId === where.campaignId;
+          }
+          return true;
+        }),
+      );
     });
 
     prismaMock.sponsoredCampaign.findMany.mockImplementation(({ where }) => {
@@ -514,7 +549,7 @@ describe('Campaigns (e2e)', () => {
       .expect(403);
   });
 
-  it('adds targets, activates a valid campaign, and keeps billing placeholders non-charging', async () => {
+  it('adds targets, activates a valid campaign, and returns billing/spend defaults safely', async () => {
     const token = await loginAndGetToken(app, 'seller1@example.com');
 
     const createResponse = await request(app.getHttpServer())
@@ -557,15 +592,19 @@ describe('Campaigns (e2e)', () => {
       billing: {
         chargingEnabled: boolean;
         spendTracked: boolean;
+        spentAmount: string;
+        cpcAmount: string;
         notes: string[];
       };
     }>(activatedResponse);
 
     expect(activated.status).toBe('active');
     expect(activated.targets[0].productId).toBe('product-1');
-    expect(activated.billing.chargingEnabled).toBe(false);
-    expect(activated.billing.spendTracked).toBe(false);
-    expect(activated.billing.notes.join(' ')).toContain('Phase 4.1');
+    expect(activated.billing.chargingEnabled).toBe(true);
+    expect(activated.billing.spendTracked).toBe(true);
+    expect(activated.billing.spentAmount).toBe('0');
+    expect(activated.billing.cpcAmount).toBe('1');
+    expect(activated.billing.notes.join(' ')).toContain('CPC');
     expect(JSON.stringify(activated)).not.toContain('sellerProfile');
     expect(JSON.stringify(activated)).not.toContain('seller-user-1');
   });
@@ -734,6 +773,77 @@ describe('Campaigns (e2e)', () => {
     );
     expect(JSON.stringify(body)).not.toContain('billingMode');
     expect(JSON.stringify(body)).not.toContain('campaignId');
+  });
+
+  it('returns campaign performance only to the owning seller and keeps event data safe', async () => {
+    const ownerToken = await loginAndGetToken(app, 'seller1@example.com');
+    const otherSellerToken = await loginAndGetToken(app, 'seller2@example.com');
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-1/campaigns')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Performance campaign',
+        scenarioTypes: ['home'],
+        maxBoost: 4,
+        billingMode: 'cpc',
+        budgetLimit: 100,
+      })
+      .expect(201);
+
+    const created = readBody<{ id: string }>(createResponse);
+    await request(app.getHttpServer())
+      .post(`/api/seller/shops/shop-1/campaigns/${created.id}/targets`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        productId: 'product-1',
+        boost: 3,
+      })
+      .expect(200);
+
+    recommendationEvents.push({
+      id: 'event-1',
+      campaignId: created.id,
+      productId: 'product-1',
+      type: 'click',
+      placement: 'home',
+      scenarioType: 'home',
+      algorithm: 'rule_based_v2',
+      sponsored: true,
+      charged: true,
+      chargeStatus: 'charged',
+      billingMode: 'cpc',
+      cost: new Prisma.Decimal('1'),
+      ledgerEntryId: 'ledger-1',
+      createdAt: new Date('2026-06-07T11:00:00Z'),
+    });
+
+    const performanceResponse = await request(app.getHttpServer())
+      .get(`/api/seller/shops/shop-1/campaigns/${created.id}/performance`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const performance = readBody<{
+      campaignId: string;
+      summary: { spentAmount: string; chargedClicks: number };
+      recentEvents: Array<{ productName: string; chargeStatus: string }>;
+    }>(performanceResponse);
+    expect(performance.campaignId).toBe(created.id);
+    expect(performance.summary.spentAmount).toBe('1');
+    expect(performance.summary.chargedClicks).toBe(1);
+    expect(performance.recentEvents[0]).toEqual(
+      expect.objectContaining({
+        productName: 'Summer Dress',
+        chargeStatus: 'charged',
+      }),
+    );
+    expect(JSON.stringify(performance)).not.toContain('seller-user-1');
+    expect(JSON.stringify(performance)).not.toContain('guestSessionId');
+
+    await request(app.getHttpServer())
+      .get(`/api/seller/shops/shop-1/campaigns/${created.id}/performance`)
+      .set('Authorization', `Bearer ${otherSellerToken}`)
+      .expect(403);
   });
 });
 

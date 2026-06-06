@@ -13,6 +13,10 @@ import {
   type SponsoredCampaignTargetStatus,
 } from './campaigns.constants';
 import { CreateSponsoredCampaignDto } from './dto/create-sponsored-campaign.dto';
+import {
+  type SponsoredCampaignEventResponseDto,
+  type SponsoredCampaignPerformanceResponseDto,
+} from './dto/campaign-performance-response.dto';
 import { ListSponsoredCampaignsQueryDto } from './dto/list-sponsored-campaigns-query.dto';
 import { UpdateSponsoredCampaignDto } from './dto/update-sponsored-campaign.dto';
 import { UpsertSponsoredCampaignTargetDto } from './dto/upsert-sponsored-campaign-target.dto';
@@ -21,6 +25,7 @@ const ACTIVE_TARGET_STATUSES: SponsoredCampaignTargetStatus[] = [
   'active',
   'paused',
 ];
+const DEFAULT_CAMPAIGN_CPC_AMOUNT = new Prisma.Decimal('1.00');
 
 type CampaignWithTargets = {
   id: string;
@@ -57,6 +62,39 @@ type CampaignWithTargets = {
   }>;
 };
 
+type CampaignPerformanceMetrics = {
+  spentAmount: Prisma.Decimal;
+  budgetLimit: Prisma.Decimal | null;
+  remainingBudget: Prisma.Decimal | null;
+  billableImpressions: number;
+  billableClicks: number;
+  chargedClicks: number;
+  totalChargedEvents: number;
+  totalEvents: number;
+  servedAsSponsored: boolean;
+  budgetExhausted: boolean;
+  walletBlocked: boolean;
+  cpcAmount: Prisma.Decimal;
+  chargingEnabled: boolean;
+  spendTracked: boolean;
+  notes: string[];
+};
+
+type CampaignRecommendationEvent = {
+  id: string;
+  type: string;
+  placement: string;
+  scenarioType: string | null;
+  productId: string;
+  algorithm: string | null;
+  sponsored: boolean;
+  charged: boolean;
+  chargeStatus: string;
+  cost: Prisma.Decimal | null;
+  ledgerEntryId: string | null;
+  createdAt: Date;
+};
+
 @Injectable()
 export class CampaignsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -74,7 +112,7 @@ export class CampaignsService {
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return campaigns.map((campaign) => this.mapCampaign(campaign));
+    return this.mapCampaignCollection(campaigns);
   }
 
   async create(shopId: string, dto: CreateSponsoredCampaignDto) {
@@ -105,12 +143,12 @@ export class CampaignsService {
       include: this.getCampaignInclude(),
     });
 
-    return this.mapCampaign(campaign);
+    return this.mapCampaignWithPerformance(campaign);
   }
 
   async findOneByShop(shopId: string, campaignId: string) {
     const campaign = await this.getCampaignOrThrow(shopId, campaignId);
-    return this.mapCampaign(campaign);
+    return this.mapCampaignWithPerformance(campaign);
   }
 
   async update(
@@ -126,7 +164,8 @@ export class CampaignsService {
     }
 
     this.validateDateWindow(dto.startAt, dto.endAt);
-    const nextStatus = (dto.status ?? existing.status) as SponsoredCampaignStatus;
+    const nextStatus = (dto.status ??
+      existing.status) as SponsoredCampaignStatus;
     this.assertValidStatusTransition(existing.status, nextStatus);
 
     const startAt =
@@ -185,7 +224,7 @@ export class CampaignsService {
       return nextCampaign;
     });
 
-    return this.mapCampaign(updated);
+    return this.mapCampaignWithPerformance(updated);
   }
 
   async archive(shopId: string, campaignId: string) {
@@ -198,7 +237,7 @@ export class CampaignsService {
       include: this.getCampaignInclude(),
     });
 
-    return this.mapCampaign(archived);
+    return this.mapCampaignWithPerformance(archived);
   }
 
   async upsertTarget(
@@ -250,7 +289,7 @@ export class CampaignsService {
       if (refreshed.status === 'active') {
         await this.assertCampaignCanBeActivated(refreshed, tx);
       }
-      return this.mapCampaign(refreshed);
+      return this.mapCampaignWithPerformance(refreshed);
     });
   }
 
@@ -283,8 +322,31 @@ export class CampaignsService {
       if (refreshed.status === 'active') {
         await this.assertCampaignCanBeActivated(refreshed, tx);
       }
-      return this.mapCampaign(refreshed);
+      return this.mapCampaignWithPerformance(refreshed);
     });
+  }
+
+  async getPerformanceByShop(
+    shopId: string,
+    campaignId: string,
+  ): Promise<SponsoredCampaignPerformanceResponseDto> {
+    const campaign = await this.getCampaignOrThrow(shopId, campaignId);
+    const [metrics, recentEvents] = await Promise.all([
+      this.getCampaignPerformanceMetrics([campaign]),
+      this.listCampaignEvents(campaign),
+    ]);
+
+    return {
+      campaignId: campaign.id,
+      shopId: campaign.shopId,
+      summary: this.mapPerformanceSummary(metrics.get(campaign.id)!),
+      recentEvents,
+    };
+  }
+
+  async listEventsByShop(shopId: string, campaignId: string) {
+    const campaign = await this.getCampaignOrThrow(shopId, campaignId);
+    return this.listCampaignEvents(campaign);
   }
 
   async getActiveRecommendationTargets(
@@ -330,23 +392,36 @@ export class CampaignsService {
       orderBy: [{ updatedAt: 'desc' }],
     });
 
-    return campaigns.flatMap((campaign) =>
-      campaign.targets.map((target) => ({
-        campaignId: campaign.id,
-        shopId: campaign.shopId,
-        billingMode: this.normalizeBillingMode(campaign.billingMode),
-        scenarioTypes: [...campaign.scenarioTypes],
-        maxBoost: Number(campaign.maxBoost.toString()),
-        productId: target.productId,
-        targetId: target.id,
-        boost: Number(target.boost.toString()),
-        product: {
-          id: target.product.id,
-          name: target.product.localTitle ?? target.product.wbTitle,
-          seoSlug: target.product.seoSlug,
-        },
-      })),
+    const metricsByCampaignId = await this.getCampaignPerformanceMetrics(
+      campaigns as unknown as CampaignWithTargets[],
     );
+
+    return campaigns
+      .filter((campaign) =>
+        this.canServeCampaign(
+          campaign as unknown as CampaignWithTargets,
+          metricsByCampaignId.get(campaign.id),
+        ),
+      )
+      .flatMap((campaign) =>
+        campaign.targets.map((target) => ({
+          campaignId: campaign.id,
+          shopId: campaign.shopId,
+          billingMode: this.normalizeBillingMode(campaign.billingMode),
+          scenarioTypes: [...campaign.scenarioTypes],
+          maxBoost: Number(campaign.maxBoost.toString()),
+          productId: target.productId,
+          targetId: target.id,
+          boost: Number(target.boost.toString()),
+          cpcAmount: this.getCampaignCpcAmount(campaign).toNumber(),
+          product: {
+            id: target.product.id,
+            name: target.product.localTitle ?? target.product.wbTitle,
+            seoSlug: target.product.seoSlug,
+          },
+        })),
+      )
+      .sort((left, right) => right.boost - left.boost);
   }
 
   private getCampaignInclude() {
@@ -539,7 +614,25 @@ export class CampaignsService {
     );
   }
 
-  private mapCampaign(campaign: CampaignWithTargets) {
+  private async mapCampaignCollection(campaigns: CampaignWithTargets[]) {
+    const metricsByCampaignId =
+      await this.getCampaignPerformanceMetrics(campaigns);
+    return campaigns.map((campaign) =>
+      this.mapCampaign(campaign, metricsByCampaignId.get(campaign.id)!),
+    );
+  }
+
+  private async mapCampaignWithPerformance(campaign: CampaignWithTargets) {
+    const metricsByCampaignId = await this.getCampaignPerformanceMetrics([
+      campaign,
+    ]);
+    return this.mapCampaign(campaign, metricsByCampaignId.get(campaign.id)!);
+  }
+
+  private mapCampaign(
+    campaign: CampaignWithTargets,
+    metrics: CampaignPerformanceMetrics,
+  ) {
     const totalTargets = campaign.targets.length;
     const activeTargets = campaign.targets.filter(
       (target) => target.status === 'active',
@@ -568,12 +661,19 @@ export class CampaignsService {
       billing: {
         mode: this.normalizeBillingMode(campaign.billingMode),
         budgetLimit: campaign.budgetLimit?.toString() ?? null,
-        chargingEnabled: false,
-        spendTracked: false,
-        notes: [
-          'Billing and spend charging are not enabled in Phase 4.1.',
-          'Budget limit is stored as a placeholder for future wallet and ledger integration.',
-        ],
+        chargingEnabled: metrics.chargingEnabled,
+        spendTracked: metrics.spendTracked,
+        spentAmount: metrics.spentAmount.toString(),
+        remainingBudget: metrics.remainingBudget?.toString() ?? null,
+        billableImpressions: metrics.billableImpressions,
+        billableClicks: metrics.billableClicks,
+        chargedClicks: metrics.chargedClicks,
+        totalChargedEvents: metrics.totalChargedEvents,
+        servedAsSponsored: metrics.servedAsSponsored,
+        budgetExhausted: metrics.budgetExhausted,
+        walletBlocked: metrics.walletBlocked,
+        cpcAmount: metrics.cpcAmount.toString(),
+        notes: metrics.notes,
       },
       summary: {
         totalTargets,
@@ -600,5 +700,261 @@ export class CampaignsService {
         },
       })),
     };
+  }
+
+  private async getCampaignPerformanceMetrics(
+    campaigns: CampaignWithTargets[],
+  ) {
+    const metricsByCampaignId = new Map<string, CampaignPerformanceMetrics>();
+    if (campaigns.length < 1) {
+      return metricsByCampaignId;
+    }
+
+    const campaignIds = campaigns.map((campaign) => campaign.id);
+    const shopIds = [...new Set(campaigns.map((campaign) => campaign.shopId))];
+
+    const [events, wallets] = await Promise.all([
+      this.prisma.recommendationEvent.findMany({
+        where: {
+          campaignId: { in: campaignIds },
+        },
+        select: {
+          campaignId: true,
+          type: true,
+          billingMode: true,
+          sponsored: true,
+          charged: true,
+          cost: true,
+          chargeStatus: true,
+        },
+      }),
+      this.prisma.sellerWallet.findMany({
+        where: {
+          shopId: { in: shopIds },
+        },
+        select: {
+          shopId: true,
+          balance: true,
+          reservedBalance: true,
+          status: true,
+        },
+      }),
+    ]);
+
+    const walletByShopId = new Map(
+      wallets.map((wallet) => [
+        wallet.shopId,
+        {
+          availableBalance: wallet.balance.minus(wallet.reservedBalance),
+          status: wallet.status,
+        },
+      ]),
+    );
+
+    for (const campaign of campaigns) {
+      const campaignEvents = events.filter(
+        (event) => event.campaignId === campaign.id,
+      );
+      const spentAmount = campaignEvents.reduce(
+        (sum, event) =>
+          event.charged && event.cost ? sum.plus(event.cost) : sum,
+        new Prisma.Decimal(0),
+      );
+      const budgetLimit = campaign.budgetLimit
+        ? new Prisma.Decimal(campaign.budgetLimit.toString())
+        : null;
+      const remainingBudget = budgetLimit
+        ? (() => {
+            const delta = budgetLimit.minus(spentAmount);
+            return delta.lt(0) ? new Prisma.Decimal(0) : delta;
+          })()
+        : null;
+      const cpcAmount = this.getCampaignCpcAmount(campaign);
+      const wallet = walletByShopId.get(campaign.shopId);
+      const walletBlocked =
+        this.normalizeBillingMode(campaign.billingMode) === 'cpc'
+          ? !wallet ||
+            wallet.status !== 'active' ||
+            wallet.availableBalance.lt(cpcAmount)
+          : false;
+      const budgetExhausted =
+        budgetLimit !== null &&
+        (spentAmount.gte(budgetLimit) ||
+          (this.normalizeBillingMode(campaign.billingMode) === 'cpc' &&
+            (remainingBudget?.lt(cpcAmount) ?? false)));
+      const billingMode = this.normalizeBillingMode(campaign.billingMode);
+
+      metricsByCampaignId.set(campaign.id, {
+        spentAmount,
+        budgetLimit,
+        remainingBudget,
+        billableImpressions: campaignEvents.filter(
+          (event) =>
+            event.sponsored &&
+            event.type === 'impression' &&
+            event.billingMode === 'cpm',
+        ).length,
+        billableClicks: campaignEvents.filter(
+          (event) =>
+            event.sponsored &&
+            event.type === 'click' &&
+            event.billingMode === 'cpc',
+        ).length,
+        chargedClicks: campaignEvents.filter(
+          (event) => event.type === 'click' && event.charged,
+        ).length,
+        totalChargedEvents: campaignEvents.filter((event) => event.charged)
+          .length,
+        totalEvents: campaignEvents.length,
+        servedAsSponsored: campaignEvents.some((event) => event.sponsored),
+        budgetExhausted,
+        walletBlocked,
+        cpcAmount,
+        chargingEnabled: billingMode === 'cpc',
+        spendTracked: campaign.status !== 'draft',
+        notes: this.buildBillingNotes(
+          billingMode,
+          budgetExhausted,
+          walletBlocked,
+        ),
+      });
+    }
+
+    return metricsByCampaignId;
+  }
+
+  private canServeCampaign(
+    campaign: CampaignWithTargets,
+    metrics?: CampaignPerformanceMetrics,
+  ) {
+    if (!metrics) {
+      return false;
+    }
+
+    const billingMode = this.normalizeBillingMode(campaign.billingMode);
+    if (billingMode !== 'cpc') {
+      return true;
+    }
+
+    return !metrics.walletBlocked && !metrics.budgetExhausted;
+  }
+
+  private buildBillingNotes(
+    billingMode: string,
+    budgetExhausted: boolean,
+    walletBlocked: boolean,
+  ) {
+    const notes: string[] = [];
+    if (billingMode === 'cpc') {
+      notes.push(
+        'CPC click charging is enabled for sponsored recommendation clicks.',
+      );
+    } else if (billingMode === 'cpm') {
+      notes.push(
+        'CPM impressions are tracked in V1 but are not auto-charged yet.',
+      );
+    } else if (billingMode === 'fixed') {
+      notes.push(
+        'Fixed billing mode is stored for future manual billing workflows.',
+      );
+    } else {
+      notes.push('Automatic charging is disabled for this campaign.');
+    }
+    if (budgetExhausted) {
+      notes.push(
+        'Budget limit reached; sponsored serving is blocked until the budget changes.',
+      );
+    }
+    if (walletBlocked) {
+      notes.push('Wallet available balance is too low for another CPC charge.');
+    }
+    return notes;
+  }
+
+  private getCampaignCpcAmount(
+    campaign: Pick<CampaignWithTargets, 'billingMode'>,
+  ) {
+    return this.normalizeBillingMode(campaign.billingMode) === 'cpc'
+      ? new Prisma.Decimal(DEFAULT_CAMPAIGN_CPC_AMOUNT.toString())
+      : new Prisma.Decimal(0);
+  }
+
+  private mapPerformanceSummary(metrics: CampaignPerformanceMetrics) {
+    return {
+      spentAmount: metrics.spentAmount.toString(),
+      budgetLimit: metrics.budgetLimit?.toString() ?? null,
+      remainingBudget: metrics.remainingBudget?.toString() ?? null,
+      billableImpressions: metrics.billableImpressions,
+      billableClicks: metrics.billableClicks,
+      chargedClicks: metrics.chargedClicks,
+      totalChargedEvents: metrics.totalChargedEvents,
+      totalEvents: metrics.totalEvents,
+      servedAsSponsored: metrics.servedAsSponsored,
+      budgetExhausted: metrics.budgetExhausted,
+      walletBlocked: metrics.walletBlocked,
+      cpcAmount: metrics.cpcAmount.toString(),
+    };
+  }
+
+  private async listCampaignEvents(
+    campaign: CampaignWithTargets,
+  ): Promise<SponsoredCampaignEventResponseDto[]> {
+    const events = (await this.prisma.recommendationEvent.findMany({
+      where: {
+        campaignId: campaign.id,
+      },
+      select: {
+        id: true,
+        type: true,
+        placement: true,
+        scenarioType: true,
+        productId: true,
+        algorithm: true,
+        sponsored: true,
+        charged: true,
+        chargeStatus: true,
+        cost: true,
+        ledgerEntryId: true,
+        createdAt: true,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 25,
+    })) as CampaignRecommendationEvent[];
+
+    const productIds = [...new Set(events.map((event) => event.productId))];
+    const products = productIds.length
+      ? await this.prisma.product.findMany({
+          where: {
+            id: { in: productIds },
+          },
+          select: {
+            id: true,
+            localTitle: true,
+            wbTitle: true,
+          },
+        })
+      : [];
+    const productNameById = new Map(
+      products.map((product) => [
+        product.id,
+        product.localTitle ?? product.wbTitle,
+      ]),
+    );
+
+    return events.map((event) => ({
+      id: event.id,
+      type: event.type,
+      placement: event.placement,
+      scenarioType: event.scenarioType,
+      productId: event.productId,
+      productName: productNameById.get(event.productId) ?? event.productId,
+      algorithm: event.algorithm,
+      sponsored: event.sponsored,
+      charged: event.charged,
+      chargeStatus: event.chargeStatus,
+      cost: event.cost?.toString() ?? null,
+      ledgerEntryId: event.ledgerEntryId,
+      createdAt: event.createdAt.toISOString(),
+    }));
   }
 }

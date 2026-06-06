@@ -5,11 +5,13 @@ import { SectionCard } from "@/components/seller/section-card";
 import {
   archiveSellerCampaign,
   createSellerCampaign,
+  getSellerCampaignPerformance,
   getShopProducts,
   listSellerCampaigns,
   removeSellerCampaignTarget,
   type ProductListItem,
   type SellerCampaign,
+  type SellerCampaignPerformance,
   type SellerCampaignBillingMode,
   type SellerCampaignScenarioType,
   type SellerCampaignStatus,
@@ -25,15 +27,15 @@ const STATUS_OPTIONS: SellerCampaignStatus[] = ["draft", "active", "paused", "en
 const TARGET_STATUS_OPTIONS: SellerCampaignTargetStatus[] = ["active", "paused", "removed"];
 const CAMPAIGN_COPY = {
   eyebrow: "Campaigns",
-  title: "Sponsored campaign foundation",
+  title: "Sponsored campaign manager",
   description:
-    "Manage safe internal campaign placeholders for future sponsored ranking, wallet, and billing phases.",
+    "Create, target, activate, and review sponsored campaigns with bounded recommendation boosts and CPC spend tracking.",
   currentShop: "Current shop",
   pickShop: "Pick a seller shop to manage campaigns.",
   totalCampaigns: "Campaign count",
-  placeholderBilling: "Billing placeholder",
+  placeholderBilling: "Campaign billing",
   placeholderBillingDescription:
-    "Phase 4.1 stores billing mode and budget limits only. No charging, wallet deduction, or spend tracking is active.",
+    "CPC recommendation click charging, spend tracking, and budget enforcement are now available for the V1 demo flow.",
   loading: "Loading campaigns...",
   loadFailed: "Unable to load seller campaigns.",
   submitting: "Saving...",
@@ -56,9 +58,13 @@ const CAMPAIGN_COPY = {
   saveTarget: "Save target",
   removeTarget: "Remove target",
   noTargets: "No product targets yet.",
-  billingPanelTitle: "Billing placeholder",
+  billingPanelTitle: "Billing and performance",
   billingPanelDescription:
-    "These campaign notes are intentionally non-charging until the seller wallet and billing ledger foundation is added.",
+    "This panel shows the current campaign spend state plus recent sponsored events recorded for the campaign.",
+  performanceTitle: "Performance snapshot",
+  performanceAction: "Load performance",
+  performanceLoading: "Loading performance...",
+  noEvents: "No sponsored events yet.",
   fields: {
     name: "Campaign name",
     namePlaceholder: "Summer visibility push",
@@ -80,6 +86,9 @@ const CAMPAIGN_COPY = {
     totalTargets: "Targets",
     activeTargets: "Active",
     removedTargets: "Removed",
+    spentAmount: "Spent",
+    remainingBudget: "Remaining",
+    billableClicks: "Billable clicks",
   },
   table: {
     product: "Product",
@@ -155,6 +164,9 @@ export function SellerCampaignsPageClient() {
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [campaignDrafts, setCampaignDrafts] = useState<Record<string, CampaignFormState>>({});
   const [targetDrafts, setTargetDrafts] = useState<Record<string, TargetFormState>>({});
+  const [performanceByCampaign, setPerformanceByCampaign] = useState<Record<string, SellerCampaignPerformance>>({});
+  const [loadingPerformanceId, setLoadingPerformanceId] = useState<string | null>(null);
+  const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CampaignFormState>(buildCampaignForm());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -191,6 +203,13 @@ export function SellerCampaignsPageClient() {
 
     setCampaigns(nextCampaigns);
     setProducts(nextProducts.items);
+    setPerformanceByCampaign((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([campaignId]) =>
+          nextCampaigns.some((campaign) => campaign.id === campaignId),
+        ),
+      ),
+    );
     setCampaignDrafts(
       Object.fromEntries(
         nextCampaigns.map((campaign) => [campaign.id, buildCampaignForm(campaign)]),
@@ -393,6 +412,34 @@ export function SellerCampaignsPageClient() {
     }
   };
 
+  const handleTogglePerformance = async (campaignId: string) => {
+    if (!currentShopId) return;
+
+    if (expandedCampaignId === campaignId) {
+      setExpandedCampaignId(null);
+      return;
+    }
+
+    setExpandedCampaignId(campaignId);
+    if (performanceByCampaign[campaignId]) {
+      return;
+    }
+
+    setLoadingPerformanceId(campaignId);
+    try {
+      const performance = await getSellerCampaignPerformance(currentShopId, campaignId);
+      setPerformanceByCampaign((current) => ({
+        ...current,
+        [campaignId]: performance,
+      }));
+      setError(null);
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : "Unable to load campaign performance.");
+    } finally {
+      setLoadingPerformanceId(null);
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="seller-campaigns-page">
       <SectionCard
@@ -582,6 +629,15 @@ export function SellerCampaignsPageClient() {
                         {copy.summary.activeTargets}: {campaign.summary.activeTargets}
                       </span>
                       <span className="rounded-full border border-[var(--border)] px-3 py-1">
+                        {copy.summary.spentAmount}: {campaign.billing.spentAmount}
+                      </span>
+                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
+                        {copy.summary.remainingBudget}: {campaign.billing.remainingBudget ?? "∞"}
+                      </span>
+                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
+                        {copy.summary.billableClicks}: {campaign.billing.billableClicks}
+                      </span>
+                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
                         {copy.summary.removedTargets}: {campaign.summary.removedTargets}
                       </span>
                     </div>
@@ -765,6 +821,16 @@ export function SellerCampaignsPageClient() {
                     >
                       {copy.archiveCampaign}
                     </button>
+                    <button
+                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:opacity-60"
+                      disabled={loadingPerformanceId === campaign.id}
+                      onClick={() => void handleTogglePerformance(campaign.id)}
+                      type="button"
+                    >
+                      {loadingPerformanceId === campaign.id
+                        ? copy.performanceLoading
+                        : copy.performanceAction}
+                    </button>
                   </div>
 
                   <div className="mt-6 grid gap-4 rounded-[1.5rem] border border-[var(--border)] bg-[var(--background)] p-4">
@@ -908,11 +974,89 @@ export function SellerCampaignsPageClient() {
                     <p className="mt-2 text-sm text-[var(--muted)]">
                       {copy.billingPanelDescription}
                     </p>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Mode</p>
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.mode}</p>
+                      </article>
+                      <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Budget</p>
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                          {campaign.billing.budgetLimit ?? "Unlimited"}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Remaining {campaign.billing.remainingBudget ?? "∞"}
+                        </p>
+                      </article>
+                      <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">CPC</p>
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.cpcAmount}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Charged clicks {campaign.billing.chargedClicks} / total billed {campaign.billing.totalChargedEvents}
+                        </p>
+                      </article>
+                    </div>
                     <ul className="mt-3 space-y-2 text-sm text-[var(--foreground)]">
                       {campaign.billing.notes.map((note) => (
                         <li key={note}>- {note}</li>
                       ))}
                     </ul>
+                    {expandedCampaignId === campaign.id ? (
+                      <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
+                        <p className="text-sm font-semibold text-[var(--foreground)]">{copy.performanceTitle}</p>
+                        {performanceByCampaign[campaign.id] ? (
+                          <>
+                            <div className="mt-3 grid gap-3 md:grid-cols-4">
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                Events {performanceByCampaign[campaign.id].summary.totalEvents}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                Sponsored {performanceByCampaign[campaign.id].summary.servedAsSponsored ? "Yes" : "No"}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                Wallet blocked {performanceByCampaign[campaign.id].summary.walletBlocked ? "Yes" : "No"}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                Budget exhausted {performanceByCampaign[campaign.id].summary.budgetExhausted ? "Yes" : "No"}
+                              </article>
+                            </div>
+                            <div className="mt-4 overflow-x-auto">
+                              <table className="min-w-full text-sm">
+                                <thead className="text-left text-[var(--muted)]">
+                                  <tr>
+                                    <th className="px-3 py-2 font-medium">Time</th>
+                                    <th className="px-3 py-2 font-medium">Product</th>
+                                    <th className="px-3 py-2 font-medium">Type</th>
+                                    <th className="px-3 py-2 font-medium">Status</th>
+                                    <th className="px-3 py-2 font-medium">Cost</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {performanceByCampaign[campaign.id].recentEvents.map((event) => (
+                                    <tr key={event.id} className="border-t border-[var(--border)]">
+                                      <td className="px-3 py-3 text-[var(--muted)]">{new Date(event.createdAt).toLocaleString()}</td>
+                                      <td className="px-3 py-3 text-[var(--foreground)]">{event.productName}</td>
+                                      <td className="px-3 py-3 text-[var(--foreground)]">{event.type}</td>
+                                      <td className="px-3 py-3 text-[var(--muted)]">{event.chargeStatus}</td>
+                                      <td className="px-3 py-3 text-[var(--foreground)]">{event.cost ?? "-"}</td>
+                                    </tr>
+                                  ))}
+                                  {performanceByCampaign[campaign.id].recentEvents.length < 1 ? (
+                                    <tr>
+                                      <td colSpan={5} className="px-3 py-6 text-center text-[var(--muted)]">
+                                        {copy.noEvents}
+                                      </td>
+                                    </tr>
+                                  ) : null}
+                                </tbody>
+                              </table>
+                            </div>
+                          </>
+                        ) : loadingPerformanceId === campaign.id ? (
+                          <p className="mt-3 text-sm text-[var(--muted)]">{copy.performanceLoading}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 </article>
               );

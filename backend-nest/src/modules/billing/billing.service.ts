@@ -147,7 +147,11 @@ export class BillingService {
     });
   }
 
-  private async applyMutation(shopId: string, input: BillingMutationInput) {
+  async applyMutationInTransaction(
+    prisma: PrismaExecutor,
+    shopId: string,
+    input: BillingMutationInput,
+  ) {
     const amount = this.toMoney(input.amount);
     if (amount.lte(0)) {
       throw new BadRequestException(
@@ -155,122 +159,127 @@ export class BillingService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const wallet = await this.getOrCreateWalletRecord(shopId, tx);
-      this.assertWalletMutable(wallet.status);
+    const tx = this.asBillingExecutor(prisma);
+    const wallet = await this.getOrCreateWalletRecord(shopId, tx);
+    this.assertWalletMutable(wallet.status);
 
-      if (
-        input.campaignId &&
-        !(await this.belongsToShopCampaign(shopId, input.campaignId, tx))
-      ) {
-        throw new BadRequestException(
-          `Campaign ${input.campaignId} does not belong to shop ${shopId}.`,
-        );
-      }
-
-      const currency = (input.currency ?? wallet.currency).trim().toUpperCase();
-      if (currency !== wallet.currency) {
-        throw new BadRequestException(
-          `Wallet currency ${wallet.currency} does not match requested currency ${currency}.`,
-        );
-      }
-
-      const balanceBefore = new Prisma.Decimal(wallet.balance.toString());
-      const reservedBefore = new Prisma.Decimal(
-        wallet.reservedBalance.toString(),
+    if (
+      input.campaignId &&
+      !(await this.belongsToShopCampaign(shopId, input.campaignId, tx))
+    ) {
+      throw new BadRequestException(
+        `Campaign ${input.campaignId} does not belong to shop ${shopId}.`,
       );
-      const availableBefore = balanceBefore.minus(reservedBefore);
+    }
 
-      let balanceAfter = balanceBefore;
-      let reservedAfter = reservedBefore;
+    const currency = (input.currency ?? wallet.currency).trim().toUpperCase();
+    if (currency !== wallet.currency) {
+      throw new BadRequestException(
+        `Wallet currency ${wallet.currency} does not match requested currency ${currency}.`,
+      );
+    }
 
-      switch (input.type) {
-        case 'credit':
-        case 'refund':
-        case 'adjustment':
-          balanceAfter = balanceBefore.plus(amount);
-          break;
-        case 'debit':
-          if (!input.allowNegativeBalance && availableBefore.lt(amount)) {
-            throw new BadRequestException('Insufficient available balance.');
-          }
-          balanceAfter = balanceBefore.minus(amount);
-          break;
-        case 'reserve':
-          if (availableBefore.lt(amount)) {
-            throw new BadRequestException(
-              'Insufficient available balance to reserve funds.',
-            );
-          }
-          reservedAfter = reservedBefore.plus(amount);
-          break;
-        case 'release':
-          if (reservedBefore.lt(amount)) {
-            throw new BadRequestException(
-              'Cannot release more than the reserved balance.',
-            );
-          }
-          reservedAfter = reservedBefore.minus(amount);
-          break;
-        default:
-          throw new BadRequestException('Unsupported billing mutation type.');
-      }
+    const balanceBefore = new Prisma.Decimal(wallet.balance.toString());
+    const reservedBefore = new Prisma.Decimal(
+      wallet.reservedBalance.toString(),
+    );
+    const availableBefore = balanceBefore.minus(reservedBefore);
 
-      if (!input.allowNegativeBalance && balanceAfter.lt(0)) {
-        throw new BadRequestException('Wallet balance cannot be negative.');
-      }
-      if (reservedAfter.lt(0)) {
-        throw new BadRequestException(
-          'Reserved wallet balance cannot be negative.',
-        );
-      }
-      if (balanceAfter.minus(reservedAfter).lt(0)) {
-        throw new BadRequestException(
-          'Reserved balance cannot exceed total wallet balance.',
-        );
-      }
+    let balanceAfter = balanceBefore;
+    let reservedAfter = reservedBefore;
 
-      const nextWallet = await tx.sellerWallet.update({
-        where: { id: wallet.id },
-        data: {
-          balance: balanceAfter,
-          reservedBalance: reservedAfter,
-          currency,
-        },
-      });
+    switch (input.type) {
+      case 'credit':
+      case 'refund':
+      case 'adjustment':
+        balanceAfter = balanceBefore.plus(amount);
+        break;
+      case 'debit':
+        if (!input.allowNegativeBalance && availableBefore.lt(amount)) {
+          throw new BadRequestException('Insufficient available balance.');
+        }
+        balanceAfter = balanceBefore.minus(amount);
+        break;
+      case 'reserve':
+        if (availableBefore.lt(amount)) {
+          throw new BadRequestException(
+            'Insufficient available balance to reserve funds.',
+          );
+        }
+        reservedAfter = reservedBefore.plus(amount);
+        break;
+      case 'release':
+        if (reservedBefore.lt(amount)) {
+          throw new BadRequestException(
+            'Cannot release more than the reserved balance.',
+          );
+        }
+        reservedAfter = reservedBefore.minus(amount);
+        break;
+      default:
+        throw new BadRequestException('Unsupported billing mutation type.');
+    }
 
-      const entry = await tx.billingLedgerEntry.create({
-        data: {
-          walletId: wallet.id,
-          shopId,
-          campaignId: input.campaignId ?? null,
-          type: input.type,
-          amount,
-          currency,
-          balanceBefore,
-          balanceAfter,
-          reservedBefore,
-          reservedAfter,
-          referenceType: input.referenceType?.trim() || null,
-          referenceId: input.referenceId?.trim() || null,
-          description: input.description?.trim() || null,
-          metadata: input.metadata,
-        },
-        include: {
-          campaign: {
-            select: {
-              id: true,
-              name: true,
-            },
+    if (!input.allowNegativeBalance && balanceAfter.lt(0)) {
+      throw new BadRequestException('Wallet balance cannot be negative.');
+    }
+    if (reservedAfter.lt(0)) {
+      throw new BadRequestException(
+        'Reserved wallet balance cannot be negative.',
+      );
+    }
+    if (balanceAfter.minus(reservedAfter).lt(0)) {
+      throw new BadRequestException(
+        'Reserved balance cannot exceed total wallet balance.',
+      );
+    }
+
+    const nextWallet = await tx.sellerWallet.update({
+      where: { id: wallet.id },
+      data: {
+        balance: balanceAfter,
+        reservedBalance: reservedAfter,
+        currency,
+      },
+    });
+
+    const entry = await tx.billingLedgerEntry.create({
+      data: {
+        walletId: wallet.id,
+        shopId,
+        campaignId: input.campaignId ?? null,
+        type: input.type,
+        amount,
+        currency,
+        balanceBefore,
+        balanceAfter,
+        reservedBefore,
+        reservedAfter,
+        referenceType: input.referenceType?.trim() || null,
+        referenceId: input.referenceId?.trim() || null,
+        description: input.description?.trim() || null,
+        metadata: input.metadata,
+      },
+      include: {
+        campaign: {
+          select: {
+            id: true,
+            name: true,
           },
         },
-      });
-
-      return {
-        wallet: this.mapWallet(nextWallet),
-        entry: this.mapLedgerEntry(entry),
-      };
+      },
     });
+
+    return {
+      wallet: this.mapWallet(nextWallet),
+      entry: this.mapLedgerEntry(entry),
+    };
+  }
+
+  private async applyMutation(shopId: string, input: BillingMutationInput) {
+    return this.prisma.$transaction((tx) =>
+      this.applyMutationInTransaction(tx, shopId, input),
+    );
   }
 
   private async belongsToShopCampaign(

@@ -415,6 +415,16 @@ export type SellerCampaign = {
     budgetLimit: string | null;
     chargingEnabled: boolean;
     spendTracked: boolean;
+    spentAmount: string;
+    remainingBudget: string | null;
+    billableImpressions: number;
+    billableClicks: number;
+    chargedClicks: number;
+    totalChargedEvents: number;
+    servedAsSponsored: boolean;
+    budgetExhausted: boolean;
+    walletBlocked: boolean;
+    cpcAmount: string;
     notes: string[];
   };
   summary: {
@@ -424,6 +434,42 @@ export type SellerCampaign = {
     removedTargets: number;
   };
   targets: SellerCampaignTarget[];
+};
+
+export type SellerCampaignEvent = {
+  id: string;
+  type: string;
+  placement: string;
+  scenarioType: string | null;
+  productId: string;
+  productName: string;
+  algorithm: string | null;
+  sponsored: boolean;
+  charged: boolean;
+  chargeStatus: string;
+  cost: string | null;
+  ledgerEntryId: string | null;
+  createdAt: string;
+};
+
+export type SellerCampaignPerformance = {
+  campaignId: string;
+  shopId: string;
+  summary: {
+    spentAmount: string;
+    budgetLimit: string | null;
+    remainingBudget: string | null;
+    billableImpressions: number;
+    billableClicks: number;
+    chargedClicks: number;
+    totalChargedEvents: number;
+    totalEvents: number;
+    servedAsSponsored: boolean;
+    budgetExhausted: boolean;
+    walletBlocked: boolean;
+    cpcAmount: string;
+  };
+  recentEvents: SellerCampaignEvent[];
 };
 
 export type SellerOrderListItem = {
@@ -1527,6 +1573,34 @@ export async function removeSellerCampaignTarget(
     `/api/seller/shops/${shopId}/campaigns/${campaignId}/targets/${targetId}`,
     {
       method: "DELETE",
+      token,
+    },
+  );
+}
+
+export async function getSellerCampaignPerformance(
+  shopId: string,
+  campaignId: string,
+  token?: string,
+) {
+  return apiRequest<SellerCampaignPerformance>(
+    `/api/seller/shops/${shopId}/campaigns/${campaignId}/performance`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function listSellerCampaignEvents(
+  shopId: string,
+  campaignId: string,
+  token?: string,
+) {
+  return apiRequest<SellerCampaignEvent[]>(
+    `/api/seller/shops/${shopId}/campaigns/${campaignId}/events`,
+    {
+      method: "GET",
       token,
     },
   );

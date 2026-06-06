@@ -80,13 +80,23 @@ describe('RecommendationsController (e2e)', () => {
   let app: INestApplication<App>;
   let recommendationsService: RecommendationsService;
   let products: StoredProduct[];
+  let recommendationEvents: Array<Record<string, unknown>>;
   const originalEnv = { ...process.env };
 
   const prismaMock = {
+    shop: {
+      findUnique: jest.fn(),
+    },
     product: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+    },
+    sellerWallet: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
     },
     productViewLog: {
       create: jest.fn(),
@@ -96,9 +106,20 @@ describe('RecommendationsController (e2e)', () => {
       create: jest.fn(),
       findMany: jest.fn(),
     },
+    sponsoredCampaign: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    billingLedgerEntry: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
     recommendationEvent: {
       create: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const buildApp = async () => {
@@ -151,7 +172,25 @@ describe('RecommendationsController (e2e)', () => {
         brand: 'City Berry',
       }),
     ];
+    recommendationEvents = [];
+    const walletState = {
+      id: 'wallet-1',
+      shopId: 'shop-1',
+      balance: new Prisma.Decimal('50'),
+      reservedBalance: new Prisma.Decimal('0'),
+      currency: 'RUB',
+      status: 'active',
+      createdAt: new Date('2026-06-07T00:00:00Z'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+    };
 
+    prismaMock.shop.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve(
+        products.some((product) => product.shopId === where.id)
+          ? { id: where.id }
+          : null,
+      ),
+    );
     prismaMock.product.findMany.mockImplementation(
       ({ where }: { where?: Record<string, unknown> }) => {
         const includedIds =
@@ -196,7 +235,82 @@ describe('RecommendationsController (e2e)', () => {
     prismaMock.productViewLog.findMany.mockResolvedValue([]);
     prismaMock.searchLog.create.mockResolvedValue({});
     prismaMock.searchLog.findMany.mockResolvedValue([]);
-    prismaMock.recommendationEvent.create.mockResolvedValue({});
+    prismaMock.sellerWallet.findMany.mockImplementation(({ where }) =>
+      Promise.resolve(
+        where?.shopId?.in?.includes('shop-1') ? [walletState] : [],
+      ),
+    );
+    prismaMock.sellerWallet.findUnique.mockImplementation(({ where }) =>
+      Promise.resolve(where.shopId === 'shop-1' ? walletState : null),
+    );
+    prismaMock.sellerWallet.create.mockImplementation(({ data }) => {
+      walletState.shopId = data.shopId;
+      walletState.balance = new Prisma.Decimal(data.balance ?? 0);
+      walletState.reservedBalance = new Prisma.Decimal(data.reservedBalance ?? 0);
+      walletState.currency = data.currency;
+      walletState.status = data.status;
+      return Promise.resolve({ ...walletState });
+    });
+    prismaMock.sellerWallet.update.mockImplementation(({ data }) => {
+      walletState.balance = new Prisma.Decimal(data.balance);
+      walletState.reservedBalance = new Prisma.Decimal(data.reservedBalance);
+      walletState.currency = data.currency ?? walletState.currency;
+      return Promise.resolve({ ...walletState });
+    });
+    prismaMock.sponsoredCampaign.findMany.mockResolvedValue([]);
+    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue(null);
+    prismaMock.billingLedgerEntry.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: `ledger-${recommendationEvents.length + 1}`,
+        createdAt: new Date('2026-06-07T00:00:00Z'),
+        ...data,
+        campaign: data.campaignId
+          ? {
+              id: data.campaignId,
+              name: 'Sponsored Campaign',
+            }
+          : null,
+      }),
+    );
+    prismaMock.billingLedgerEntry.findMany.mockResolvedValue([]);
+    prismaMock.recommendationEvent.create.mockImplementation(({ data }) => {
+      if (
+        data.idempotencyKey &&
+        recommendationEvents.some(
+          (event) => event.idempotencyKey === data.idempotencyKey,
+        )
+      ) {
+        return Promise.reject({ code: 'P2002' });
+      }
+      const created = {
+        id: `event-${recommendationEvents.length + 1}`,
+        createdAt: new Date('2026-06-07T00:00:00Z'),
+        ...data,
+      };
+      recommendationEvents.push(created);
+      return Promise.resolve(created);
+    });
+    prismaMock.recommendationEvent.update.mockImplementation(({ where, data }) => {
+      const event = recommendationEvents.find((item) => item.id === where.id);
+      if (event) {
+        Object.assign(event, data);
+      }
+      return Promise.resolve(event ?? { id: where.id, ...data });
+    });
+    prismaMock.recommendationEvent.findMany.mockImplementation(({ where }) => {
+      return Promise.resolve(
+        recommendationEvents.filter((event) => {
+          if (where?.campaignId && event.campaignId !== where.campaignId) {
+            return false;
+          }
+          if (where?.charged !== undefined && event.charged !== where.charged) {
+            return false;
+          }
+          return true;
+        }),
+      );
+    });
+    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     app = await buildApp();
     recommendationsService = app.get(RecommendationsService);
   });
@@ -1761,6 +1875,267 @@ describe('RecommendationsController (e2e)', () => {
     expect(lastPayload?.data.algorithm).toBe('rule_based_v1');
     expect(lastPayload?.data.placement).toBe('home');
     expect(lastPayload?.data.rank).toBe(2);
+  });
+
+  it('charges a sponsored CPC click once when a valid tracking token is returned', async () => {
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRESET_ID = 'balanced';
+    await app.close();
+    app = await buildApp();
+
+    const sponsoredProduct = products[1];
+    const activeCampaign = {
+      id: 'campaign-1',
+      shopId: sponsoredProduct.shopId,
+      name: 'Sponsored Campaign',
+      description: null,
+      status: 'active',
+      scenarioTypes: ['home'],
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('20'),
+      billingMode: 'cpc',
+      maxBoost: new Prisma.Decimal('4'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+      targets: [
+        {
+          id: 'target-1',
+          campaignId: 'campaign-1',
+          productId: sponsoredProduct.id,
+          boost: new Prisma.Decimal('4'),
+          status: 'active',
+          createdAt: new Date('2026-06-07T00:00:00Z'),
+          updatedAt: new Date('2026-06-07T00:00:00Z'),
+          product: {
+            id: sponsoredProduct.id,
+            shopId: sponsoredProduct.shopId,
+            wbTitle: sponsoredProduct.wbTitle,
+            localTitle: sponsoredProduct.localTitle,
+            seoSlug: sponsoredProduct.seoSlug,
+          },
+        },
+      ],
+    };
+
+    prismaMock.sellerWallet.findMany.mockResolvedValue([
+      {
+        shopId: sponsoredProduct.shopId,
+        balance: new Prisma.Decimal('50'),
+        reservedBalance: new Prisma.Decimal('0'),
+        status: 'active',
+      },
+    ]);
+    prismaMock.sellerWallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      shopId: sponsoredProduct.shopId,
+      balance: new Prisma.Decimal('50'),
+      reservedBalance: new Prisma.Decimal('0'),
+      currency: 'RUB',
+      status: 'active',
+      createdAt: new Date('2026-06-07T00:00:00Z'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+    });
+    prismaMock.sponsoredCampaign.findMany.mockResolvedValue([activeCampaign]);
+    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
+      id: 'campaign-1',
+      shopId: sponsoredProduct.shopId,
+      status: 'active',
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('20'),
+      billingMode: 'cpc',
+    });
+
+    const recommendationsResponse = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3')
+      .expect(200);
+
+    const recommendationsBody = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+        sponsored?: boolean;
+        trackingToken?: string | null;
+      }>;
+    }>(recommendationsResponse);
+    const sponsoredItem = recommendationsBody.items.find(
+      (item) => item.product.id === sponsoredProduct.id,
+    );
+
+    expect(sponsoredItem?.sponsored).toBe(true);
+    expect(sponsoredItem?.trackingToken).toBeTruthy();
+
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        rank: 1,
+        idempotencyKey: 'click-charge-1',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        rank: 1,
+        idempotencyKey: 'click-charge-1',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(1);
+    expect(
+      prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
+    ).toEqual(
+      expect.objectContaining({
+        charged: true,
+        chargeStatus: 'charged',
+      }),
+    );
+  });
+
+  it('marks sponsored clicks as insufficient_wallet when the wallet cannot cover CPC', async () => {
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const sponsoredProduct = products[1];
+    prismaMock.sellerWallet.findMany.mockResolvedValue([
+      {
+        shopId: sponsoredProduct.shopId,
+        balance: new Prisma.Decimal('50'),
+        reservedBalance: new Prisma.Decimal('0'),
+        status: 'active',
+      },
+    ]);
+    prismaMock.sellerWallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      shopId: sponsoredProduct.shopId,
+      balance: new Prisma.Decimal('50'),
+      reservedBalance: new Prisma.Decimal('0'),
+      currency: 'RUB',
+      status: 'active',
+      createdAt: new Date('2026-06-07T00:00:00Z'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+    });
+    prismaMock.sponsoredCampaign.findMany.mockResolvedValue([
+      {
+        id: 'campaign-2',
+        shopId: sponsoredProduct.shopId,
+        name: 'Low Wallet Campaign',
+        description: null,
+        status: 'active',
+        scenarioTypes: ['home'],
+        startAt: new Date('2026-06-01T00:00:00Z'),
+        endAt: new Date('2026-06-30T00:00:00Z'),
+        budgetLimit: new Prisma.Decimal('20'),
+        billingMode: 'cpc',
+        maxBoost: new Prisma.Decimal('4'),
+        updatedAt: new Date('2026-06-07T00:00:00Z'),
+        targets: [
+          {
+            id: 'target-2',
+            campaignId: 'campaign-2',
+            productId: sponsoredProduct.id,
+            boost: new Prisma.Decimal('4'),
+            status: 'active',
+            createdAt: new Date('2026-06-07T00:00:00Z'),
+            updatedAt: new Date('2026-06-07T00:00:00Z'),
+            product: {
+              id: sponsoredProduct.id,
+              shopId: sponsoredProduct.shopId,
+              wbTitle: sponsoredProduct.wbTitle,
+              localTitle: sponsoredProduct.localTitle,
+              seoSlug: sponsoredProduct.seoSlug,
+            },
+          },
+        ],
+      },
+    ]);
+    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
+      id: 'campaign-2',
+      shopId: sponsoredProduct.shopId,
+      status: 'active',
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('20'),
+      billingMode: 'cpc',
+    });
+
+    const recommendationsResponse = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3')
+      .expect(200);
+    const recommendationsBody = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+        trackingToken?: string | null;
+      }>;
+    }>(recommendationsResponse);
+    const sponsoredItem = recommendationsBody.items.find(
+      (item) => item.product.id === sponsoredProduct.id,
+    );
+
+    prismaMock.sellerWallet.findUnique.mockResolvedValue({
+      id: 'wallet-1',
+      shopId: sponsoredProduct.shopId,
+      balance: new Prisma.Decimal('0.50'),
+      reservedBalance: new Prisma.Decimal('0'),
+      currency: 'RUB',
+      status: 'active',
+      createdAt: new Date('2026-06-07T00:00:00Z'),
+      updatedAt: new Date('2026-06-07T00:00:00Z'),
+    });
+
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        idempotencyKey: 'click-insufficient-wallet-1',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(0);
+    expect(
+      prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
+    ).toEqual(
+      expect.objectContaining({
+        chargeStatus: 'insufficient_wallet',
+      }),
+    );
   });
 });
 

@@ -62,6 +62,36 @@ export class SponsoredCampaignBillingSummaryDto {
   @ApiProperty()
   spendTracked!: boolean;
 
+  @ApiProperty()
+  spentAmount!: string;
+
+  @ApiProperty({ nullable: true })
+  remainingBudget!: string | null;
+
+  @ApiProperty()
+  billableImpressions!: number;
+
+  @ApiProperty()
+  billableClicks!: number;
+
+  @ApiProperty()
+  chargedClicks!: number;
+
+  @ApiProperty()
+  totalChargedEvents!: number;
+
+  @ApiProperty()
+  servedAsSponsored!: boolean;
+
+  @ApiProperty()
+  budgetExhausted!: boolean;
+
+  @ApiProperty()
+  walletBlocked!: boolean;
+
+  @ApiProperty()
+  cpcAmount!: string;
+
   @ApiProperty({ type: [String] })
   notes!: string[];
 }

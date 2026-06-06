@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type ProductVariant } from '@prisma/client';
-import { createHash } from 'crypto';
+import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { BillingService } from '../billing/billing.service';
+import { CampaignsService } from '../campaigns/campaigns.service';
 import { ProductReadinessService } from '../products/product-readiness.service';
 import { RecommendationQaCompareQueryDto } from './dto/recommendation-qa-compare-query.dto';
 import {
@@ -52,6 +54,7 @@ import {
   type RecommendationPlacement,
   RECOMMENDATION_SPONSORED_RANKING_LIMITS,
   type RecommendationSponsoredRankingConfig,
+  type RecommendationSponsoredTargetConfig,
 } from './recommendation-scoring.service';
 
 type RecommendationApiItem = {
@@ -59,6 +62,8 @@ type RecommendationApiItem = {
   rank: number;
   score: number | null;
   reasonCodes: string[];
+  sponsored?: boolean;
+  trackingToken?: string | null;
   scoreExplanation?: {
     algorithm: string;
     finalScore: number | null;
@@ -71,6 +76,16 @@ type RecommendationApiItem = {
   };
 };
 
+type RecommendationTrackingTokenPayload = {
+  campaignId: string;
+  shopId: string;
+  productId: string;
+  placement: RecommendationPlacement;
+  scenarioType: RecommendationSponsoredScenarioType;
+  billingMode: RecommendationSponsoredBillingMode;
+  algorithm: string;
+};
+
 type RecommendationRankedItem = {
   product: RecommendationProductRecord;
   scored: {
@@ -81,6 +96,7 @@ type RecommendationRankedItem = {
     sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
     campaignReadiness: RecommendationCampaignReadinessMetadata;
     sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
+    sponsored: boolean;
   };
 };
 
@@ -183,6 +199,8 @@ export class RecommendationsService {
     private readonly configService: ConfigService,
     private readonly productReadiness: ProductReadinessService,
     private readonly scoring: RecommendationScoringService,
+    private readonly campaignsService: CampaignsService,
+    private readonly billingService: BillingService,
   ) {}
 
   async getHomeRecommendations(
@@ -283,19 +301,19 @@ export class RecommendationsService {
           this.loadHomeRecommendationsV1(normalizedQuery),
           this.loadHomeRecommendationsV2(normalizedQuery, request, user),
         ]);
-        sponsoredQaSummary = this.buildSponsoredQaSummary('home');
+        sponsoredQaSummary = await this.buildSponsoredQaSummary('home');
         break;
       case 'product_detail':
         [v1Items, v2Items] = await Promise.all([
           this.loadSimilarRecommendationsV1(query.productId!, normalizedQuery),
           this.loadSimilarRecommendationsV2(query.productId!, normalizedQuery),
         ]);
-        sponsoredQaSummary = this.buildSponsoredQaSummary('similar');
+        sponsoredQaSummary = await this.buildSponsoredQaSummary('similar');
         break;
       case 'search':
         v1Items = [];
         v2Items = await this.loadSearchRecommendationsV2(normalizedQuery);
-        sponsoredQaSummary = this.buildSponsoredQaSummary('search');
+        sponsoredQaSummary = await this.buildSponsoredQaSummary('search');
         break;
     }
 
@@ -534,27 +552,159 @@ export class RecommendationsService {
       return;
     }
 
+    const placement = dto.placement.trim() as RecommendationPlacement;
+    const algorithm = dto.algorithm?.trim() || 'rule_based_v2';
+    const guestSessionId = this.resolveGuestSessionId(
+      dto.guestSessionId,
+      request,
+    );
+    const tracking = this.verifyRecommendationTrackingToken(dto.trackingToken, {
+      productId: dto.productId,
+      placement,
+      algorithm,
+    });
+
     try {
-      await this.prisma.recommendationEvent.create({
-        data: {
-          type: dto.type,
-          placement: dto.placement.trim(),
-          productId: dto.productId,
-          sourceProductId: dto.sourceProductId ?? null,
-          customerId: user?.userId ?? null,
-          guestSessionId: this.resolveGuestSessionId(
-            dto.guestSessionId,
-            request,
-          ),
-          algorithm: dto.algorithm?.trim() || 'rule_based_v2',
-          rank: dto.rank ?? null,
-          score:
-            typeof dto.score === 'number'
-              ? new Prisma.Decimal(dto.score)
-              : null,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        const created = await tx.recommendationEvent.create({
+          data: {
+            type: dto.type,
+            placement,
+            productId: dto.productId,
+            sourceProductId: dto.sourceProductId ?? null,
+            customerId: user?.userId ?? null,
+            guestSessionId,
+            shopId: tracking?.shopId ?? null,
+            campaignId: tracking?.campaignId ?? null,
+            algorithm,
+            scenarioType: tracking?.scenarioType ?? null,
+            billingMode: tracking?.billingMode ?? null,
+            sponsored: Boolean(tracking),
+            charged: false,
+            chargeStatus: tracking
+              ? tracking.billingMode === 'cpc' && dto.type === 'click'
+                ? 'pending_charge'
+                : 'tracked_only'
+              : 'not_billable',
+            cost: null,
+            ledgerEntryId: null,
+            idempotencyKey: dto.idempotencyKey?.trim() || null,
+            metadata: tracking
+              ? {
+                  trackingTokenVersion: 'v1',
+                  sponsored: true,
+                }
+              : undefined,
+            rank: dto.rank ?? null,
+            score:
+              typeof dto.score === 'number'
+                ? new Prisma.Decimal(dto.score)
+                : null,
+          },
+        });
+
+        if (
+          !tracking ||
+          dto.type !== 'click' ||
+          tracking.billingMode !== 'cpc'
+        ) {
+          return;
+        }
+
+        const cpcAmount = this.getSponsoredCpcAmount();
+        const campaign = await tx.sponsoredCampaign.findFirst({
+          where: {
+            id: tracking.campaignId,
+            shopId: tracking.shopId,
+          },
+          select: {
+            id: true,
+            shopId: true,
+            status: true,
+            startAt: true,
+            endAt: true,
+            budgetLimit: true,
+            billingMode: true,
+          },
+        });
+
+        if (
+          !campaign ||
+          campaign.status !== 'active' ||
+          this.normalizeBillingMode(campaign.billingMode) !== 'cpc' ||
+          !this.isCampaignWithinDateWindow(campaign.startAt, campaign.endAt)
+        ) {
+          await tx.recommendationEvent.update({
+            where: { id: created.id },
+            data: {
+              chargeStatus: 'campaign_inactive',
+              cost: cpcAmount,
+            },
+          });
+          return;
+        }
+
+        const spentAmount = await this.sumCampaignSpend(
+          tracking.campaignId,
+          tx,
+        );
+        if (
+          campaign.budgetLimit &&
+          (spentAmount.gte(campaign.budgetLimit) ||
+            campaign.budgetLimit.minus(spentAmount).lt(cpcAmount))
+        ) {
+          await tx.recommendationEvent.update({
+            where: { id: created.id },
+            data: {
+              chargeStatus: 'budget_exhausted',
+              cost: cpcAmount,
+            },
+          });
+          return;
+        }
+
+        try {
+          const charge = await this.billingService.applyMutationInTransaction(
+            tx,
+            tracking.shopId,
+            {
+              type: 'debit',
+              amount: cpcAmount,
+              campaignId: tracking.campaignId,
+              referenceType: 'recommendation_click',
+              referenceId: created.id,
+              description: `Sponsored recommendation click for ${dto.productId}`,
+              metadata: {
+                placement,
+                productId: dto.productId,
+                algorithm,
+              },
+            },
+          );
+
+          await tx.recommendationEvent.update({
+            where: { id: created.id },
+            data: {
+              charged: true,
+              chargeStatus: 'charged',
+              cost: cpcAmount,
+              ledgerEntryId: charge.entry.id,
+            },
+          });
+        } catch {
+          await tx.recommendationEvent.update({
+            where: { id: created.id },
+            data: {
+              chargeStatus: 'insufficient_wallet',
+              cost: cpcAmount,
+            },
+          });
+        }
       });
-    } catch {
+    } catch (error) {
+      if (this.isUniqueIdempotencyConflict(error)) {
+        return;
+      }
       return;
     }
   }
@@ -593,6 +743,7 @@ export class RecommendationsService {
             rolloutMode: 'disabled',
           } as const,
           sponsoredCampaign: null,
+          sponsored: false,
         },
       }));
   }
@@ -612,7 +763,7 @@ export class RecommendationsService {
       this.buildPreferenceProfile(query, request, user),
     ]);
 
-    const sponsoredRanking = this.getSponsoredRankingConfig('home');
+    const sponsoredRanking = await this.getSponsoredRankingConfig('home');
 
     return products
       .filter((product) => this.isPublicVisible(product))
@@ -680,6 +831,7 @@ export class RecommendationsService {
             rolloutMode: 'disabled',
           } as const,
           sponsoredCampaign: null,
+          sponsored: false,
         },
       }));
   }
@@ -705,7 +857,7 @@ export class RecommendationsService {
       query.limit,
     );
 
-    const sponsoredRanking = this.getSponsoredRankingConfig('similar');
+    const sponsoredRanking = await this.getSponsoredRankingConfig('similar');
 
     return candidates
       .filter(
@@ -768,7 +920,7 @@ export class RecommendationsService {
       orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
     });
 
-    const sponsoredRanking = this.getSponsoredRankingConfig('search');
+    const sponsoredRanking = await this.getSponsoredRankingConfig('search');
 
     return candidates
       .filter((product) => this.isPublicVisible(product))
@@ -857,11 +1009,27 @@ export class RecommendationsService {
   ) {
     const includeExplainability = this.shouldIncludeExplainability(debug);
     const mappedItems: RecommendationApiItem[] = items.map((item, index) => {
+      const sponsored =
+        item.scored.sponsored === true &&
+        item.scored.campaignReadiness.sponsoredBoostApplied === true &&
+        Boolean(item.scored.sponsoredCampaign?.campaignId);
       const mappedItem: RecommendationApiItem = {
         product: this.mapProduct(item.product),
         rank: index + 1,
         score: options?.hideScores ? null : item.scored.score,
         reasonCodes: item.scored.reasonCodes,
+        sponsored,
+        trackingToken: sponsored
+          ? this.createRecommendationTrackingToken({
+              campaignId: item.scored.sponsoredCampaign!.campaignId!,
+              shopId: item.product.shopId,
+              productId: item.product.id,
+              placement,
+              scenarioType: this.mapPlacementToScenarioType(placement),
+              billingMode: item.scored.sponsoredCampaign!.billingMode,
+              algorithm,
+            })
+          : null,
       };
 
       if (includeExplainability) {
@@ -1542,19 +1710,19 @@ export class RecommendationsService {
     return this.readFlag('RECOMMENDATION_QA_TOOLS_ENABLED', false);
   }
 
-  private buildSponsoredQaSummary(
+  private async buildSponsoredQaSummary(
     scenarioType: RecommendationSponsoredScenarioType,
-  ): RecommendationSponsoredQaSummary {
-    const config = this.getSponsoredRankingConfig(scenarioType);
+  ): Promise<RecommendationSponsoredQaSummary> {
+    const config = await this.getSponsoredRankingConfig(scenarioType);
     return {
       sponsoredRankingEnabled: config.enabled,
       activePreset: config.preset,
     };
   }
 
-  private getSponsoredRankingConfig(
+  private async getSponsoredRankingConfig(
     scenarioType: RecommendationSponsoredScenarioType,
-  ): RecommendationSponsoredRankingConfig {
+  ): Promise<RecommendationSponsoredRankingConfig> {
     const rankingEnabled = this.readFlag(
       'RECOMMENDATION_SPONSORED_RANKING_ENABLED',
       false,
@@ -1583,30 +1751,61 @@ export class RecommendationsService {
     const sponsoredProductIds = rankingEnabled
       ? this.readStringListFlag('RECOMMENDATION_SPONSORED_PRODUCT_IDS')
       : [];
+    const activeCampaignTargets = enabled
+      ? await this.campaignsService.getActiveRecommendationTargets(scenarioType)
+      : [];
+    const sponsoredTargetsByProductId = new Map<
+      string,
+      RecommendationSponsoredTargetConfig
+    >();
+    for (const target of activeCampaignTargets) {
+      if (!sponsoredTargetsByProductId.has(target.productId)) {
+        sponsoredTargetsByProductId.set(target.productId, {
+          campaignId: target.campaignId,
+          shopId: target.shopId,
+          productId: target.productId,
+          boost: Math.min(target.boost, target.maxBoost),
+          billingMode: target.billingMode,
+          scenarioType,
+        });
+      }
+    }
     const campaign: RecommendationSponsoredCampaignContract = {
       campaignId:
-        this.configService
-          .get<string>('RECOMMENDATION_SPONSORED_CAMPAIGN_ID')
-          ?.trim() || null,
+        (activeCampaignTargets[0]?.campaignId ??
+          this.configService
+            .get<string>('RECOMMENDATION_SPONSORED_CAMPAIGN_ID')
+            ?.trim()) ||
+        null,
       sponsorType: this.readEnumFlag<RecommendationSponsoredSponsorType>(
         'RECOMMENDATION_SPONSORED_SPONSOR_TYPE',
         ['none', 'campaign', 'business_boost', 'hybrid'],
-        sponsoredProductIds.length > 0 ? 'campaign' : 'none',
+        sponsoredTargetsByProductId.size > 0 || sponsoredProductIds.length > 0
+          ? 'campaign'
+          : 'none',
       ),
-      sponsoredProductIds,
+      sponsoredProductIds: [
+        ...new Set([
+          ...sponsoredProductIds,
+          ...activeCampaignTargets.map((target) => target.productId),
+        ]),
+      ],
       maxBoost: maxSponsoredBoost,
       scenarioType,
-      billingMode: this.readEnumFlag<RecommendationSponsoredBillingMode>(
-        'RECOMMENDATION_SPONSORED_BILLING_MODE',
-        ['none', 'cpc', 'cpm', 'fixed'],
-        'none',
-      ),
+      billingMode:
+        activeCampaignTargets[0]?.billingMode ??
+        this.readEnumFlag<RecommendationSponsoredBillingMode>(
+          'RECOMMENDATION_SPONSORED_BILLING_MODE',
+          ['none', 'cpc', 'cpm', 'fixed'],
+          'none',
+        ),
       rolloutMode,
     };
 
     return {
       enabled,
       sponsoredProductIds: new Set(sponsoredProductIds),
+      sponsoredTargetsByProductId,
       businessBoostShopIds: new Set(
         rankingEnabled
           ? this.readStringListFlag('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS')
@@ -1964,6 +2163,147 @@ export class RecommendationsService {
 
   private normalizeQuery(query: string) {
     return query.trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  private createRecommendationTrackingToken(
+    payload: RecommendationTrackingTokenPayload,
+  ) {
+    const serialized = JSON.stringify(payload);
+    const encodedPayload = Buffer.from(serialized).toString('base64url');
+    const signature = createHmac(
+      'sha256',
+      this.getRecommendationTrackingSecret(),
+    )
+      .update(serialized)
+      .digest('base64url');
+
+    return `${encodedPayload}.${signature}`;
+  }
+
+  private verifyRecommendationTrackingToken(
+    token: string | undefined,
+    expected: Pick<
+      RecommendationTrackingTokenPayload,
+      'productId' | 'placement' | 'algorithm'
+    >,
+  ): RecommendationTrackingTokenPayload | null {
+    if (!token?.trim()) {
+      return null;
+    }
+
+    const [encodedPayload, signature] = token.trim().split('.');
+    if (!encodedPayload || !signature) {
+      return null;
+    }
+
+    try {
+      const payloadString = Buffer.from(encodedPayload, 'base64url').toString(
+        'utf8',
+      );
+      const expectedSignature = createHmac(
+        'sha256',
+        this.getRecommendationTrackingSecret(),
+      )
+        .update(payloadString)
+        .digest();
+      const actualSignature = Buffer.from(signature, 'base64url');
+      if (
+        actualSignature.length !== expectedSignature.length ||
+        !timingSafeEqual(actualSignature, expectedSignature)
+      ) {
+        return null;
+      }
+
+      const payload = JSON.parse(
+        payloadString,
+      ) as RecommendationTrackingTokenPayload;
+      if (
+        payload.productId !== expected.productId ||
+        payload.placement !== expected.placement ||
+        payload.algorithm !== expected.algorithm
+      ) {
+        return null;
+      }
+
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
+  private getRecommendationTrackingSecret() {
+    return (
+      this.configService.get<string>('RECOMMENDATION_TRACKING_TOKEN_SECRET') ??
+      this.configService.get<string>('JWT_SECRET') ??
+      'recommendation-tracking-v1'
+    );
+  }
+
+  private getSponsoredCpcAmount() {
+    const configured = this.configService.get<string>(
+      'RECOMMENDATION_SPONSORED_CPC_AMOUNT',
+    );
+    const decimal = configured
+      ? new Prisma.Decimal(configured)
+      : new Prisma.Decimal('1.00');
+    return new Prisma.Decimal(decimal.toDecimalPlaces(2).toString());
+  }
+
+  private async sumCampaignSpend(
+    campaignId: string,
+    prisma: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    const events = await prisma.recommendationEvent.findMany({
+      where: {
+        campaignId,
+        charged: true,
+      },
+      select: {
+        cost: true,
+      },
+    });
+
+    return events.reduce(
+      (sum, event) => (event.cost ? sum.plus(event.cost) : sum),
+      new Prisma.Decimal(0),
+    );
+  }
+
+  private normalizeBillingMode(
+    billingMode: string | null | undefined,
+  ): RecommendationSponsoredBillingMode {
+    return (['none', 'cpc', 'cpm', 'fixed'].find(
+      (mode) => mode === billingMode,
+    ) ?? 'none') as RecommendationSponsoredBillingMode;
+  }
+
+  private isCampaignWithinDateWindow(startAt: Date | null, endAt: Date | null) {
+    const now = new Date();
+    if (startAt && startAt > now) {
+      return false;
+    }
+    if (endAt && endAt < now) {
+      return false;
+    }
+    return true;
+  }
+
+  private mapPlacementToScenarioType(
+    placement: RecommendationPlacement,
+  ): RecommendationSponsoredScenarioType {
+    if (placement === 'product_detail') {
+      return 'similar';
+    }
+    return placement === 'search' ? 'search' : 'home';
+  }
+
+  private isUniqueIdempotencyConflict(error: unknown) {
+    return (
+      error !== null &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    );
   }
 
   private resolveGuestSessionId(

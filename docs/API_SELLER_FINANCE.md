@@ -1,5 +1,37 @@
 # Seller Finance API
 
+## 2026-06-07 Campaign Billing V1 Completion Phase 4.3
+
+Seller finance now includes the first live sponsored campaign billing loop for recommendation CPC clicks.
+
+Updated seller endpoints:
+
+- `GET /api/seller/shops/:shopId/billing/wallet`
+- `GET /api/seller/shops/:shopId/billing/ledger`
+- `GET /api/seller/shops/:shopId/campaigns/:campaignId/performance`
+- `GET /api/seller/shops/:shopId/campaigns/:campaignId/events`
+
+New V1 behavior:
+
+- sponsored recommendation CPC clicks can create transactional `debit` ledger rows
+- campaign-linked spend is now visible through campaign performance summaries
+- budget exhaustion and low-wallet states are surfaced safely to the seller
+
+Campaign performance response summary now includes fields such as:
+
+- `spentAmount`
+- `budgetLimit`
+- `remainingBudget`
+- `billableImpressions`
+- `billableClicks`
+- `chargedClicks`
+- `totalChargedEvents`
+- `totalEvents`
+- `servedAsSponsored`
+- `budgetExhausted`
+- `walletBlocked`
+- `cpcAmount`
+
 ## 2026-06-07 Seller Billing Foundation Phase 4.2
 
 Seller finance now includes a separate shop-scoped wallet and billing ledger foundation for future sponsored billing.

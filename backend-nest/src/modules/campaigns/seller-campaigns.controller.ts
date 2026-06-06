@@ -22,6 +22,10 @@ import {
 import { SellerJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import { CampaignsService } from './campaigns.service';
+import {
+  SponsoredCampaignEventResponseDto,
+  SponsoredCampaignPerformanceResponseDto,
+} from './dto/campaign-performance-response.dto';
 import { CreateSponsoredCampaignDto } from './dto/create-sponsored-campaign.dto';
 import { ListSponsoredCampaignsQueryDto } from './dto/list-sponsored-campaigns-query.dto';
 import { SponsoredCampaignResponseDto } from './dto/sponsored-campaign-response.dto';
@@ -63,6 +67,26 @@ export class SellerCampaignsController {
     @Param('campaignId') campaignId: string,
   ) {
     return this.campaignsService.findOneByShop(shopId, campaignId);
+  }
+
+  @Get(':campaignId/performance')
+  @ApiOperation({ summary: 'Get seller sponsored campaign performance.' })
+  @ApiOkResponse({ type: SponsoredCampaignPerformanceResponseDto })
+  getPerformance(
+    @Param('shopId') shopId: string,
+    @Param('campaignId') campaignId: string,
+  ) {
+    return this.campaignsService.getPerformanceByShop(shopId, campaignId);
+  }
+
+  @Get(':campaignId/events')
+  @ApiOperation({ summary: 'List recent seller sponsored campaign events.' })
+  @ApiOkResponse({ type: SponsoredCampaignEventResponseDto, isArray: true })
+  listEvents(
+    @Param('shopId') shopId: string,
+    @Param('campaignId') campaignId: string,
+  ) {
+    return this.campaignsService.listEventsByShop(shopId, campaignId);
   }
 
   @Patch(':campaignId')

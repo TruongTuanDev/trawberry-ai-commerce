@@ -280,6 +280,7 @@ model Shop {
   returnRefundCases     ReturnRefundCase[]
   productReviews        ProductReview[]
   messageThreads        ShopMessageThread[]
+  recommendationEvents  RecommendationEvent[]
 
   @@map("shops")
 }
@@ -402,6 +403,7 @@ model SponsoredCampaign {
   shop          Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
   targets       SponsoredCampaignProduct[]
   billingLedgerEntries BillingLedgerEntry[]
+  recommendationEvents RecommendationEvent[]
 
   @@index([shopId, status, updatedAt])
   @@index([shopId, createdAt])
@@ -461,6 +463,7 @@ model BillingLedgerEntry {
   wallet         SellerWallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
   shop           Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
   campaign       SponsoredCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  recommendationEvents RecommendationEvent[]
 
   @@index([walletId, createdAt])
   @@index([shopId, createdAt])
@@ -512,15 +515,32 @@ model RecommendationEvent {
   sourceProductId String?  @map("source_product_id") @db.Uuid
   customerId      String?  @map("customer_id") @db.Uuid
   guestSessionId  String?  @map("guest_session_id") @db.VarChar(255)
+  shopId          String?  @map("shop_id") @db.Uuid
+  campaignId      String?  @map("campaign_id") @db.Uuid
   algorithm       String   @default("rule_based_v1") @db.VarChar(100)
+  scenarioType    String?  @map("scenario_type") @db.VarChar(50)
+  billingMode     String?  @map("billing_mode") @db.VarChar(50)
+  sponsored       Boolean  @default(false)
+  charged         Boolean  @default(false)
+  chargeStatus    String   @default("not_billable") @map("charge_status") @db.VarChar(50)
+  cost            Decimal? @db.Decimal(14, 2)
+  ledgerEntryId   String?  @map("ledger_entry_id") @db.Uuid
+  idempotencyKey  String?  @unique @map("idempotency_key") @db.VarChar(255)
+  metadata        Json?
   rank            Int?
   score           Decimal? @db.Decimal(10, 4)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  shop            Shop?    @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  campaign        SponsoredCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  ledgerEntry     BillingLedgerEntry? @relation(fields: [ledgerEntryId], references: [id], onDelete: SetNull)
 
   @@index([productId, createdAt])
   @@index([sourceProductId, createdAt])
   @@index([customerId, createdAt])
   @@index([guestSessionId, createdAt])
+  @@index([shopId, createdAt])
+  @@index([campaignId, createdAt])
+  @@index([chargeStatus, createdAt])
   @@index([placement, type, createdAt])
   @@map("recommendation_events")
 }

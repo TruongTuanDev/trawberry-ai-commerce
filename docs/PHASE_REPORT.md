@@ -1,5 +1,79 @@
 # Phase Report
 
+## 2026-06-07 Campaign Billing V1 Completion Phase 4.3
+
+- Status: Implemented on current branch
+- Scope:
+  - completed the first end-to-end sponsored campaign billing flow for the active NestJS + Next.js stack only
+  - extended `RecommendationEvent` with safe sponsored attribution fields:
+    - `shopId`
+    - `campaignId`
+    - `scenarioType`
+    - `billingMode`
+    - `sponsored`
+    - `charged`
+    - `chargeStatus`
+    - `cost`
+    - `ledgerEntryId`
+    - `idempotencyKey`
+  - wired active seller campaigns into bounded sponsored recommendation ranking
+  - added safe public recommendation item fields:
+    - `sponsored`
+    - `trackingToken`
+  - kept public recommendation APIs backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+  - completed V1 CPC billing behavior:
+    - sponsored click attribution
+    - backend-only CPC pricing
+    - transactional ledger debit on charge
+    - idempotent click charging
+    - insufficient-wallet protection
+    - budget enforcement for further serving/charging
+  - added seller campaign performance APIs:
+    - `GET /api/seller/shops/:shopId/campaigns/:campaignId/performance`
+    - `GET /api/seller/shops/:shopId/campaigns/:campaignId/events`
+  - upgraded seller UI:
+    - `/seller/campaigns` now shows spend, remaining budget, click metrics, and recent events
+    - `/seller/billing` now explains live campaign-charge ledger behavior
+  - added regression coverage for:
+    - sponsored CPC charge success
+    - duplicate idempotent click protection
+    - insufficient wallet charge blocking
+    - campaign performance visibility
+    - seller ownership enforcement for campaign performance
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no payment gateway, invoice flow, or auction logic was introduced
+  - public pages still do not expose wallet balances or private campaign billing internals
+- Demo flow:
+  1. seller opens `/seller/campaigns`
+  2. seller creates a draft campaign
+  3. seller adds product targets
+  4. seller activates the campaign
+  5. public recommendation sections serve a safe sponsored item
+  6. sponsored click tracking posts back with `trackingToken` + `idempotencyKey`
+  7. backend attributes the event, writes a ledger charge, and updates campaign spend
+  8. seller reviews `/seller/campaigns` and `/seller/billing`
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npx prisma db push --accept-data-loss`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pending rerun after final doc-only changes
+  - `git diff --check`: pending final rerun
+  - `git ls-files | Select-String "\.env"`: pending final rerun
+  - `git ls-files data.xlsx`: pending final rerun
+- Remaining gaps:
+  - no real top-up flow or payment gateway exists yet
+  - CPM batching, invoices, fraud controls, advanced analytics, and auction logic remain future work
+- Next recommended phase:
+  - Phase 4.4: seller funding/dev top-up path plus stronger campaign budget and analytics polish
+
 ## 2026-06-07 Seller Wallet and Billing Ledger Foundation Phase 4.2
 
 - Status: Implemented on current branch

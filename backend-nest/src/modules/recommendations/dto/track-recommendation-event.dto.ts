@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsNumber,
   IsOptional,
@@ -53,4 +54,21 @@ export class TrackRecommendationEventDto {
   @IsString()
   @MaxLength(255)
   guestSessionId?: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  idempotencyKey?: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  sponsored?: boolean;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  trackingToken?: string;
 }

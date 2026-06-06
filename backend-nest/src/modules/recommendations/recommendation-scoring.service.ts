@@ -126,11 +126,22 @@ export type ScoredRecommendation = {
   sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
   campaignReadiness: RecommendationCampaignReadinessMetadata;
   sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
+  sponsored: boolean;
+};
+
+export type RecommendationSponsoredTargetConfig = {
+  campaignId: string;
+  shopId: string;
+  productId: string;
+  boost: number;
+  billingMode: 'none' | 'cpc' | 'cpm' | 'fixed';
+  scenarioType: 'home' | 'similar' | 'search';
 };
 
 export type RecommendationSponsoredRankingConfig = {
   enabled: boolean;
   sponsoredProductIds: Set<string>;
+  sponsoredTargetsByProductId: Map<string, RecommendationSponsoredTargetConfig>;
   businessBoostShopIds: Set<string>;
   sponsoredBoost: number;
   businessBoost: number;
@@ -307,9 +318,9 @@ export class RecommendationScoringService {
         ? input.sponsoredRanking.preset
         : null,
       campaignReadiness: sponsoredBoost.campaignReadiness,
-      sponsoredCampaign: input.sponsoredRanking?.enabled
-        ? input.sponsoredRanking.campaign
-        : null,
+      sponsoredCampaign: sponsoredBoost.sponsoredCampaign,
+      sponsored:
+        sponsoredBoost.totalBoostScore > 0 && sponsoredBoost.hasCampaign,
     };
   }
 
@@ -323,6 +334,9 @@ export class RecommendationScoringService {
     maxSponsoredBoost: number;
     sponsoredReason: string | null;
     campaignReadiness: RecommendationCampaignReadinessMetadata;
+    sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
+    totalBoostScore: number;
+    hasCampaign: boolean;
   } {
     const disabledResult: {
       sponsoredBoostScore: number;
@@ -330,6 +344,9 @@ export class RecommendationScoringService {
       maxSponsoredBoost: number;
       sponsoredReason: string | null;
       campaignReadiness: RecommendationCampaignReadinessMetadata;
+      sponsoredCampaign: RecommendationSponsoredCampaignMetadata | null;
+      totalBoostScore: number;
+      hasCampaign: boolean;
     } = {
       sponsoredBoostScore: 0,
       businessBoostScore: 0,
@@ -345,6 +362,9 @@ export class RecommendationScoringService {
         billingMode: config?.campaign?.billingMode ?? 'none',
         rolloutMode: config?.campaign?.rolloutMode ?? 'disabled',
       },
+      sponsoredCampaign: null,
+      totalBoostScore: 0,
+      hasCampaign: false,
     };
 
     if (!config?.enabled) {
@@ -352,6 +372,8 @@ export class RecommendationScoringService {
     }
 
     const sponsoredEligible = this.isBoostEligible(candidate);
+    const targetedCampaign =
+      config.sponsoredTargetsByProductId.get(candidate.id) ?? null;
     if (!sponsoredEligible) {
       return {
         ...disabledResult,
@@ -363,15 +385,31 @@ export class RecommendationScoringService {
           sponsoredReason: null,
           sponsoredPresetId: config.preset?.id ?? null,
           campaignReadinessStatus: 'ineligible',
-          billingMode: config.campaign?.billingMode ?? 'none',
+          billingMode:
+            targetedCampaign?.billingMode ??
+            config.campaign?.billingMode ??
+            'none',
           rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
         },
+        sponsoredCampaign: targetedCampaign
+          ? {
+              campaignId: targetedCampaign.campaignId,
+              sponsorType: 'campaign',
+              maxBoost: targetedCampaign.boost,
+              scenarioType: targetedCampaign.scenarioType,
+              billingMode: targetedCampaign.billingMode,
+              rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+            }
+          : null,
+        hasCampaign: Boolean(targetedCampaign),
       };
     }
 
-    const baseSponsoredBoost = config.sponsoredProductIds.has(candidate.id)
-      ? Math.min(config.sponsoredBoost, config.maxSponsoredBoost)
-      : 0;
+    const baseSponsoredBoost = targetedCampaign
+      ? Math.min(targetedCampaign.boost, config.maxSponsoredBoost)
+      : config.sponsoredProductIds.has(candidate.id)
+        ? Math.min(config.sponsoredBoost, config.maxSponsoredBoost)
+        : 0;
     const baseBusinessBoost = config.businessBoostShopIds.has(candidate.shopId)
       ? Math.min(config.businessBoost, config.maxBusinessBoost)
       : 0;
@@ -387,9 +425,23 @@ export class RecommendationScoringService {
           sponsoredReason: null,
           sponsoredPresetId: config.preset?.id ?? null,
           campaignReadinessStatus: 'not_targeted',
-          billingMode: config.campaign?.billingMode ?? 'none',
+          billingMode:
+            targetedCampaign?.billingMode ??
+            config.campaign?.billingMode ??
+            'none',
           rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
         },
+        sponsoredCampaign: targetedCampaign
+          ? {
+              campaignId: targetedCampaign.campaignId,
+              sponsorType: 'campaign',
+              maxBoost: targetedCampaign.boost,
+              scenarioType: targetedCampaign.scenarioType,
+              billingMode: targetedCampaign.billingMode,
+              rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+            }
+          : config.campaign,
+        hasCampaign: Boolean(targetedCampaign),
       };
     }
 
@@ -413,9 +465,23 @@ export class RecommendationScoringService {
           sponsoredReason: null,
           sponsoredPresetId: config.preset?.id ?? null,
           campaignReadinessStatus: 'eligible',
-          billingMode: config.campaign?.billingMode ?? 'none',
+          billingMode:
+            targetedCampaign?.billingMode ??
+            config.campaign?.billingMode ??
+            'none',
           rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
         },
+        sponsoredCampaign: targetedCampaign
+          ? {
+              campaignId: targetedCampaign.campaignId,
+              sponsorType: 'campaign',
+              maxBoost: targetedCampaign.boost,
+              scenarioType: targetedCampaign.scenarioType,
+              billingMode: targetedCampaign.billingMode,
+              rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+            }
+          : config.campaign,
+        hasCampaign: Boolean(targetedCampaign),
       };
     }
 
@@ -436,6 +502,7 @@ export class RecommendationScoringService {
       businessBoostScore,
       maxSponsoredBoost: config.maxSponsoredBoost,
       sponsoredReason,
+      totalBoostScore,
       campaignReadiness: {
         sponsoredEligible: true,
         sponsoredBoostApplied: totalBoostScore > 0,
@@ -443,9 +510,23 @@ export class RecommendationScoringService {
         sponsoredReason,
         sponsoredPresetId: config.preset?.id ?? null,
         campaignReadinessStatus: totalBoostScore > 0 ? 'boosted' : 'eligible',
-        billingMode: config.campaign?.billingMode ?? 'none',
+        billingMode:
+          targetedCampaign?.billingMode ??
+          config.campaign?.billingMode ??
+          'none',
         rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
       },
+      sponsoredCampaign: targetedCampaign
+        ? {
+            campaignId: targetedCampaign.campaignId,
+            sponsorType: 'campaign',
+            maxBoost: targetedCampaign.boost,
+            scenarioType: targetedCampaign.scenarioType,
+            billingMode: targetedCampaign.billingMode,
+            rolloutMode: config.campaign?.rolloutMode ?? 'disabled',
+          }
+        : config.campaign,
+      hasCampaign: Boolean(targetedCampaign),
     };
   }
 

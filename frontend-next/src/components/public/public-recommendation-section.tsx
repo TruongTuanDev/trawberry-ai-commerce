@@ -10,6 +10,14 @@ import {
   type RecommendationProductItem,
 } from "@/lib/public-api";
 
+function createRecommendationEventKey(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}:${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+}
+
 export function PublicRecommendationSection({
   titleKey,
   items,
@@ -52,6 +60,9 @@ export function PublicRecommendationSection({
         rank: item.rank ?? index + 1,
         score: item.score ?? undefined,
         guestSessionId,
+        idempotencyKey: `imp:${impressionKey}:${item.product.id}`,
+        sponsored: item.sponsored ?? false,
+        trackingToken: item.trackingToken ?? null,
       });
     });
   }, [algorithm, items, placement, sourceProductId, trackingEnabled]);
@@ -96,9 +107,21 @@ export function PublicRecommendationSection({
                   rank: item.rank ?? index + 1,
                   score: item.score ?? undefined,
                   guestSessionId: getGuestSessionId(),
+                  idempotencyKey: createRecommendationEventKey(
+                    `click:${placement}:${item.product.id}`,
+                  ),
+                  sponsored: item.sponsored ?? false,
+                  trackingToken: item.trackingToken ?? null,
                 });
               }}
             />
+            {item.sponsored ? (
+              <div className="px-1">
+                <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Sponsored
+                </span>
+              </div>
+            ) : null}
             {showExplainability && item.scoreExplanation ? (
               <div
                 className="rounded-[1.25rem] border border-dashed border-[var(--border)] bg-white/80 px-3 py-3 text-xs text-[var(--muted)]"

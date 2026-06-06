@@ -125,6 +125,8 @@ export type RecommendationProductItem = {
   rank: number;
   score: number | null;
   reasonCodes: string[];
+  sponsored?: boolean;
+  trackingToken?: string | null;
   scoreExplanation?: {
     algorithm: string;
     finalScore: number | null;
@@ -1089,6 +1091,9 @@ type TrackRecommendationEventPayload = {
   rank?: number;
   score?: number;
   guestSessionId?: string;
+  idempotencyKey?: string;
+  sponsored?: boolean;
+  trackingToken?: string | null;
 };
 
 type TrackVisualSearchEventPayload = {

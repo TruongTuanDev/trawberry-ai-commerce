@@ -1,5 +1,55 @@
 # Campaigns
 
+## Phase 4.3 V1 completion
+
+Phase 4.3 completes the first demo-ready sponsored campaign loop for the active `backend-nest` + `frontend-next` stack.
+
+Added in this phase:
+
+- active campaign targets now feed sponsored recommendation ranking when all safety checks pass
+- recommendation responses can include a safe public `sponsored` marker plus an opaque `trackingToken`
+- sponsored recommendation events are attributed back to:
+  - `campaignId`
+  - `shopId`
+  - `productId`
+  - scenario type
+  - billing mode
+- CPC click charging now writes transactional `BillingLedgerEntry` rows
+- campaign spend, charged clicks, remaining budget, wallet-blocked state, and budget-exhausted state are now computed and returned safely to seller tooling
+- seller performance APIs now include:
+  - `GET /api/seller/shops/:shopId/campaigns/:campaignId/performance`
+  - `GET /api/seller/shops/:shopId/campaigns/:campaignId/events`
+- seller UI at `/seller/campaigns` now shows:
+  - budget limit
+  - spent amount
+  - remaining budget
+  - billing mode
+  - billable and charged click counts
+  - recent sponsored event history
+
+V1 behavior:
+
+- only eligible active campaigns can influence sponsored ranking
+- sponsored boost remains additive and bounded
+- CPC charges happen on click only
+- CPM impressions are tracked but not auto-charged yet
+- `fixed` and `none` do not auto-charge
+- insufficient wallet balance blocks charging
+- exhausted budget blocks further sponsored serving for CPC campaigns
+- public storefront pages never expose wallet balances or campaign billing internals
+
+V1 demo flow:
+
+1. Open `/seller/campaigns`
+2. Create a draft campaign
+3. Add one or more published product targets from the same shop
+4. Set billing mode to `cpc`
+5. Set an optional `budgetLimit`
+6. Activate the campaign
+7. Trigger recommendation impressions/clicks from public recommendation sections
+8. Confirm `/seller/campaigns` shows spend and recent event activity
+9. Confirm `/seller/billing` shows the corresponding ledger row for charged clicks
+
 ## Phase 4.1 scope
 
 Phase 4.1 adds a campaign management foundation for the active `backend-nest` + `frontend-next` stack only.

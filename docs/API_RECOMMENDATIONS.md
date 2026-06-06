@@ -1,5 +1,28 @@
 # API Recommendations
 
+## Phase 4.3 recommendation attribution update
+
+Recommendation tracking now supports the V1 sponsored campaign billing loop while keeping public read APIs backward compatible.
+
+Public response additions:
+
+- recommendation items may include `sponsored: true`
+- sponsored items may also include a safe opaque `trackingToken`
+
+Public tracking additions:
+
+- `POST /api/public/recommendations/events` now accepts optional:
+  - `idempotencyKey`
+  - `sponsored`
+  - `trackingToken`
+
+Safety rules:
+
+- public payloads still do not expose wallet balances, campaign budget details, or seller billing internals
+- the backend never trusts client-supplied cost data
+- CPC cost is calculated on the backend only
+- idempotency is enforced via `idempotencyKey`
+
 ## Phase 2 and Phase 3.3 Scope
 
 This document covers the Phase 2 smart ranking rollout plus the Phase 3 sponsored ranking foundation through Phase 3.3 campaign-readiness contract finalization for public product recommendations.
