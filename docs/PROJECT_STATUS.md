@@ -1,5 +1,32 @@
 # Project Status
 
+## Seller Wallet and Billing Ledger Foundation Phase 4.2 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Billing stack now supports:
+  - shop-scoped `SellerWallet` persistence
+  - immutable `BillingLedgerEntry` rows
+  - transactional wallet mutation primitives for future controlled billing flows
+  - seller billing APIs at:
+    - `/api/seller/shops/:shopId/billing/wallet`
+    - `/api/seller/shops/:shopId/billing/ledger`
+  - seller UI at `/seller/billing` for wallet summary and ledger history
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - targeted backend billing and campaign regressions: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - no real charging, top-up, budget deduction, or attribution settlement exists yet by design
+  - recommendation ranking still does not write sponsored attribution events or spend into this billing foundation
+- Next recommended phase:
+  - Phase 4.3: Sponsored Impression / Click Attribution
+
 ## Campaign Management Foundation Phase 4.1 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

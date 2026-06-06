@@ -323,6 +323,48 @@ export type SellerFinanceInvoice = {
   updatedAt: string;
 };
 
+export type SellerWalletStatus = "active" | "frozen" | "closed";
+export type BillingLedgerEntryType =
+  | "credit"
+  | "debit"
+  | "reserve"
+  | "release"
+  | "refund"
+  | "adjustment";
+
+export type SellerBillingWallet = {
+  id: string;
+  shopId: string;
+  balance: string;
+  reservedBalance: string;
+  availableBalance: string;
+  currency: string;
+  status: SellerWalletStatus | string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SellerBillingLedgerEntry = {
+  id: string;
+  walletId: string;
+  shopId: string;
+  type: BillingLedgerEntryType | string;
+  amount: string;
+  currency: string;
+  balanceBefore: string;
+  balanceAfter: string;
+  reservedBefore: string;
+  reservedAfter: string;
+  referenceType: string | null;
+  referenceId: string | null;
+  description: string | null;
+  campaign: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+};
+
 export type SellerCampaignScenarioType = "home" | "similar" | "search";
 export type SellerCampaignStatus =
   | "draft"
@@ -1340,6 +1382,26 @@ export async function getSellerFinanceInvoices(
 ) {
   return apiRequest<SellerFinanceInvoice[]>(
     `/api/seller/shops/${shopId}/invoices`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function getSellerBillingWallet(shopId: string, token?: string) {
+  return apiRequest<SellerBillingWallet>(
+    `/api/seller/shops/${shopId}/billing/wallet`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function getSellerBillingLedger(shopId: string, token?: string) {
+  return apiRequest<SellerBillingLedgerEntry[]>(
+    `/api/seller/shops/${shopId}/billing/ledger`,
     {
       method: "GET",
       token,

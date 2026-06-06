@@ -204,22 +204,34 @@ Current behavior:
 8. Confirm billing placeholders remain non-charging
 9. Confirm public pages do not expose campaign metadata
 
-## What Phase 4.2 should add
+## Phase 4.2 wallet and ledger connection
 
-Phase 4.2 should connect this foundation to a seller wallet and billing ledger without breaking current ownership or lifecycle rules.
+Phase 4.2 now adds a billing foundation without enabling real charging yet.
 
-Recommended Phase 4.2 work:
+Current campaign-to-billing relationship:
 
-- seller wallet balance model
-- immutable billing ledger entries
-- safe attribution event model for campaign clicks/impressions
-- non-blocking spend snapshot fields per campaign
-- budget consumption logic based on ledger writes, not ad hoc counters
-- clear internal reconciliation between:
+- campaign `budgetLimit` still remains a placeholder
+- ledger rows may optionally reference a `campaignId`
+- no campaign mutation automatically writes wallet or ledger data yet
+- no campaign activation or ranking flow deducts spend yet
+
+This keeps Phase 4.1 campaign ownership and lifecycle behavior intact while making future billing reconciliation possible.
+
+## What Phase 4.3 should add
+
+Phase 4.3 should connect sponsored impression and click attribution to campaigns plus the new wallet/ledger foundation without breaking current ownership or public recommendation contracts.
+
+Recommended Phase 4.3 work:
+
+- immutable sponsored attribution event model
+- attribution-to-ledger settlement rules
+- campaign-linked wallet mutations for billable events
+- safe spend snapshots or derived budget usage views
+- explicit reconciliation between:
   - campaign
   - campaign target
-  - wallet
-  - ledger
   - attribution event
+  - wallet
+  - billing ledger
 
-Phase 4.2 should still keep public recommendation APIs backward compatible.
+Phase 4.3 should still keep public recommendation APIs backward compatible and avoid leaking private billing data.

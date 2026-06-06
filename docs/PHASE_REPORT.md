@@ -1,5 +1,100 @@
 # Phase Report
 
+## 2026-06-07 Seller Wallet and Billing Ledger Foundation Phase 4.2
+
+- Status: Implemented on current branch
+- Scope:
+  - added a shop-scoped seller billing foundation for the active NestJS + Next.js stack only
+  - added Prisma-backed billing tables:
+    - `SellerWallet`
+    - `BillingLedgerEntry`
+  - added seller billing APIs under:
+    - `GET /api/seller/shops/:shopId/billing/wallet`
+    - `GET /api/seller/shops/:shopId/billing/ledger`
+  - implemented transactional billing service primitives for:
+    - wallet auto-create
+    - credit
+    - debit
+    - reserve
+    - release reserved
+    - refund
+    - ledger listing
+  - enforced money and safety rules:
+    - Prisma `Decimal` money storage
+    - two-decimal rounding
+    - negative balance blocked by default
+    - negative reserved balance blocked
+    - reserved balance cannot exceed total balance
+    - wallet writes and ledger writes happen together in one transaction
+  - kept billing ownership aligned to existing seller shop patterns through `ShopAccessGuard`
+  - added seller UI at `/seller/billing` for:
+    - wallet balance
+    - reserved balance
+    - available balance
+    - wallet status
+    - ledger history
+    - explicit Phase 4.2 foundation messaging
+  - added regression coverage for:
+    - wallet auto create
+    - credit
+    - debit
+    - insufficient debit rejection
+    - reserve
+    - insufficient reserve rejection
+    - release reserved
+    - refund
+    - ledger entry creation per mutation
+    - balance before/after correctness
+    - reserved before/after correctness
+    - seller ownership enforcement on wallet/ledger reads
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no live recommendation spend charging or budget deduction was introduced
+  - no public recommendation payload changed
+  - no legacy `strawberry-*` apps were modified
+- Handoff:
+  - Phase 4.2 provides the accounting primitives needed before sponsored attribution can charge anything safely.
+  - Implemented:
+    - shop-scoped wallet model
+    - immutable billing ledger model
+    - transactional mutation primitives
+    - seller wallet + ledger visibility
+  - Intentionally not implemented:
+    - payment gateway UI
+    - top-up flow
+    - automatic campaign charging
+    - sponsored click/impression attribution
+    - budget consumption logic
+    - invoice workflow for this wallet layer
+- Local QA guide:
+  - enable the local backend and frontend runtime
+  - open `/seller/billing`
+  - pick a seller shop
+  - confirm the wallet auto-creates when first opened
+  - confirm the page shows zero balances and `active` status by default
+  - confirm the ledger safely shows an empty state before any mutations
+  - confirm another seller account cannot open the same shop wallet route
+  - use future internal service/manual tooling only after later phases expose controlled write paths
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run prisma:db:push`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - targeted backend billing and campaign regression tests: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - no live write endpoint for wallet funding is exposed yet by design
+  - no campaign or recommendation attribution writes into this billing foundation yet
+  - no budget consumption or reconciliation dashboard exists yet
+- Next recommended phase:
+  - Phase 4.3: Sponsored Impression / Click Attribution
+
 ## 2026-06-07 Campaign Management Foundation Phase 4.1
 
 - Status: Implemented on current branch

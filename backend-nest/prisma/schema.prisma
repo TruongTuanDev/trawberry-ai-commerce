@@ -273,6 +273,8 @@ model Shop {
   wbSyncRuns            WbSyncRun[]
   commissionSettings    ShopCommissionSetting[]
   sponsoredCampaigns    SponsoredCampaign[]
+  sellerWallet          SellerWallet?
+  billingLedgerEntries  BillingLedgerEntry[]
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
   sellerMonthlyInvoices SellerMonthlyInvoice[]
   returnRefundCases     ReturnRefundCase[]
@@ -399,6 +401,7 @@ model SponsoredCampaign {
   updatedAt     DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
   shop          Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
   targets       SponsoredCampaignProduct[]
+  billingLedgerEntries BillingLedgerEntry[]
 
   @@index([shopId, status, updatedAt])
   @@index([shopId, createdAt])
@@ -420,6 +423,50 @@ model SponsoredCampaignProduct {
   @@index([campaignId, status, updatedAt])
   @@index([productId, status])
   @@map("sponsored_campaign_products")
+}
+
+model SellerWallet {
+  id              String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId          String             @unique @map("shop_id") @db.Uuid
+  balance         Decimal            @default(0) @db.Decimal(14, 2)
+  reservedBalance Decimal            @default(0) @map("reserved_balance") @db.Decimal(14, 2)
+  currency        String             @default("RUB") @db.VarChar(10)
+  status          String             @default("active") @db.VarChar(50)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop            Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  ledgerEntries   BillingLedgerEntry[]
+
+  @@index([status, createdAt])
+  @@map("seller_wallets")
+}
+
+model BillingLedgerEntry {
+  id             String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  walletId       String             @map("wallet_id") @db.Uuid
+  shopId         String             @map("shop_id") @db.Uuid
+  campaignId     String?            @map("campaign_id") @db.Uuid
+  type           String             @db.VarChar(50)
+  amount         Decimal            @db.Decimal(14, 2)
+  currency       String             @default("RUB") @db.VarChar(10)
+  balanceBefore  Decimal            @map("balance_before") @db.Decimal(14, 2)
+  balanceAfter   Decimal            @map("balance_after") @db.Decimal(14, 2)
+  reservedBefore Decimal            @map("reserved_before") @db.Decimal(14, 2)
+  reservedAfter  Decimal            @map("reserved_after") @db.Decimal(14, 2)
+  referenceType  String?            @map("reference_type") @db.VarChar(100)
+  referenceId    String?            @map("reference_id") @db.VarChar(255)
+  description    String?            @db.VarChar(500)
+  metadata       Json?
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  wallet         SellerWallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  shop           Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  campaign       SponsoredCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([walletId, createdAt])
+  @@index([shopId, createdAt])
+  @@index([campaignId, createdAt])
+  @@index([type, createdAt])
+  @@map("billing_ledger_entries")
 }
 
 model ProductViewLog {

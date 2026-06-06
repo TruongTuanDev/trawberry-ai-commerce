@@ -1,5 +1,67 @@
 # Seller Finance API
 
+## 2026-06-07 Seller Billing Foundation Phase 4.2
+
+Seller finance now includes a separate shop-scoped wallet and billing ledger foundation for future sponsored billing.
+
+New seller billing endpoints:
+
+- `GET /api/seller/shops/:shopId/billing/wallet`
+- `GET /api/seller/shops/:shopId/billing/ledger`
+
+Current behavior:
+
+- wallet auto-creates on first access for an owned shop
+- billing data is shop-scoped and seller-guarded
+- responses expose only safe wallet and ledger fields
+- no real charging, top-up, or spend deduction is active yet
+
+Wallet response:
+
+```json
+{
+  "id": "uuid",
+  "shopId": "uuid",
+  "balance": "0",
+  "reservedBalance": "0",
+  "availableBalance": "0",
+  "currency": "RUB",
+  "status": "active",
+  "createdAt": "2026-06-07T10:00:00.000Z",
+  "updatedAt": "2026-06-07T10:00:00.000Z"
+}
+```
+
+Ledger response row:
+
+```json
+{
+  "id": "uuid",
+  "walletId": "uuid",
+  "shopId": "uuid",
+  "type": "credit",
+  "amount": "100",
+  "currency": "RUB",
+  "balanceBefore": "0",
+  "balanceAfter": "100",
+  "reservedBefore": "0",
+  "reservedAfter": "0",
+  "referenceType": "manual_top_up",
+  "referenceId": "seed-1",
+  "description": "Seed wallet",
+  "campaign": null,
+  "createdAt": "2026-06-07T10:00:00.000Z"
+}
+```
+
+Safety notes:
+
+- money values use Prisma `Decimal`
+- negative reserved balance is blocked
+- negative balance is blocked by default
+- wallet and ledger writes are designed to be transactional
+- no checkout, order, or payment flow writes to this foundation yet
+
 ## 2026-05-22 Return / Refund / Dispute Foundation
 
 Seller finance now projects refund adjustments for direct-to-seller payment flows.

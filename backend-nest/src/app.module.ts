@@ -25,6 +25,7 @@ import { WildberriesImportsModule } from './modules/wb-imports/wildberries-impor
 import { WbSyncModule } from './modules/wb-sync/wb-sync.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { CustomerAccountModule } from './modules/customer-account/customer-account.module';
 import { SellerFinanceModule } from './modules/seller-finance/seller-finance.module';
 import { ReturnRefundsModule } from './modules/return-refunds/return-refunds.module';
@@ -63,6 +64,7 @@ import { HealthController } from './health.controller';
     WbSyncModule,
     CategoriesModule,
     CampaignsModule,
+    BillingModule,
     CustomerAccountModule,
     SellerFinanceModule,
     ReturnRefundsModule,
