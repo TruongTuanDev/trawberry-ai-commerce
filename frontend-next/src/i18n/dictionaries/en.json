@@ -1950,6 +1950,30 @@
     "id": "ID",
     "actions": "Actions"
   },
+  "adminShell": {
+    "checkingAccess": "Checking admin access...",
+    "badge": "Admin workspace",
+    "title": "Admin center",
+    "loggedInAs": "Signed in as {{email}}",
+    "closeMenu": "Close menu",
+    "nav": {
+      "dashboard": "Dashboard",
+      "notifications": "Notifications",
+      "sellers": "Sellers",
+      "users": "Users",
+      "deliveries": "Deliveries",
+      "payments": "Payments",
+      "returns": "Returns",
+      "messages": "Messages",
+      "reviews": "Reviews",
+      "finance": "Finance",
+      "queues": "Queues",
+      "supportCases": "Support cases",
+      "reports": "Reports",
+      "homepageSlides": "Homepage slides",
+      "aiSettings": "AI settings"
+    }
+  },
   "errors": {
     "default": "Something went wrong. Please try again.",
     "USER_HAS_DEPENDENCIES": "This user has related data and cannot be deleted. Disable the user instead.",

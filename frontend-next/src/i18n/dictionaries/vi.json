@@ -333,20 +333,20 @@
   },
   "public": {
     "reviews": {
-      "sectionKicker": "ÄÃ¡nh giÃ¡ tá»« ngÆ°á»i mua",
-      "title": "ÄÃ¡nh giÃ¡",
-      "emptyLong": "Sáº£n pháº©m nÃ y chÆ°a cÃ³ Ä‘Ã¡nh giÃ¡ nÃ o.",
-      "loading": "Äang táº£i Ä‘Ã¡nh giÃ¡...",
-      "loadFailed": "KhÃ´ng thá»ƒ táº£i Ä‘Ã¡nh giÃ¡.",
-      "verifiedPurchase": "ÄÃ£ mua xÃ¡c minh",
-      "sellerReply": "Pháº£n há»“i tá»« seller",
+      "sectionKicker": "Đánh giá từ người mua",
+      "title": "Đánh giá",
+      "emptyLong": "Sản phẩm này chưa có đánh giá nào.",
+      "loading": "Đang tải đánh giá...",
+      "loadFailed": "Không thể tải đánh giá.",
+      "verifiedPurchase": "Đã mua xác minh",
+      "sellerReply": "Phản hồi từ seller",
       "filters": {
-        "all": "Táº¥t cáº£ Ä‘Ã¡nh giÃ¡"
+        "all": "Tất cả đánh giá"
       },
       "fit": {
-        "RUNS_SMALL": "Form nhá»",
-        "TRUE_TO_SIZE": "ÄÃºng size",
-        "RUNS_LARGE": "Form rá»™ng"
+        "RUNS_SMALL": "Form nhỏ",
+        "TRUE_TO_SIZE": "Đúng size",
+        "RUNS_LARGE": "Form rộng"
       }
     }
   },
@@ -1067,6 +1067,30 @@
       "shopId": "Shop ID",
       "invoice": "Hóa đơn",
       "markRead": "Đánh dấu đã đọc"
+    }
+  },
+  "adminShell": {
+    "checkingAccess": "Đang kiểm tra quyền admin...",
+    "badge": "Khu vực admin",
+    "title": "Trung tâm admin",
+    "loggedInAs": "Đăng nhập bằng {{email}}",
+    "closeMenu": "Đóng menu",
+    "nav": {
+      "dashboard": "Tổng quan",
+      "notifications": "Thông báo",
+      "sellers": "Seller",
+      "users": "Người dùng",
+      "deliveries": "Giao hàng",
+      "payments": "Thanh toán",
+      "returns": "Hoàn trả",
+      "messages": "Tin nhắn",
+      "reviews": "Đánh giá",
+      "finance": "Tài chính",
+      "queues": "Hàng đợi",
+      "supportCases": "Case hỗ trợ",
+      "reports": "Báo cáo",
+      "homepageSlides": "Banner trang chủ",
+      "aiSettings": "Cài đặt AI"
     }
   }
 }

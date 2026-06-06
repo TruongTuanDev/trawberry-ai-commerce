@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ProductCard } from "@/components/public/product-card";
-import { PromoSlider } from "@/components/public/promo-slider";
+import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
-import { getPublicProducts, type PublicProduct } from "@/lib/public-api";
+import {
+  getPublicHomepageSlides,
+  getPublicProducts,
+  type PublicHomepageSlide,
+  type PublicProduct,
+} from "@/lib/public-api";
 import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
 import { translate } from "@/i18n/translate";
 
@@ -39,8 +44,17 @@ async function loadHomepageCatalog() {
   }
 }
 
+async function loadHomepageSlides() {
+  try {
+    return await getPublicHomepageSlides();
+  } catch {
+    return [] as PublicHomepageSlide[];
+  }
+}
+
 export default async function HomePage() {
   const { items, total } = await loadHomepageCatalog();
+  const slides = await loadHomepageSlides();
   const cookieStore = await cookies();
   const locale = normalizeLocale(cookieStore.get(LOCALE_COOKIE_KEY)?.value) ?? "ru";
 
@@ -48,7 +62,7 @@ export default async function HomePage() {
     <PublicShell tone="hero">
       <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-7xl space-y-8">
-          <PromoSlider />
+          <PublicHomepageHeroSlider initialSlides={slides} />
 
           <section className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
