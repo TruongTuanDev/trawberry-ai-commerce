@@ -11,8 +11,17 @@ import {
   RecommendationQaDiffRequestDto,
   RecommendationQaSnapshotDto,
 } from './dto/recommendation-qa-diff.dto';
-import { RecommendationQaPackDto } from './dto/recommendation-qa-pack.dto';
+import {
+  RecommendationQaPackDto,
+  RecommendationQaPackThresholdsDto,
+} from './dto/recommendation-qa-pack.dto';
 import { RecommendationQueryDto } from './dto/recommendation-query.dto';
+import {
+  RECOMMENDATION_QA_BASELINE_CATALOG,
+  RECOMMENDATION_QA_THRESHOLD_PRESETS,
+  type RecommendationQaBaselineCatalogEntry,
+  type RecommendationQaThresholdPreset,
+} from './recommendation-qa-config';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
 import { TrackSearchDto } from './dto/track-search.dto';
@@ -262,6 +271,47 @@ export class RecommendationsService {
     };
   }
 
+  getQaThresholdPresets() {
+    if (!this.isQaToolsEnabled()) {
+      throw new NotFoundException();
+    }
+
+    return {
+      presets: RECOMMENDATION_QA_THRESHOLD_PRESETS.map((preset) => ({
+        ...preset,
+        thresholds: { ...preset.thresholds },
+      })),
+    };
+  }
+
+  getQaBaselineCatalog() {
+    if (!this.isQaToolsEnabled()) {
+      throw new NotFoundException();
+    }
+
+    return {
+      catalog: RECOMMENDATION_QA_BASELINE_CATALOG.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        description: entry.description,
+        scenarioType: entry.scenarioType,
+        query: entry.query,
+        productId: entry.productId,
+        defaultLimit: entry.defaultLimit,
+        recommendedThresholdPresetId: entry.recommendedThresholdPresetId,
+        mockPack: entry.mockPack
+          ? {
+              packName: entry.mockPack.packName,
+              description: entry.mockPack.description,
+              thresholdPresetId: entry.mockPack.thresholdPresetId,
+              baselineSnapshot: entry.mockPack.baselineSnapshot,
+              candidateSnapshot: entry.mockPack.candidateSnapshot,
+            }
+          : null,
+      })),
+    };
+  }
+
   diffRankingSnapshots(body: RecommendationQaDiffRequestDto) {
     if (!this.isQaToolsEnabled()) {
       throw new NotFoundException();
@@ -298,20 +348,43 @@ export class RecommendationsService {
         'Candidate snapshot scenarioType differs from the QA pack scenarioType.',
       );
     }
+    const appliedThresholdPreset = this.resolveQaThresholdPreset(
+      body.thresholdPresetId,
+    );
+    if (body.thresholdPresetId && !appliedThresholdPreset) {
+      notices.push('Threshold preset id is unknown and was ignored.');
+    }
+    const catalogEntry = this.resolveQaBaselineCatalogEntry(body.catalogId);
+    if (body.catalogId && !catalogEntry) {
+      notices.push('Baseline catalog id is unknown and was ignored.');
+    }
+    if (catalogEntry && catalogEntry.scenarioType !== body.scenarioType) {
+      notices.push(
+        'Baseline catalog scenarioType differs from the QA pack scenarioType.',
+      );
+    }
 
     const diff = this.buildSnapshotDiffResult({
       baseline: body.baselineSnapshot,
       candidate: body.candidateSnapshot,
     });
-    const evaluation = this.evaluateQaPackThresholds(
-      diff,
+    const resolvedThresholds = this.resolveQaPackThresholds(
+      appliedThresholdPreset,
       body.expectedSummaryThresholds,
     );
+    const evaluation = this.evaluateQaPackThresholds(diff, resolvedThresholds);
 
     return {
       valid: true,
       pack: body,
       notices,
+      appliedThresholdPreset: appliedThresholdPreset
+        ? {
+            ...appliedThresholdPreset,
+            thresholds: { ...appliedThresholdPreset.thresholds },
+          }
+        : null,
+      resolvedThresholds,
       evaluation,
     };
   }
@@ -1132,6 +1205,44 @@ export class RecommendationsService {
         : ('fail' as const),
       summary,
       thresholds: evaluations,
+    };
+  }
+
+  private resolveQaThresholdPreset(
+    presetId?: string | null,
+  ): RecommendationQaThresholdPreset | null {
+    if (!presetId?.trim()) {
+      return null;
+    }
+
+    return (
+      RECOMMENDATION_QA_THRESHOLD_PRESETS.find(
+        (preset) => preset.id === presetId.trim(),
+      ) ?? null
+    );
+  }
+
+  private resolveQaBaselineCatalogEntry(
+    catalogId?: string | null,
+  ): RecommendationQaBaselineCatalogEntry | null {
+    if (!catalogId?.trim()) {
+      return null;
+    }
+
+    return (
+      RECOMMENDATION_QA_BASELINE_CATALOG.find(
+        (entry) => entry.id === catalogId.trim(),
+      ) ?? null
+    );
+  }
+
+  private resolveQaPackThresholds(
+    preset: RecommendationQaThresholdPreset | null,
+    explicitThresholds?: RecommendationQaPackDto['expectedSummaryThresholds'],
+  ): RecommendationQaPackThresholdsDto {
+    return {
+      ...(preset?.thresholds ?? {}),
+      ...(explicitThresholds ?? {}),
     };
   }
 

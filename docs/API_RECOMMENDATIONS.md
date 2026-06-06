@@ -111,6 +111,13 @@ Internal QA comparison mode:
   - cookies
   - private tracking payloads
   - private shop/internal-only fields
+- QA preset and baseline catalog endpoints also never return:
+  - user ids
+  - session ids
+  - cookies
+  - private tracking payloads
+  - private shop/internal-only fields
+  - real production snapshots
 - QA packs committed to the repo must contain only safe mock/sample snapshot data
 
 ## Read APIs
@@ -569,6 +576,8 @@ QA pack structure:
 - `description`
 - `scenarioType`
 - `query` or `productId` when applicable
+- optional `catalogId`
+- optional `thresholdPresetId`
 - `limit`
 - `baselineSnapshot`
 - `candidateSnapshot`
@@ -584,6 +593,15 @@ Supported threshold keys:
 - `maxAbsoluteRankMovement`
 - `minUnchangedCount`
 - `maxTotalChangedCount`
+
+Preset behavior:
+
+- `thresholdPresetId` is optional
+- if present, the backend expands the selected preset into concrete thresholds
+- `expectedSummaryThresholds` can still override or extend the preset values
+- validation response includes:
+  - `appliedThresholdPreset`
+  - `resolvedThresholds`
 
 QA pack example:
 
@@ -654,6 +672,74 @@ Threshold interpretation:
 - `minUnchangedCount` passes when the actual value is `>= expectedValue`
 - if no thresholds are provided, `overallStatus` becomes `not_evaluated`
 
+### `GET /api/internal/recommendations/presets`
+
+Purpose:
+
+- return safe reusable QA threshold preset definitions for internal recommendation audits
+
+Behavior:
+
+- returns `404` when `RECOMMENDATION_QA_TOOLS_ENABLED` is off
+- returns safe preset metadata only:
+  - `id`
+  - `name`
+  - `description`
+  - `thresholds`
+
+Current preset ids:
+
+- `strict`
+- `balanced`
+- `lenient`
+- `search-intent-sensitive`
+- `similar-products-sensitive`
+
+### `GET /api/internal/recommendations/baseline-catalog`
+
+Purpose:
+
+- return a safe internal baseline catalog of reusable recommendation QA scenarios
+
+Behavior:
+
+- returns `404` when `RECOMMENDATION_QA_TOOLS_ENABLED` is off
+- returns allowlisted catalog metadata only:
+  - `id`
+  - `name`
+  - `description`
+  - `scenarioType`
+  - `query`
+  - `productId`
+  - `defaultLimit`
+  - `recommendedThresholdPresetId`
+  - optional `mockPack`
+- `mockPack` can contain only safe mock/sample snapshots, never real exported production data
+
+Catalog example:
+
+```json
+{
+  "catalog": [
+    {
+      "id": "search-intent-stability",
+      "name": "Search intent stability",
+      "description": "Safe mock search audit scenario for tracking intent drift and added results.",
+      "scenarioType": "search",
+      "query": "jacket",
+      "productId": null,
+      "defaultLimit": 4,
+      "recommendedThresholdPresetId": "search-intent-sensitive",
+      "mockPack": {
+        "packName": "Sample search QA pack",
+        "description": "Safe mock QA pack for repeatable search ranking audits with sample search intent data.",
+        "thresholdPresetId": "search-intent-sensitive"
+      }
+    }
+  ]
+}
+```
+
 Local QA threshold workflow:
 
 1. Enable internal QA flags:
@@ -664,18 +750,28 @@ Local QA threshold workflow:
    - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
 3. Start backend and frontend locally.
 4. Open `/admin/recommendations-qa`.
-5. Load one of the safe sample QA packs:
+5. Choose a threshold preset:
+   - `strict`
+   - `balanced`
+   - `lenient`
+   - `search-intent-sensitive`
+   - `similar-products-sensitive`
+6. Load one of the safe baseline catalog entries:
    - home ranking stability
    - search intent stability
    - similar products stability
-6. Review the validation result:
+7. Review the validation result:
    - `overallStatus`
    - per-threshold `actualValue`
    - per-threshold `expectedValue`
    - per-threshold `message`
-7. Run the snapshot diff using the hydrated baseline/candidate snapshots.
-8. Export the Markdown summary or print view for internal review.
-9. After future weight changes, repeat the same fixture pack or scenario and compare whether thresholds still pass.
+8. Run the snapshot diff using the hydrated baseline/candidate snapshots.
+9. Export the Markdown summary or print view for internal review.
+10. When creating a new safe catalog entry:
+   - keep only allowlisted scenario metadata
+   - use only safe mock/sample snapshots
+   - never commit real exported storefront snapshots
+11. After future weight changes, repeat the same catalog entry or pack and compare whether thresholds still pass.
 
 ## Rollout
 
@@ -689,6 +785,8 @@ Local QA threshold workflow:
    - optional QA comparison: call `GET /api/internal/recommendations/compare` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA snapshot export: call `GET /api/internal/recommendations/compare?export=true&format=json` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA snapshot diff: call `POST /api/internal/recommendations/diff` with two safe snapshot payloads after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - optional QA threshold preset list: call `GET /api/internal/recommendations/presets` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - optional QA baseline catalog list: call `GET /api/internal/recommendations/baseline-catalog` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA pack validation: call `POST /api/internal/recommendations/packs/validate` with a safe QA pack payload after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA threshold evaluation: inspect `evaluation.overallStatus` and `evaluation.thresholds[]` from the same QA pack validation response
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.

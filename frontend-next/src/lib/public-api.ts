@@ -217,6 +217,8 @@ export type RecommendationQaPack = {
   scenarioType: "home" | "similar" | "search";
   query?: string | null;
   productId?: string | null;
+  catalogId?: string | null;
+  thresholdPresetId?: string | null;
   limit: number;
   baselineSnapshot: RecommendationQaSnapshotResponse;
   candidateSnapshot: RecommendationQaSnapshotResponse;
@@ -232,10 +234,42 @@ export type RecommendationQaPack = {
   };
 };
 
+export type RecommendationQaThresholdPreset = {
+  id:
+    | "strict"
+    | "balanced"
+    | "lenient"
+    | "search-intent-sensitive"
+    | "similar-products-sensitive";
+  name: string;
+  description: string;
+  thresholds: NonNullable<RecommendationQaPack["expectedSummaryThresholds"]>;
+};
+
+export type RecommendationQaBaselineCatalogEntry = {
+  id: string;
+  name: string;
+  description: string;
+  scenarioType: "home" | "similar" | "search";
+  query: string | null;
+  productId: string | null;
+  defaultLimit: number;
+  recommendedThresholdPresetId: RecommendationQaThresholdPreset["id"];
+  mockPack: {
+    packName: string;
+    description: string;
+    thresholdPresetId: RecommendationQaThresholdPreset["id"];
+    baselineSnapshot: RecommendationQaSnapshotResponse;
+    candidateSnapshot: RecommendationQaSnapshotResponse;
+  } | null;
+};
+
 export type RecommendationQaPackValidationResponse = {
   valid: boolean;
   pack: RecommendationQaPack;
   notices: string[];
+  appliedThresholdPreset: RecommendationQaThresholdPreset | null;
+  resolvedThresholds: NonNullable<RecommendationQaPack["expectedSummaryThresholds"]>;
   evaluation: {
     overallStatus: "pass" | "fail" | "not_evaluated";
     summary: {
@@ -916,6 +950,24 @@ export async function validateRecommendationQaPack(payload: RecommendationQaPack
     {
       method: "POST",
       body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getRecommendationQaThresholdPresets() {
+  return apiRequest<{ presets: RecommendationQaThresholdPreset[] }>(
+    "/api/internal/recommendations/presets",
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getRecommendationQaBaselineCatalog() {
+  return apiRequest<{ catalog: RecommendationQaBaselineCatalogEntry[] }>(
+    "/api/internal/recommendations/baseline-catalog",
+    {
+      method: "GET",
     },
   );
 }

@@ -5,15 +5,18 @@ import { useState } from "react";
 import {
   diffRecommendationRankingSnapshots,
   validateRecommendationQaPack,
+  type RecommendationQaBaselineCatalogEntry,
   type RecommendationQaDiffResponse,
   type RecommendationQaPack,
   type RecommendationQaPackValidationResponse,
   type RecommendationQaSnapshotResponse,
+  type RecommendationQaThresholdPreset,
 } from "@/lib/public-api";
-import {
-  RECOMMENDATION_QA_BASELINE_FIXTURES,
-  RECOMMENDATION_QA_SAMPLE_PACKS,
-} from "@/lib/recommendation-qa-fixtures";
+
+type Props = {
+  presets: RecommendationQaThresholdPreset[];
+  baselineCatalog: RecommendationQaBaselineCatalogEntry[];
+};
 
 function formatSignedNumber(value: number | null) {
   if (value === null) {
@@ -72,6 +75,8 @@ function formatThresholdLabel(
 function buildMarkdownSummary(
   packValidation: RecommendationQaPackValidationResponse | null,
   diff: RecommendationQaDiffResponse,
+  selectedPreset: RecommendationQaThresholdPreset | null,
+  selectedCatalog: RecommendationQaBaselineCatalogEntry | null,
 ) {
   const topMovedUp = diff.items.filter((item) => item.status === "moved_up").slice(0, 5);
   const topMovedDown = diff.items
@@ -80,6 +85,7 @@ function buildMarkdownSummary(
   const added = diff.items.filter((item) => item.status === "added").slice(0, 5);
   const removed = diff.items.filter((item) => item.status === "removed").slice(0, 5);
   const evaluation = packValidation?.evaluation ?? null;
+  const appliedPreset = packValidation?.appliedThresholdPreset ?? selectedPreset;
 
   const thresholdLines = evaluation?.thresholds.length
     ? evaluation.thresholds.map(
@@ -88,11 +94,19 @@ function buildMarkdownSummary(
       )
     : ["- none"];
 
+  const resolvedThresholdLines = packValidation
+    ? Object.entries(packValidation.resolvedThresholds)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => `- ${formatThresholdLabel(key as never)}: ${value}`)
+    : ["- none"];
+
   const lines = [
     `# Recommendation QA Diff Summary`,
     ``,
     `- Pack: ${packValidation?.pack.packName ?? "Manual snapshot diff"}`,
     `- Scenario: ${packValidation?.pack.scenarioType ?? diff.scenario.baseline.scenarioType}`,
+    `- Catalog: ${selectedCatalog?.name ?? packValidation?.pack.catalogId ?? "none"}`,
+    `- Threshold preset: ${appliedPreset?.name ?? "none"}`,
     `- Baseline generatedAt: ${diff.scenario.baseline.generatedAt}`,
     `- Candidate generatedAt: ${diff.scenario.candidate.generatedAt}`,
     `- Total compared: ${diff.summary.totalItemsCompared}`,
@@ -101,6 +115,20 @@ function buildMarkdownSummary(
     `- Added: ${diff.summary.addedCount}`,
     `- Removed: ${diff.summary.removedCount}`,
     `- Unchanged: ${diff.summary.unchangedCount}`,
+    ``,
+    `## Preset thresholds`,
+    ...(appliedPreset
+      ? [
+          `- Preset id: ${appliedPreset.id}`,
+          `- Preset description: ${appliedPreset.description}`,
+          ...Object.entries(appliedPreset.thresholds)
+            .filter(([, value]) => value !== undefined)
+            .map(([key, value]) => `- ${formatThresholdLabel(key as never)}: ${value}`),
+        ]
+      : ["- none"]),
+    ``,
+    `## Resolved thresholds`,
+    ...resolvedThresholdLines,
     ``,
     `## Threshold evaluation`,
     `- Overall status: ${evaluation?.overallStatus ?? "not_evaluated"}`,
@@ -143,10 +171,17 @@ function buildMarkdownSummary(
   return lines.join("\n");
 }
 
-export function RecommendationRankingSnapshotDiffPanel() {
+export function RecommendationRankingSnapshotDiffPanel({
+  presets,
+  baselineCatalog,
+}: Props) {
   const [baselineText, setBaselineText] = useState("");
   const [candidateText, setCandidateText] = useState("");
   const [packText, setPackText] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState<string>(
+    presets.find((preset) => preset.id === "balanced")?.id ?? presets[0]?.id ?? "",
+  );
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string>("");
   const [validatedPack, setValidatedPack] =
     useState<RecommendationQaPackValidationResponse | null>(null);
   const [diffResult, setDiffResult] = useState<RecommendationQaDiffResponse | null>(
@@ -156,8 +191,25 @@ export function RecommendationRankingSnapshotDiffPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingPack, setIsValidatingPack] = useState(false);
 
+  const selectedPreset =
+    presets.find((preset) => preset.id === selectedPresetId) ?? null;
+  const selectedCatalog =
+    baselineCatalog.find((entry) => entry.id === selectedCatalogId) ?? null;
   const markdownSummary =
-    diffResult ? buildMarkdownSummary(validatedPack, diffResult) : "";
+    diffResult
+      ? buildMarkdownSummary(validatedPack, diffResult, selectedPreset, selectedCatalog)
+      : "";
+  const selectedPresetThresholds = selectedPreset
+    ? Object.entries(selectedPreset.thresholds).filter(([, value]) => value !== undefined)
+    : [];
+
+  function buildPackForValidation(input: RecommendationQaPack) {
+    return {
+      ...input,
+      catalogId: selectedCatalogId || input.catalogId || null,
+      thresholdPresetId: selectedPresetId || input.thresholdPresetId || null,
+    } satisfies RecommendationQaPack;
+  }
 
   async function handleCompare() {
     try {
@@ -186,11 +238,12 @@ export function RecommendationRankingSnapshotDiffPanel() {
     try {
       setIsValidatingPack(true);
       setError(null);
-      const pack = parseQaPack(nextPackText ?? packText);
+      const pack = buildPackForValidation(parseQaPack(nextPackText ?? packText));
       const validation = await validateRecommendationQaPack(pack);
       setValidatedPack(validation);
       setBaselineText(JSON.stringify(validation.pack.baselineSnapshot, null, 2));
       setCandidateText(JSON.stringify(validation.pack.candidateSnapshot, null, 2));
+      setPackText(JSON.stringify(validation.pack, null, 2));
     } catch (nextError) {
       setValidatedPack(null);
       setError(
@@ -223,6 +276,53 @@ export function RecommendationRankingSnapshotDiffPanel() {
     event.target.value = "";
   }
 
+  function loadCatalogEntry(entry: RecommendationQaBaselineCatalogEntry) {
+    setSelectedCatalogId(entry.id);
+    setSelectedPresetId(entry.recommendedThresholdPresetId);
+
+    const nextPack: RecommendationQaPack = {
+      packName: entry.mockPack?.packName ?? `${entry.name} QA pack`,
+      description: entry.mockPack?.description ?? entry.description,
+      scenarioType: entry.scenarioType,
+      query: entry.query,
+      productId: entry.productId,
+      catalogId: entry.id,
+      thresholdPresetId: entry.recommendedThresholdPresetId,
+      limit: entry.defaultLimit,
+      baselineSnapshot:
+        entry.mockPack?.baselineSnapshot ??
+        ({
+          scenarioType: entry.scenarioType,
+          placement: entry.scenarioType === "similar" ? "product_detail" : entry.scenarioType,
+          productId: entry.productId,
+          query: entry.query,
+          limit: entry.defaultLimit,
+          generatedAt: new Date().toISOString(),
+          comparedAlgorithms: ["rule_based_v1", "rule_based_v2"],
+          items: [],
+        } satisfies RecommendationQaSnapshotResponse),
+      candidateSnapshot:
+        entry.mockPack?.candidateSnapshot ??
+        ({
+          scenarioType: entry.scenarioType,
+          placement: entry.scenarioType === "similar" ? "product_detail" : entry.scenarioType,
+          productId: entry.productId,
+          query: entry.query,
+          limit: entry.defaultLimit,
+          generatedAt: new Date().toISOString(),
+          comparedAlgorithms: ["rule_based_v1", "rule_based_v2"],
+          items: [],
+        } satisfies RecommendationQaSnapshotResponse),
+    };
+
+    setPackText(JSON.stringify(nextPack, null, 2));
+    setBaselineText(JSON.stringify(nextPack.baselineSnapshot, null, 2));
+    setCandidateText(JSON.stringify(nextPack.candidateSnapshot, null, 2));
+    setValidatedPack(null);
+    setDiffResult(null);
+    setError(null);
+  }
+
   return (
     <section className="space-y-5 rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-sm">
       <div className="space-y-2">
@@ -240,31 +340,113 @@ export function RecommendationRankingSnapshotDiffPanel() {
       </div>
 
       <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Threshold presets
+            </p>
+            <p className="text-sm leading-7 text-[var(--muted)]">
+              Choose a reusable preset first, then validate a QA pack against the
+              expanded threshold set.
+            </p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem),1fr]">
+            <label className="space-y-2 text-sm">
+              <span className="font-semibold text-[var(--foreground)]">Preset</span>
+              <select
+                value={selectedPresetId}
+                onChange={(event) => setSelectedPresetId(event.target.value)}
+                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3"
+              >
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                {selectedPreset?.name ?? "No preset selected"}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                {selectedPreset?.description ?? "Select a preset to inspect the safe threshold defaults."}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                {selectedPresetThresholds.length ? (
+                  selectedPresetThresholds.map(([key, value]) => (
+                    <span
+                      key={key}
+                      className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1"
+                    >
+                      {formatThresholdLabel(key as never)} = {value}
+                    </span>
+                  ))
+                ) : (
+                  <span>No preset thresholds</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            Baseline catalog
+          </p>
+          <p className="text-sm leading-7 text-[var(--muted)]">
+            Use these safe internal baseline catalog entries to reuse scenario
+            metadata, recommended presets, and optional mock snapshots.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          {baselineCatalog.map((entry) => (
+            <article
+              key={entry.id}
+              className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4"
+            >
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                {entry.name}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                {entry.description}
+              </p>
+              <p className="mt-3 text-xs text-[var(--muted)]">
+                {entry.scenarioType}
+                {entry.query ? ` · q=${entry.query}` : ""}
+                {entry.productId ? ` · productId=${entry.productId}` : ""}
+                {` · limit=${entry.defaultLimit}`}
+              </p>
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Recommended preset: {entry.recommendedThresholdPresetId}
+              </p>
+              <button
+                type="button"
+                onClick={() => loadCatalogEntry(entry)}
+                className="mt-4 inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+              >
+                Load catalog scenario
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
               QA packs
             </p>
             <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-              Load a safe sample pack or paste/import a QA pack JSON that bundles
-              scenario metadata, baseline snapshot, candidate snapshot, and optional thresholds.
+              Paste/import a QA pack JSON or start from a baseline catalog entry.
+              The selected preset is applied during validation and explicit threshold
+              fields in the pack can still override preset values.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {RECOMMENDATION_QA_SAMPLE_PACKS.map((fixture) => (
-              <button
-                key={fixture.id}
-                type="button"
-                onClick={() => {
-                  const sampleText = JSON.stringify(fixture.pack, null, 2);
-                  setPackText(sampleText);
-                  void handleValidatePack(sampleText);
-                }}
-                className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
-              >
-                {fixture.label}
-              </button>
-            ))}
             <label className="cursor-pointer rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
               Import pack JSON
               <input
@@ -302,6 +484,10 @@ export function RecommendationRankingSnapshotDiffPanel() {
               <p className="mt-2 text-[var(--muted)]">
                 Scenario: {validatedPack.pack.scenarioType} · limit {validatedPack.pack.limit}
               </p>
+              <p className="mt-2 text-[var(--muted)]">
+                Catalog: {validatedPack.pack.catalogId ?? "none"} · preset{" "}
+                {validatedPack.appliedThresholdPreset?.id ?? validatedPack.pack.thresholdPresetId ?? "none"}
+              </p>
               {validatedPack.notices.length ? (
                 <div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
                   {validatedPack.notices.map((notice) => (
@@ -309,6 +495,37 @@ export function RecommendationRankingSnapshotDiffPanel() {
                   ))}
                 </div>
               ) : null}
+            </div>
+
+            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                    Resolved threshold set
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Expanded from the selected preset plus any explicit pack-level
+                    threshold overrides.
+                  </p>
+                </div>
+                {validatedPack.appliedThresholdPreset ? (
+                  <div className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-sm">
+                    {validatedPack.appliedThresholdPreset.name}
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                {Object.entries(validatedPack.resolvedThresholds)
+                  .filter(([, value]) => value !== undefined)
+                  .map(([key, value]) => (
+                    <span
+                      key={key}
+                      className="rounded-full border border-[var(--border)] bg-white px-3 py-1"
+                    >
+                      {formatThresholdLabel(key as never)} = {value}
+                    </span>
+                  ))}
+              </div>
             </div>
 
             <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
@@ -447,6 +664,7 @@ export function RecommendationRankingSnapshotDiffPanel() {
             setPackText("");
             setValidatedPack(null);
             setDiffResult(null);
+            setSelectedCatalogId("");
             setError(null);
           }}
           className="inline-flex rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
@@ -456,39 +674,6 @@ export function RecommendationRankingSnapshotDiffPanel() {
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
-      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-            Baseline fixture library
-          </p>
-          <p className="text-sm leading-7 text-[var(--muted)]">
-            Use these safe internal fixture scenarios when building repeatable
-            before-and-after ranking audits.
-          </p>
-        </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          {RECOMMENDATION_QA_BASELINE_FIXTURES.map((item) => (
-            <article
-              key={item.id}
-              className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4"
-            >
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                {item.label}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                {item.scenario}
-              </p>
-              <p className="mt-3 text-xs text-[var(--muted)]">
-                {item.scenarioType}
-                {item.query ? ` · q=${item.query}` : ""}
-                {item.productId ? ` · productId=${item.productId}` : ""}
-                {` · limit=${item.limit}`}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
 
       {diffResult ? (
         <div className="space-y-4">
@@ -531,54 +716,26 @@ export function RecommendationRankingSnapshotDiffPanel() {
           </section>
 
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Total
-              </p>
-              <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
-                {diffResult.summary.totalItemsCompared}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Moved up
-              </p>
-              <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
-                {diffResult.summary.movedUpCount}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Moved down
-              </p>
-              <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
-                {diffResult.summary.movedDownCount}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Added
-              </p>
-              <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
-                {diffResult.summary.addedCount}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Removed
-              </p>
-              <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
-                {diffResult.summary.removedCount}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Unchanged
-              </p>
-              <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
-                {diffResult.summary.unchangedCount}
-              </p>
-            </div>
+            {[
+              ["Total", diffResult.summary.totalItemsCompared],
+              ["Moved up", diffResult.summary.movedUpCount],
+              ["Moved down", diffResult.summary.movedDownCount],
+              ["Added", diffResult.summary.addedCount],
+              ["Removed", diffResult.summary.removedCount],
+              ["Unchanged", diffResult.summary.unchangedCount],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-4"
+              >
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                  {label}
+                </p>
+                <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
+                  {value}
+                </p>
+              </div>
+            ))}
           </div>
 
           <div className="overflow-x-auto">

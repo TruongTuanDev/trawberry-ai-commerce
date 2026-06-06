@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { RecommendationQaSnapshotDto } from './recommendation-qa-diff.dto';
 
-class RecommendationQaPackThresholdsDto {
+export class RecommendationQaPackThresholdsDto {
   @ApiPropertyOptional()
   @Type(() => Number)
   @IsOptional()
@@ -96,6 +96,18 @@ export class RecommendationQaPackDto {
   @IsOptional()
   @IsString()
   productId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  catalogId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  thresholdPresetId?: string | null;
 
   @ApiProperty()
   @Type(() => Number)
@@ -203,6 +215,20 @@ class RecommendationQaPackEvaluationDto {
   thresholds!: RecommendationQaPackThresholdEvaluationDto[];
 }
 
+class RecommendationQaAppliedThresholdPresetDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  description!: string;
+
+  @ApiProperty({ type: RecommendationQaPackThresholdsDto })
+  thresholds!: RecommendationQaPackThresholdsDto;
+}
+
 export class RecommendationQaPackValidationResponseDto {
   @ApiProperty()
   valid!: boolean;
@@ -212,6 +238,15 @@ export class RecommendationQaPackValidationResponseDto {
 
   @ApiProperty({ type: String, isArray: true })
   notices!: string[];
+
+  @ApiProperty({
+    type: RecommendationQaAppliedThresholdPresetDto,
+    nullable: true,
+  })
+  appliedThresholdPreset!: RecommendationQaAppliedThresholdPresetDto | null;
+
+  @ApiProperty({ type: RecommendationQaPackThresholdsDto })
+  resolvedThresholds!: RecommendationQaPackThresholdsDto;
 
   @ApiProperty({ type: RecommendationQaPackEvaluationDto })
   evaluation!: RecommendationQaPackEvaluationDto;

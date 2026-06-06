@@ -1,5 +1,27 @@
 # Project Status
 
+## Recommendation QA Baseline Catalog Presets Phase 2.7 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - internal reusable threshold presets for recommendation QA packs
+  - internal file-based baseline catalog entries with safe scenario metadata and optional mock snapshots
+  - preset expansion plus explicit threshold override during QA pack validation
+  - `/admin/recommendations-qa` flows for choosing presets, loading catalog entries, and exporting preset-aware summaries
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - baseline catalog and presets are still code-managed internal assets rather than centrally managed QA records
+  - QA tooling remains intentionally internal-only and requires explicit flags
+- Next recommended phase:
+  - Phase 2.8: add lightweight sharing/versioning for preset and baseline catalog changes across QA iterations
+
 ## Recommendation QA Threshold Evaluation and Fixture Library Phase 2.6 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`

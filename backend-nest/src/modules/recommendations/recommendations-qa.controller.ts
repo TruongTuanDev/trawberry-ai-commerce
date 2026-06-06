@@ -24,6 +24,10 @@ import {
   RecommendationQaSnapshotResponseDto,
 } from './dto/recommendation-qa-compare-response.dto';
 import {
+  RecommendationQaBaselineCatalogResponseDto,
+  RecommendationQaThresholdPresetListResponseDto,
+} from './dto/recommendation-qa-config-response.dto';
+import {
   RecommendationQaDiffRequestDto,
   RecommendationQaDiffResponseDto,
 } from './dto/recommendation-qa-diff.dto';
@@ -38,6 +42,8 @@ import { RecommendationsService } from './recommendations.service';
   RecommendationQaCompareResponseDto,
   RecommendationQaSnapshotResponseDto,
   RecommendationQaDiffResponseDto,
+  RecommendationQaThresholdPresetListResponseDto,
+  RecommendationQaBaselineCatalogResponseDto,
   RecommendationQaPackValidationResponseDto,
 )
 @Controller('api/internal/recommendations')
@@ -70,6 +76,26 @@ export class RecommendationsQaController {
       request,
       user,
     );
+  }
+
+  @Get('presets')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'List internal recommendation QA threshold presets.',
+  })
+  @ApiOkResponse({ type: RecommendationQaThresholdPresetListResponseDto })
+  getThresholdPresets() {
+    return this.recommendationsService.getQaThresholdPresets();
+  }
+
+  @Get('baseline-catalog')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'List internal recommendation QA baseline catalog entries.',
+  })
+  @ApiOkResponse({ type: RecommendationQaBaselineCatalogResponseDto })
+  getBaselineCatalog() {
+    return this.recommendationsService.getQaBaselineCatalog();
   }
 
   @Post('diff')

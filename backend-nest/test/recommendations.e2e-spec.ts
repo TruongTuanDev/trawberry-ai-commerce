@@ -337,6 +337,18 @@ describe('RecommendationsController (e2e)', () => {
       .expect(404);
   });
 
+  it('keeps recommendation QA threshold presets disabled by default', async () => {
+    await request(app.getHttpServer())
+      .get('/api/internal/recommendations/presets')
+      .expect(404);
+  });
+
+  it('keeps recommendation QA baseline catalog disabled by default', async () => {
+    await request(app.getHttpServer())
+      .get('/api/internal/recommendations/baseline-catalog')
+      .expect(404);
+  });
+
   it('keeps recommendation QA pack validation disabled by default', async () => {
     await request(app.getHttpServer())
       .post('/api/internal/recommendations/packs/validate')
@@ -682,6 +694,18 @@ describe('RecommendationsController (e2e)', () => {
         };
       };
       notices: string[];
+      appliedThresholdPreset: {
+        id: string;
+        name: string;
+        thresholds: {
+          maxMovedDownCount?: number;
+        };
+      } | null;
+      resolvedThresholds: {
+        maxMovedDownCount?: number;
+        maxRemovedCount?: number;
+        maxScoreDelta?: number;
+      };
       evaluation: {
         overallStatus: string;
         summary: {
@@ -704,6 +728,12 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.pack.scenarioType).toBe('home');
     expect(body.pack.limit).toBe(5);
     expect(body.pack.expectedSummaryThresholds?.maxMovedDownCount).toBe(2);
+    expect(body.appliedThresholdPreset).toBeNull();
+    expect(body.resolvedThresholds).toMatchObject({
+      maxMovedDownCount: 2,
+      maxRemovedCount: 1,
+      maxScoreDelta: 5,
+    });
     expect(body.evaluation.overallStatus).toBe('pass');
     expect(body.evaluation.summary.totalChangedCount).toBe(4);
     expect(body.evaluation.summary.maxScoreDelta).toBe(4);
@@ -722,6 +752,92 @@ describe('RecommendationsController (e2e)', () => {
     expect(serialized).not.toContain('guestSessionId');
     expect(serialized).not.toContain('customerId');
     expect(serialized).not.toContain('paymentInstructions');
+  });
+
+  it('returns safe threshold presets only when the internal flag is enabled', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/internal/recommendations/presets')
+      .expect(200);
+
+    const body = readBody<{
+      presets: Array<{
+        id: string;
+        name: string;
+        description: string;
+        thresholds: {
+          maxMovedDownCount?: number;
+          maxScoreDelta?: number;
+        };
+      }>;
+    }>(response);
+    const strict = body.presets.find((preset) => preset.id === 'strict');
+    const lenient = body.presets.find((preset) => preset.id === 'lenient');
+    const serialized = JSON.stringify(body);
+
+    expect(body.presets.length).toBeGreaterThanOrEqual(5);
+    expect(strict?.thresholds.maxMovedDownCount).toBeLessThan(
+      lenient?.thresholds.maxMovedDownCount ?? Number.MAX_SAFE_INTEGER,
+    );
+    expect(strict?.thresholds.maxScoreDelta).toBeLessThan(
+      lenient?.thresholds.maxScoreDelta ?? Number.MAX_SAFE_INTEGER,
+    );
+    expect(serialized).not.toContain('guestSessionId');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('paymentInstructions');
+  });
+
+  it('returns a safe baseline catalog only when the internal flag is enabled', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/internal/recommendations/baseline-catalog')
+      .expect(200);
+
+    const body = readBody<{
+      catalog: Array<{
+        id: string;
+        name: string;
+        description: string;
+        scenarioType: string;
+        query: string | null;
+        productId: string | null;
+        defaultLimit: number;
+        recommendedThresholdPresetId: string;
+        mockPack: {
+          packName: string;
+          thresholdPresetId: string;
+          baselineSnapshot: {
+            generatedAt: string;
+          };
+          candidateSnapshot: {
+            generatedAt: string;
+          };
+        } | null;
+      }>;
+    }>(response);
+    const searchEntry = body.catalog.find(
+      (entry) => entry.id === 'search-intent-stability',
+    );
+    const serialized = JSON.stringify(body);
+
+    expect(body.catalog.length).toBeGreaterThanOrEqual(3);
+    expect(searchEntry).toMatchObject({
+      scenarioType: 'search',
+      query: 'jacket',
+      productId: null,
+      recommendedThresholdPresetId: 'search-intent-sensitive',
+    });
+    expect(searchEntry?.mockPack?.packName).toBe('Sample search QA pack');
+    expect(serialized).not.toContain('guestSessionId');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('paymentInstructions');
+    expect(serialized).not.toContain('approvalStatus');
   });
 
   it('marks QA pack evaluation as not_evaluated when thresholds are omitted', async () => {
@@ -916,6 +1032,81 @@ describe('RecommendationsController (e2e)', () => {
         }),
       ]),
     );
+  });
+
+  it('expands preset thresholds during QA pack validation', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send({
+        ...buildQaPackPayload(undefined),
+        catalogId: 'home-ranking-stability',
+        thresholdPresetId: 'balanced',
+        expectedSummaryThresholds: undefined,
+      })
+      .expect(201);
+
+    const body = readBody<{
+      appliedThresholdPreset: {
+        id: string;
+        thresholds: {
+          maxMovedDownCount?: number;
+          maxRemovedCount?: number;
+        };
+      } | null;
+      resolvedThresholds: {
+        maxMovedDownCount?: number;
+        maxRemovedCount?: number;
+        maxScoreDelta?: number;
+      };
+      evaluation: {
+        overallStatus: string;
+      };
+    }>(response);
+
+    expect(body.appliedThresholdPreset?.id).toBe('balanced');
+    expect(body.resolvedThresholds.maxMovedDownCount).toBe(1);
+    expect(body.resolvedThresholds.maxRemovedCount).toBe(1);
+    expect(body.resolvedThresholds.maxScoreDelta).toBe(4);
+    expect(body.evaluation.overallStatus).toBe('pass');
+  });
+
+  it('allows explicit thresholds to override or extend preset thresholds', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/packs/validate')
+      .send({
+        ...buildQaPackPayload({
+          maxMovedDownCount: 2,
+          maxRemovedCount: 0,
+        }),
+        thresholdPresetId: 'strict',
+      })
+      .expect(201);
+
+    const body = readBody<{
+      appliedThresholdPreset: {
+        id: string;
+      } | null;
+      resolvedThresholds: {
+        maxMovedDownCount?: number;
+        maxRemovedCount?: number;
+      };
+      evaluation: {
+        overallStatus: string;
+      };
+    }>(response);
+
+    expect(body.appliedThresholdPreset?.id).toBe('strict');
+    expect(body.resolvedThresholds.maxMovedDownCount).toBe(2);
+    expect(body.resolvedThresholds.maxRemovedCount).toBe(0);
+    expect(body.evaluation.overallStatus).toBe('fail');
   });
 
   it('rejects malformed QA pack payloads', async () => {

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { RecommendationRankingQaPanel } from "@/components/admin/recommendation-ranking-qa-panel";
 import { RecommendationRankingSnapshotDiffPanel } from "@/components/admin/recommendation-ranking-snapshot-diff-panel";
 import {
+  getRecommendationQaBaselineCatalog,
+  getRecommendationQaThresholdPresets,
   getRecommendationRankingComparison,
   type RecommendationQaPlacement,
 } from "@/lib/public-api";
@@ -70,6 +72,10 @@ export default async function AdminRecommendationsQaPage({
         debug,
       })
     : null;
+  const [{ presets }, { catalog }] = await Promise.all([
+    getRecommendationQaThresholdPresets(),
+    getRecommendationQaBaselineCatalog(),
+  ]);
   const savedScenarios = [
     {
       id: "home-baseline",
@@ -253,8 +259,10 @@ export default async function AdminRecommendationsQaPage({
             `productId`.
           </section>
         )}
-
-        <RecommendationRankingSnapshotDiffPanel />
+        <RecommendationRankingSnapshotDiffPanel
+          presets={presets}
+          baselineCatalog={catalog}
+        />
       </div>
     </main>
   );

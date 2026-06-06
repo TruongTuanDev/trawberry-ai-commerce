@@ -1,5 +1,77 @@
 # Phase Report
 
+## 2026-06-06 Recommendation QA Baseline Catalog Presets Phase 2.7
+
+- Status: Implemented on current branch
+- Scope:
+  - added internal-only QA threshold preset support with safe preset ids:
+    - `strict`
+    - `balanced`
+    - `lenient`
+    - `search-intent-sensitive`
+    - `similar-products-sensitive`
+  - added internal-only reusable baseline catalog support using file-based safe mock data
+  - added backend internal endpoints:
+    - `GET /api/internal/recommendations/presets`
+    - `GET /api/internal/recommendations/baseline-catalog`
+  - extended QA pack validation so packs can include:
+    - optional `thresholdPresetId`
+    - optional `catalogId`
+  - backend validation now returns:
+    - `appliedThresholdPreset`
+    - `resolvedThresholds`
+    - existing `evaluation`
+  - explicit pack thresholds can override or extend preset-derived thresholds
+  - enhanced `/admin/recommendations-qa` with:
+    - threshold preset picker
+    - baseline catalog loader
+    - preset threshold preview before validation
+    - resolved threshold chips after validation
+    - Markdown/print export including preset and catalog context
+  - added backend regression coverage for:
+    - presets gated by QA flag
+    - baseline catalog gated by QA flag
+    - strict vs lenient threshold tightness
+    - safe allowlisted catalog shape
+    - preset-based QA pack validation
+    - explicit threshold override behavior
+    - no user/session/private leakage
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no database model was added for this phase
+  - catalog and preset data remain internal-only and file-based
+  - committed catalog entries contain only safe mock/sample data
+- Local QA workflow:
+  - set `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - set `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - optional explainability:
+    - set `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - set `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - open `/admin/recommendations-qa`
+  - choose a threshold preset
+  - load a baseline catalog entry
+  - validate the generated or imported QA pack
+  - review:
+    - preset thresholds
+    - resolved thresholds
+    - threshold evaluation status
+  - run the snapshot diff and export Markdown or print summary
+  - when adding new catalog entries, commit only safe mock/sample snapshots and never real exported storefront data
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - baseline catalog remains repo-local rather than shared through a central QA service
+  - preset/catalog editing is still code-driven rather than UI-authored
+
 ## 2026-06-06 Recommendation QA Threshold Evaluation and Fixture Library Phase 2.6
 
 - Status: Implemented on current branch
