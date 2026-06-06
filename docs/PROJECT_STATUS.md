@@ -1,5 +1,27 @@
 # Project Status
 
+## Sponsored Ranking and Rollout-Safe Configuration Phase 3.1 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Phase 3 has started with:
+  - a lightweight sponsored/business-aware ranking config layer behind `RECOMMENDATION_SPONSORED_RANKING_ENABLED`
+  - bounded additive sponsored/business boosts that cannot fully replace core relevance
+  - internal explainability and QA visibility for sponsored diagnostics through score breakdowns
+  - continued public API backward compatibility and backend-returned algorithm tracking
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - sponsored targeting is still lightweight env/config only
+  - there is still no managed campaign, billing, or pacing workflow
+- Next recommended phase:
+  - Phase 3.2: safer managed sponsored config catalogs or rollout presets before any larger campaign tooling
+
 ## Recommendation Ranking Readiness Finalization Phase 2.8 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`

@@ -24,6 +24,15 @@ class RecommendationQaScoreBreakdownDto {
 
   @ApiProperty()
   penaltyScore!: number;
+
+  @ApiProperty()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty()
+  businessBoostScore!: number;
+
+  @ApiProperty()
+  maxSponsoredBoost!: number;
 }
 
 class RecommendationQaAlgorithmSnapshotDto {
@@ -45,6 +54,9 @@ class RecommendationQaAlgorithmSnapshotDto {
     required: false,
   })
   scoreBreakdown!: RecommendationQaScoreBreakdownDto | null;
+
+  @ApiProperty({ nullable: true, required: false })
+  sponsoredReason!: string | null;
 }
 
 class RecommendationQaComparisonItemDto {

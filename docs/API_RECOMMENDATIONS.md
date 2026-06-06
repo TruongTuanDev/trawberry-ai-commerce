@@ -1,8 +1,8 @@
 # API Recommendations
 
-## Phase 2 Scope
+## Phase 2 and Phase 3.1 Scope
 
-This document covers the Phase 2 smart ranking rollout for public product recommendations.
+This document covers the Phase 2 smart ranking rollout plus the Phase 3.1 sponsored ranking foundation for public product recommendations.
 
 Safety guarantees:
 
@@ -21,6 +21,7 @@ Feature flags:
 - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED`
 - `RECOMMENDATION_QA_TOOLS_ENABLED`
 - `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED`
+- `RECOMMENDATION_SPONSORED_RANKING_ENABLED`
 
 If `RECOMMENDATION_SMART_RANKING_ENABLED=false`:
 
@@ -45,6 +46,8 @@ finalScore =
   + ratingScore
   + stockScore
   + shopScore
+  + sponsoredBoostScore
+  + businessBoostScore
   - penaltyScore
 ```
 
@@ -57,6 +60,8 @@ Initial weights:
 - `ratingScore`: up to `10`
 - `stockScore`: up to `5`
 - `shopScore`: up to `5`
+- `sponsoredBoostScore`: rollout-safe additive boost, capped internally
+- `businessBoostScore`: rollout-safe additive boost, capped internally
 
 Reason codes currently returned:
 
@@ -73,6 +78,15 @@ Reason codes currently returned:
 - `same_shop`
 - `has_image`
 
+Internal-only sponsored diagnostics:
+
+- `scoreBreakdown.sponsoredBoostScore`
+- `scoreBreakdown.businessBoostScore`
+- `scoreBreakdown.maxSponsoredBoost`
+- `scoreExplanation.sponsoredReason`
+
+These fields are only visible through internal explainability and QA tooling. They are not part of the normal public recommendation payload.
+
 Explainability mode:
 
 - internal explainability is disabled by default
@@ -80,6 +94,28 @@ Explainability mode:
   - request query includes `debug=true`
   - backend runtime sets `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
 - explainability never returns customer IDs, guest session IDs, raw search queries, or raw view history
+
+Sponsored ranking foundation:
+
+- sponsored/business-aware ranking stays disabled by default
+- to enable the Phase 3.1 foundation locally:
+  - set `RECOMMENDATION_SPONSORED_RANKING_ENABLED=true`
+- optional rollout-safe env configuration:
+  - `RECOMMENDATION_SPONSORED_PRODUCT_IDS`
+  - `RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS`
+  - `RECOMMENDATION_SPONSORED_PRODUCT_BOOST`
+  - `RECOMMENDATION_BUSINESS_SHOP_BOOST`
+  - `RECOMMENDATION_SPONSORED_MAX_BOOST`
+- boost behavior is intentionally limited:
+  - additive only
+  - bounded by `RECOMMENDATION_SPONSORED_MAX_BOOST`
+  - further capped relative to the product's organic relevance score
+  - cannot fully replace core relevance signals
+- out-of-stock, inactive, unpublished, archived, or otherwise not public-safe products are not eligible for sponsored/business boost
+- public recommendation payloads do not expose raw sponsored config, env values, or internal target lists
+- internal explainability can show safe sponsored diagnostics only when:
+  - `debug=true`
+  - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
 
 Internal QA comparison mode:
 
@@ -200,8 +236,12 @@ Internal explainability example:
           "ratingScore": 9.4,
           "stockScore": 4,
           "shopScore": 2,
-          "penaltyScore": 0
-        }
+          "penaltyScore": 0,
+          "sponsoredBoostScore": 0,
+          "businessBoostScore": 0,
+          "maxSponsoredBoost": 0
+        },
+        "sponsoredReason": null
       }
     }
   ],
@@ -368,8 +408,12 @@ Response example:
           "ratingScore": 8,
           "stockScore": 2.8,
           "shopScore": 2,
-          "penaltyScore": 0
-        }
+          "penaltyScore": 0,
+          "sponsoredBoostScore": 0,
+          "businessBoostScore": 0,
+          "maxSponsoredBoost": 0
+        },
+        "sponsoredReason": null
       }
     }
   ]
@@ -420,8 +464,12 @@ Snapshot export example:
           "ratingScore": 8,
           "stockScore": 4,
           "shopScore": 2,
-          "penaltyScore": 0
-        }
+          "penaltyScore": 0,
+          "sponsoredBoostScore": 0,
+          "businessBoostScore": 0,
+          "maxSponsoredBoost": 0
+        },
+        "sponsoredReason": null
       }
     }
   ]
@@ -555,7 +603,10 @@ Diff response example:
         "ratingScore": 0,
         "stockScore": 1,
         "shopScore": 0,
-        "penaltyScore": 0
+        "penaltyScore": 0,
+        "sponsoredBoostScore": 0,
+        "businessBoostScore": 0,
+        "maxSponsoredBoost": 0
       }
     }
   ]
@@ -800,6 +851,25 @@ Phase 2.8 readiness notes:
   - leave clear `notes` about the intended QA use
   - do not replace committed mock snapshots with real storefront exports
 
+Sponsored ranking QA workflow:
+
+1. Keep `RECOMMENDATION_SPONSORED_RANKING_ENABLED=false` for the default deploy path.
+2. Use Phase 2 internal QA flags first:
+   - `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+3. Optional internal explainability:
+   - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+4. Export a baseline snapshot with sponsored ranking still off.
+5. Enable sponsored ranking and set a small bounded local config.
+6. Export the same scenario again.
+7. Use snapshot diff and QA pack validation before rollout:
+   - compare rank movement
+   - inspect `sponsoredBoostScore` and `businessBoostScore`
+   - confirm moved-down counts and score deltas stay within the chosen preset thresholds
+8. Only use stable preset/catalog combinations for rollout-readiness signoff.
+9. Never commit real exported production snapshots or raw sponsored target lists.
+
 Phase 2 final local QA checklist:
 
 1. Enable internal flags:
@@ -839,8 +909,14 @@ Phase 2 final local QA checklist:
 
 Future Phase 3 topics:
 
-- sponsored ranking
 - ads campaign inventory
 - budget-aware placement rules
 - richer session intent modeling
 - rollout-safe ranking configuration management beyond code-managed internal presets
+
+Phase 3.1 out of scope:
+
+- no full ads management dashboard
+- no billing, budget pacing, campaign scheduling, or auction logic
+- no public disclosure of sponsored configuration internals
+- no checkout, order, cart, payment, shipping, WB sync, AI Try-On, or legacy app changes

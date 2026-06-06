@@ -88,7 +88,11 @@ export type RecommendationProductItem = {
       stockScore: number;
       shopScore: number;
       penaltyScore: number;
+      sponsoredBoostScore: number;
+      businessBoostScore: number;
+      maxSponsoredBoost: number;
     } | null;
+    sponsoredReason?: string | null;
   };
 };
 
@@ -118,7 +122,11 @@ export type RecommendationQaAlgorithmSnapshot = {
     stockScore: number;
     shopScore: number;
     penaltyScore: number;
+    sponsoredBoostScore: number;
+    businessBoostScore: number;
+    maxSponsoredBoost: number;
   } | null;
+  sponsoredReason: string | null;
 };
 
 export type RecommendationQaComparisonItem = {
@@ -207,6 +215,9 @@ export type RecommendationQaDiffResponse = {
       stockScore: number;
       shopScore: number;
       penaltyScore: number;
+      sponsoredBoostScore: number;
+      businessBoostScore: number;
+      maxSponsoredBoost: number;
     } | null;
   }>;
 };

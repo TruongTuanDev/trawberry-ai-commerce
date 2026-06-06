@@ -316,6 +316,105 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.products).toHaveLength(2);
   });
 
+  it('keeps sponsored ranking disabled by default even when config ids are present', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
+    process.env.RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS =
+      '10000000-0000-0000-0000-000000000001';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2&debug=true')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          scoreBreakdown: {
+            sponsoredBoostScore: number;
+            businessBoostScore: number;
+            maxSponsoredBoost: number;
+          } | null;
+          sponsoredReason?: string | null;
+        };
+      }>;
+    }>(response);
+    const targetItem = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000002',
+    );
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(
+      targetItem?.scoreExplanation?.scoreBreakdown?.sponsoredBoostScore,
+    ).toBe(0);
+    expect(
+      targetItem?.scoreExplanation?.scoreBreakdown?.businessBoostScore,
+    ).toBe(0);
+    expect(
+      targetItem?.scoreExplanation?.scoreBreakdown?.maxSponsoredBoost,
+    ).toBe(0);
+    expect(targetItem?.scoreExplanation?.sponsoredReason).toBeNull();
+  });
+
+  it('applies bounded sponsored boosts only when the env flag is enabled', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
+    process.env.RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS =
+      '10000000-0000-0000-0000-000000000001';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_BOOST = '8';
+    process.env.RECOMMENDATION_BUSINESS_SHOP_BOOST = '4';
+    process.env.RECOMMENDATION_SPONSORED_MAX_BOOST = '5';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3&debug=true')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          scoreBreakdown: {
+            sponsoredBoostScore: number;
+            businessBoostScore: number;
+            maxSponsoredBoost: number;
+          } | null;
+          sponsoredReason?: string | null;
+        };
+      }>;
+    }>(response);
+    const sponsoredItem = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000002',
+    );
+    const totalBoost =
+      (sponsoredItem?.scoreExplanation?.scoreBreakdown?.sponsoredBoostScore ??
+        0) +
+      (sponsoredItem?.scoreExplanation?.scoreBreakdown?.businessBoostScore ??
+        0);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(
+      sponsoredItem?.scoreExplanation?.scoreBreakdown?.sponsoredBoostScore,
+    ).toBeGreaterThan(0);
+    expect(
+      sponsoredItem?.scoreExplanation?.scoreBreakdown?.businessBoostScore,
+    ).toBeGreaterThan(0);
+    expect(totalBoost).toBeLessThanOrEqual(
+      sponsoredItem?.scoreExplanation?.scoreBreakdown?.maxSponsoredBoost ?? 0,
+    );
+    expect(sponsoredItem?.scoreExplanation?.sponsoredReason).toContain(
+      'Internal sponsored',
+    );
+  });
+
   it('keeps recommendation QA comparison disabled by default', async () => {
     await request(app.getHttpServer())
       .get('/api/internal/recommendations/compare?placement=home&limit=2')
@@ -631,6 +730,9 @@ describe('RecommendationsController (e2e)', () => {
           stockScore: number;
           shopScore: number;
           penaltyScore: number;
+          sponsoredBoostScore: number;
+          businessBoostScore: number;
+          maxSponsoredBoost: number;
         } | null;
       }>;
     }>(response);
@@ -1180,8 +1282,86 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.products[0]?.name).toContain('Similar jacket');
   });
 
+  it('keeps stronger similar-product relevance ahead of a sponsored but less relevant candidate', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000003';
+    process.env.RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS =
+      '10000000-0000-0000-0000-000000000001';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_BOOST = '8';
+    process.env.RECOMMENDATION_BUSINESS_SHOP_BOOST = '4';
+    process.env.RECOMMENDATION_SPONSORED_MAX_BOOST = '5';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/public/recommendations/products/00000000-0000-0000-0000-000000000001/similar?limit=2&debug=true',
+      )
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        product: { id: string };
+      }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.product.id).toBe(
+      '00000000-0000-0000-0000-000000000002',
+    );
+  });
+
+  it('keeps public recommendation responses backward compatible and free of sponsored config leakage', async () => {
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
+    process.env.RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS =
+      '10000000-0000-0000-0000-000000000001';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_BOOST = '8';
+    process.env.RECOMMENDATION_BUSINESS_SHOP_BOOST = '4';
+    process.env.RECOMMENDATION_SPONSORED_MAX_BOOST = '5';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      placement: string;
+      items: Array<{
+        product: { id: string };
+        rank: number;
+        score: number | null;
+        reasonCodes: string[];
+        scoreExplanation?: unknown;
+      }>;
+      products: Array<{ id: string }>;
+    }>(response);
+    const serialized = JSON.stringify(body);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.placement).toBe('home');
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.products.length).toBeGreaterThan(0);
+    expect(body.items[0]?.scoreExplanation).toBeUndefined();
+    expect(serialized).not.toContain('sponsoredBoostScore');
+    expect(serialized).not.toContain('businessBoostScore');
+    expect(serialized).not.toContain('maxSponsoredBoost');
+    expect(serialized).not.toContain('sponsoredReason');
+    expect(serialized).not.toContain('RECOMMENDATION_SPONSORED_PRODUCT_IDS');
+    expect(serialized).not.toContain('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS');
+  });
+
   it('keeps score explanations hidden when debug mode is missing', async () => {
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
     await app.close();
     app = await buildApp();
 
@@ -1201,6 +1381,9 @@ describe('RecommendationsController (e2e)', () => {
   });
 
   it('keeps score explanations hidden when the internal explainability flag is off', async () => {
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
     await app.close();
     app = await buildApp();
 
@@ -1221,6 +1404,11 @@ describe('RecommendationsController (e2e)', () => {
 
   it('returns optional score explanations only when internal explainability is enabled', async () => {
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
+    process.env.RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS =
+      '10000000-0000-0000-0000-000000000001';
     await app.close();
     app = await buildApp();
 
@@ -1244,7 +1432,11 @@ describe('RecommendationsController (e2e)', () => {
             stockScore: number;
             shopScore: number;
             penaltyScore: number;
+            sponsoredBoostScore: number;
+            businessBoostScore: number;
+            maxSponsoredBoost: number;
           } | null;
+          sponsoredReason?: string | null;
         };
       }>;
     }>(response);
@@ -1254,6 +1446,32 @@ describe('RecommendationsController (e2e)', () => {
       algorithm: 'rule_based_v2',
     });
     expect(body.items[0]?.scoreExplanation?.scoreBreakdown).toBeTruthy();
+    expect(
+      body.items[0]?.scoreExplanation?.scoreBreakdown?.sponsoredBoostScore,
+    ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('keeps fallback algorithm behavior safe when smart ranking is off even if sponsored ranking is enabled', async () => {
+    process.env.RECOMMENDATION_SMART_RANKING_ENABLED = 'false';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        score: number | null;
+      }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v1');
+    expect(body.items[0]?.score).toBeNull();
   });
 
   it('returns 204 and skips writes when tracking is disabled', async () => {
@@ -1592,6 +1810,9 @@ function buildSnapshotItem(
     stockScore: number;
     shopScore: number;
     penaltyScore: number;
+    sponsoredBoostScore?: number;
+    businessBoostScore?: number;
+    maxSponsoredBoost?: number;
   },
 ) {
   return {
@@ -1615,7 +1836,13 @@ function buildSnapshotItem(
       rank,
       finalScore: score,
       reasons,
-      scoreBreakdown,
+      scoreBreakdown: {
+        ...scoreBreakdown,
+        sponsoredBoostScore: scoreBreakdown.sponsoredBoostScore ?? 0,
+        businessBoostScore: scoreBreakdown.businessBoostScore ?? 0,
+        maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,
+      },
+      sponsoredReason: null,
     },
   };
 }

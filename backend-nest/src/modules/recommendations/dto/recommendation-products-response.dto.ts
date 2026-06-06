@@ -25,6 +25,15 @@ class RecommendationScoreBreakdownDto {
 
   @ApiProperty()
   penaltyScore!: number;
+
+  @ApiProperty()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty()
+  businessBoostScore!: number;
+
+  @ApiProperty()
+  maxSponsoredBoost!: number;
 }
 
 class RecommendationScoreExplanationDto {
@@ -43,6 +52,9 @@ class RecommendationScoreExplanationDto {
     required: false,
   })
   scoreBreakdown?: RecommendationScoreBreakdownDto | null;
+
+  @ApiProperty({ nullable: true, required: false })
+  sponsoredReason?: string | null;
 }
 
 class RecommendationResponseItemDto {

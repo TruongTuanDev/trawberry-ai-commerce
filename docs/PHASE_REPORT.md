@@ -1,5 +1,61 @@
 # Phase Report
 
+## 2026-06-07 Sponsored Ranking and Rollout-Safe Configuration Phase 3.1
+
+- Status: Implemented on current branch
+- Scope:
+  - started Phase 3 with a lightweight sponsored/business-aware ranking foundation for the active NestJS + Next.js stack only
+  - added a rollout-safe sponsored ranking config layer behind:
+    - `RECOMMENDATION_SPONSORED_RANKING_ENABLED`
+    - optional env lists for sponsored product ids and business-boost shop ids
+    - bounded numeric envs for sponsored/product/business boost caps
+  - kept sponsored/business boost additive and bounded so it cannot fully replace core relevance
+  - kept the public recommendation APIs backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+  - extended internal explainability and Phase 2 QA tooling so score breakdown can show:
+    - `sponsoredBoostScore`
+    - `businessBoostScore`
+    - `maxSponsoredBoost`
+    - `sponsoredReason`
+  - ensured out-of-stock or otherwise inactive/non-public-safe products are not eligible for sponsored/business boost
+  - added regression coverage for:
+    - sponsored ranking disabled by default
+    - sponsored ranking enabled only with env flag
+    - bounded boost behavior
+    - stronger organic relevance staying ahead of weaker sponsored candidates
+    - out-of-stock candidate boost rejection
+    - explainability gating with sponsored diagnostics
+    - public response backward compatibility and no config leakage
+    - safe fallback behavior when smart ranking is off
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no legacy `strawberry-*` apps were modified
+  - no full ads management dashboard or campaign system was introduced in this phase
+- Rollout guidance:
+  - keep sponsored ranking off by default
+  - export a baseline snapshot with Phase 2 QA tooling before enabling the flag
+  - enable a small bounded local sponsored config
+  - export the same scenario again and use snapshot diff plus threshold validation before rollout
+  - keep sponsored diagnostics internal-only through explainability/QA mode
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - sponsored targeting still uses lightweight env/config inputs rather than a managed campaign source
+  - no budget pacing, billing, scheduling, or advertiser workflow exists yet
+- Next recommended phase:
+  - Phase 3.2: internal managed sponsored config catalogs or safer rollout presets before any real campaign workflow
+
 ## 2026-06-06 Recommendation Ranking Readiness Finalization Phase 2.8
 
 - Status: Implemented on current branch

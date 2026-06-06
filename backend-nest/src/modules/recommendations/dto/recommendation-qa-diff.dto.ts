@@ -45,6 +45,18 @@ class RecommendationQaDiffScoreBreakdownDto {
   @ApiProperty()
   @IsNumber()
   penaltyScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  businessBoostScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  maxSponsoredBoost!: number;
 }
 
 class RecommendationQaDiffAlgorithmSnapshotDto {
@@ -76,6 +88,11 @@ class RecommendationQaDiffAlgorithmSnapshotDto {
   @ValidateNested()
   @Type(() => RecommendationQaDiffScoreBreakdownDto)
   scoreBreakdown!: RecommendationQaDiffScoreBreakdownDto | null;
+
+  @ApiProperty({ nullable: true, required: false })
+  @IsOptional()
+  @Allow()
+  sponsoredReason!: string | null;
 }
 
 class RecommendationQaDiffSnapshotProductDto {
@@ -239,6 +256,15 @@ class RecommendationQaDiffScoreBreakdownDeltaDto {
 
   @ApiProperty()
   penaltyScore!: number;
+
+  @ApiProperty()
+  sponsoredBoostScore!: number;
+
+  @ApiProperty()
+  businessBoostScore!: number;
+
+  @ApiProperty()
+  maxSponsoredBoost!: number;
 }
 
 class RecommendationQaDiffReasonDeltaDto {

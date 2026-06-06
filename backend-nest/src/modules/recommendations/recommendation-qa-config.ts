@@ -62,6 +62,9 @@ function buildSnapshotItem(
     stockScore: number;
     shopScore: number;
     penaltyScore: number;
+    sponsoredBoostScore?: number;
+    businessBoostScore?: number;
+    maxSponsoredBoost?: number;
   },
 ) {
   return {
@@ -85,7 +88,13 @@ function buildSnapshotItem(
       rank,
       finalScore: score,
       reasons,
-      scoreBreakdown,
+      scoreBreakdown: {
+        ...scoreBreakdown,
+        sponsoredBoostScore: scoreBreakdown.sponsoredBoostScore ?? 0,
+        businessBoostScore: scoreBreakdown.businessBoostScore ?? 0,
+        maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,
+      },
+      sponsoredReason: null,
     },
   };
 }

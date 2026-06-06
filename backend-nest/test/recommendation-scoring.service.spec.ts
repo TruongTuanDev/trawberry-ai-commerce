@@ -156,6 +156,112 @@ describe('RecommendationScoringService', () => {
     );
     expect(scored.reasonCodes).toContain('based_on_viewed_category');
   });
+
+  it('keeps sponsored/business boosts disabled when the config is off', () => {
+    const candidate = buildProduct({
+      id: 'candidate-sponsored-disabled',
+      shopId: 'shop-sponsored',
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsoredConfig({
+        enabled: false,
+        sponsoredProductIds: ['candidate-sponsored-disabled'],
+        businessBoostShopIds: ['shop-sponsored'],
+      }),
+    );
+
+    expect(scored.scoreBreakdown.sponsoredBoostScore).toBe(0);
+    expect(scored.scoreBreakdown.businessBoostScore).toBe(0);
+    expect(scored.sponsoredReason).toBeNull();
+  });
+
+  it('keeps sponsored boost bounded by the configured safety cap', () => {
+    const candidate = buildProduct({
+      id: 'candidate-sponsored-capped',
+      feedbackCount: 40,
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsoredConfig({
+        sponsoredProductIds: ['candidate-sponsored-capped'],
+        businessBoostShopIds: ['shop-1'],
+        sponsoredBoost: 8,
+        businessBoost: 4,
+        maxSponsoredBoost: 5,
+      }),
+    );
+
+    expect(
+      scored.scoreBreakdown.sponsoredBoostScore +
+        scored.scoreBreakdown.businessBoostScore,
+    ).toBeLessThanOrEqual(5);
+    expect(scored.scoreBreakdown.maxSponsoredBoost).toBe(5);
+  });
+
+  it('does not let sponsored boost fully override a clearly stronger organic result', () => {
+    const highlyRelevant = buildProduct({
+      id: 'highly-relevant',
+      title: 'Linen blue jacket',
+      description: 'Linen blue tailored jacket',
+      feedbackCount: 20,
+      averageRating: '4.8',
+      stockQuantity: 12,
+    });
+    const weakButSponsored = buildProduct({
+      id: 'weak-but-sponsored',
+      title: 'Generic item',
+      description: 'Generic item',
+      feedbackCount: 0,
+      averageRating: '1.5',
+      stockQuantity: 1,
+      imagesCount: 1,
+    });
+
+    const organicStrong = service.scoreSearchProduct(
+      'linen blue jacket',
+      highlyRelevant,
+      sponsoredConfig(),
+    );
+    const boostedWeak = service.scoreSearchProduct(
+      'linen blue jacket',
+      weakButSponsored,
+      sponsoredConfig({
+        sponsoredProductIds: ['weak-but-sponsored'],
+        businessBoostShopIds: ['shop-1'],
+        sponsoredBoost: 8,
+        businessBoost: 4,
+        maxSponsoredBoost: 5,
+      }),
+    );
+
+    expect(organicStrong.score).toBeGreaterThan(boostedWeak.score);
+  });
+
+  it('does not boost out-of-stock or inactive candidates', () => {
+    const outOfStockCandidate = buildProduct({
+      id: 'candidate-out-of-stock-sponsored',
+      stockQuantity: 0,
+      feedbackCount: 10,
+    });
+
+    const scored = service.scoreHomeProduct(
+      outOfStockCandidate,
+      emptyPreferenceProfile(),
+      sponsoredConfig({
+        sponsoredProductIds: ['candidate-out-of-stock-sponsored'],
+        businessBoostShopIds: ['shop-1'],
+      }),
+    );
+
+    expect(scored.scoreBreakdown.sponsoredBoostScore).toBe(0);
+    expect(scored.scoreBreakdown.businessBoostScore).toBe(0);
+    expect(scored.sponsoredReason).toBeNull();
+  });
 });
 
 function emptyPreferenceProfile(): RecommendationPreferenceProfile {
@@ -165,6 +271,26 @@ function emptyPreferenceProfile(): RecommendationPreferenceProfile {
     brands: new Set<string>(),
     colors: new Set<string>(),
     searchTerms: [],
+  };
+}
+
+function sponsoredConfig(
+  overrides?: Partial<{
+    enabled: boolean;
+    sponsoredProductIds: string[];
+    businessBoostShopIds: string[];
+    sponsoredBoost: number;
+    businessBoost: number;
+    maxSponsoredBoost: number;
+  }>,
+) {
+  return {
+    enabled: overrides?.enabled ?? true,
+    sponsoredProductIds: new Set(overrides?.sponsoredProductIds ?? []),
+    businessBoostShopIds: new Set(overrides?.businessBoostShopIds ?? []),
+    sponsoredBoost: overrides?.sponsoredBoost ?? 4,
+    businessBoost: overrides?.businessBoost ?? 2,
+    maxSponsoredBoost: overrides?.maxSponsoredBoost ?? 5,
   };
 }
 

@@ -169,14 +169,20 @@ export function RecommendationRankingQaPanel({
                         <p>v1 breakdown:</p>
                         <p>
                           {item.ruleBasedV1?.scoreBreakdown
-                            ? `cat ${item.ruleBasedV1.scoreBreakdown.categoryScore} | text ${item.ruleBasedV1.scoreBreakdown.textScore} | pop ${item.ruleBasedV1.scoreBreakdown.popularityScore} | fresh ${item.ruleBasedV1.scoreBreakdown.freshnessScore} | rating ${item.ruleBasedV1.scoreBreakdown.ratingScore} | stock ${item.ruleBasedV1.scoreBreakdown.stockScore} | shop ${item.ruleBasedV1.scoreBreakdown.shopScore} | penalty ${item.ruleBasedV1.scoreBreakdown.penaltyScore}`
+                            ? `cat ${item.ruleBasedV1.scoreBreakdown.categoryScore} | text ${item.ruleBasedV1.scoreBreakdown.textScore} | pop ${item.ruleBasedV1.scoreBreakdown.popularityScore} | fresh ${item.ruleBasedV1.scoreBreakdown.freshnessScore} | rating ${item.ruleBasedV1.scoreBreakdown.ratingScore} | stock ${item.ruleBasedV1.scoreBreakdown.stockScore} | shop ${item.ruleBasedV1.scoreBreakdown.shopScore} | penalty ${item.ruleBasedV1.scoreBreakdown.penaltyScore} | sponsored ${item.ruleBasedV1.scoreBreakdown.sponsoredBoostScore} | business ${item.ruleBasedV1.scoreBreakdown.businessBoostScore} | max ${item.ruleBasedV1.scoreBreakdown.maxSponsoredBoost}`
                             : "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v1 sponsored reason: {item.ruleBasedV1?.sponsoredReason ?? "n/a"}
                         </p>
                         <p className="mt-2">v2 breakdown:</p>
                         <p>
                           {item.ruleBasedV2?.scoreBreakdown
-                            ? `cat ${item.ruleBasedV2.scoreBreakdown.categoryScore} | text ${item.ruleBasedV2.scoreBreakdown.textScore} | pop ${item.ruleBasedV2.scoreBreakdown.popularityScore} | fresh ${item.ruleBasedV2.scoreBreakdown.freshnessScore} | rating ${item.ruleBasedV2.scoreBreakdown.ratingScore} | stock ${item.ruleBasedV2.scoreBreakdown.stockScore} | shop ${item.ruleBasedV2.scoreBreakdown.shopScore} | penalty ${item.ruleBasedV2.scoreBreakdown.penaltyScore}`
+                            ? `cat ${item.ruleBasedV2.scoreBreakdown.categoryScore} | text ${item.ruleBasedV2.scoreBreakdown.textScore} | pop ${item.ruleBasedV2.scoreBreakdown.popularityScore} | fresh ${item.ruleBasedV2.scoreBreakdown.freshnessScore} | rating ${item.ruleBasedV2.scoreBreakdown.ratingScore} | stock ${item.ruleBasedV2.scoreBreakdown.stockScore} | shop ${item.ruleBasedV2.scoreBreakdown.shopScore} | penalty ${item.ruleBasedV2.scoreBreakdown.penaltyScore} | sponsored ${item.ruleBasedV2.scoreBreakdown.sponsoredBoostScore} | business ${item.ruleBasedV2.scoreBreakdown.businessBoostScore} | max ${item.ruleBasedV2.scoreBreakdown.maxSponsoredBoost}`
                             : "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v2 sponsored reason: {item.ruleBasedV2?.sponsoredReason ?? "n/a"}
                         </p>
                       </div>
                     </div>

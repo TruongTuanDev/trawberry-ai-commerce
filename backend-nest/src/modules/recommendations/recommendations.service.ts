@@ -34,6 +34,8 @@ import {
   type RecommendationScoreBreakdown,
   type RecommendationVariantRecord,
   type RecommendationPlacement,
+  RECOMMENDATION_SPONSORED_RANKING_LIMITS,
+  type RecommendationSponsoredRankingConfig,
 } from './recommendation-scoring.service';
 
 type RecommendationApiItem = {
@@ -46,6 +48,7 @@ type RecommendationApiItem = {
     finalScore: number | null;
     reasons: string[];
     scoreBreakdown: RecommendationScoreBreakdown | null;
+    sponsoredReason?: string | null;
   };
 };
 
@@ -55,6 +58,7 @@ type RecommendationRankedItem = {
     score: number | null;
     reasonCodes: RecommendationReasonCode[];
     scoreBreakdown: RecommendationScoreBreakdown | null;
+    sponsoredReason: string | null;
   };
 };
 
@@ -64,6 +68,7 @@ type RecommendationAlgorithmSnapshot = {
   finalScore: number | null;
   reasons: string[];
   scoreBreakdown: RecommendationScoreBreakdown | null;
+  sponsoredReason: string | null;
 };
 
 type RecommendationQaProductSummary = {
@@ -517,6 +522,7 @@ export class RecommendationsService {
           score: this.scoreHomeProductV1(product),
           reasonCodes: [] as RecommendationReasonCode[],
           scoreBreakdown: null,
+          sponsoredReason: null,
         },
       }));
   }
@@ -536,12 +542,18 @@ export class RecommendationsService {
       this.buildPreferenceProfile(query, request, user),
     ]);
 
+    const sponsoredRanking = this.getSponsoredRankingConfig();
+
     return products
       .filter((product) => this.isPublicVisible(product))
       .map((product) => ({
         product,
         scored: {
-          ...this.scoring.scoreHomeProduct(product, preferenceProfile),
+          ...this.scoring.scoreHomeProduct(
+            product,
+            preferenceProfile,
+            sponsoredRanking,
+          ),
         },
       }))
       .sort((left, right) => right.scored.score - left.scored.score)
@@ -585,6 +597,7 @@ export class RecommendationsService {
           score: this.scoreSimilarProductV1(sourceProduct, product),
           reasonCodes: [] as RecommendationReasonCode[],
           scoreBreakdown: null,
+          sponsoredReason: null,
         },
       }));
   }
@@ -610,6 +623,8 @@ export class RecommendationsService {
       query.limit,
     );
 
+    const sponsoredRanking = this.getSponsoredRankingConfig();
+
     return candidates
       .filter(
         (product) => this.isPublicVisible(product) && product.id !== productId,
@@ -617,7 +632,11 @@ export class RecommendationsService {
       .map((product) => ({
         product,
         scored: {
-          ...this.scoring.scoreSimilarProduct(sourceProduct, product),
+          ...this.scoring.scoreSimilarProduct(
+            sourceProduct,
+            product,
+            sponsoredRanking,
+          ),
         },
       }))
       .sort((left, right) => right.scored.score - left.scored.score)
@@ -667,12 +686,18 @@ export class RecommendationsService {
       orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
     });
 
+    const sponsoredRanking = this.getSponsoredRankingConfig();
+
     return candidates
       .filter((product) => this.isPublicVisible(product))
       .map((product) => ({
         product,
         scored: {
-          ...this.scoring.scoreSearchProduct(searchQuery, product),
+          ...this.scoring.scoreSearchProduct(
+            searchQuery,
+            product,
+            sponsoredRanking,
+          ),
         },
       }))
       .filter((item) => (item.scored.score ?? 0) > 0)
@@ -761,10 +786,9 @@ export class RecommendationsService {
         mappedItem.scoreExplanation = {
           algorithm,
           finalScore: item.scored.score,
-          reasons: item.scored.reasonCodes.map(
-            (reasonCode) => RECOMMENDATION_REASON_LABELS[reasonCode],
-          ),
+          reasons: this.buildExplainabilityReasons(item.scored),
           scoreBreakdown: item.scored.scoreBreakdown ?? null,
+          sponsoredReason: item.scored.sponsoredReason,
         };
       }
 
@@ -911,12 +935,23 @@ export class RecommendationsService {
       rank,
       finalScore: item.scored.score,
       reasons: includeExplainability
-        ? item.scored.reasonCodes.map(
-            (reasonCode) => RECOMMENDATION_REASON_LABELS[reasonCode],
-          )
+        ? this.buildExplainabilityReasons(item.scored)
         : [],
       scoreBreakdown: includeExplainability ? item.scored.scoreBreakdown : null,
+      sponsoredReason: includeExplainability
+        ? item.scored.sponsoredReason
+        : null,
     };
+  }
+
+  private buildExplainabilityReasons(item: RecommendationRankedItem['scored']) {
+    const reasons = item.reasonCodes.map(
+      (reasonCode) => RECOMMENDATION_REASON_LABELS[reasonCode],
+    );
+    if (item.sponsoredReason) {
+      reasons.push(item.sponsoredReason);
+    }
+    return reasons;
   }
 
   private buildQaProductSummary(
@@ -980,6 +1015,15 @@ export class RecommendationsService {
         (newBreakdown?.shopScore ?? 0) - (oldBreakdown?.shopScore ?? 0),
       penaltyScore:
         (newBreakdown?.penaltyScore ?? 0) - (oldBreakdown?.penaltyScore ?? 0),
+      sponsoredBoostScore:
+        (newBreakdown?.sponsoredBoostScore ?? 0) -
+        (oldBreakdown?.sponsoredBoostScore ?? 0),
+      businessBoostScore:
+        (newBreakdown?.businessBoostScore ?? 0) -
+        (oldBreakdown?.businessBoostScore ?? 0),
+      maxSponsoredBoost:
+        (newBreakdown?.maxSponsoredBoost ?? 0) -
+        (oldBreakdown?.maxSponsoredBoost ?? 0),
     };
   }
 
@@ -1401,12 +1445,78 @@ export class RecommendationsService {
     return this.readFlag('RECOMMENDATION_QA_TOOLS_ENABLED', false);
   }
 
+  private getSponsoredRankingConfig(): RecommendationSponsoredRankingConfig {
+    const enabled = this.readFlag(
+      'RECOMMENDATION_SPONSORED_RANKING_ENABLED',
+      false,
+    );
+
+    return {
+      enabled,
+      sponsoredProductIds: new Set(
+        enabled
+          ? this.readStringListFlag('RECOMMENDATION_SPONSORED_PRODUCT_IDS')
+          : [],
+      ),
+      businessBoostShopIds: new Set(
+        enabled
+          ? this.readStringListFlag('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS')
+          : [],
+      ),
+      sponsoredBoost: this.readNumberFlag(
+        'RECOMMENDATION_SPONSORED_PRODUCT_BOOST',
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.sponsoredBoostDefault,
+        0,
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+      ),
+      businessBoost: this.readNumberFlag(
+        'RECOMMENDATION_BUSINESS_SHOP_BOOST',
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.businessBoostDefault,
+        0,
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+      ),
+      maxSponsoredBoost: this.readNumberFlag(
+        'RECOMMENDATION_SPONSORED_MAX_BOOST',
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxSponsoredBoostDefault,
+        0,
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+      ),
+    };
+  }
+
   private readFlag(name: string, fallback: boolean) {
     const raw = this.configService.get<string>(name);
     if (raw === undefined) {
       return fallback;
     }
     return !['0', 'false', 'off', 'no'].includes(raw.toLowerCase());
+  }
+
+  private readStringListFlag(name: string) {
+    const raw = this.configService.get<string>(name) ?? '';
+    return raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  private readNumberFlag(
+    name: string,
+    fallback: number,
+    min: number,
+    max: number,
+  ) {
+    const raw = this.configService.get<string>(name);
+    if (raw === undefined) {
+      return fallback;
+    }
+
+    const value = Number(raw);
+    if (Number.isNaN(value)) {
+      return fallback;
+    }
+
+    return Math.min(max, Math.max(min, value));
   }
 
   private buildPublicVisibilityWhere(): Prisma.ProductWhereInput {

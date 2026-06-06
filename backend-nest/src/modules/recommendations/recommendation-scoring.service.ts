@@ -108,12 +108,25 @@ export type RecommendationScoreBreakdown = {
   stockScore: number;
   shopScore: number;
   penaltyScore: number;
+  sponsoredBoostScore: number;
+  businessBoostScore: number;
+  maxSponsoredBoost: number;
 };
 
 export type ScoredRecommendation = {
   score: number;
   reasonCodes: RecommendationReasonCode[];
   scoreBreakdown: RecommendationScoreBreakdown;
+  sponsoredReason: string | null;
+};
+
+export type RecommendationSponsoredRankingConfig = {
+  enabled: boolean;
+  sponsoredProductIds: Set<string>;
+  businessBoostShopIds: Set<string>;
+  sponsoredBoost: number;
+  businessBoost: number;
+  maxSponsoredBoost: number;
 };
 
 export const RECOMMENDATION_SCORING_WEIGHTS = {
@@ -156,6 +169,14 @@ export const RECOMMENDATION_SCORING_WEIGHTS = {
   },
 } as const;
 
+export const RECOMMENDATION_SPONSORED_RANKING_LIMITS = {
+  sponsoredBoostDefault: 4,
+  businessBoostDefault: 2,
+  maxSponsoredBoostDefault: 5,
+  maxConfiguredBoost: 12,
+  relevanceCapRatio: 0.2,
+} as const;
+
 export const RECOMMENDATION_REASON_LABELS: Record<
   RecommendationReasonCode,
   string
@@ -179,30 +200,36 @@ export class RecommendationScoringService {
   scoreSimilarProduct(
     source: RecommendationProductRecord,
     candidate: RecommendationProductRecord,
+    sponsoredRanking?: RecommendationSponsoredRankingConfig,
   ): ScoredRecommendation {
     return this.scoreCandidate(candidate, {
       placement: 'product_detail',
       sourceProduct: source,
+      sponsoredRanking,
     });
   }
 
   scoreHomeProduct(
     candidate: RecommendationProductRecord,
     preferenceProfile: RecommendationPreferenceProfile,
+    sponsoredRanking?: RecommendationSponsoredRankingConfig,
   ): ScoredRecommendation {
     return this.scoreCandidate(candidate, {
       placement: 'home',
       preferenceProfile,
+      sponsoredRanking,
     });
   }
 
   scoreSearchProduct(
     query: string,
     candidate: RecommendationProductRecord,
+    sponsoredRanking?: RecommendationSponsoredRankingConfig,
   ): ScoredRecommendation {
     return this.scoreCandidate(candidate, {
       placement: 'search',
       query,
+      sponsoredRanking,
     });
   }
 
@@ -213,6 +240,7 @@ export class RecommendationScoringService {
       sourceProduct?: RecommendationProductRecord;
       preferenceProfile?: RecommendationPreferenceProfile;
       query?: string;
+      sponsoredRanking?: RecommendationSponsoredRankingConfig;
     },
   ): ScoredRecommendation {
     const reasonCodes = new Set<RecommendationReasonCode>();
@@ -228,8 +256,7 @@ export class RecommendationScoringService {
     const stockScore = this.resolveStockScore(candidate, reasonCodes);
     const shopScore = this.resolveShopScore(candidate, input, reasonCodes);
     const penaltyScore = this.resolvePenaltyScore(candidate);
-
-    const score =
+    const organicScore =
       categoryScore +
       textScore +
       popularityScore +
@@ -238,6 +265,15 @@ export class RecommendationScoringService {
       stockScore +
       shopScore -
       penaltyScore;
+    const sponsoredBoost = this.resolveSponsoredBoost(
+      candidate,
+      organicScore,
+      input.sponsoredRanking,
+    );
+    const score =
+      organicScore +
+      sponsoredBoost.sponsoredBoostScore +
+      sponsoredBoost.businessBoostScore;
 
     return {
       score: Number(score.toFixed(2)),
@@ -251,8 +287,95 @@ export class RecommendationScoringService {
         stockScore,
         shopScore,
         penaltyScore,
+        sponsoredBoostScore: sponsoredBoost.sponsoredBoostScore,
+        businessBoostScore: sponsoredBoost.businessBoostScore,
+        maxSponsoredBoost: sponsoredBoost.maxSponsoredBoost,
       },
+      sponsoredReason: sponsoredBoost.sponsoredReason,
     };
+  }
+
+  private resolveSponsoredBoost(
+    candidate: RecommendationProductRecord,
+    organicScore: number,
+    config?: RecommendationSponsoredRankingConfig,
+  ) {
+    const disabledResult = {
+      sponsoredBoostScore: 0,
+      businessBoostScore: 0,
+      maxSponsoredBoost: config?.enabled ? config.maxSponsoredBoost : 0,
+      sponsoredReason: null as string | null,
+    };
+
+    if (!config?.enabled || !this.isBoostEligible(candidate)) {
+      return disabledResult;
+    }
+
+    const baseSponsoredBoost = config.sponsoredProductIds.has(candidate.id)
+      ? config.sponsoredBoost
+      : 0;
+    const baseBusinessBoost = config.businessBoostShopIds.has(candidate.shopId)
+      ? config.businessBoost
+      : 0;
+    const rawBoost = baseSponsoredBoost + baseBusinessBoost;
+    if (rawBoost <= 0) {
+      return disabledResult;
+    }
+
+    const effectiveCap = Math.min(
+      config.maxSponsoredBoost,
+      Number(
+        (
+          Math.max(0, organicScore) *
+          RECOMMENDATION_SPONSORED_RANKING_LIMITS.relevanceCapRatio
+        ).toFixed(2),
+      ),
+    );
+    if (effectiveCap <= 0) {
+      return disabledResult;
+    }
+
+    const scale = Math.min(1, effectiveCap / rawBoost);
+    const sponsoredBoostScore = Number((baseSponsoredBoost * scale).toFixed(2));
+    const businessBoostScore = Number((baseBusinessBoost * scale).toFixed(2));
+
+    return {
+      sponsoredBoostScore,
+      businessBoostScore,
+      maxSponsoredBoost: config.maxSponsoredBoost,
+      sponsoredReason: this.resolveSponsoredReason(
+        sponsoredBoostScore,
+        businessBoostScore,
+      ),
+    };
+  }
+
+  private resolveSponsoredReason(
+    sponsoredBoostScore: number,
+    businessBoostScore: number,
+  ) {
+    if (sponsoredBoostScore > 0 && businessBoostScore > 0) {
+      return 'Internal sponsored and business boost applied within safety cap';
+    }
+    if (sponsoredBoostScore > 0) {
+      return 'Internal sponsored boost applied within safety cap';
+    }
+    if (businessBoostScore > 0) {
+      return 'Internal business boost applied within safety cap';
+    }
+    return null;
+  }
+
+  private isBoostEligible(candidate: RecommendationProductRecord) {
+    return (
+      candidate.visibility === 'ACTIVE' &&
+      candidate.catalogStatus === 'PUBLISHED' &&
+      candidate.archivedAt === null &&
+      candidate.unpublishedAt === null &&
+      candidate.shop.status === 'ACTIVE' &&
+      candidate.shop.sellerProfile.approvalStatus === 'APPROVED' &&
+      this.resolveAvailableQuantity(candidate.variants) > 0
+    );
   }
 
   private resolveCategoryScore(

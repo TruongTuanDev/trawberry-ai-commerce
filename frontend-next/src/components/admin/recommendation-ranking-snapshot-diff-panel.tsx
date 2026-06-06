@@ -868,7 +868,7 @@ export function RecommendationRankingSnapshotDiffPanel({
                         </p>
                         <p className="font-mono leading-5">
                           {item.scoreBreakdownDelta
-                            ? `cat ${formatSignedNumber(item.scoreBreakdownDelta.categoryScore)} | text ${formatSignedNumber(item.scoreBreakdownDelta.textScore)} | pop ${formatSignedNumber(item.scoreBreakdownDelta.popularityScore)} | fresh ${formatSignedNumber(item.scoreBreakdownDelta.freshnessScore)} | rating ${formatSignedNumber(item.scoreBreakdownDelta.ratingScore)} | stock ${formatSignedNumber(item.scoreBreakdownDelta.stockScore)} | shop ${formatSignedNumber(item.scoreBreakdownDelta.shopScore)} | penalty ${formatSignedNumber(item.scoreBreakdownDelta.penaltyScore)}`
+                            ? `cat ${formatSignedNumber(item.scoreBreakdownDelta.categoryScore)} | text ${formatSignedNumber(item.scoreBreakdownDelta.textScore)} | pop ${formatSignedNumber(item.scoreBreakdownDelta.popularityScore)} | fresh ${formatSignedNumber(item.scoreBreakdownDelta.freshnessScore)} | rating ${formatSignedNumber(item.scoreBreakdownDelta.ratingScore)} | stock ${formatSignedNumber(item.scoreBreakdownDelta.stockScore)} | shop ${formatSignedNumber(item.scoreBreakdownDelta.shopScore)} | penalty ${formatSignedNumber(item.scoreBreakdownDelta.penaltyScore)} | sponsored ${formatSignedNumber(item.scoreBreakdownDelta.sponsoredBoostScore)} | business ${formatSignedNumber(item.scoreBreakdownDelta.businessBoostScore)} | max ${formatSignedNumber(item.scoreBreakdownDelta.maxSponsoredBoost)}`
                             : "breakdown n/a"}
                         </p>
                       </div>
