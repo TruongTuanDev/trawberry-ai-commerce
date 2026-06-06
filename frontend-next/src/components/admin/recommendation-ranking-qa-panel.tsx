@@ -5,6 +5,7 @@ import {
   getRecommendationRankingSnapshot,
   type RecommendationQaComparisonResponse,
   type RecommendationQaPlacement,
+  type RecommendationSponsoredPresetCatalog,
 } from "@/lib/public-api";
 
 function formatMovement(value: number | null) {
@@ -23,10 +24,12 @@ function formatMovement(value: number | null) {
 export function RecommendationRankingQaPanel({
   comparison,
   debugEnabled,
+  sponsoredPresetCatalog,
   exportQuery,
 }: {
   comparison: RecommendationQaComparisonResponse;
   debugEnabled: boolean;
+  sponsoredPresetCatalog: RecommendationSponsoredPresetCatalog;
   exportQuery: {
     placement: RecommendationQaPlacement;
     productId?: string;
@@ -98,6 +101,92 @@ export function RecommendationRankingQaPanel({
       {exportError ? (
         <p className="text-sm text-red-600">{exportError}</p>
       ) : null}
+
+      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Sponsored rollout preset
+            </p>
+            <p className="text-sm leading-7 text-[var(--muted)]">
+              Internal-only metadata for the current sponsored ranking preset and
+              the safe preset catalog used during QA.
+            </p>
+          </div>
+          <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
+            ranking {comparison.sponsoredRanking?.sponsoredRankingEnabled ? "enabled" : "disabled"}
+          </span>
+        </div>
+
+        {comparison.sponsoredRanking?.activePreset ? (
+          <div className="mt-4 rounded-[1.25rem] border border-[var(--border)] bg-white p-4">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              Active preset: {comparison.sponsoredRanking.activePreset.name}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              {comparison.sponsoredRanking.activePreset.description}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                id {comparison.sponsoredRanking.activePreset.id}
+              </span>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                v{comparison.sponsoredRanking.activePreset.version}
+              </span>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                {comparison.sponsoredRanking.activePreset.stability}
+              </span>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                sponsored cap {comparison.sponsoredRanking.activePreset.maxSponsoredBoost}
+              </span>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                business cap {comparison.sponsoredRanking.activePreset.maxBusinessBoost}
+              </span>
+              <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                scenarios {comparison.sponsoredRanking.activePreset.allowedScenarioTypes.join(", ")}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          {sponsoredPresetCatalog.presets.map((preset) => (
+            <article
+              key={preset.id}
+              className="rounded-[1.25rem] border border-[var(--border)] bg-white p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                  {preset.name}
+                </p>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                  {preset.stability}
+                </span>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                {preset.description}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                  {preset.id}
+                </span>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                  v{preset.version}
+                </span>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                  sponsored {preset.maxSponsoredBoost}
+                </span>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                  business {preset.maxBusinessBoost}
+                </span>
+                <span className="rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1">
+                  {preset.allowedScenarioTypes.join(", ")}
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
@@ -175,6 +264,9 @@ export function RecommendationRankingQaPanel({
                         <p className="mt-1">
                           v1 sponsored reason: {item.ruleBasedV1?.sponsoredReason ?? "n/a"}
                         </p>
+                        <p className="mt-1">
+                          v1 preset: {item.ruleBasedV1?.sponsoredPreset?.id ?? "n/a"}
+                        </p>
                         <p className="mt-2">v2 breakdown:</p>
                         <p>
                           {item.ruleBasedV2?.scoreBreakdown
@@ -183,6 +275,9 @@ export function RecommendationRankingQaPanel({
                         </p>
                         <p className="mt-1">
                           v2 sponsored reason: {item.ruleBasedV2?.sponsoredReason ?? "n/a"}
+                        </p>
+                        <p className="mt-1">
+                          v2 preset: {item.ruleBasedV2?.sponsoredPreset?.id ?? "n/a"}
                         </p>
                       </div>
                     </div>

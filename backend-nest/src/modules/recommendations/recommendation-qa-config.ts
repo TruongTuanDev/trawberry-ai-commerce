@@ -95,6 +95,7 @@ function buildSnapshotItem(
         maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,
       },
       sponsoredReason: null,
+      sponsoredPreset: null,
     },
   };
 }
@@ -228,6 +229,7 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
         baselineSnapshot: {
           scenarioType: 'home',
           placement: 'home',
+          sponsoredRanking: null,
           productId: null,
           query: null,
           limit: 5,
@@ -276,6 +278,7 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
         candidateSnapshot: {
           scenarioType: 'home',
           placement: 'home',
+          sponsoredRanking: null,
           productId: null,
           query: null,
           limit: 5,
@@ -347,6 +350,7 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
         baselineSnapshot: {
           scenarioType: 'search',
           placement: 'search',
+          sponsoredRanking: null,
           productId: null,
           query: 'jacket',
           limit: 4,
@@ -392,6 +396,7 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
         candidateSnapshot: {
           scenarioType: 'search',
           placement: 'search',
+          sponsoredRanking: null,
           productId: null,
           query: 'jacket',
           limit: 4,
@@ -477,6 +482,7 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
         baselineSnapshot: {
           scenarioType: 'similar',
           placement: 'product_detail',
+          sponsoredRanking: null,
           productId: 'public-source-product',
           query: null,
           limit: 4,
@@ -522,6 +528,7 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
         candidateSnapshot: {
           scenarioType: 'similar',
           placement: 'product_detail',
+          sponsoredRanking: null,
           productId: 'public-source-product',
           query: null,
           limit: 4,

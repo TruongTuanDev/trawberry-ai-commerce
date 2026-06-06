@@ -1,5 +1,28 @@
 # Project Status
 
+## Managed Sponsored Config Catalogs and Rollout Presets Phase 3.2 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - an internal sponsored preset catalog with safe rollout metadata
+  - preset-based sponsored cap resolution with scenario restrictions
+  - a QA-only sponsored preset endpoint at `/api/internal/recommendations/sponsored-presets`
+  - internal compare/export explainability that can show safe sponsored preset metadata
+  - `/admin/recommendations-qa` visibility into the active preset and available preset catalog
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - sponsored presets remain internal code-managed assets rather than a managed campaign system
+  - there is still no billing, budget pacing, scheduling, or seller self-serve ads workflow
+- Next recommended phase:
+  - Phase 3.3: add lightweight preset versioning/sharing or sponsored rollout audit baselines for repeated QA reuse
+
 ## Sponsored Ranking and Rollout-Safe Configuration Phase 3.1 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

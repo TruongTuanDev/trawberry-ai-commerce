@@ -25,6 +25,7 @@ import {
 } from './dto/recommendation-qa-compare-response.dto';
 import {
   RecommendationQaBaselineCatalogResponseDto,
+  RecommendationSponsoredPresetListResponseDto,
   RecommendationQaThresholdPresetListResponseDto,
 } from './dto/recommendation-qa-config-response.dto';
 import {
@@ -44,6 +45,7 @@ import { RecommendationsService } from './recommendations.service';
   RecommendationQaDiffResponseDto,
   RecommendationQaThresholdPresetListResponseDto,
   RecommendationQaBaselineCatalogResponseDto,
+  RecommendationSponsoredPresetListResponseDto,
   RecommendationQaPackValidationResponseDto,
 )
 @Controller('api/internal/recommendations')
@@ -96,6 +98,16 @@ export class RecommendationsQaController {
   @ApiOkResponse({ type: RecommendationQaBaselineCatalogResponseDto })
   getBaselineCatalog() {
     return this.recommendationsService.getQaBaselineCatalog();
+  }
+
+  @Get('sponsored-presets')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'List internal sponsored ranking rollout presets.',
+  })
+  @ApiOkResponse({ type: RecommendationSponsoredPresetListResponseDto })
+  getSponsoredRankingPresets() {
+    return this.recommendationsService.getSponsoredRankingPresets();
   }
 
   @Post('diff')

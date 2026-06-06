@@ -22,6 +22,15 @@ import {
   type RecommendationQaBaselineCatalogEntry,
   type RecommendationQaThresholdPreset,
 } from './recommendation-qa-config';
+import {
+  DEFAULT_RECOMMENDATION_SPONSORED_PRESET_ID,
+  RECOMMENDATION_SPONSORED_PRESETS,
+  toSafeSponsoredPresetMetadata,
+  type RecommendationSponsoredPresetDefinition,
+  type RecommendationSponsoredPresetId,
+  type RecommendationSponsoredPresetMetadata,
+  type RecommendationSponsoredScenarioType,
+} from './recommendation-sponsored-config';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
 import { TrackSearchDto } from './dto/track-search.dto';
@@ -49,6 +58,7 @@ type RecommendationApiItem = {
     reasons: string[];
     scoreBreakdown: RecommendationScoreBreakdown | null;
     sponsoredReason?: string | null;
+    sponsoredPreset?: RecommendationSponsoredPresetMetadata | null;
   };
 };
 
@@ -59,6 +69,7 @@ type RecommendationRankedItem = {
     reasonCodes: RecommendationReasonCode[];
     scoreBreakdown: RecommendationScoreBreakdown | null;
     sponsoredReason: string | null;
+    sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
   };
 };
 
@@ -69,6 +80,7 @@ type RecommendationAlgorithmSnapshot = {
   reasons: string[];
   scoreBreakdown: RecommendationScoreBreakdown | null;
   sponsoredReason: string | null;
+  sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
 };
 
 type RecommendationQaProductSummary = {
@@ -91,6 +103,11 @@ type RecommendationQaComparisonRow = {
   rankMovement: number | null;
   ruleBasedV1: RecommendationAlgorithmSnapshot | null;
   ruleBasedV2: RecommendationAlgorithmSnapshot | null;
+};
+
+type RecommendationSponsoredQaSummary = {
+  sponsoredRankingEnabled: boolean;
+  activePreset: RecommendationSponsoredPresetMetadata | null;
 };
 
 type RecommendationQaSnapshotItemLike =
@@ -245,6 +262,7 @@ export class RecommendationsService {
 
     let v1Items: RecommendationRankedItem[] = [];
     let v2Items: RecommendationRankedItem[] = [];
+    let sponsoredQaSummary: RecommendationSponsoredQaSummary | null = null;
 
     switch (query.placement) {
       case 'home':
@@ -252,16 +270,19 @@ export class RecommendationsService {
           this.loadHomeRecommendationsV1(normalizedQuery),
           this.loadHomeRecommendationsV2(normalizedQuery, request, user),
         ]);
+        sponsoredQaSummary = this.buildSponsoredQaSummary('home');
         break;
       case 'product_detail':
         [v1Items, v2Items] = await Promise.all([
           this.loadSimilarRecommendationsV1(query.productId!, normalizedQuery),
           this.loadSimilarRecommendationsV2(query.productId!, normalizedQuery),
         ]);
+        sponsoredQaSummary = this.buildSponsoredQaSummary('similar');
         break;
       case 'search':
         v1Items = [];
         v2Items = await this.loadSearchRecommendationsV2(normalizedQuery);
+        sponsoredQaSummary = this.buildSponsoredQaSummary('search');
         break;
     }
 
@@ -272,6 +293,7 @@ export class RecommendationsService {
 
     return {
       placement: query.placement,
+      sponsoredRanking: sponsoredQaSummary,
       items,
     };
   }
@@ -319,6 +341,29 @@ export class RecommendationsService {
             }
           : null,
       })),
+    };
+  }
+
+  getSponsoredRankingPresets() {
+    if (!this.isQaToolsEnabled()) {
+      throw new NotFoundException();
+    }
+
+    const resolvedPreset = this.resolveSponsoredPreset(
+      this.configService.get<string>('RECOMMENDATION_SPONSORED_PRESET_ID'),
+    );
+
+    return {
+      sponsoredRankingEnabled: this.readFlag(
+        'RECOMMENDATION_SPONSORED_RANKING_ENABLED',
+        false,
+      ),
+      activePreset: resolvedPreset
+        ? toSafeSponsoredPresetMetadata(resolvedPreset)
+        : null,
+      presets: RECOMMENDATION_SPONSORED_PRESETS.map((preset) =>
+        toSafeSponsoredPresetMetadata(preset),
+      ),
     };
   }
 
@@ -523,6 +568,7 @@ export class RecommendationsService {
           reasonCodes: [] as RecommendationReasonCode[],
           scoreBreakdown: null,
           sponsoredReason: null,
+          sponsoredPreset: null,
         },
       }));
   }
@@ -542,7 +588,7 @@ export class RecommendationsService {
       this.buildPreferenceProfile(query, request, user),
     ]);
 
-    const sponsoredRanking = this.getSponsoredRankingConfig();
+    const sponsoredRanking = this.getSponsoredRankingConfig('home');
 
     return products
       .filter((product) => this.isPublicVisible(product))
@@ -598,6 +644,7 @@ export class RecommendationsService {
           reasonCodes: [] as RecommendationReasonCode[],
           scoreBreakdown: null,
           sponsoredReason: null,
+          sponsoredPreset: null,
         },
       }));
   }
@@ -623,7 +670,7 @@ export class RecommendationsService {
       query.limit,
     );
 
-    const sponsoredRanking = this.getSponsoredRankingConfig();
+    const sponsoredRanking = this.getSponsoredRankingConfig('similar');
 
     return candidates
       .filter(
@@ -686,7 +733,7 @@ export class RecommendationsService {
       orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
     });
 
-    const sponsoredRanking = this.getSponsoredRankingConfig();
+    const sponsoredRanking = this.getSponsoredRankingConfig('search');
 
     return candidates
       .filter((product) => this.isPublicVisible(product))
@@ -789,6 +836,7 @@ export class RecommendationsService {
           reasons: this.buildExplainabilityReasons(item.scored),
           scoreBreakdown: item.scored.scoreBreakdown ?? null,
           sponsoredReason: item.scored.sponsoredReason,
+          sponsoredPreset: item.scored.sponsoredPreset,
         };
       }
 
@@ -897,6 +945,9 @@ export class RecommendationsService {
       scenarioType:
         query.placement === 'product_detail' ? 'similar' : query.placement,
       placement: query.placement,
+      sponsoredRanking: this.buildSponsoredQaSummary(
+        query.placement === 'product_detail' ? 'similar' : query.placement,
+      ),
       productId:
         query.placement === 'product_detail' ? (query.productId ?? null) : null,
       query: query.placement === 'search' ? (query.q?.trim() ?? null) : null,
@@ -940,6 +991,9 @@ export class RecommendationsService {
       scoreBreakdown: includeExplainability ? item.scored.scoreBreakdown : null,
       sponsoredReason: includeExplainability
         ? item.scored.sponsoredReason
+        : null,
+      sponsoredPreset: includeExplainability
+        ? item.scored.sponsoredPreset
         : null,
     };
   }
@@ -1445,43 +1499,95 @@ export class RecommendationsService {
     return this.readFlag('RECOMMENDATION_QA_TOOLS_ENABLED', false);
   }
 
-  private getSponsoredRankingConfig(): RecommendationSponsoredRankingConfig {
-    const enabled = this.readFlag(
+  private buildSponsoredQaSummary(
+    scenarioType: RecommendationSponsoredScenarioType,
+  ): RecommendationSponsoredQaSummary {
+    const config = this.getSponsoredRankingConfig(scenarioType);
+    return {
+      sponsoredRankingEnabled: config.enabled,
+      activePreset: config.preset,
+    };
+  }
+
+  private getSponsoredRankingConfig(
+    scenarioType: RecommendationSponsoredScenarioType,
+  ): RecommendationSponsoredRankingConfig {
+    const rankingEnabled = this.readFlag(
       'RECOMMENDATION_SPONSORED_RANKING_ENABLED',
       false,
     );
+    const preset = this.resolveSponsoredPreset(
+      this.configService.get<string>('RECOMMENDATION_SPONSORED_PRESET_ID'),
+    );
+    const scenarioAllowed =
+      preset?.allowedScenarioTypes.includes(scenarioType) ?? false;
+    const enabled = rankingEnabled && scenarioAllowed;
+    const maxSponsoredBoost = this.readNumberFlag(
+      'RECOMMENDATION_SPONSORED_MAX_BOOST',
+      preset?.maxSponsoredBoost ??
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxSponsoredBoostDefault,
+      0,
+      Math.min(
+        preset?.maxSponsoredBoost ??
+          RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxSponsoredBoostDefault,
+        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+      ),
+    );
+    const maxBusinessBoost =
+      preset?.maxBusinessBoost ??
+      RECOMMENDATION_SPONSORED_RANKING_LIMITS.businessBoostDefault;
 
     return {
       enabled,
       sponsoredProductIds: new Set(
-        enabled
+        rankingEnabled
           ? this.readStringListFlag('RECOMMENDATION_SPONSORED_PRODUCT_IDS')
           : [],
       ),
       businessBoostShopIds: new Set(
-        enabled
+        rankingEnabled
           ? this.readStringListFlag('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS')
           : [],
       ),
       sponsoredBoost: this.readNumberFlag(
         'RECOMMENDATION_SPONSORED_PRODUCT_BOOST',
-        RECOMMENDATION_SPONSORED_RANKING_LIMITS.sponsoredBoostDefault,
+        preset?.sponsoredBoost ??
+          RECOMMENDATION_SPONSORED_RANKING_LIMITS.sponsoredBoostDefault,
         0,
-        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+        maxSponsoredBoost,
       ),
       businessBoost: this.readNumberFlag(
         'RECOMMENDATION_BUSINESS_SHOP_BOOST',
-        RECOMMENDATION_SPONSORED_RANKING_LIMITS.businessBoostDefault,
+        preset?.businessBoost ??
+          RECOMMENDATION_SPONSORED_RANKING_LIMITS.businessBoostDefault,
         0,
-        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+        Math.min(
+          maxBusinessBoost,
+          RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
+        ),
       ),
-      maxSponsoredBoost: this.readNumberFlag(
-        'RECOMMENDATION_SPONSORED_MAX_BOOST',
-        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxSponsoredBoostDefault,
-        0,
-        RECOMMENDATION_SPONSORED_RANKING_LIMITS.maxConfiguredBoost,
-      ),
+      maxSponsoredBoost,
+      maxBusinessBoost,
+      preset: preset ? toSafeSponsoredPresetMetadata(preset) : null,
     };
+  }
+
+  private resolveSponsoredPreset(
+    presetId: string | undefined,
+  ): RecommendationSponsoredPresetDefinition | null {
+    const normalizedPresetId = presetId?.trim() as
+      | RecommendationSponsoredPresetId
+      | undefined;
+
+    return (
+      RECOMMENDATION_SPONSORED_PRESETS.find(
+        (preset) => preset.id === normalizedPresetId,
+      ) ??
+      RECOMMENDATION_SPONSORED_PRESETS.find(
+        (preset) => preset.id === DEFAULT_RECOMMENDATION_SPONSORED_PRESET_ID,
+      ) ??
+      null
+    );
   }
 
   private readFlag(name: string, fallback: boolean) {

@@ -120,6 +120,35 @@ class RecommendationQaBaselineCatalogEntryDto {
   mockPack!: RecommendationQaBaselineCatalogMockPackDto | null;
 }
 
+class RecommendationSponsoredPresetDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  description!: string;
+
+  @ApiProperty()
+  version!: string;
+
+  @ApiProperty({ enum: ['experimental', 'stable', 'deprecated'] })
+  stability!: 'experimental' | 'stable' | 'deprecated';
+
+  @ApiProperty()
+  maxSponsoredBoost!: number;
+
+  @ApiProperty()
+  maxBusinessBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'], isArray: true })
+  allowedScenarioTypes!: Array<'home' | 'similar' | 'search'>;
+
+  @ApiProperty()
+  notes!: string;
+}
+
 export class RecommendationQaThresholdPresetListResponseDto {
   @ApiProperty({ type: RecommendationQaThresholdPresetDto, isArray: true })
   presets!: RecommendationQaThresholdPresetDto[];
@@ -131,4 +160,18 @@ export class RecommendationQaBaselineCatalogResponseDto {
     isArray: true,
   })
   catalog!: RecommendationQaBaselineCatalogEntryDto[];
+}
+
+export class RecommendationSponsoredPresetListResponseDto {
+  @ApiProperty()
+  sponsoredRankingEnabled!: boolean;
+
+  @ApiProperty({
+    type: RecommendationSponsoredPresetDto,
+    nullable: true,
+  })
+  activePreset!: RecommendationSponsoredPresetDto | null;
+
+  @ApiProperty({ type: RecommendationSponsoredPresetDto, isArray: true })
+  presets!: RecommendationSponsoredPresetDto[];
 }

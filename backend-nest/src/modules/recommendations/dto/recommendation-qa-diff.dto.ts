@@ -59,6 +59,60 @@ class RecommendationQaDiffScoreBreakdownDto {
   maxSponsoredBoost!: number;
 }
 
+class RecommendationQaDiffSponsoredPresetDto {
+  @ApiProperty()
+  @IsString()
+  id!: string;
+
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiProperty()
+  @IsString()
+  description!: string;
+
+  @ApiProperty()
+  @IsString()
+  version!: string;
+
+  @ApiProperty({ enum: ['experimental', 'stable', 'deprecated'] })
+  @IsString()
+  stability!: 'experimental' | 'stable' | 'deprecated';
+
+  @ApiProperty()
+  @IsNumber()
+  maxSponsoredBoost!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  maxBusinessBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'], isArray: true })
+  @IsArray()
+  @IsString({ each: true })
+  allowedScenarioTypes!: Array<'home' | 'similar' | 'search'>;
+
+  @ApiProperty()
+  @IsString()
+  notes!: string;
+}
+
+class RecommendationQaDiffSponsoredRankingDto {
+  @ApiProperty()
+  @IsBoolean()
+  sponsoredRankingEnabled!: boolean;
+
+  @ApiProperty({
+    type: RecommendationQaDiffSponsoredPresetDto,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffSponsoredPresetDto)
+  activePreset!: RecommendationQaDiffSponsoredPresetDto | null;
+}
+
 class RecommendationQaDiffAlgorithmSnapshotDto {
   @ApiProperty()
   @IsString()
@@ -93,6 +147,16 @@ class RecommendationQaDiffAlgorithmSnapshotDto {
   @IsOptional()
   @Allow()
   sponsoredReason!: string | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffSponsoredPresetDto,
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffSponsoredPresetDto)
+  sponsoredPreset!: RecommendationQaDiffSponsoredPresetDto | null;
 }
 
 class RecommendationQaDiffSnapshotProductDto {
@@ -187,6 +251,15 @@ export class RecommendationQaSnapshotDto {
   @ApiProperty({ enum: ['home', 'product_detail', 'search'] })
   @IsString()
   placement!: 'home' | 'product_detail' | 'search';
+
+  @ApiProperty({
+    type: RecommendationQaDiffSponsoredRankingDto,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffSponsoredRankingDto)
+  sponsoredRanking!: RecommendationQaDiffSponsoredRankingDto | null;
 
   @ApiProperty({ nullable: true })
   @IsOptional()

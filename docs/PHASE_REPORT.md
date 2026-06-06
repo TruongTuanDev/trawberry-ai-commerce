@@ -1,5 +1,78 @@
 # Phase Report
 
+## 2026-06-07 Managed Sponsored Config Catalogs and Rollout Presets Phase 3.2
+
+- Status: Implemented on current branch
+- Scope:
+  - extended the Phase 3 sponsored ranking foundation with a managed internal preset catalog for the active NestJS + Next.js stack only
+  - added code-managed internal sponsored rollout presets:
+    - `conservative`
+    - `balanced`
+    - `aggressive-internal-only`
+    - `stock-safe`
+    - `search-safe`
+  - added safe preset metadata for QA:
+    - `id`
+    - `name`
+    - `description`
+    - `version`
+    - `stability`
+    - `maxSponsoredBoost`
+    - `maxBusinessBoost`
+    - `allowedScenarioTypes`
+    - `notes`
+  - added internal endpoint:
+    - `GET /api/internal/recommendations/sponsored-presets`
+  - updated sponsored ranking resolution so:
+    - invalid preset ids safely fall back to `balanced`
+    - env overrides are clamped by preset caps
+    - scenario restrictions are enforced per preset
+    - sponsored ranking still remains disabled unless `RECOMMENDATION_SPONSORED_RANKING_ENABLED=true`
+  - extended internal explainability and QA comparison/export payloads with safe sponsored preset metadata only when allowed
+  - enhanced `/admin/recommendations-qa` so internal users can inspect active and available sponsored presets without exposing them on public pages
+  - added regression coverage for:
+    - sponsored presets endpoint disabled by default
+    - sponsored presets endpoint enabled behind the QA flag
+    - conservative vs aggressive cap differences
+    - invalid/unbounded preset override clamping
+    - explainability-safe sponsored preset metadata
+    - public response compatibility with no preset leakage
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no seller-facing ads UI or campaign management UI was introduced
+  - no legacy `strawberry-*` apps were modified
+  - public recommendation pages remain free of internal preset/config metadata
+- Local QA workflow:
+  - keep `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - keep `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - optional explainability:
+    - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - enable sponsored ranking only while auditing:
+    - `RECOMMENDATION_SPONSORED_RANKING_ENABLED=true`
+  - choose a preset with:
+    - `RECOMMENDATION_SPONSORED_PRESET_ID=balanced`
+  - open `/admin/recommendations-qa`
+  - inspect the active preset card and preset catalog
+  - run the same saved scenario before and after changing the sponsored preset or caps
+  - export snapshots and use the existing diff / QA pack validation workflow to review rank movement safely
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - sponsored presets are still code-managed internal assets, not a managed campaign system
+  - no billing, budget pacing, scheduling, or seller self-serve ads workflow exists by design
+- Next recommended phase:
+  - Phase 3.3: add lightweight preset versioning/sharing workflows or rollout audit baselines for sponsored ranking changes
+
 ## 2026-06-07 Sponsored Ranking and Rollout-Safe Configuration Phase 3.1
 
 - Status: Implemented on current branch

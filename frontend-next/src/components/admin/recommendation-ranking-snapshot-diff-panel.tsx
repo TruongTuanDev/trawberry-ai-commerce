@@ -306,6 +306,7 @@ export function RecommendationRankingSnapshotDiffPanel({
         ({
           scenarioType: entry.scenarioType,
           placement: entry.scenarioType === "similar" ? "product_detail" : entry.scenarioType,
+          sponsoredRanking: null,
           productId: entry.productId,
           query: entry.query,
           limit: entry.defaultLimit,
@@ -318,6 +319,7 @@ export function RecommendationRankingSnapshotDiffPanel({
         ({
           scenarioType: entry.scenarioType,
           placement: entry.scenarioType === "similar" ? "product_detail" : entry.scenarioType,
+          sponsoredRanking: null,
           productId: entry.productId,
           query: entry.query,
           limit: entry.defaultLimit,

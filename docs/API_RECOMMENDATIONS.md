@@ -1,8 +1,8 @@
 # API Recommendations
 
-## Phase 2 and Phase 3.1 Scope
+## Phase 2 and Phase 3.2 Scope
 
-This document covers the Phase 2 smart ranking rollout plus the Phase 3.1 sponsored ranking foundation for public product recommendations.
+This document covers the Phase 2 smart ranking rollout plus the Phase 3 sponsored ranking foundation through Phase 3.2 managed internal preset catalogs for public product recommendations.
 
 Safety guarantees:
 
@@ -22,6 +22,7 @@ Feature flags:
 - `RECOMMENDATION_QA_TOOLS_ENABLED`
 - `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED`
 - `RECOMMENDATION_SPONSORED_RANKING_ENABLED`
+- `RECOMMENDATION_SPONSORED_PRESET_ID`
 
 If `RECOMMENDATION_SMART_RANKING_ENABLED=false`:
 
@@ -116,6 +117,44 @@ Sponsored ranking foundation:
 - internal explainability can show safe sponsored diagnostics only when:
   - `debug=true`
   - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+
+Managed sponsored rollout presets:
+
+- sponsored ranking still stays disabled by default
+- preset metadata is code-managed and internal-only, not seller-managed and not database-managed
+- current preset ids:
+  - `conservative`
+  - `balanced`
+  - `aggressive-internal-only`
+  - `stock-safe`
+  - `search-safe`
+- select the active preset with:
+  - `RECOMMENDATION_SPONSORED_PRESET_ID=<preset-id>`
+- if the preset id is invalid, the backend safely falls back to `balanced`
+- each preset defines safe metadata:
+  - `id`
+  - `name`
+  - `description`
+  - `version`
+  - `stability`
+  - `maxSponsoredBoost`
+  - `maxBusinessBoost`
+  - `allowedScenarioTypes`
+  - `notes`
+- each preset also defines bounded internal default boost values that are still clamped by:
+  - preset-level max caps
+  - the global configured max cap
+  - organic relevance ratio limits already enforced by Phase 3.1
+- scenario restrictions are enforced:
+  - a preset can be selected globally
+  - but it only becomes active for the scenarios listed in `allowedScenarioTypes`
+  - for example, `search-safe` is intended for `search` only
+- public recommendation payloads never expose:
+  - internal preset ids
+  - sponsored target product ids
+  - business target shop ids
+  - raw env var names or values
+- internal explainability and QA can show safe preset metadata only when internal flags allow it
 
 Internal QA comparison mode:
 
@@ -241,7 +280,18 @@ Internal explainability example:
           "businessBoostScore": 0,
           "maxSponsoredBoost": 0
         },
-        "sponsoredReason": null
+        "sponsoredReason": null,
+        "sponsoredPreset": {
+          "id": "balanced",
+          "name": "Balanced",
+          "description": "Default internal rollout preset with moderate boosts and bounded scenario coverage.",
+          "version": "1.0.0",
+          "stability": "stable",
+          "maxSponsoredBoost": 5,
+          "maxBusinessBoost": 2,
+          "allowedScenarioTypes": ["home", "similar", "search"],
+          "notes": "Recommended preset for most QA comparisons and initial staged rollout checks."
+        }
       }
     }
   ],
@@ -374,12 +424,29 @@ Behavior:
   - positive value means the product moved up in `rule_based_v2`
 - when `export=true`, the same internal workflow returns a QA snapshot payload instead of the default compare response
 - exported snapshots only include public product summary fields plus ranking metadata needed for QA review
+- compare and snapshot responses can include safe root-level sponsored ranking metadata for QA:
+  - `sponsoredRankingEnabled`
+  - `activePreset`
 
 Response example:
 
 ```json
 {
   "placement": "home",
+  "sponsoredRanking": {
+    "sponsoredRankingEnabled": true,
+    "activePreset": {
+      "id": "balanced",
+      "name": "Balanced",
+      "description": "Default internal rollout preset with moderate boosts and bounded scenario coverage.",
+      "version": "1.0.0",
+      "stability": "stable",
+      "maxSponsoredBoost": 5,
+      "maxBusinessBoost": 2,
+      "allowedScenarioTypes": ["home", "similar", "search"],
+      "notes": "Recommended preset for most QA comparisons and initial staged rollout checks."
+    }
+  },
   "items": [
     {
       "productId": "uuid",
@@ -413,7 +480,18 @@ Response example:
           "businessBoostScore": 0,
           "maxSponsoredBoost": 0
         },
-        "sponsoredReason": null
+        "sponsoredReason": null,
+        "sponsoredPreset": {
+          "id": "balanced",
+          "name": "Balanced",
+          "description": "Default internal rollout preset with moderate boosts and bounded scenario coverage.",
+          "version": "1.0.0",
+          "stability": "stable",
+          "maxSponsoredBoost": 5,
+          "maxBusinessBoost": 2,
+          "allowedScenarioTypes": ["home", "similar", "search"],
+          "notes": "Recommended preset for most QA comparisons and initial staged rollout checks."
+        }
       }
     }
   ]
@@ -426,6 +504,20 @@ Snapshot export example:
 {
   "scenarioType": "search",
   "placement": "search",
+  "sponsoredRanking": {
+    "sponsoredRankingEnabled": true,
+    "activePreset": {
+      "id": "search-safe",
+      "name": "Search safe",
+      "description": "Search-focused preset with tighter caps to avoid overwhelming keyword relevance.",
+      "version": "1.0.0",
+      "stability": "stable",
+      "maxSponsoredBoost": 3,
+      "maxBusinessBoost": 1,
+      "allowedScenarioTypes": ["search"],
+      "notes": "Use for keyword-driven recommendation audits where intent stability matters most."
+    }
+  },
   "productId": null,
   "query": "jacket",
   "limit": 8,
@@ -469,7 +561,18 @@ Snapshot export example:
           "businessBoostScore": 0,
           "maxSponsoredBoost": 0
         },
-        "sponsoredReason": null
+        "sponsoredReason": null,
+        "sponsoredPreset": {
+          "id": "search-safe",
+          "name": "Search safe",
+          "description": "Search-focused preset with tighter caps to avoid overwhelming keyword relevance.",
+          "version": "1.0.0",
+          "stability": "stable",
+          "maxSponsoredBoost": 3,
+          "maxBusinessBoost": 1,
+          "allowedScenarioTypes": ["search"],
+          "notes": "Use for keyword-driven recommendation audits where intent stability matters most."
+        }
       }
     }
   ]
@@ -840,6 +943,50 @@ Local QA threshold workflow:
    - never commit real exported storefront snapshots
 11. After future weight changes, repeat the same catalog entry or pack and compare whether thresholds still pass.
 
+### `GET /api/internal/recommendations/sponsored-presets`
+
+Purpose:
+
+- return the safe internal sponsored rollout preset catalog used by Phase 3.2
+- help QA inspect preset caps and scenario coverage before enabling sponsored ranking locally
+
+Behavior:
+
+- returns `404` when `RECOMMENDATION_QA_TOOLS_ENABLED` is off
+- returns allowlisted metadata only:
+  - `sponsoredRankingEnabled`
+  - `activePreset`
+  - `presets[]`
+- does not return:
+  - sponsored target product ids
+  - business target shop ids
+  - raw env vars
+  - cookies
+  - session ids
+  - user ids
+  - private tracking payloads
+
+Local sponsored preset QA workflow:
+
+1. Keep `RECOMMENDATION_QA_TOOLS_ENABLED=true`.
+2. Keep `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`.
+3. Optional explainability:
+   - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+4. Enable sponsored ranking only when you are actively auditing it:
+   - `RECOMMENDATION_SPONSORED_RANKING_ENABLED=true`
+5. Choose a preset:
+   - `RECOMMENDATION_SPONSORED_PRESET_ID=conservative`
+   - `RECOMMENDATION_SPONSORED_PRESET_ID=balanced`
+   - `RECOMMENDATION_SPONSORED_PRESET_ID=aggressive-internal-only`
+   - `RECOMMENDATION_SPONSORED_PRESET_ID=stock-safe`
+   - `RECOMMENDATION_SPONSORED_PRESET_ID=search-safe`
+6. Open `/admin/recommendations-qa`.
+7. Review the active preset metadata and allowed scenarios.
+8. Run the same saved scenario before and after the sponsored flag/preset change.
+9. Export snapshots and diff them with the existing Phase 2 QA workflow.
+10. Never expose preset/catalog metadata on public storefront pages or seller-facing tooling.
+
 Phase 2.8 readiness notes:
 
 - treat preset and catalog `version` fields as the lightweight audit handle when sharing internal QA results
@@ -914,9 +1061,10 @@ Future Phase 3 topics:
 - richer session intent modeling
 - rollout-safe ranking configuration management beyond code-managed internal presets
 
-Phase 3.1 out of scope:
+Phase 3.2 out of scope:
 
 - no full ads management dashboard
 - no billing, budget pacing, campaign scheduling, or auction logic
+- no seller self-serve ads UI
 - no public disclosure of sponsored configuration internals
 - no checkout, order, cart, payment, shipping, WB sync, AI Try-On, or legacy app changes

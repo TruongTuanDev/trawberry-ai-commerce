@@ -36,6 +36,35 @@ class RecommendationScoreBreakdownDto {
   maxSponsoredBoost!: number;
 }
 
+class RecommendationSponsoredPresetDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  description!: string;
+
+  @ApiProperty()
+  version!: string;
+
+  @ApiProperty({ enum: ['experimental', 'stable', 'deprecated'] })
+  stability!: 'experimental' | 'stable' | 'deprecated';
+
+  @ApiProperty()
+  maxSponsoredBoost!: number;
+
+  @ApiProperty()
+  maxBusinessBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'], isArray: true })
+  allowedScenarioTypes!: Array<'home' | 'similar' | 'search'>;
+
+  @ApiProperty()
+  notes!: string;
+}
+
 class RecommendationScoreExplanationDto {
   @ApiProperty()
   algorithm!: string;
@@ -55,6 +84,13 @@ class RecommendationScoreExplanationDto {
 
   @ApiProperty({ nullable: true, required: false })
   sponsoredReason?: string | null;
+
+  @ApiProperty({
+    type: RecommendationSponsoredPresetDto,
+    nullable: true,
+    required: false,
+  })
+  sponsoredPreset?: RecommendationSponsoredPresetDto | null;
 }
 
 class RecommendationResponseItemDto {

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { RecommendationSponsoredPresetMetadata } from './recommendation-sponsored-config';
 
 export type RecommendationProductRecord = {
   id: string;
@@ -118,6 +119,7 @@ export type ScoredRecommendation = {
   reasonCodes: RecommendationReasonCode[];
   scoreBreakdown: RecommendationScoreBreakdown;
   sponsoredReason: string | null;
+  sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
 };
 
 export type RecommendationSponsoredRankingConfig = {
@@ -127,6 +129,8 @@ export type RecommendationSponsoredRankingConfig = {
   sponsoredBoost: number;
   businessBoost: number;
   maxSponsoredBoost: number;
+  maxBusinessBoost: number;
+  preset: RecommendationSponsoredPresetMetadata | null;
 };
 
 export const RECOMMENDATION_SCORING_WEIGHTS = {
@@ -292,6 +296,9 @@ export class RecommendationScoringService {
         maxSponsoredBoost: sponsoredBoost.maxSponsoredBoost,
       },
       sponsoredReason: sponsoredBoost.sponsoredReason,
+      sponsoredPreset: input.sponsoredRanking?.enabled
+        ? input.sponsoredRanking.preset
+        : null,
     };
   }
 
@@ -312,10 +319,10 @@ export class RecommendationScoringService {
     }
 
     const baseSponsoredBoost = config.sponsoredProductIds.has(candidate.id)
-      ? config.sponsoredBoost
+      ? Math.min(config.sponsoredBoost, config.maxSponsoredBoost)
       : 0;
     const baseBusinessBoost = config.businessBoostShopIds.has(candidate.shopId)
-      ? config.businessBoost
+      ? Math.min(config.businessBoost, config.maxBusinessBoost)
       : 0;
     const rawBoost = baseSponsoredBoost + baseBusinessBoost;
     if (rawBoost <= 0) {

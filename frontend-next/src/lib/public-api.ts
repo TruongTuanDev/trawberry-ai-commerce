@@ -68,6 +68,31 @@ export type RecommendationPlacement =
   | "cart"
   | "cart_later_reserved";
 
+export type RecommendationSponsoredScenarioType = "home" | "similar" | "search";
+
+export type RecommendationSponsoredPreset = {
+  id:
+    | "conservative"
+    | "balanced"
+    | "aggressive-internal-only"
+    | "stock-safe"
+    | "search-safe";
+  name: string;
+  description: string;
+  version: string;
+  stability: "experimental" | "stable" | "deprecated";
+  maxSponsoredBoost: number;
+  maxBusinessBoost: number;
+  allowedScenarioTypes: RecommendationSponsoredScenarioType[];
+  notes: string;
+};
+
+export type RecommendationSponsoredPresetCatalog = {
+  sponsoredRankingEnabled: boolean;
+  activePreset: RecommendationSponsoredPreset | null;
+  presets: RecommendationSponsoredPreset[];
+};
+
 export type VisualSearchEventType = "impression" | "click";
 
 export type RecommendationProductItem = {
@@ -93,6 +118,7 @@ export type RecommendationProductItem = {
       maxSponsoredBoost: number;
     } | null;
     sponsoredReason?: string | null;
+    sponsoredPreset?: RecommendationSponsoredPreset | null;
   };
 };
 
@@ -127,6 +153,7 @@ export type RecommendationQaAlgorithmSnapshot = {
     maxSponsoredBoost: number;
   } | null;
   sponsoredReason: string | null;
+  sponsoredPreset: RecommendationSponsoredPreset | null;
 };
 
 export type RecommendationQaComparisonItem = {
@@ -139,6 +166,10 @@ export type RecommendationQaComparisonItem = {
 
 export type RecommendationQaComparisonResponse = {
   placement: RecommendationQaPlacement;
+  sponsoredRanking: {
+    sponsoredRankingEnabled: boolean;
+    activePreset: RecommendationSponsoredPreset | null;
+  } | null;
   items: RecommendationQaComparisonItem[];
 };
 
@@ -159,6 +190,10 @@ export type RecommendationQaSnapshotProduct = {
 export type RecommendationQaSnapshotResponse = {
   scenarioType: "home" | "similar" | "search";
   placement: RecommendationQaPlacement;
+  sponsoredRanking: {
+    sponsoredRankingEnabled: boolean;
+    activePreset: RecommendationSponsoredPreset | null;
+  } | null;
   productId: string | null;
   query: string | null;
   limit: number;
@@ -987,6 +1022,15 @@ export async function getRecommendationQaThresholdPresets() {
 export async function getRecommendationQaBaselineCatalog() {
   return apiRequest<{ catalog: RecommendationQaBaselineCatalogEntry[] }>(
     "/api/internal/recommendations/baseline-catalog",
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getRecommendationSponsoredPresets() {
+  return apiRequest<RecommendationSponsoredPresetCatalog>(
+    "/api/internal/recommendations/sponsored-presets",
     {
       method: "GET",
     },

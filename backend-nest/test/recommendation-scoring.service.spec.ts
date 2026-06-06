@@ -176,6 +176,7 @@ describe('RecommendationScoringService', () => {
     expect(scored.scoreBreakdown.sponsoredBoostScore).toBe(0);
     expect(scored.scoreBreakdown.businessBoostScore).toBe(0);
     expect(scored.sponsoredReason).toBeNull();
+    expect(scored.sponsoredPreset?.id).toBe('balanced');
   });
 
   it('keeps sponsored boost bounded by the configured safety cap', () => {
@@ -201,6 +202,29 @@ describe('RecommendationScoringService', () => {
         scored.scoreBreakdown.businessBoostScore,
     ).toBeLessThanOrEqual(5);
     expect(scored.scoreBreakdown.maxSponsoredBoost).toBe(5);
+  });
+
+  it('clamps business boost against its own preset cap before the total cap', () => {
+    const candidate = buildProduct({
+      id: 'candidate-business-capped',
+      feedbackCount: 40,
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsoredConfig({
+        sponsoredProductIds: ['candidate-business-capped'],
+        businessBoostShopIds: ['shop-1'],
+        sponsoredBoost: 4,
+        businessBoost: 9,
+        maxSponsoredBoost: 6,
+        maxBusinessBoost: 2,
+      }),
+    );
+
+    expect(scored.scoreBreakdown.businessBoostScore).toBeLessThanOrEqual(2);
+    expect(scored.scoreBreakdown.sponsoredBoostScore).toBeGreaterThan(0);
   });
 
   it('does not let sponsored boost fully override a clearly stronger organic result', () => {
@@ -282,6 +306,7 @@ function sponsoredConfig(
     sponsoredBoost: number;
     businessBoost: number;
     maxSponsoredBoost: number;
+    maxBusinessBoost: number;
   }>,
 ) {
   return {
@@ -291,6 +316,18 @@ function sponsoredConfig(
     sponsoredBoost: overrides?.sponsoredBoost ?? 4,
     businessBoost: overrides?.businessBoost ?? 2,
     maxSponsoredBoost: overrides?.maxSponsoredBoost ?? 5,
+    maxBusinessBoost: overrides?.maxBusinessBoost ?? 2,
+    preset: {
+      id: 'balanced',
+      name: 'Balanced',
+      description: 'Default internal preset',
+      version: '1.0.0',
+      stability: 'stable',
+      maxSponsoredBoost: overrides?.maxSponsoredBoost ?? 5,
+      maxBusinessBoost: overrides?.maxBusinessBoost ?? 2,
+      allowedScenarioTypes: ['home', 'similar', 'search'],
+      notes: 'Test preset only',
+    },
   };
 }
 

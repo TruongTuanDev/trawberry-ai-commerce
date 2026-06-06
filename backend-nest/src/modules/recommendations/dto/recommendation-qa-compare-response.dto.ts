@@ -35,6 +35,46 @@ class RecommendationQaScoreBreakdownDto {
   maxSponsoredBoost!: number;
 }
 
+class RecommendationQaSponsoredPresetDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  description!: string;
+
+  @ApiProperty()
+  version!: string;
+
+  @ApiProperty({ enum: ['experimental', 'stable', 'deprecated'] })
+  stability!: 'experimental' | 'stable' | 'deprecated';
+
+  @ApiProperty()
+  maxSponsoredBoost!: number;
+
+  @ApiProperty()
+  maxBusinessBoost!: number;
+
+  @ApiProperty({ enum: ['home', 'similar', 'search'], isArray: true })
+  allowedScenarioTypes!: Array<'home' | 'similar' | 'search'>;
+
+  @ApiProperty()
+  notes!: string;
+}
+
+class RecommendationQaSponsoredRankingDto {
+  @ApiProperty()
+  sponsoredRankingEnabled!: boolean;
+
+  @ApiProperty({
+    type: RecommendationQaSponsoredPresetDto,
+    nullable: true,
+  })
+  activePreset!: RecommendationQaSponsoredPresetDto | null;
+}
+
 class RecommendationQaAlgorithmSnapshotDto {
   @ApiProperty()
   algorithm!: string;
@@ -57,6 +97,13 @@ class RecommendationQaAlgorithmSnapshotDto {
 
   @ApiProperty({ nullable: true, required: false })
   sponsoredReason!: string | null;
+
+  @ApiProperty({
+    type: RecommendationQaSponsoredPresetDto,
+    nullable: true,
+    required: false,
+  })
+  sponsoredPreset!: RecommendationQaSponsoredPresetDto | null;
 }
 
 class RecommendationQaComparisonItemDto {
@@ -141,6 +188,12 @@ export class RecommendationQaCompareResponseDto {
   @ApiProperty({ enum: ['home', 'product_detail', 'search'] })
   placement!: 'home' | 'product_detail' | 'search';
 
+  @ApiProperty({
+    type: RecommendationQaSponsoredRankingDto,
+    nullable: true,
+  })
+  sponsoredRanking!: RecommendationQaSponsoredRankingDto | null;
+
   @ApiProperty({ type: RecommendationQaComparisonItemDto, isArray: true })
   items!: RecommendationQaComparisonItemDto[];
 }
@@ -151,6 +204,12 @@ export class RecommendationQaSnapshotResponseDto {
 
   @ApiProperty({ enum: ['home', 'product_detail', 'search'] })
   placement!: 'home' | 'product_detail' | 'search';
+
+  @ApiProperty({
+    type: RecommendationQaSponsoredRankingDto,
+    nullable: true,
+  })
+  sponsoredRanking!: RecommendationQaSponsoredRankingDto | null;
 
   @ApiProperty({ nullable: true })
   productId!: string | null;

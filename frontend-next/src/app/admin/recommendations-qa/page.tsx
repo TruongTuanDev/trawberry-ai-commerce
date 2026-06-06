@@ -4,6 +4,7 @@ import { RecommendationRankingQaPanel } from "@/components/admin/recommendation-
 import { RecommendationRankingSnapshotDiffPanel } from "@/components/admin/recommendation-ranking-snapshot-diff-panel";
 import {
   getRecommendationQaBaselineCatalog,
+  getRecommendationSponsoredPresets,
   getRecommendationQaThresholdPresets,
   getRecommendationRankingComparison,
   type RecommendationQaPlacement,
@@ -72,9 +73,10 @@ export default async function AdminRecommendationsQaPage({
         debug,
       })
     : null;
-  const [{ presets }, { catalog }] = await Promise.all([
+  const [{ presets }, { catalog }, sponsoredPresetCatalog] = await Promise.all([
     getRecommendationQaThresholdPresets(),
     getRecommendationQaBaselineCatalog(),
+    getRecommendationSponsoredPresets(),
   ]);
   const savedScenarios = [
     {
@@ -244,6 +246,7 @@ export default async function AdminRecommendationsQaPage({
           <RecommendationRankingQaPanel
             comparison={comparison}
             debugEnabled={debug}
+            sponsoredPresetCatalog={sponsoredPresetCatalog}
             exportQuery={{
               placement,
               productId: normalizedProductId,

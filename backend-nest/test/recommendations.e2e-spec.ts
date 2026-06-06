@@ -448,6 +448,12 @@ describe('RecommendationsController (e2e)', () => {
       .expect(404);
   });
 
+  it('keeps sponsored ranking presets disabled by default', async () => {
+    await request(app.getHttpServer())
+      .get('/api/internal/recommendations/sponsored-presets')
+      .expect(404);
+  });
+
   it('keeps recommendation QA pack validation disabled by default', async () => {
     await request(app.getHttpServer())
       .post('/api/internal/recommendations/packs/validate')
@@ -469,6 +475,13 @@ describe('RecommendationsController (e2e)', () => {
 
     const body = readBody<{
       placement: string;
+      sponsoredRanking: {
+        sponsoredRankingEnabled: boolean;
+        activePreset: {
+          id: string;
+          version: string;
+        } | null;
+      } | null;
       items: Array<{
         productId: string;
         productName: string;
@@ -491,6 +504,8 @@ describe('RecommendationsController (e2e)', () => {
     }>(response);
 
     expect(body.placement).toBe('home');
+    expect(body.sponsoredRanking?.activePreset?.id).toBe('balanced');
+    expect(body.sponsoredRanking?.activePreset?.version).toBe('1.0.0');
     expect(typeof body.items[0]?.productId).toBe('string');
     expect(typeof body.items[0]?.productName).toBe('string');
     expect(body.items[0]?.ruleBasedV1?.algorithm).toBe('rule_based_v1');
@@ -966,6 +981,61 @@ describe('RecommendationsController (e2e)', () => {
     expect(serialized).not.toContain('approvalStatus');
   });
 
+  it('returns safe sponsored presets only when the internal flag is enabled', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRESET_ID = 'aggressive-internal-only';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/internal/recommendations/sponsored-presets')
+      .expect(200);
+
+    const body = readBody<{
+      sponsoredRankingEnabled: boolean;
+      activePreset: {
+        id: string;
+        name: string;
+        version: string;
+        stability: string;
+        maxSponsoredBoost: number;
+        maxBusinessBoost: number;
+        allowedScenarioTypes: string[];
+      } | null;
+      presets: Array<{
+        id: string;
+        maxSponsoredBoost: number;
+        maxBusinessBoost: number;
+        allowedScenarioTypes: string[];
+      }>;
+    }>(response);
+    const conservative = body.presets.find(
+      (preset) => preset.id === 'conservative',
+    );
+    const aggressive = body.presets.find(
+      (preset) => preset.id === 'aggressive-internal-only',
+    );
+    const serialized = JSON.stringify(body);
+
+    expect(body.sponsoredRankingEnabled).toBe(true);
+    expect(body.activePreset?.id).toBe('aggressive-internal-only');
+    expect(body.activePreset?.stability).toBe('experimental');
+    expect(conservative?.maxSponsoredBoost).toBeLessThan(
+      aggressive?.maxSponsoredBoost ?? Number.MAX_SAFE_INTEGER,
+    );
+    expect(conservative?.maxBusinessBoost).toBeLessThan(
+      aggressive?.maxBusinessBoost ?? Number.MAX_SAFE_INTEGER,
+    );
+    expect(aggressive?.allowedScenarioTypes).toEqual(
+      expect.arrayContaining(['home', 'similar', 'search']),
+    );
+    expect(serialized).not.toContain('RECOMMENDATION_SPONSORED_PRODUCT_IDS');
+    expect(serialized).not.toContain('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS');
+    expect(serialized).not.toContain('00000000-0000-0000-0000-000000000002');
+    expect(serialized).not.toContain('10000000-0000-0000-0000-000000000001');
+  });
+
   it('marks QA pack evaluation as not_evaluated when thresholds are omitted', async () => {
     process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
     await app.close();
@@ -1353,6 +1423,7 @@ describe('RecommendationsController (e2e)', () => {
     expect(serialized).not.toContain('businessBoostScore');
     expect(serialized).not.toContain('maxSponsoredBoost');
     expect(serialized).not.toContain('sponsoredReason');
+    expect(serialized).not.toContain('sponsoredPreset');
     expect(serialized).not.toContain('RECOMMENDATION_SPONSORED_PRODUCT_IDS');
     expect(serialized).not.toContain('RECOMMENDATION_BUSINESS_BOOST_SHOP_IDS');
   });
@@ -1437,6 +1508,15 @@ describe('RecommendationsController (e2e)', () => {
             maxSponsoredBoost: number;
           } | null;
           sponsoredReason?: string | null;
+          sponsoredPreset?: {
+            id: string;
+            name: string;
+            version: string;
+            stability: string;
+            maxSponsoredBoost: number;
+            maxBusinessBoost: number;
+            allowedScenarioTypes: string[];
+          } | null;
         };
       }>;
     }>(response);
@@ -1446,9 +1526,63 @@ describe('RecommendationsController (e2e)', () => {
       algorithm: 'rule_based_v2',
     });
     expect(body.items[0]?.scoreExplanation?.scoreBreakdown).toBeTruthy();
+    expect(body.items[0]?.scoreExplanation?.sponsoredPreset).toMatchObject({
+      id: 'balanced',
+      version: '1.0.0',
+      stability: 'stable',
+    });
     expect(
       body.items[0]?.scoreExplanation?.scoreBreakdown?.sponsoredBoostScore,
     ).toBeGreaterThanOrEqual(0);
+  });
+
+  it('falls back to a safe preset and clamps unbounded sponsored boost overrides', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_SPONSORED_PRESET_ID = 'not-a-real-preset';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
+      '00000000-0000-0000-0000-000000000002';
+    process.env.RECOMMENDATION_SPONSORED_PRODUCT_BOOST = '999';
+    process.env.RECOMMENDATION_BUSINESS_SHOP_BOOST = '999';
+    process.env.RECOMMENDATION_SPONSORED_MAX_BOOST = '999';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2&debug=true')
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          sponsoredPreset?: {
+            id: string;
+            maxSponsoredBoost: number;
+            maxBusinessBoost: number;
+          } | null;
+          scoreBreakdown?: {
+            maxSponsoredBoost: number;
+          } | null;
+        };
+      }>;
+    }>(response);
+    const sponsoredItem = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000002',
+    );
+
+    expect(sponsoredItem?.scoreExplanation?.sponsoredPreset?.id).toBe(
+      'balanced',
+    );
+    expect(
+      sponsoredItem?.scoreExplanation?.sponsoredPreset?.maxSponsoredBoost,
+    ).toBe(5);
+    expect(
+      sponsoredItem?.scoreExplanation?.sponsoredPreset?.maxBusinessBoost,
+    ).toBe(2);
+    expect(
+      sponsoredItem?.scoreExplanation?.scoreBreakdown?.maxSponsoredBoost,
+    ).toBe(5);
   });
 
   it('keeps fallback algorithm behavior safe when smart ranking is off even if sponsored ranking is enabled', async () => {
@@ -1651,6 +1785,7 @@ function buildSnapshotDiffPayload() {
     baseline: {
       scenarioType: 'home',
       placement: 'home',
+      sponsoredRanking: null,
       productId: null,
       query: null,
       limit: 5,
@@ -1709,6 +1844,7 @@ function buildSnapshotDiffPayload() {
     candidate: {
       scenarioType: 'home',
       placement: 'home',
+      sponsoredRanking: null,
       productId: null,
       query: null,
       limit: 5,
@@ -1843,6 +1979,7 @@ function buildSnapshotItem(
         maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,
       },
       sponsoredReason: null,
+      sponsoredPreset: null,
     },
   };
 }
