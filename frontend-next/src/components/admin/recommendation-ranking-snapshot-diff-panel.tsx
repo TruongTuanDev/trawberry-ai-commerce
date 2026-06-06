@@ -28,6 +28,14 @@ function formatSignedNumber(value: number | null) {
   return String(value);
 }
 
+function formatMetaDate(value: string) {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return value;
+  }
+  return new Date(parsed).toLocaleString();
+}
+
 function parseSnapshot(value: string) {
   const parsed = JSON.parse(value) as RecommendationQaSnapshotResponse;
   if (!parsed || !Array.isArray(parsed.items) || !parsed.generatedAt) {
@@ -107,6 +115,10 @@ function buildMarkdownSummary(
     `- Scenario: ${packValidation?.pack.scenarioType ?? diff.scenario.baseline.scenarioType}`,
     `- Catalog: ${selectedCatalog?.name ?? packValidation?.pack.catalogId ?? "none"}`,
     `- Threshold preset: ${appliedPreset?.name ?? "none"}`,
+    `- Preset version: ${appliedPreset?.version ?? "n/a"}`,
+    `- Preset stability: ${appliedPreset?.stability ?? "n/a"}`,
+    `- Catalog version: ${selectedCatalog?.version ?? "n/a"}`,
+    `- Catalog stability: ${selectedCatalog?.stability ?? "n/a"}`,
     `- Baseline generatedAt: ${diff.scenario.baseline.generatedAt}`,
     `- Candidate generatedAt: ${diff.scenario.candidate.generatedAt}`,
     `- Total compared: ${diff.summary.totalItemsCompared}`,
@@ -372,6 +384,30 @@ export function RecommendationRankingSnapshotDiffPanel({
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 {selectedPreset?.description ?? "Select a preset to inspect the safe threshold defaults."}
               </p>
+              {selectedPreset ? (
+                <dl className="mt-3 grid gap-2 text-xs text-[var(--muted)] sm:grid-cols-2">
+                  <div>
+                    <dt className="font-semibold text-[var(--foreground)]">Version</dt>
+                    <dd>{selectedPreset.version}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--foreground)]">Stability</dt>
+                    <dd>{selectedPreset.stability}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--foreground)]">Updated</dt>
+                    <dd>{formatMetaDate(selectedPreset.updatedAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[var(--foreground)]">Owner</dt>
+                    <dd>{selectedPreset.owner}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="font-semibold text-[var(--foreground)]">Notes</dt>
+                    <dd>{selectedPreset.notes}</dd>
+                  </div>
+                </dl>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
                 {selectedPresetThresholds.length ? (
                   selectedPresetThresholds.map(([key, value]) => (
@@ -422,6 +458,30 @@ export function RecommendationRankingSnapshotDiffPanel({
               <p className="mt-2 text-xs text-[var(--muted)]">
                 Recommended preset: {entry.recommendedThresholdPresetId}
               </p>
+              <dl className="mt-3 grid gap-2 text-xs text-[var(--muted)]">
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <div>
+                    <dt className="inline font-semibold text-[var(--foreground)]">Version:</dt>{" "}
+                    <dd className="inline">{entry.version}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-semibold text-[var(--foreground)]">Stability:</dt>{" "}
+                    <dd className="inline">{entry.stability}</dd>
+                  </div>
+                </div>
+                <div>
+                  <dt className="inline font-semibold text-[var(--foreground)]">Updated:</dt>{" "}
+                  <dd className="inline">{formatMetaDate(entry.updatedAt)}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-semibold text-[var(--foreground)]">Owner:</dt>{" "}
+                  <dd className="inline">{entry.owner}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-semibold text-[var(--foreground)]">Notes:</dt>{" "}
+                  <dd className="inline">{entry.notes}</dd>
+                </div>
+              </dl>
               <button
                 type="button"
                 onClick={() => loadCatalogEntry(entry)}
@@ -488,6 +548,12 @@ export function RecommendationRankingSnapshotDiffPanel({
                 Catalog: {validatedPack.pack.catalogId ?? "none"} · preset{" "}
                 {validatedPack.appliedThresholdPreset?.id ?? validatedPack.pack.thresholdPresetId ?? "none"}
               </p>
+              {validatedPack.appliedThresholdPreset ? (
+                <p className="mt-2 text-[var(--muted)]">
+                  Preset version: {validatedPack.appliedThresholdPreset.version} | stability{" "}
+                  {validatedPack.appliedThresholdPreset.stability}
+                </p>
+              ) : null}
               {validatedPack.notices.length ? (
                 <div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
                   {validatedPack.notices.map((notice) => (
@@ -510,7 +576,8 @@ export function RecommendationRankingSnapshotDiffPanel({
                 </div>
                 {validatedPack.appliedThresholdPreset ? (
                   <div className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-sm">
-                    {validatedPack.appliedThresholdPreset.name}
+                    {validatedPack.appliedThresholdPreset.name} | v
+                    {validatedPack.appliedThresholdPreset.version}
                   </div>
                 ) : null}
               </div>

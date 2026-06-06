@@ -118,6 +118,12 @@ Internal QA comparison mode:
   - private tracking payloads
   - private shop/internal-only fields
   - real production snapshots
+- QA preset and baseline catalog metadata is now versioned for safer handoff:
+  - `version`
+  - `updatedAt`
+  - `owner`
+  - `notes`
+  - `stability`
 - QA packs committed to the repo must contain only safe mock/sample snapshot data
 
 ## Read APIs
@@ -685,6 +691,11 @@ Behavior:
   - `id`
   - `name`
   - `description`
+  - `version`
+  - `updatedAt`
+  - `owner`
+  - `notes`
+  - `stability`
   - `thresholds`
 
 Current preset ids:
@@ -708,6 +719,11 @@ Behavior:
   - `id`
   - `name`
   - `description`
+  - `version`
+  - `updatedAt`
+  - `owner`
+  - `notes`
+  - `stability`
   - `scenarioType`
   - `query`
   - `productId`
@@ -773,6 +789,33 @@ Local QA threshold workflow:
    - never commit real exported storefront snapshots
 11. After future weight changes, repeat the same catalog entry or pack and compare whether thresholds still pass.
 
+Phase 2.8 readiness notes:
+
+- treat preset and catalog `version` fields as the lightweight audit handle when sharing internal QA results
+- prefer `stability=stable` presets/catalog entries for signoff and rollout-readiness checks
+- keep `experimental` entries for exploratory tuning only
+- when updating a preset or catalog entry:
+  - bump `version`
+  - refresh `updatedAt`
+  - leave clear `notes` about the intended QA use
+  - do not replace committed mock snapshots with real storefront exports
+
+Phase 2 final local QA checklist:
+
+1. Enable internal flags:
+   - `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+2. Optional explainability:
+   - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+3. Start backend and frontend locally.
+4. Open `/admin/recommendations-qa`.
+5. Choose a stable preset and review its version/stability metadata.
+6. Load a baseline catalog entry and review its version/stability metadata.
+7. Validate the pack and confirm threshold evaluation stays within the expected audit envelope.
+8. Run the snapshot diff and export the Markdown summary for internal review.
+9. If tuning weights again, repeat the same preset/catalog combination so comparisons stay consistent.
+
 ## Rollout
 
 1. Deploy backend and frontend with the new additive code.
@@ -800,3 +843,4 @@ Future Phase 3 topics:
 - ads campaign inventory
 - budget-aware placement rules
 - richer session intent modeling
+- rollout-safe ranking configuration management beyond code-managed internal presets

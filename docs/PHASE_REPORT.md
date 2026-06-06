@@ -1,5 +1,65 @@
 # Phase Report
 
+## 2026-06-06 Recommendation Ranking Readiness Finalization Phase 2.8
+
+- Status: Implemented on current branch
+- Scope:
+  - finalized Phase 2 recommendation QA readiness for the active NestJS + Next.js stack only
+  - extended internal QA preset and baseline catalog metadata with lightweight versioning fields:
+    - `version`
+    - `updatedAt`
+    - `owner`
+    - `notes`
+    - `stability`
+  - returned the same metadata from internal backend endpoints:
+    - `GET /api/internal/recommendations/presets`
+    - `GET /api/internal/recommendations/baseline-catalog`
+  - enhanced `/admin/recommendations-qa` so QA can inspect preset/catalog metadata directly while preparing pack validation and diff review
+  - extended Markdown export context with preset/catalog version and stability details for safer internal handoff
+  - added backend regression coverage for:
+    - explainability hidden when `debug=true` is missing
+    - explainability hidden when `RECOMMENDATION_EXPLAINABILITY_ENABLED` is off
+    - safe allowlisted preset metadata shape
+    - safe allowlisted catalog metadata shape
+  - kept all public recommendation APIs backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no legacy `strawberry-*` apps were modified
+  - QA versioning stays internal-only behind existing recommendation QA flags
+  - committed QA artifacts remain safe mock/sample data only
+- Phase 2 handoff guide:
+  - use `stable` presets/catalog entries for rollout-readiness signoff
+  - treat preset/catalog `version` as the lightweight audit handle when sharing internal QA findings
+  - when tuning recommendation weights again:
+    - reuse the same preset and baseline catalog entry first
+    - validate thresholds
+    - diff snapshots
+    - export the Markdown summary with version/stability context
+  - when updating an internal preset/catalog entry:
+    - bump `version`
+    - refresh `updatedAt`
+    - keep `notes` explicit about intended QA usage
+    - never commit real storefront snapshot exports
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - presets and baseline catalog entries are still code-managed internal assets, not centrally shared QA records
+  - there is still no non-code configuration workflow for ranking changes yet
+- Next recommended phase:
+  - Phase 3: sponsored ranking, ads inventory, or controlled rollout configuration on top of the completed Phase 2 QA tooling baseline
+
 ## 2026-06-06 Recommendation QA Baseline Catalog Presets Phase 2.7
 
 - Status: Implemented on current branch

@@ -768,6 +768,11 @@ describe('RecommendationsController (e2e)', () => {
         id: string;
         name: string;
         description: string;
+        version: string;
+        updatedAt: string;
+        owner: string;
+        notes: string;
+        stability: string;
         thresholds: {
           maxMovedDownCount?: number;
           maxScoreDelta?: number;
@@ -785,6 +790,13 @@ describe('RecommendationsController (e2e)', () => {
     expect(strict?.thresholds.maxScoreDelta).toBeLessThan(
       lenient?.thresholds.maxScoreDelta ?? Number.MAX_SAFE_INTEGER,
     );
+    expect(strict?.version).toBe('1.0.0');
+    expect(typeof strict?.updatedAt).toBe('string');
+    expect(strict?.updatedAt).toContain('T');
+    expect(strict?.owner).toBe('recommendations-team');
+    expect(typeof strict?.notes).toBe('string');
+    expect(strict?.notes?.length).toBeGreaterThan(0);
+    expect(strict?.stability).toBe('stable');
     expect(serialized).not.toContain('guestSessionId');
     expect(serialized).not.toContain('customerId');
     expect(serialized).not.toContain('paymentInstructions');
@@ -804,6 +816,11 @@ describe('RecommendationsController (e2e)', () => {
         id: string;
         name: string;
         description: string;
+        version: string;
+        updatedAt: string;
+        owner: string;
+        notes: string;
+        stability: string;
         scenarioType: string;
         query: string | null;
         productId: string | null;
@@ -827,12 +844,19 @@ describe('RecommendationsController (e2e)', () => {
     const serialized = JSON.stringify(body);
 
     expect(body.catalog.length).toBeGreaterThanOrEqual(3);
-    expect(searchEntry).toMatchObject({
-      scenarioType: 'search',
-      query: 'jacket',
-      productId: null,
-      recommendedThresholdPresetId: 'search-intent-sensitive',
-    });
+    expect(searchEntry?.version).toBe('1.0.0');
+    expect(typeof searchEntry?.updatedAt).toBe('string');
+    expect(searchEntry?.updatedAt).toContain('T');
+    expect(searchEntry?.owner).toBe('recommendations-team');
+    expect(typeof searchEntry?.notes).toBe('string');
+    expect(searchEntry?.notes?.length).toBeGreaterThan(0);
+    expect(searchEntry?.stability).toBe('stable');
+    expect(searchEntry?.scenarioType).toBe('search');
+    expect(searchEntry?.query).toBe('jacket');
+    expect(searchEntry?.productId).toBeNull();
+    expect(searchEntry?.recommendedThresholdPresetId).toBe(
+      'search-intent-sensitive',
+    );
     expect(searchEntry?.mockPack?.packName).toBe('Sample search QA pack');
     expect(serialized).not.toContain('guestSessionId');
     expect(serialized).not.toContain('customerId');
@@ -1154,6 +1178,45 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.placement).toBe('search');
     expect(body.items[0]?.product.name).toContain('Similar jacket');
     expect(body.products[0]?.name).toContain('Similar jacket');
+  });
+
+  it('keeps score explanations hidden when debug mode is missing', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=1')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        scoreExplanation?: unknown;
+      }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.scoreExplanation).toBeUndefined();
+  });
+
+  it('keeps score explanations hidden when the internal explainability flag is off', async () => {
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=1&debug=true')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        scoreExplanation?: unknown;
+      }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.scoreExplanation).toBeUndefined();
   });
 
   it('returns optional score explanations only when internal explainability is enabled', async () => {

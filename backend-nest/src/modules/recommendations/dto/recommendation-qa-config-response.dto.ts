@@ -37,6 +37,21 @@ class RecommendationQaThresholdPresetDto {
   @ApiProperty()
   description!: string;
 
+  @ApiProperty()
+  version!: string;
+
+  @ApiProperty()
+  updatedAt!: string;
+
+  @ApiProperty()
+  owner!: string;
+
+  @ApiProperty()
+  notes!: string;
+
+  @ApiProperty({ enum: ['experimental', 'stable', 'deprecated'] })
+  stability!: 'experimental' | 'stable' | 'deprecated';
+
   @ApiProperty({ type: RecommendationQaThresholdsDto })
   thresholds!: RecommendationQaThresholdsDto;
 }
@@ -67,6 +82,21 @@ class RecommendationQaBaselineCatalogEntryDto {
 
   @ApiProperty()
   description!: string;
+
+  @ApiProperty()
+  version!: string;
+
+  @ApiProperty()
+  updatedAt!: string;
+
+  @ApiProperty()
+  owner!: string;
+
+  @ApiProperty()
+  notes!: string;
+
+  @ApiProperty({ enum: ['experimental', 'stable', 'deprecated'] })
+  stability!: 'experimental' | 'stable' | 'deprecated';
 
   @ApiProperty({ enum: ['home', 'similar', 'search'] })
   scenarioType!: 'home' | 'similar' | 'search';

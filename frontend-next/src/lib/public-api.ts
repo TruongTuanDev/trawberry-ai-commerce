@@ -243,6 +243,11 @@ export type RecommendationQaThresholdPreset = {
     | "similar-products-sensitive";
   name: string;
   description: string;
+  version: string;
+  updatedAt: string;
+  owner: string;
+  notes: string;
+  stability: "experimental" | "stable" | "deprecated";
   thresholds: NonNullable<RecommendationQaPack["expectedSummaryThresholds"]>;
 };
 
@@ -250,6 +255,11 @@ export type RecommendationQaBaselineCatalogEntry = {
   id: string;
   name: string;
   description: string;
+  version: string;
+  updatedAt: string;
+  owner: string;
+  notes: string;
+  stability: "experimental" | "stable" | "deprecated";
   scenarioType: "home" | "similar" | "search";
   query: string | null;
   productId: string | null;

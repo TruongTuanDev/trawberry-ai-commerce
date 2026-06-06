@@ -16,6 +16,11 @@ export type RecommendationQaThresholdPreset = {
   id: RecommendationQaThresholdPresetId;
   name: string;
   description: string;
+  version: string;
+  updatedAt: string;
+  owner: string;
+  notes: string;
+  stability: 'experimental' | 'stable' | 'deprecated';
   thresholds: QaThresholds;
 };
 
@@ -23,6 +28,11 @@ export type RecommendationQaBaselineCatalogEntry = {
   id: string;
   name: string;
   description: string;
+  version: string;
+  updatedAt: string;
+  owner: string;
+  notes: string;
+  stability: 'experimental' | 'stable' | 'deprecated';
   scenarioType: 'home' | 'similar' | 'search';
   query: string | null;
   productId: string | null;
@@ -86,6 +96,11 @@ export const RECOMMENDATION_QA_THRESHOLD_PRESETS: RecommendationQaThresholdPrese
       id: 'strict',
       name: 'Strict',
       description: 'Tight guardrails for low movement and low score drift.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes: 'Use for low-risk readiness checks before rollout.',
+      stability: 'stable',
       thresholds: {
         maxMovedDownCount: 0,
         maxAddedCount: 0,
@@ -100,6 +115,11 @@ export const RECOMMENDATION_QA_THRESHOLD_PRESETS: RecommendationQaThresholdPrese
       id: 'balanced',
       name: 'Balanced',
       description: 'General-purpose QA thresholds for routine ranking tuning.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes: 'Default preset for most Phase 2 rule-based ranking changes.',
+      stability: 'stable',
       thresholds: {
         maxMovedDownCount: 1,
         maxAddedCount: 1,
@@ -114,6 +134,11 @@ export const RECOMMENDATION_QA_THRESHOLD_PRESETS: RecommendationQaThresholdPrese
       id: 'lenient',
       name: 'Lenient',
       description: 'Broader room for experiments and heavier ranking changes.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes: 'Useful for exploratory tuning, not for strict release signoff.',
+      stability: 'experimental',
       thresholds: {
         maxMovedDownCount: 3,
         maxMovedUpCount: 3,
@@ -129,6 +154,12 @@ export const RECOMMENDATION_QA_THRESHOLD_PRESETS: RecommendationQaThresholdPrese
       name: 'Search intent sensitive',
       description:
         'Search-focused preset that is stricter on adds, removals, and score drift.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes:
+        'Prioritize intent stability for keyword-driven recommendation blocks.',
+      stability: 'stable',
       thresholds: {
         maxMovedDownCount: 1,
         maxAddedCount: 1,
@@ -144,6 +175,11 @@ export const RECOMMENDATION_QA_THRESHOLD_PRESETS: RecommendationQaThresholdPrese
       name: 'Similar products sensitive',
       description:
         'Similar-products preset that allows light reshuffling but watches removals closely.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes: 'Use when validating product detail recommendation safety.',
+      stability: 'stable',
       thresholds: {
         maxMovedDownCount: 1,
         maxMovedUpCount: 1,
@@ -164,6 +200,12 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
       name: 'Home ranking stability',
       description:
         'Safe mock home audit scenario for watching moved-down items and unchanged coverage.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes:
+        'Baseline catalog entry for homepage fallback and movement checks.',
+      stability: 'stable',
       scenarioType: 'home',
       query: null,
       productId: null,
@@ -277,6 +319,12 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
       name: 'Search intent stability',
       description:
         'Safe mock search audit scenario for tracking intent drift and added results.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes:
+        'Use this when tuning search-intent-sensitive recommendation weights.',
+      stability: 'stable',
       scenarioType: 'search',
       query: 'jacket',
       productId: null,
@@ -401,6 +449,12 @@ export const RECOMMENDATION_QA_BASELINE_CATALOG: RecommendationQaBaselineCatalog
       name: 'Similar products stability',
       description:
         'Safe mock similar-products audit scenario for removals and small rank movement.',
+      version: '1.0.0',
+      updatedAt: '2026-06-06T23:00:00.000Z',
+      owner: 'recommendations-team',
+      notes:
+        'Focuses on safe similar-product reshuffling without real storefront exports.',
+      stability: 'stable',
       scenarioType: 'similar',
       query: null,
       productId: 'public-source-product',

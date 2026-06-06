@@ -1,5 +1,27 @@
 # Project Status
 
+## Recommendation Ranking Readiness Finalization Phase 2.8 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - lightweight versioned metadata for internal QA threshold presets and baseline catalog entries
+  - safer internal QA handoff using `version`, `updatedAt`, `owner`, `notes`, and `stability`
+  - `/admin/recommendations-qa` visibility into preset/catalog readiness metadata during pack validation and diff export
+  - stricter explainability gating coverage so public responses only expose `scoreExplanation` when both internal flag and `debug=true` are present
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - preset/catalog assets remain code-managed and internal-only
+  - rollout-safe remote configuration for ranking changes is still future work
+- Next recommended phase:
+  - Phase 3: build sponsored ranking or rollout configuration on top of the completed Phase 2 QA baseline
+
 ## Recommendation QA Baseline Catalog Presets Phase 2.7 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`
