@@ -1,5 +1,68 @@
 # Phase Report
 
+## 2026-06-06 Recommendation QA Snapshot Export and Saved Scenarios Phase 2.3
+
+- Status: Implemented on current branch
+- Scope:
+  - extended `GET /api/internal/recommendations/compare` with internal-only snapshot export using:
+    - `export=true`
+    - `format=json`
+  - kept the default comparison response backward compatible when export mode is not requested
+  - exported snapshots now include:
+    - `scenarioType`
+    - `placement`
+    - `productId` or `query` when applicable
+    - `limit`
+    - `generatedAt`
+    - `comparedAlgorithms`
+    - public product summary fields only
+    - `rankMovement`
+    - per-algorithm `rank`
+    - per-algorithm `finalScore`
+    - optional `reasons`
+    - optional `scoreBreakdown`
+  - added backend regression coverage for:
+    - snapshot export disabled by default
+    - snapshot export enabled behind `RECOMMENDATION_QA_TOOLS_ENABLED`
+    - exported snapshot shape
+    - exported snapshot rank movement preservation
+    - no user/session/private field leakage
+  - enhanced the internal frontend QA route `/admin/recommendations-qa` with:
+    - saved scenario presets for home, search, and similar-product audits
+    - JSON snapshot export for the current comparison result
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no public recommendation endpoint contracts were broken
+  - snapshot export remains internal-only behind QA flags
+- Local QA workflow:
+  - set `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - set `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - optional explainability:
+    - set `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - set `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - start backend and frontend locally
+  - open `/admin/recommendations-qa`
+  - run saved scenarios or custom inputs for:
+    - `home`
+    - `search&q=...`
+    - `product_detail&productId=...`
+  - click `Export JSON snapshot`
+  - compare the saved JSON snapshot against later exports after weight changes
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - saved scenarios are currently preset-based and do not persist to a database
+  - the internal QA page is intentionally not linked in public navigation
+
 ## 2026-06-06 Recommendation Internal Ranking Comparison QA Tools Phase 2.2
 
 - Status: Implemented on current branch

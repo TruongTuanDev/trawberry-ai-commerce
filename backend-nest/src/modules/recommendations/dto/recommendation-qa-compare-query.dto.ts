@@ -58,4 +58,16 @@ export class RecommendationQaCompareQueryDto {
   @IsOptional()
   @IsBoolean()
   debug?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @Type(() => Boolean)
+  @IsOptional()
+  @IsBoolean()
+  export?: boolean;
+
+  @ApiPropertyOptional({ enum: ['json'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['json'])
+  format?: 'json';
 }

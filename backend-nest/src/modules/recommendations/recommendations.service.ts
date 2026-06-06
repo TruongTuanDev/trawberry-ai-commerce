@@ -52,6 +52,28 @@ type RecommendationAlgorithmSnapshot = {
   scoreBreakdown: RecommendationScoreBreakdown | null;
 };
 
+type RecommendationQaProductSummary = {
+  id: string;
+  name: string;
+  seoSlug: string | null;
+  categoryName: string | null;
+  brand: string | null;
+  color: string | null;
+  price: string | null;
+  inStock: boolean;
+  imageUrl: string | null;
+  shopName: string | null;
+  shopSlug: string | null;
+};
+
+type RecommendationQaComparisonRow = {
+  productId: string;
+  productName: string;
+  rankMovement: number | null;
+  ruleBasedV1: RecommendationAlgorithmSnapshot | null;
+  ruleBasedV2: RecommendationAlgorithmSnapshot | null;
+};
+
 @Injectable()
 export class RecommendationsService {
   constructor(
@@ -171,9 +193,14 @@ export class RecommendationsService {
         break;
     }
 
+    const items = this.buildComparisonItems(v1Items, v2Items, debug);
+    if (query.export && (!query.format || query.format === 'json')) {
+      return this.buildComparisonSnapshotExport(query, items, v1Items, v2Items);
+    }
+
     return {
       placement: query.placement,
-      items: this.buildComparisonItems(v1Items, v2Items, debug),
+      items,
     };
   }
 
@@ -636,6 +663,53 @@ export class RecommendationsService {
       }));
   }
 
+  private buildComparisonSnapshotExport(
+    query: RecommendationQaCompareQueryDto,
+    comparisonItems: RecommendationQaComparisonRow[],
+    v1Items: RecommendationRankedItem[],
+    v2Items: RecommendationRankedItem[],
+  ) {
+    const productSummaries = new Map<string, RecommendationQaProductSummary>();
+    [...v1Items, ...v2Items].forEach((item) => {
+      if (!productSummaries.has(item.product.id)) {
+        productSummaries.set(
+          item.product.id,
+          this.buildQaProductSummary(item.product),
+        );
+      }
+    });
+
+    return {
+      scenarioType:
+        query.placement === 'product_detail' ? 'similar' : query.placement,
+      placement: query.placement,
+      productId:
+        query.placement === 'product_detail' ? (query.productId ?? null) : null,
+      query: query.placement === 'search' ? (query.q?.trim() ?? null) : null,
+      limit: query.limit,
+      generatedAt: new Date().toISOString(),
+      comparedAlgorithms: ['rule_based_v1', 'rule_based_v2'],
+      items: comparisonItems.map((item) => ({
+        product: productSummaries.get(item.productId) ?? {
+          id: item.productId,
+          name: item.productName,
+          seoSlug: null,
+          categoryName: null,
+          brand: null,
+          color: null,
+          price: null,
+          inStock: false,
+          imageUrl: null,
+          shopName: null,
+          shopSlug: null,
+        },
+        rankMovement: item.rankMovement,
+        ruleBasedV1: item.ruleBasedV1,
+        ruleBasedV2: item.ruleBasedV2,
+      })),
+    };
+  }
+
   private buildComparisonSnapshot(
     algorithm: 'rule_based_v1' | 'rule_based_v2',
     rank: number,
@@ -652,6 +726,25 @@ export class RecommendationsService {
           )
         : [],
       scoreBreakdown: includeExplainability ? item.scored.scoreBreakdown : null,
+    };
+  }
+
+  private buildQaProductSummary(
+    product: RecommendationProductRecord,
+  ): RecommendationQaProductSummary {
+    const mappedProduct = this.mapProduct(product);
+    return {
+      id: mappedProduct.id,
+      name: mappedProduct.name,
+      seoSlug: mappedProduct.seoSlug,
+      categoryName: mappedProduct.categoryName,
+      brand: mappedProduct.brand,
+      color: mappedProduct.color,
+      price: mappedProduct.price,
+      inStock: mappedProduct.inStock,
+      imageUrl: mappedProduct.images[0]?.url ?? null,
+      shopName: mappedProduct.shop.name,
+      shopSlug: mappedProduct.shop.slug,
     };
   }
 

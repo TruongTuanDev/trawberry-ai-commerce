@@ -1,4 +1,11 @@
-import type { RecommendationQaComparisonResponse } from "@/lib/public-api";
+"use client";
+
+import { useState } from "react";
+import {
+  getRecommendationRankingSnapshot,
+  type RecommendationQaComparisonResponse,
+  type RecommendationQaPlacement,
+} from "@/lib/public-api";
 
 function formatMovement(value: number | null) {
   if (value === null) {
@@ -16,10 +23,49 @@ function formatMovement(value: number | null) {
 export function RecommendationRankingQaPanel({
   comparison,
   debugEnabled,
+  exportQuery,
 }: {
   comparison: RecommendationQaComparisonResponse;
   debugEnabled: boolean;
+  exportQuery: {
+    placement: RecommendationQaPlacement;
+    productId?: string;
+    q?: string;
+    limit: number;
+    debug: boolean;
+  };
 }) {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function handleExport() {
+    try {
+      setIsExporting(true);
+      setExportError(null);
+      const snapshot = await getRecommendationRankingSnapshot(exportQuery);
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+        type: "application/json",
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const timestamp = snapshot.generatedAt
+        .replace(/[:]/g, "-")
+        .replace(/\.\d{3}Z$/, "Z");
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = `recommendation-qa-${snapshot.scenarioType}-${timestamp}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Failed to export snapshot.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <section className="space-y-4 rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -35,6 +81,23 @@ export function RecommendationRankingQaPanel({
           placement: {comparison.placement}
         </span>
       </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={isExporting}
+          className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isExporting ? "Exporting snapshot..." : "Export JSON snapshot"}
+        </button>
+        <p className="text-xs text-[var(--muted)]">
+          Export the current comparison as an internal QA JSON snapshot for later audits.
+        </p>
+      </div>
+      {exportError ? (
+        <p className="text-sm text-red-600">{exportError}</p>
+      ) : null}
 
       <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">

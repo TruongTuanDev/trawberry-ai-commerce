@@ -7,6 +7,29 @@ import {
 } from "@/lib/public-api";
 import { getRecommendationFlags } from "@/lib/recommendation-flags";
 
+function buildScenarioHref(query: {
+  placement: RecommendationQaPlacement;
+  limit: number;
+  debug: boolean;
+  q?: string;
+  productId?: string;
+}) {
+  const params = new URLSearchParams();
+  params.set("placement", query.placement);
+  params.set("limit", String(query.limit));
+  if (query.q) {
+    params.set("q", query.q);
+  }
+  if (query.productId) {
+    params.set("productId", query.productId);
+  }
+  if (query.debug) {
+    params.set("debug", "true");
+  }
+
+  return `/admin/recommendations-qa?${params.toString()}`;
+}
+
 export default async function AdminRecommendationsQaPage({
   searchParams,
 }: {
@@ -33,16 +56,58 @@ export default async function AdminRecommendationsQaPage({
     placement === "home" ||
     (placement === "search" && Boolean(query.q?.trim())) ||
     (placement === "product_detail" && Boolean(query.productId?.trim()));
+  const normalizedLimit = Number.isFinite(limit) && limit > 0 ? limit : 8;
+  const normalizedQuery = query.q?.trim() || undefined;
+  const normalizedProductId = query.productId?.trim() || undefined;
 
   const comparison = canLoadComparison
     ? await getRecommendationRankingComparison({
         placement,
-        productId: query.productId?.trim() || undefined,
-        q: query.q?.trim() || undefined,
-        limit: Number.isFinite(limit) && limit > 0 ? limit : 8,
+        productId: normalizedProductId,
+        q: normalizedQuery,
+        limit: normalizedLimit,
         debug,
       })
     : null;
+  const savedScenarios = [
+    {
+      id: "home-baseline",
+      label: "Home baseline",
+      description: "Repeat the default home ranking audit with a stable limit.",
+      href: buildScenarioHref({
+        placement: "home",
+        limit: 8,
+        debug,
+      }),
+    },
+    {
+      id: "search-jacket",
+      label: "Search audit",
+      description: "Run a repeatable search comparison using a known keyword.",
+      href: buildScenarioHref({
+        placement: "search",
+        q: normalizedQuery ?? "jacket",
+        limit: 8,
+        debug,
+      }),
+    },
+    {
+      id: "similar-current",
+      label: "Similar products",
+      description: normalizedProductId
+        ? "Repeat the similar-products audit for the current public product."
+        : "Provide a public productId, then reuse it as a repeatable similar-products audit.",
+      href: buildScenarioHref({
+        placement: "product_detail",
+        productId:
+          normalizedProductId ??
+          comparison?.items[0]?.productId ??
+          undefined,
+        limit: 8,
+        debug,
+      }),
+    },
+  ];
 
   return (
     <main className="px-4 py-8 sm:px-6 sm:py-10">
@@ -100,7 +165,7 @@ export default async function AdminRecommendationsQaPage({
                 type="number"
                 min={1}
                 max={24}
-                defaultValue={String(limit)}
+                defaultValue={String(normalizedLimit)}
                 className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3"
               />
             </label>
@@ -135,10 +200,50 @@ export default async function AdminRecommendationsQaPage({
           </form>
         </section>
 
+        <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] p-5 shadow-sm">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+              Saved scenarios
+            </p>
+            <h2 className="text-xl font-black tracking-tight text-[var(--foreground)]">
+              Repeatable ranking audits
+            </h2>
+            <p className="max-w-3xl text-sm leading-7 text-[var(--muted)]">
+              Use these internal presets to rerun the same comparison inputs before and after future ranking weight changes.
+            </p>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            {savedScenarios.map((scenario) => (
+              <Link
+                key={scenario.id}
+                href={scenario.href}
+                className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-sm"
+              >
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                  {scenario.label}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  {scenario.description}
+                </p>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Open scenario
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         {comparison ? (
           <RecommendationRankingQaPanel
             comparison={comparison}
             debugEnabled={debug}
+            exportQuery={{
+              placement,
+              productId: normalizedProductId,
+              q: normalizedQuery,
+              limit: normalizedLimit,
+              debug,
+            }}
           />
         ) : (
           <section className="rounded-[1.75rem] border border-dashed border-[var(--border)] bg-[var(--panel)] px-6 py-8 text-sm text-[var(--muted)]">

@@ -134,6 +134,36 @@ export type RecommendationQaComparisonResponse = {
   items: RecommendationQaComparisonItem[];
 };
 
+export type RecommendationQaSnapshotProduct = {
+  id: string;
+  name: string;
+  seoSlug: string | null;
+  categoryName: string | null;
+  brand: string | null;
+  color: string | null;
+  price: string | null;
+  inStock: boolean;
+  imageUrl: string | null;
+  shopName: string | null;
+  shopSlug: string | null;
+};
+
+export type RecommendationQaSnapshotResponse = {
+  scenarioType: "home" | "similar" | "search";
+  placement: RecommendationQaPlacement;
+  productId: string | null;
+  query: string | null;
+  limit: number;
+  generatedAt: string;
+  comparedAlgorithms: Array<"rule_based_v1" | "rule_based_v2">;
+  items: Array<{
+    product: RecommendationQaSnapshotProduct;
+    rankMovement: number | null;
+    ruleBasedV1: RecommendationQaAlgorithmSnapshot | null;
+    ruleBasedV2: RecommendationQaAlgorithmSnapshot | null;
+  }>;
+};
+
 export type VisualSearchResponse = {
   analysis: {
     category: string | null;
@@ -726,6 +756,36 @@ export async function getRecommendationRankingComparison(query?: {
   }
 
   return apiRequest<RecommendationQaComparisonResponse>(
+    `/api/internal/recommendations/compare?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getRecommendationRankingSnapshot(query?: {
+  placement?: RecommendationQaPlacement;
+  productId?: string;
+  q?: string;
+  limit?: number;
+  debug?: boolean;
+}) {
+  const params = new URLSearchParams();
+  params.set("placement", query?.placement ?? "home");
+  params.set("limit", String(query?.limit ?? 12));
+  params.set("export", "true");
+  params.set("format", "json");
+  if (query?.productId) {
+    params.set("productId", query.productId);
+  }
+  if (query?.q) {
+    params.set("q", query.q);
+  }
+  if (query?.debug) {
+    params.set("debug", "true");
+  }
+
+  return apiRequest<RecommendationQaSnapshotResponse>(
     `/api/internal/recommendations/compare?${params.toString()}`,
     {
       method: "GET",

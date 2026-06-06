@@ -1,5 +1,27 @@
 # Project Status
 
+## Recommendation QA Snapshot Export and Saved Scenarios Phase 2.3 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - internal-only JSON snapshot export from `/api/internal/recommendations/compare`
+  - saved QA scenario presets on `/admin/recommendations-qa`
+  - repeatable ranking audits for home, search, and similar-product scenarios
+  - exported snapshot payloads that preserve rank movement and optional explainability without leaking user/session/private fields
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - saved scenarios are preset-based and not yet persisted across teams or environments
+  - export tooling remains intentionally internal-only and requires explicit flags
+- Next recommended phase:
+  - Phase 2.4: add baseline snapshot cataloging or diff views so QA can compare two exported ranking snapshots side by side
+
 ## Recommendation Internal Ranking Comparison QA Tools Phase 2.2 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`

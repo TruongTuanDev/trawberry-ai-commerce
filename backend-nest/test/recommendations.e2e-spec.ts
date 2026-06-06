@@ -322,6 +322,14 @@ describe('RecommendationsController (e2e)', () => {
       .expect(404);
   });
 
+  it('keeps recommendation QA snapshot export disabled by default', async () => {
+    await request(app.getHttpServer())
+      .get(
+        '/api/internal/recommendations/compare?placement=home&limit=2&export=true&format=json',
+      )
+      .expect(404);
+  });
+
   it('returns internal ranking comparison when the QA tools flag is enabled', async () => {
     process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
@@ -426,6 +434,134 @@ describe('RecommendationsController (e2e)', () => {
     expect(serialized).not.toContain('guestSessionId');
     expect(serialized).not.toContain('customerId');
     expect(serialized).not.toContain('searchTerms');
+  });
+
+  it('exports a safe QA ranking snapshot when the internal flag is enabled', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/internal/recommendations/compare?placement=search&q=similar%20jacket&limit=2&debug=true&export=true&format=json',
+      )
+      .expect(200);
+
+    const body = readBody<{
+      scenarioType: string;
+      placement: string;
+      productId: string | null;
+      query: string | null;
+      limit: number;
+      generatedAt: string;
+      comparedAlgorithms: string[];
+      items: Array<{
+        product: {
+          id: string;
+          name: string;
+          seoSlug: string | null;
+          categoryName: string | null;
+          brand: string | null;
+          color: string | null;
+          price: string | null;
+          inStock: boolean;
+          imageUrl: string | null;
+          shopName: string | null;
+          shopSlug: string | null;
+        };
+        rankMovement: number | null;
+        ruleBasedV1: { rank: number | null } | null;
+        ruleBasedV2: {
+          algorithm: string;
+          rank: number | null;
+          finalScore: number | null;
+          reasons: string[];
+          scoreBreakdown: Record<string, number> | null;
+        } | null;
+      }>;
+    }>(response);
+    const serialized = JSON.stringify(body);
+
+    expect(body.scenarioType).toBe('search');
+    expect(body.placement).toBe('search');
+    expect(body.productId).toBeNull();
+    expect(body.query).toBe('similar jacket');
+    expect(body.limit).toBe(2);
+    expect(Array.isArray(body.comparedAlgorithms)).toBe(true);
+    expect(body.comparedAlgorithms).toEqual(['rule_based_v1', 'rule_based_v2']);
+    expect(typeof body.generatedAt).toBe('string');
+    expect(body.items[0]?.product.id).toBe(
+      '00000000-0000-0000-0000-000000000002',
+    );
+    expect(body.items[0]?.product.name).toContain('Similar jacket');
+    expect(body.items[0]?.ruleBasedV1).toBeNull();
+    expect(body.items[0]?.ruleBasedV2?.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.ruleBasedV2?.scoreBreakdown).toBeTruthy();
+    expect(serialized).not.toContain('guestSessionId');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('searchTerms');
+    expect(serialized).not.toContain('paymentInstructions');
+    expect(serialized).not.toContain('approvalStatus');
+  });
+
+  it('preserves rank movement in exported QA snapshots', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    products = [
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000001',
+        title: 'Source jacket',
+        categoryId: 11n,
+        categoryName: 'Jackets',
+        brand: 'North Berry',
+        feedbackCount: 25,
+      }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000002',
+        title: 'Popular jacket',
+        categoryId: 11n,
+        categoryName: 'Jackets',
+        brand: 'North Berry',
+        feedbackCount: 25,
+      }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000003',
+        title: 'Viewed shoes',
+        categoryId: 22n,
+        categoryName: 'Shoes',
+        brand: 'City Berry',
+        feedbackCount: 0,
+        averageRating: '4.0',
+      }),
+    ];
+    prismaMock.productViewLog.findMany.mockResolvedValue([
+      { productId: '00000000-0000-0000-0000-000000000003' },
+    ]);
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/internal/recommendations/compare?placement=home&limit=3&debug=true&guestSessionId=guest-qa&export=true&format=json',
+      )
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        product: { id: string };
+        rankMovement: number | null;
+        ruleBasedV1: { rank: number | null } | null;
+        ruleBasedV2: { rank: number | null } | null;
+      }>;
+    }>(response);
+    const viewedShoes = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000003',
+    );
+
+    expect(viewedShoes?.ruleBasedV1?.rank).toBe(3);
+    expect(viewedShoes?.ruleBasedV2?.rank).toBe(1);
+    expect(viewedShoes?.rankMovement).toBe(2);
   });
 
   it('returns search recommendations for matching products', async () => {

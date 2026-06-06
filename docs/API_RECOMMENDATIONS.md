@@ -95,6 +95,11 @@ Internal QA comparison mode:
   - `guestSessionId`
   - raw search history
   - raw viewed-product history
+- snapshot export also never returns:
+  - `userId`
+  - cookies
+  - private tracking payloads
+  - private shop/internal-only fields
 
 ## Read APIs
 
@@ -289,6 +294,8 @@ Query params:
 - `productId` required when `placement=product_detail`
 - `q` required when `placement=search`
 - `debug=true` optional for explainability
+- `export=true` optional for snapshot export
+- `format=json` optional when `export=true`
 
 Behavior:
 
@@ -300,6 +307,8 @@ Behavior:
 - rank movement is calculated as:
   - `rule_based_v1.rank - rule_based_v2.rank`
   - positive value means the product moved up in `rule_based_v2`
+- when `export=true`, the same internal workflow returns a QA snapshot payload instead of the default compare response
+- exported snapshots only include public product summary fields plus ranking metadata needed for QA review
 
 Response example:
 
@@ -342,6 +351,58 @@ Response example:
 }
 ```
 
+Snapshot export example:
+
+```json
+{
+  "scenarioType": "search",
+  "placement": "search",
+  "productId": null,
+  "query": "jacket",
+  "limit": 8,
+  "generatedAt": "2026-06-06T13:15:00.000Z",
+  "comparedAlgorithms": ["rule_based_v1", "rule_based_v2"],
+  "items": [
+    {
+      "product": {
+        "id": "uuid",
+        "name": "Product title",
+        "seoSlug": "product-title",
+        "categoryName": "Jackets",
+        "brand": "North Berry",
+        "color": "Black",
+        "price": "1499",
+        "inStock": true,
+        "imageUrl": "https://example.com/image.jpg",
+        "shopName": "Ready Shop",
+        "shopSlug": "ready-shop"
+      },
+      "rankMovement": null,
+      "ruleBasedV1": null,
+      "ruleBasedV2": {
+        "algorithm": "rule_based_v2",
+        "rank": 1,
+        "finalScore": 62.2,
+        "reasons": [
+          "Keyword overlap with the search intent",
+          "Currently in stock"
+        ],
+        "scoreBreakdown": {
+          "categoryScore": 0,
+          "textScore": 20,
+          "popularityScore": 10,
+          "freshnessScore": 8,
+          "ratingScore": 8,
+          "stockScore": 4,
+          "shopScore": 2,
+          "penaltyScore": 0
+        }
+      }
+    }
+  ]
+}
+```
+
 Local QA UI:
 
 - frontend internal page: `/admin/recommendations-qa`
@@ -351,7 +412,29 @@ Local QA UI:
   - start frontend on `127.0.0.1:3000`
   - enable QA and explainability flags
   - open `/admin/recommendations-qa`
-  - compare `home`, `search`, and `product_detail` scenarios
+  - run saved scenarios for:
+    - `home`
+    - `search`
+    - `similar products`
+  - compare custom `home`, `search`, and `product_detail` scenarios
+  - export the current comparison as JSON when you want a repeatable audit artifact
+
+QA snapshot guide:
+
+1. Enable internal QA flags:
+   - `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+2. Optional explainability:
+   - `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+   - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+3. Open `/admin/recommendations-qa`.
+4. Run a saved scenario or enter custom inputs for:
+   - `home`
+   - `search` with `q`
+   - `product_detail` with a public `productId`
+5. Review side-by-side `rule_based_v1` vs `rule_based_v2` rank movement.
+6. Click `Export JSON snapshot`.
+7. After future weight changes, rerun the same scenario and compare the new snapshot with the old JSON artifact.
 
 ## Rollout
 
@@ -363,6 +446,7 @@ Local QA UI:
    - `GET /api/public/recommendations/search?q=...`
    - optional internal QA: repeat the same calls with `debug=true` after enabling `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
    - optional QA comparison: call `GET /api/internal/recommendations/compare` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - optional QA snapshot export: call `GET /api/internal/recommendations/compare?export=true&format=json` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.
 5. Monitor recommendation event volume and storefront render behavior.
 
