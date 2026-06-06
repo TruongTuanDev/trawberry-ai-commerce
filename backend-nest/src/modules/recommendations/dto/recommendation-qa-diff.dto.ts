@@ -1,0 +1,332 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  Allow,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+class RecommendationQaDiffScoreBreakdownDto {
+  @ApiProperty()
+  @IsNumber()
+  categoryScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  textScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  popularityScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  freshnessScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  ratingScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  stockScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  shopScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  penaltyScore!: number;
+}
+
+class RecommendationQaDiffAlgorithmSnapshotDto {
+  @ApiProperty()
+  @IsString()
+  algorithm!: string;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsInt()
+  rank!: number | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsNumber()
+  finalScore!: number | null;
+
+  @ApiProperty({ type: String, isArray: true })
+  @IsArray()
+  @IsString({ each: true })
+  reasons!: string[];
+
+  @ApiProperty({
+    type: RecommendationQaDiffScoreBreakdownDto,
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffScoreBreakdownDto)
+  scoreBreakdown!: RecommendationQaDiffScoreBreakdownDto | null;
+}
+
+class RecommendationQaDiffSnapshotProductDto {
+  @ApiProperty()
+  @IsString()
+  id!: string;
+
+  @ApiProperty()
+  @IsString()
+  name!: string;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  seoSlug!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  categoryName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  brand!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  color!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  price!: string | null;
+
+  @ApiProperty()
+  @IsBoolean()
+  inStock!: boolean;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  imageUrl!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  shopName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @IsString()
+  shopSlug!: string | null;
+}
+
+class RecommendationQaDiffSnapshotItemDto {
+  @ApiProperty({ type: RecommendationQaDiffSnapshotProductDto })
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffSnapshotProductDto)
+  product!: RecommendationQaDiffSnapshotProductDto;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @Allow()
+  rankMovement!: number | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffAlgorithmSnapshotDto,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffAlgorithmSnapshotDto)
+  ruleBasedV1!: RecommendationQaDiffAlgorithmSnapshotDto | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffAlgorithmSnapshotDto,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RecommendationQaDiffAlgorithmSnapshotDto)
+  ruleBasedV2!: RecommendationQaDiffAlgorithmSnapshotDto | null;
+}
+
+export class RecommendationQaSnapshotDto {
+  @ApiProperty({ enum: ['home', 'similar', 'search'] })
+  @IsString()
+  scenarioType!: 'home' | 'similar' | 'search';
+
+  @ApiProperty({ enum: ['home', 'product_detail', 'search'] })
+  @IsString()
+  placement!: 'home' | 'product_detail' | 'search';
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @Allow()
+  productId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @IsOptional()
+  @Allow()
+  query!: string | null;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  limit!: number;
+
+  @ApiProperty()
+  @IsString()
+  generatedAt!: string;
+
+  @ApiProperty({ type: String, isArray: true })
+  @IsArray()
+  @IsString({ each: true })
+  comparedAlgorithms!: string[];
+
+  @ApiProperty({ type: RecommendationQaDiffSnapshotItemDto, isArray: true })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RecommendationQaDiffSnapshotItemDto)
+  items!: RecommendationQaDiffSnapshotItemDto[];
+}
+
+export class RecommendationQaDiffRequestDto {
+  @ApiProperty({ type: RecommendationQaSnapshotDto })
+  @ValidateNested()
+  @Type(() => RecommendationQaSnapshotDto)
+  baseline!: RecommendationQaSnapshotDto;
+
+  @ApiProperty({ type: RecommendationQaSnapshotDto })
+  @ValidateNested()
+  @Type(() => RecommendationQaSnapshotDto)
+  candidate!: RecommendationQaSnapshotDto;
+}
+
+class RecommendationQaDiffScoreBreakdownDeltaDto {
+  @ApiProperty()
+  categoryScore!: number;
+
+  @ApiProperty()
+  textScore!: number;
+
+  @ApiProperty()
+  popularityScore!: number;
+
+  @ApiProperty()
+  freshnessScore!: number;
+
+  @ApiProperty()
+  ratingScore!: number;
+
+  @ApiProperty()
+  stockScore!: number;
+
+  @ApiProperty()
+  shopScore!: number;
+
+  @ApiProperty()
+  penaltyScore!: number;
+}
+
+class RecommendationQaDiffReasonDeltaDto {
+  @ApiProperty({ type: String, isArray: true })
+  added!: string[];
+
+  @ApiProperty({ type: String, isArray: true })
+  removed!: string[];
+}
+
+class RecommendationQaDiffItemDto {
+  @ApiProperty()
+  productId!: string;
+
+  @ApiProperty()
+  productName!: string;
+
+  @ApiProperty({
+    enum: ['unchanged', 'moved_up', 'moved_down', 'added', 'removed'],
+  })
+  status!: 'unchanged' | 'moved_up' | 'moved_down' | 'added' | 'removed';
+
+  @ApiProperty({ nullable: true })
+  oldRank!: number | null;
+
+  @ApiProperty({ nullable: true })
+  newRank!: number | null;
+
+  @ApiProperty({ nullable: true })
+  rankMovement!: number | null;
+
+  @ApiProperty({ nullable: true })
+  oldScore!: number | null;
+
+  @ApiProperty({ nullable: true })
+  newScore!: number | null;
+
+  @ApiProperty({ nullable: true })
+  scoreDelta!: number | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffReasonDeltaDto,
+    nullable: true,
+  })
+  reasonDelta!: RecommendationQaDiffReasonDeltaDto | null;
+
+  @ApiProperty({
+    type: RecommendationQaDiffScoreBreakdownDeltaDto,
+    nullable: true,
+  })
+  scoreBreakdownDelta!: RecommendationQaDiffScoreBreakdownDeltaDto | null;
+}
+
+class RecommendationQaDiffSummaryDto {
+  @ApiProperty()
+  totalItemsCompared!: number;
+
+  @ApiProperty()
+  movedUpCount!: number;
+
+  @ApiProperty()
+  movedDownCount!: number;
+
+  @ApiProperty()
+  addedCount!: number;
+
+  @ApiProperty()
+  removedCount!: number;
+
+  @ApiProperty()
+  unchangedCount!: number;
+}
+
+class RecommendationQaDiffScenarioMetaDto {
+  @ApiProperty({ type: RecommendationQaSnapshotDto })
+  baseline!: RecommendationQaSnapshotDto;
+
+  @ApiProperty({ type: RecommendationQaSnapshotDto })
+  candidate!: RecommendationQaSnapshotDto;
+}
+
+export class RecommendationQaDiffResponseDto {
+  @ApiProperty({ type: RecommendationQaDiffScenarioMetaDto })
+  scenario!: RecommendationQaDiffScenarioMetaDto;
+
+  @ApiProperty({ type: RecommendationQaDiffSummaryDto })
+  summary!: RecommendationQaDiffSummaryDto;
+
+  @ApiProperty({ type: RecommendationQaDiffItemDto, isArray: true })
+  items!: RecommendationQaDiffItemDto[];
+}

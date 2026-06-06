@@ -1,5 +1,77 @@
 # Phase Report
 
+## 2026-06-06 Recommendation Snapshot Diffing and Baseline Catalog Phase 2.4
+
+- Status: Implemented on current branch
+- Scope:
+  - added internal-only snapshot diffing at `POST /api/internal/recommendations/diff`
+  - kept `GET /api/internal/recommendations/compare` backward compatible for compare and export flows
+  - diff output now supports safe QA review with:
+    - scenario metadata
+    - summary metrics
+    - `productId`
+    - `productName`
+    - `oldRank`
+    - `newRank`
+    - `rankMovement`
+    - `oldScore`
+    - `newScore`
+    - `scoreDelta`
+    - `status`
+    - optional `reasonDelta`
+    - optional `scoreBreakdownDelta`
+  - added backend regression coverage for:
+    - diff disabled by default
+    - diff enabled behind `RECOMMENDATION_QA_TOOLS_ENABLED`
+    - unchanged item detection
+    - moved-up item detection
+    - moved-down item detection
+    - added item detection
+    - removed item detection
+    - score delta calculation
+    - no user/session/private field leakage
+  - enhanced `/admin/recommendations-qa` with:
+    - snapshot A / snapshot B paste inputs
+    - JSON file import for both snapshots
+    - diff summary cards
+    - diff table
+    - baseline catalog cards for repeatable audit scenarios
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - no public recommendation endpoint contracts were broken
+  - diffing remains internal-only behind QA flags
+- Local QA workflow:
+  - set `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - set `NEXT_PUBLIC_RECOMMENDATION_QA_TOOLS_ENABLED=true`
+  - optional explainability:
+    - set `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - set `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - open `/admin/recommendations-qa`
+  - export snapshot A from a baseline scenario
+  - tune ranking weights
+  - export snapshot B from the same scenario
+  - paste or import both snapshots into the diff panel
+  - review:
+    - `moved_up`
+    - `moved_down`
+    - `added`
+    - `removed`
+    - `unchanged`
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass, no tracked `data.xlsx`
+- Remaining gaps:
+  - baseline catalog is intentionally static and documented, not persisted to a database
+  - the internal QA page is intentionally not linked in public navigation
+
 ## 2026-06-06 Recommendation QA Snapshot Export and Saved Scenarios Phase 2.3
 
 - Status: Implemented on current branch

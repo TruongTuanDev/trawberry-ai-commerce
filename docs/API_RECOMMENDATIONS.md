@@ -100,6 +100,11 @@ Internal QA comparison mode:
   - cookies
   - private tracking payloads
   - private shop/internal-only fields
+- snapshot diffing also never returns:
+  - session ids
+  - cookies
+  - private tracking payloads
+  - private shop/internal-only fields
 
 ## Read APIs
 
@@ -434,7 +439,94 @@ QA snapshot guide:
    - `product_detail` with a public `productId`
 5. Review side-by-side `rule_based_v1` vs `rule_based_v2` rank movement.
 6. Click `Export JSON snapshot`.
-7. After future weight changes, rerun the same scenario and compare the new snapshot with the old JSON artifact.
+7. Change or tune ranking weights in the recommendation scoring service.
+8. Export snapshot B from the same scenario after the change.
+9. Paste or import snapshot A and snapshot B into the snapshot diff panel on `/admin/recommendations-qa`.
+10. Interpret the diff output:
+   - `moved_up`: candidate rank improved
+   - `moved_down`: candidate rank dropped
+   - `added`: candidate introduced a new result
+   - `removed`: candidate lost a prior result
+   - `unchanged`: item rank stayed stable
+
+### `POST /api/internal/recommendations/diff`
+
+Purpose:
+
+- compare two exported QA snapshot payloads
+- support before/after ranking audits after weight tuning
+- keep diffing internal-only without changing public recommendation contracts
+
+Behavior:
+
+- returns `404` when `RECOMMENDATION_QA_TOOLS_ENABLED` is off
+- accepts:
+  - `baseline` snapshot JSON
+  - `candidate` snapshot JSON
+- returns safe diff output only:
+  - scenario metadata
+  - summary counts
+  - `productId`
+  - `productName`
+  - `oldRank`
+  - `newRank`
+  - `rankMovement`
+  - `oldScore`
+  - `newScore`
+  - `scoreDelta`
+  - `status`
+  - optional `reasonDelta`
+  - optional `scoreBreakdownDelta`
+
+Status interpretation:
+
+- `unchanged`: item exists in both snapshots and rank stayed the same
+- `moved_up`: item exists in both snapshots and rank improved
+- `moved_down`: item exists in both snapshots and rank dropped
+- `added`: item exists only in the candidate snapshot
+- `removed`: item exists only in the baseline snapshot
+
+Diff response example:
+
+```json
+{
+  "summary": {
+    "totalItemsCompared": 5,
+    "movedUpCount": 1,
+    "movedDownCount": 1,
+    "addedCount": 1,
+    "removedCount": 1,
+    "unchangedCount": 1
+  },
+  "items": [
+    {
+      "productId": "uuid",
+      "productName": "Product title",
+      "status": "moved_up",
+      "oldRank": 4,
+      "newRank": 2,
+      "rankMovement": 2,
+      "oldScore": 7,
+      "newScore": 9,
+      "scoreDelta": 2,
+      "reasonDelta": {
+        "added": ["Currently in stock"],
+        "removed": []
+      },
+      "scoreBreakdownDelta": {
+        "categoryScore": 0,
+        "textScore": 0,
+        "popularityScore": 0,
+        "freshnessScore": 0,
+        "ratingScore": 0,
+        "stockScore": 1,
+        "shopScore": 0,
+        "penaltyScore": 0
+      }
+    }
+  ]
+}
+```
 
 ## Rollout
 
@@ -447,6 +539,7 @@ QA snapshot guide:
    - optional internal QA: repeat the same calls with `debug=true` after enabling `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
    - optional QA comparison: call `GET /api/internal/recommendations/compare` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
    - optional QA snapshot export: call `GET /api/internal/recommendations/compare?export=true&format=json` after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
+   - optional QA snapshot diff: call `POST /api/internal/recommendations/diff` with two safe snapshot payloads after enabling `RECOMMENDATION_QA_TOOLS_ENABLED=true`
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.
 5. Monitor recommendation event volume and storefront render behavior.
 

@@ -164,6 +164,53 @@ export type RecommendationQaSnapshotResponse = {
   }>;
 };
 
+export type RecommendationQaDiffStatus =
+  | "unchanged"
+  | "moved_up"
+  | "moved_down"
+  | "added"
+  | "removed";
+
+export type RecommendationQaDiffResponse = {
+  scenario: {
+    baseline: RecommendationQaSnapshotResponse;
+    candidate: RecommendationQaSnapshotResponse;
+  };
+  summary: {
+    totalItemsCompared: number;
+    movedUpCount: number;
+    movedDownCount: number;
+    addedCount: number;
+    removedCount: number;
+    unchangedCount: number;
+  };
+  items: Array<{
+    productId: string;
+    productName: string;
+    status: RecommendationQaDiffStatus;
+    oldRank: number | null;
+    newRank: number | null;
+    rankMovement: number | null;
+    oldScore: number | null;
+    newScore: number | null;
+    scoreDelta: number | null;
+    reasonDelta: {
+      added: string[];
+      removed: string[];
+    } | null;
+    scoreBreakdownDelta: {
+      categoryScore: number;
+      textScore: number;
+      popularityScore: number;
+      freshnessScore: number;
+      ratingScore: number;
+      stockScore: number;
+      shopScore: number;
+      penaltyScore: number;
+    } | null;
+  }>;
+};
+
 export type VisualSearchResponse = {
   analysis: {
     category: string | null;
@@ -789,6 +836,19 @@ export async function getRecommendationRankingSnapshot(query?: {
     `/api/internal/recommendations/compare?${params.toString()}`,
     {
       method: "GET",
+    },
+  );
+}
+
+export async function diffRecommendationRankingSnapshots(payload: {
+  baseline: RecommendationQaSnapshotResponse;
+  candidate: RecommendationQaSnapshotResponse;
+}) {
+  return apiRequest<RecommendationQaDiffResponse>(
+    "/api/internal/recommendations/diff",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
     },
   );
 }

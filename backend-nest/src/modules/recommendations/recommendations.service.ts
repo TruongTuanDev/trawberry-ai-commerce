@@ -7,6 +7,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { ProductReadinessService } from '../products/product-readiness.service';
 import { RecommendationQaCompareQueryDto } from './dto/recommendation-qa-compare-query.dto';
+import {
+  RecommendationQaDiffRequestDto,
+  RecommendationQaSnapshotDto,
+} from './dto/recommendation-qa-diff.dto';
 import { RecommendationQueryDto } from './dto/recommendation-query.dto';
 import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
@@ -73,6 +77,9 @@ type RecommendationQaComparisonRow = {
   ruleBasedV1: RecommendationAlgorithmSnapshot | null;
   ruleBasedV2: RecommendationAlgorithmSnapshot | null;
 };
+
+type RecommendationQaSnapshotItemLike =
+  RecommendationQaSnapshotDto['items'][number];
 
 @Injectable()
 export class RecommendationsService {
@@ -200,6 +207,98 @@ export class RecommendationsService {
 
     return {
       placement: query.placement,
+      items,
+    };
+  }
+
+  diffRankingSnapshots(body: RecommendationQaDiffRequestDto) {
+    if (!this.isQaToolsEnabled()) {
+      throw new NotFoundException();
+    }
+
+    const baselineItems = new Map(
+      body.baseline.items.map((item) => [item.product.id, item]),
+    );
+    const candidateItems = new Map(
+      body.candidate.items.map((item) => [item.product.id, item]),
+    );
+    const orderedIds = [
+      ...body.baseline.items.map((item) => item.product.id),
+      ...body.candidate.items
+        .map((item) => item.product.id)
+        .filter((id) => !baselineItems.has(id)),
+    ];
+
+    const items = orderedIds.map((productId) => {
+      const baselineItem = baselineItems.get(productId) ?? null;
+      const candidateItem = candidateItems.get(productId) ?? null;
+      const oldSnapshot = this.resolvePreferredSnapshot(baselineItem);
+      const newSnapshot = this.resolvePreferredSnapshot(candidateItem);
+      const oldRank = oldSnapshot?.rank ?? null;
+      const newRank = newSnapshot?.rank ?? null;
+      const rankMovement =
+        oldRank !== null && newRank !== null ? oldRank - newRank : null;
+      const oldScore = oldSnapshot?.finalScore ?? null;
+      const newScore = newSnapshot?.finalScore ?? null;
+      const productName =
+        candidateItem?.product.name ?? baselineItem?.product.name ?? productId;
+
+      let status:
+        | 'unchanged'
+        | 'moved_up'
+        | 'moved_down'
+        | 'added'
+        | 'removed' = 'unchanged';
+      if (!baselineItem && candidateItem) {
+        status = 'added';
+      } else if (baselineItem && !candidateItem) {
+        status = 'removed';
+      } else if (rankMovement !== null && rankMovement > 0) {
+        status = 'moved_up';
+      } else if (rankMovement !== null && rankMovement < 0) {
+        status = 'moved_down';
+      }
+
+      return {
+        productId,
+        productName,
+        status,
+        oldRank,
+        newRank,
+        rankMovement,
+        oldScore,
+        newScore,
+        scoreDelta:
+          oldScore !== null && newScore !== null ? newScore - oldScore : null,
+        reasonDelta:
+          baselineItem || candidateItem
+            ? this.buildReasonDelta(
+                oldSnapshot?.reasons ?? [],
+                newSnapshot?.reasons ?? [],
+              )
+            : null,
+        scoreBreakdownDelta: this.buildScoreBreakdownDelta(
+          oldSnapshot?.scoreBreakdown ?? null,
+          newSnapshot?.scoreBreakdown ?? null,
+        ),
+      };
+    });
+
+    return {
+      scenario: {
+        baseline: body.baseline,
+        candidate: body.candidate,
+      },
+      summary: {
+        totalItemsCompared: items.length,
+        movedUpCount: items.filter((item) => item.status === 'moved_up').length,
+        movedDownCount: items.filter((item) => item.status === 'moved_down')
+          .length,
+        addedCount: items.filter((item) => item.status === 'added').length,
+        removedCount: items.filter((item) => item.status === 'removed').length,
+        unchangedCount: items.filter((item) => item.status === 'unchanged')
+          .length,
+      },
       items,
     };
   }
@@ -745,6 +844,51 @@ export class RecommendationsService {
       imageUrl: mappedProduct.images[0]?.url ?? null,
       shopName: mappedProduct.shop.name,
       shopSlug: mappedProduct.shop.slug,
+    };
+  }
+
+  private resolvePreferredSnapshot(
+    item: RecommendationQaSnapshotItemLike | null,
+  ) {
+    return item?.ruleBasedV2 ?? item?.ruleBasedV1 ?? null;
+  }
+
+  private buildReasonDelta(oldReasons: string[], newReasons: string[]) {
+    const oldSet = new Set(oldReasons);
+    const newSet = new Set(newReasons);
+    return {
+      added: newReasons.filter((reason) => !oldSet.has(reason)),
+      removed: oldReasons.filter((reason) => !newSet.has(reason)),
+    };
+  }
+
+  private buildScoreBreakdownDelta(
+    oldBreakdown: RecommendationScoreBreakdown | null,
+    newBreakdown: RecommendationScoreBreakdown | null,
+  ) {
+    if (!oldBreakdown && !newBreakdown) {
+      return null;
+    }
+
+    return {
+      categoryScore:
+        (newBreakdown?.categoryScore ?? 0) - (oldBreakdown?.categoryScore ?? 0),
+      textScore:
+        (newBreakdown?.textScore ?? 0) - (oldBreakdown?.textScore ?? 0),
+      popularityScore:
+        (newBreakdown?.popularityScore ?? 0) -
+        (oldBreakdown?.popularityScore ?? 0),
+      freshnessScore:
+        (newBreakdown?.freshnessScore ?? 0) -
+        (oldBreakdown?.freshnessScore ?? 0),
+      ratingScore:
+        (newBreakdown?.ratingScore ?? 0) - (oldBreakdown?.ratingScore ?? 0),
+      stockScore:
+        (newBreakdown?.stockScore ?? 0) - (oldBreakdown?.stockScore ?? 0),
+      shopScore:
+        (newBreakdown?.shopScore ?? 0) - (oldBreakdown?.shopScore ?? 0),
+      penaltyScore:
+        (newBreakdown?.penaltyScore ?? 0) - (oldBreakdown?.penaltyScore ?? 0),
     };
   }
 

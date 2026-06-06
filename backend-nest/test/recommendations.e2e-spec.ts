@@ -330,6 +330,13 @@ describe('RecommendationsController (e2e)', () => {
       .expect(404);
   });
 
+  it('keeps recommendation QA snapshot diff disabled by default', async () => {
+    await request(app.getHttpServer())
+      .post('/api/internal/recommendations/diff')
+      .send(buildSnapshotDiffPayload())
+      .expect(404);
+  });
+
   it('returns internal ranking comparison when the QA tools flag is enabled', async () => {
     process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
@@ -564,6 +571,83 @@ describe('RecommendationsController (e2e)', () => {
     expect(viewedShoes?.rankMovement).toBe(2);
   });
 
+  it('diffs two QA snapshots with safe statuses, deltas, and no private leakage', async () => {
+    process.env.RECOMMENDATION_QA_TOOLS_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .post('/api/internal/recommendations/diff')
+      .send(buildSnapshotDiffPayload())
+      .expect(201);
+
+    const body = readBody<{
+      summary: {
+        totalItemsCompared: number;
+        movedUpCount: number;
+        movedDownCount: number;
+        addedCount: number;
+        removedCount: number;
+        unchangedCount: number;
+      };
+      items: Array<{
+        productId: string;
+        status: string;
+        oldRank: number | null;
+        newRank: number | null;
+        rankMovement: number | null;
+        oldScore: number | null;
+        newScore: number | null;
+        scoreDelta: number | null;
+        reasonDelta: {
+          added: string[];
+          removed: string[];
+        } | null;
+        scoreBreakdownDelta: {
+          categoryScore: number;
+          textScore: number;
+          popularityScore: number;
+          freshnessScore: number;
+          ratingScore: number;
+          stockScore: number;
+          shopScore: number;
+          penaltyScore: number;
+        } | null;
+      }>;
+    }>(response);
+    const unchanged = body.items.find((item) => item.productId === 'prod-1');
+    const movedUp = body.items.find((item) => item.productId === 'prod-2');
+    const movedDown = body.items.find((item) => item.productId === 'prod-3');
+    const removed = body.items.find((item) => item.productId === 'prod-4');
+    const added = body.items.find((item) => item.productId === 'prod-5');
+    const serialized = JSON.stringify(body);
+
+    expect(body.summary).toEqual({
+      totalItemsCompared: 5,
+      movedUpCount: 1,
+      movedDownCount: 1,
+      addedCount: 1,
+      removedCount: 1,
+      unchangedCount: 1,
+    });
+    expect(unchanged?.status).toBe('unchanged');
+    expect(unchanged?.scoreDelta).toBe(1);
+    expect(movedUp?.status).toBe('moved_up');
+    expect(movedUp?.rankMovement).toBe(2);
+    expect(movedDown?.status).toBe('moved_down');
+    expect(movedDown?.rankMovement).toBe(-2);
+    expect(removed?.status).toBe('removed');
+    expect(removed?.newRank).toBeNull();
+    expect(added?.status).toBe('added');
+    expect(added?.oldRank).toBeNull();
+    expect(movedUp?.reasonDelta?.added).toContain('Currently in stock');
+    expect(movedUp?.scoreBreakdownDelta?.stockScore).toBe(1);
+    expect(serialized).not.toContain('guestSessionId');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('paymentInstructions');
+    expect(serialized).not.toContain('approvalStatus');
+  });
+
   it('returns search recommendations for matching products', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/public/recommendations/search?q=similar%20jacket&limit=2')
@@ -787,6 +871,170 @@ function buildProduct({
       id: categoryId,
       name: categoryName,
       slug: categoryName.toLowerCase(),
+    },
+  };
+}
+
+function buildSnapshotDiffPayload() {
+  return {
+    baseline: {
+      scenarioType: 'home',
+      placement: 'home',
+      productId: null,
+      query: null,
+      limit: 5,
+      generatedAt: '2026-06-06T13:00:00.000Z',
+      comparedAlgorithms: ['rule_based_v1', 'rule_based_v2'],
+      items: [
+        buildSnapshotItem('prod-1', 'Stable Product', 1, 10, ['Popular'], {
+          categoryScore: 4,
+          textScore: 1,
+          popularityScore: 3,
+          freshnessScore: 1,
+          ratingScore: 1,
+          stockScore: 0,
+          shopScore: 0,
+          penaltyScore: 0,
+        }),
+        buildSnapshotItem('prod-2', 'Moved Up Product', 4, 7, ['Popular'], {
+          categoryScore: 2,
+          textScore: 0,
+          popularityScore: 2,
+          freshnessScore: 1,
+          ratingScore: 1,
+          stockScore: 0,
+          shopScore: 1,
+          penaltyScore: 0,
+        }),
+        buildSnapshotItem('prod-3', 'Moved Down Product', 1, 12, ['Fresh'], {
+          categoryScore: 5,
+          textScore: 1,
+          popularityScore: 2,
+          freshnessScore: 2,
+          ratingScore: 1,
+          stockScore: 1,
+          shopScore: 0,
+          penaltyScore: 0,
+        }),
+        buildSnapshotItem(
+          'prod-4',
+          'Removed Product',
+          3,
+          6,
+          ['Keyword match'],
+          {
+            categoryScore: 1,
+            textScore: 2,
+            popularityScore: 1,
+            freshnessScore: 1,
+            ratingScore: 1,
+            stockScore: 0,
+            shopScore: 0,
+            penaltyScore: 0,
+          },
+        ),
+      ],
+    },
+    candidate: {
+      scenarioType: 'home',
+      placement: 'home',
+      productId: null,
+      query: null,
+      limit: 5,
+      generatedAt: '2026-06-06T13:30:00.000Z',
+      comparedAlgorithms: ['rule_based_v1', 'rule_based_v2'],
+      items: [
+        buildSnapshotItem('prod-1', 'Stable Product', 1, 11, ['Popular'], {
+          categoryScore: 4,
+          textScore: 1,
+          popularityScore: 3,
+          freshnessScore: 1,
+          ratingScore: 1,
+          stockScore: 1,
+          shopScore: 0,
+          penaltyScore: 0,
+        }),
+        buildSnapshotItem(
+          'prod-2',
+          'Moved Up Product',
+          2,
+          9,
+          ['Popular', 'Currently in stock'],
+          {
+            categoryScore: 2,
+            textScore: 0,
+            popularityScore: 2,
+            freshnessScore: 1,
+            ratingScore: 1,
+            stockScore: 1,
+            shopScore: 1,
+            penaltyScore: 0,
+          },
+        ),
+        buildSnapshotItem('prod-3', 'Moved Down Product', 3, 8, ['Fresh'], {
+          categoryScore: 3,
+          textScore: 0,
+          popularityScore: 1,
+          freshnessScore: 2,
+          ratingScore: 1,
+          stockScore: 1,
+          shopScore: 0,
+          penaltyScore: 0,
+        }),
+        buildSnapshotItem('prod-5', 'Added Product', 4, 7, ['Same shop'], {
+          categoryScore: 1,
+          textScore: 0,
+          popularityScore: 1,
+          freshnessScore: 1,
+          ratingScore: 1,
+          stockScore: 1,
+          shopScore: 2,
+          penaltyScore: 0,
+        }),
+      ],
+    },
+  };
+}
+
+function buildSnapshotItem(
+  productId: string,
+  name: string,
+  rank: number,
+  score: number,
+  reasons: string[],
+  scoreBreakdown: {
+    categoryScore: number;
+    textScore: number;
+    popularityScore: number;
+    freshnessScore: number;
+    ratingScore: number;
+    stockScore: number;
+    shopScore: number;
+    penaltyScore: number;
+  },
+) {
+  return {
+    product: {
+      id: productId,
+      name,
+      seoSlug: null,
+      categoryName: 'Jackets',
+      brand: 'North Berry',
+      color: 'Black',
+      price: '1499',
+      inStock: true,
+      imageUrl: 'https://example.com/image.jpg',
+      shopName: 'Ready Shop',
+      shopSlug: 'ready-shop',
+    },
+    rankMovement: null,
+    ruleBasedV1: null,
+    ruleBasedV2: {
+      algorithm: 'rule_based_v2',
+      rank,
+      finalScore: score,
+      reasons,
+      scoreBreakdown,
     },
   };
 }

@@ -1,4 +1,12 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiExtraModels,
   ApiOkResponse,
@@ -15,12 +23,17 @@ import {
   RecommendationQaCompareResponseDto,
   RecommendationQaSnapshotResponseDto,
 } from './dto/recommendation-qa-compare-response.dto';
+import {
+  RecommendationQaDiffRequestDto,
+  RecommendationQaDiffResponseDto,
+} from './dto/recommendation-qa-diff.dto';
 import { RecommendationsService } from './recommendations.service';
 
 @ApiTags('internal-recommendations-qa')
 @ApiExtraModels(
   RecommendationQaCompareResponseDto,
   RecommendationQaSnapshotResponseDto,
+  RecommendationQaDiffResponseDto,
 )
 @Controller('api/internal/recommendations')
 export class RecommendationsQaController {
@@ -52,5 +65,16 @@ export class RecommendationsQaController {
       request,
       user,
     );
+  }
+
+  @Post('diff')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary:
+      'Diff two exported recommendation QA snapshots for internal review only.',
+  })
+  @ApiOkResponse({ type: RecommendationQaDiffResponseDto })
+  diffRankingSnapshots(@Body() body: RecommendationQaDiffRequestDto) {
+    return this.recommendationsService.diffRankingSnapshots(body);
   }
 }

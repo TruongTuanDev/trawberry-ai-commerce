@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RecommendationRankingQaPanel } from "@/components/admin/recommendation-ranking-qa-panel";
+import { RecommendationRankingSnapshotDiffPanel } from "@/components/admin/recommendation-ranking-snapshot-diff-panel";
 import {
   getRecommendationRankingComparison,
   type RecommendationQaPlacement,
@@ -252,6 +253,8 @@ export default async function AdminRecommendationsQaPage({
             `productId`.
           </section>
         )}
+
+        <RecommendationRankingSnapshotDiffPanel />
       </div>
     </main>
   );

@@ -1,5 +1,27 @@
 # Project Status
 
+## Recommendation Snapshot Diffing and Baseline Catalog Phase 2.4 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - internal-only diffing for two exported recommendation QA snapshots
+  - summary metrics for moved up, moved down, added, removed, and unchanged results
+  - internal paste/import workflow on `/admin/recommendations-qa` for snapshot A vs snapshot B
+  - a small static baseline catalog concept for repeatable ranking audits
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass
+- Remaining gaps:
+  - baseline catalog is static and not yet shared/persisted across environments
+  - diff tooling remains intentionally internal-only and requires explicit flags
+- Next recommended phase:
+  - Phase 2.5: add optional visual snapshot diff exports or lightweight baseline fixture management for repeated QA audits
+
 ## Recommendation QA Snapshot Export and Saved Scenarios Phase 2.3 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`
