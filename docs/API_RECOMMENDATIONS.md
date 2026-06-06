@@ -17,6 +17,8 @@ Feature flags:
 - `PUBLIC_RECOMMENDATIONS_ENABLED`
 - `RECOMMENDATION_TRACKING_ENABLED`
 - `RECOMMENDATION_SMART_RANKING_ENABLED`
+- `RECOMMENDATION_EXPLAINABILITY_ENABLED`
+- `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED`
 
 If `RECOMMENDATION_SMART_RANKING_ENABLED=false`:
 
@@ -69,6 +71,14 @@ Reason codes currently returned:
 - `same_shop`
 - `has_image`
 
+Explainability mode:
+
+- internal explainability is disabled by default
+- to include per-item score explanations, both of these must be true:
+  - request query includes `debug=true`
+  - backend runtime sets `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+- explainability never returns customer IDs, guest session IDs, raw search queries, or raw view history
+
 ## Read APIs
 
 ### `GET /api/public/recommendations/home?limit=12`
@@ -110,6 +120,52 @@ Backward compatibility:
 
 - `products` is included as a flat list for legacy consumers
 - frontend now reads the richer `items[].product` contract safely
+- when explainability mode is off, no extra explainability fields are returned
+
+Internal explainability example:
+
+```json
+{
+  "algorithm": "rule_based_v2",
+  "placement": "home",
+  "items": [
+    {
+      "product": {
+        "id": "uuid",
+        "name": "Product title"
+      },
+      "rank": 1,
+      "score": 82.5,
+      "reasonCodes": ["based_on_viewed_category", "popular", "in_stock"],
+      "scoreExplanation": {
+        "algorithm": "rule_based_v2",
+        "finalScore": 82.5,
+        "reasons": [
+          "Aligned with recent viewed category interest",
+          "Strong feedback volume popularity signal",
+          "Currently in stock"
+        ],
+        "scoreBreakdown": {
+          "categoryScore": 24,
+          "textScore": 10,
+          "popularityScore": 15,
+          "freshnessScore": 8.5,
+          "ratingScore": 9.4,
+          "stockScore": 4,
+          "shopScore": 2,
+          "penaltyScore": 0
+        }
+      }
+    }
+  ],
+  "products": [
+    {
+      "id": "uuid",
+      "name": "Product title"
+    }
+  ]
+}
+```
 
 ### `GET /api/public/recommendations/products/:productId/similar?limit=12`
 
@@ -208,6 +264,7 @@ Notes:
    - `GET /api/public/recommendations/home`
    - `GET /api/public/recommendations/products/:id/similar`
    - `GET /api/public/recommendations/search?q=...`
+   - optional internal QA: repeat the same calls with `debug=true` after enabling `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
 4. Enable `RECOMMENDATION_SMART_RANKING_ENABLED=true`.
 5. Monitor recommendation event volume and storefront render behavior.
 

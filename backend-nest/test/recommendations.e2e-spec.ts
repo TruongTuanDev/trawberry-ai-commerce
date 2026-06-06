@@ -270,6 +270,36 @@ describe('RecommendationsController (e2e)', () => {
     });
   });
 
+  it('returns rule_based_v1 responses when smart ranking is disabled', async () => {
+    process.env.RECOMMENDATION_SMART_RANKING_ENABLED = 'false';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      placement: string;
+      items: Array<{
+        product: { id: string };
+        rank: number;
+        score: number | null;
+        reasonCodes: string[];
+      }>;
+      products: Array<{ id: string }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v1');
+    expect(body.placement).toBe('home');
+    expect(body.items).toHaveLength(2);
+    expect(body.items[0]?.rank).toBe(1);
+    expect(body.items[0]?.score).toBeNull();
+    expect(body.items[0]?.reasonCodes).toEqual([]);
+    expect(body.products).toHaveLength(2);
+  });
+
   it('returns search recommendations for matching products', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/public/recommendations/search?q=similar%20jacket&limit=2')
@@ -286,6 +316,43 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.placement).toBe('search');
     expect(body.items[0]?.product.name).toContain('Similar jacket');
     expect(body.products[0]?.name).toContain('Similar jacket');
+  });
+
+  it('returns optional score explanations only when internal explainability is enabled', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=1&debug=true')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        scoreExplanation?: {
+          algorithm: string;
+          finalScore: number | null;
+          reasons: string[];
+          scoreBreakdown: {
+            categoryScore: number;
+            textScore: number;
+            popularityScore: number;
+            freshnessScore: number;
+            ratingScore: number;
+            stockScore: number;
+            shopScore: number;
+            penaltyScore: number;
+          } | null;
+        };
+      }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.scoreExplanation).toMatchObject({
+      algorithm: 'rule_based_v2',
+    });
+    expect(body.items[0]?.scoreExplanation?.scoreBreakdown).toBeTruthy();
   });
 
   it('returns 204 and skips writes when tracking is disabled', async () => {
@@ -330,6 +397,43 @@ describe('RecommendationsController (e2e)', () => {
       ),
     ).resolves.toBeUndefined();
     expect(prismaMock.recommendationEvent.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a fallback algorithm name when tracking recommendation events', async () => {
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'impression',
+        placement: 'home',
+        productId: '00000000-0000-0000-0000-000000000002',
+        algorithm: 'rule_based_v1',
+        rank: 2,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+
+    const trackingCalls = prismaMock.recommendationEvent.create.mock
+      .calls as Array<
+      [
+        {
+          data: {
+            algorithm: string;
+            placement: string;
+            rank: number | null;
+          };
+        },
+      ]
+    >;
+    const lastPayload = trackingCalls.at(-1)?.[0];
+
+    expect(lastPayload?.data.algorithm).toBe('rule_based_v1');
+    expect(lastPayload?.data.placement).toBe('home');
+    expect(lastPayload?.data.rank).toBe(2);
   });
 });
 

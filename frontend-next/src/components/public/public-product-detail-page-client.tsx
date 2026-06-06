@@ -31,6 +31,7 @@ import {
   type PublicProduct,
   type RecommendationProductItem,
 } from "@/lib/public-api";
+import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 import { useCartStore } from "@/stores/cart-store";
 
 export function PublicProductDetailPageClient({
@@ -43,9 +44,12 @@ export function PublicProductDetailPageClient({
   recommendationTrackingEnabled: boolean;
 }) {
   const { locale, t } = useI18n("customer");
+  const recommendationFlags = readRecommendationFlagsFromDocument();
   const router = useRouter();
   const [product, setProduct] = useState<PublicProduct | null>(null);
   const [similarProducts, setSimilarProducts] = useState<RecommendationProductItem[]>([]);
+  const [similarProductsAlgorithm, setSimilarProductsAlgorithm] =
+    useState<string | null>(null);
   const [aiTryOnConfig, setAiTryOnConfig] = useState<PublicAiTryOnConfig | null>(null);
   const [aiTryOnOpen, setAiTryOnOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
@@ -145,14 +149,18 @@ export function PublicProductDetailPageClient({
 
     const run = async () => {
       try {
-        const response = await getSimilarProductRecommendations(product.id, 8);
+        const response = await getSimilarProductRecommendations(product.id, 8, {
+          debug: recommendationFlags.recommendationExplainabilityEnabled,
+        });
         if (mounted) {
+          setSimilarProductsAlgorithm(response.algorithm);
           setSimilarProducts(
             response.items.filter((item) => item.product.id !== product.id),
           );
         }
       } catch {
         if (mounted) {
+          setSimilarProductsAlgorithm(null);
           setSimilarProducts([]);
         }
       }
@@ -163,7 +171,11 @@ export function PublicProductDetailPageClient({
     return () => {
       mounted = false;
     };
-  }, [product, recommendationsEnabled]);
+  }, [
+    product,
+    recommendationFlags.recommendationExplainabilityEnabled,
+    recommendationsEnabled,
+  ]);
 
   useEffect(() => {
     if (!product || !recommendationTrackingEnabled) {
@@ -600,6 +612,10 @@ export function PublicProductDetailPageClient({
                 titleKey="similarProducts"
                 items={similarProducts}
                 placement="product_detail"
+                algorithm={similarProductsAlgorithm}
+                showExplainability={
+                  recommendationFlags.recommendationExplainabilityEnabled
+                }
                 sourceProductId={product.id}
                 trackingEnabled={recommendationTrackingEnabled}
               />

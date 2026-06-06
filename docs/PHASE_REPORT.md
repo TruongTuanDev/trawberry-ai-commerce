@@ -1,5 +1,70 @@
 # Phase Report
 
+## 2026-06-06 Recommendation Explainability and Safer Weight Tuning Phase 2.1
+
+- Status: Implemented on current branch
+- Scope:
+  - extracted recommendation scoring weights into explicit constants in `backend-nest/src/modules/recommendations/recommendation-scoring.service.ts`
+  - added optional internal explainability payloads per recommendation item with:
+    - `scoreExplanation.algorithm`
+    - `scoreExplanation.finalScore`
+    - `scoreExplanation.reasons`
+    - `scoreExplanation.scoreBreakdown`
+  - gated explainability behind both `debug=true` and `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - kept public recommendation response backward compatible by preserving `algorithm`, `placement`, `items`, `products`, `score`, and `reasonCodes`
+  - preserved Phase 2 frontend tracking behavior so impression/click events keep using the algorithm returned by backend
+  - removed frontend hardcoded recommendation algorithm defaults and now treat the backend response as the source of truth
+  - added backend regression coverage for:
+    - same-category scoring
+    - category-name fallback scoring
+    - search text intent scoring
+    - popularity scoring
+    - freshness/rating/stock/shop/image contributions
+    - penalty scoring
+    - fallback algorithm tracking persistence
+- Feature flags:
+  - `RECOMMENDATIONS_ENABLED`
+  - `PUBLIC_RECOMMENDATIONS_ENABLED`
+  - `RECOMMENDATION_TRACKING_ENABLED`
+  - `RECOMMENDATION_SMART_RANKING_ENABLED`
+  - `RECOMMENDATION_EXPLAINABILITY_ENABLED`
+  - `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED`
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
+  - recommendation explainability does not expose raw customer IDs, guest IDs, search history, or viewed product history
+  - when explainability is disabled, recommendation APIs keep returning the existing public-safe contract
+- QA guide:
+  - default public QA:
+    - call `GET /api/public/recommendations/home?limit=8`
+    - call `GET /api/public/recommendations/products/:productId/similar?limit=8`
+    - call `GET /api/public/recommendations/search?q=jacket&limit=8`
+    - verify each response still contains stable `algorithm`, `placement`, `items`, and `products`
+  - internal explainability QA:
+    - set `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - set `NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+    - call the same endpoints with `debug=true`
+    - verify `items[].scoreExplanation` appears with `algorithm`, `finalScore`, `reasons`, and `scoreBreakdown`
+    - verify no user identifiers or session identifiers appear anywhere in explainability payloads
+  - fallback QA:
+    - set `RECOMMENDATION_SMART_RANKING_ENABLED=false`
+    - verify home and similar endpoints return `rule_based_v1`
+    - verify search recommendations safely return `[]`
+    - verify recommendation event tracking can still persist `algorithm=rule_based_v1`
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: blocked by missing backend runtime at `http://127.0.0.1:3001` (`ECONNREFUSED`)
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: no tracked `data.xlsx`
+- Remaining gaps:
+  - public recommendation E2E still depends on a live local backend at `127.0.0.1:3001`
+  - recommendation explainability is intentionally opt-in and is not enabled in the normal public storefront path
+
 ## 2026-06-06 Recommendation Smart Ranking Phase 2
 
 - Status: Implemented on current branch
@@ -10,6 +75,7 @@
   - personalized home ranking from recent `ProductViewLog` and `SearchLog` when a customer or guest session is available
   - expanded frontend recommendation blocks to homepage, product detail, and search results
   - upgraded recommendation impression/click tracking to send `rule_based_v2`, rank, and score best-effort
+  - fixed frontend recommendation tracking to use the backend-returned `algorithm` value, including `rule_based_v1` fallback mode
   - updated recommendation i18n keys in `en`, `ru`, and `vi`
 - Feature flags:
   - `RECOMMENDATIONS_ENABLED`
@@ -20,7 +86,16 @@
   - no checkout, cart, order, payment, shipping, WB sync, or AI Try-On business logic was modified
   - disabled recommendation flags still return safe empty payloads or Phase 1 fallback behavior
 - Verification:
-  - pending final run in this phase section until backend/frontend checks finish
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: blocked by missing backend runtime at `http://127.0.0.1:3001` (`ECONNREFUSED`)
+  - `git diff --check`: pass
+  - `git ls-files | Select-String "\.env"`: only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: no tracked `data.xlsx`
 - Future Phase 3:
   - sponsored ranking
   - ad inventory and campaign controls

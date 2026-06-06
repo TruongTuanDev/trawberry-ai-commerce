@@ -14,12 +14,16 @@ export function PublicRecommendationSection({
   titleKey,
   items,
   placement,
+  algorithm,
+  showExplainability,
   sourceProductId,
   trackingEnabled,
 }: {
   titleKey: "recommendedForYou" | "similarProducts" | "similarBySearch";
   items: RecommendationProductItem[];
   placement: RecommendationPlacement;
+  algorithm?: string | null;
+  showExplainability?: boolean;
   sourceProductId?: string;
   trackingEnabled: boolean;
 }) {
@@ -27,11 +31,11 @@ export function PublicRecommendationSection({
   const impressionKeyRef = useRef<string>("");
 
   useEffect(() => {
-    if (!trackingEnabled || items.length === 0) {
+    if (!trackingEnabled || items.length === 0 || !algorithm) {
       return;
     }
 
-    const impressionKey = `${placement}:${sourceProductId ?? "none"}:${items.map((item) => item.product.id).join(",")}`;
+    const impressionKey = `${placement}:${algorithm}:${sourceProductId ?? "none"}:${items.map((item) => item.product.id).join(",")}`;
     if (impressionKeyRef.current === impressionKey) {
       return;
     }
@@ -44,13 +48,13 @@ export function PublicRecommendationSection({
         placement,
         productId: item.product.id,
         sourceProductId,
-        algorithm: "rule_based_v2",
+        algorithm,
         rank: item.rank ?? index + 1,
         score: item.score ?? undefined,
         guestSessionId,
       });
     });
-  }, [items, placement, sourceProductId, trackingEnabled]);
+  }, [algorithm, items, placement, sourceProductId, trackingEnabled]);
 
   if (!items.length) {
     return null;
@@ -75,26 +79,47 @@ export function PublicRecommendationSection({
         data-testid={`recommendation-grid-${placement}`}
       >
         {items.map((item, index) => (
-          <ProductCard
-            key={`${placement}-${item.product.id}`}
-            product={item.product}
-            onProductNavigate={() => {
-              if (!trackingEnabled) {
-                return;
-              }
+          <div key={`${placement}-${item.product.id}`} className="space-y-2">
+            <ProductCard
+              product={item.product}
+              onProductNavigate={() => {
+                if (!trackingEnabled || !algorithm) {
+                  return;
+                }
 
-              void trackRecommendationEvent({
-                type: "click",
-                placement,
-                productId: item.product.id,
-                sourceProductId,
-                algorithm: "rule_based_v2",
-                rank: item.rank ?? index + 1,
-                score: item.score ?? undefined,
-                guestSessionId: getGuestSessionId(),
-              });
-            }}
-          />
+                void trackRecommendationEvent({
+                  type: "click",
+                  placement,
+                  productId: item.product.id,
+                  sourceProductId,
+                  algorithm,
+                  rank: item.rank ?? index + 1,
+                  score: item.score ?? undefined,
+                  guestSessionId: getGuestSessionId(),
+                });
+              }}
+            />
+            {showExplainability && item.scoreExplanation ? (
+              <div
+                className="rounded-[1.25rem] border border-dashed border-[var(--border)] bg-white/80 px-3 py-3 text-xs text-[var(--muted)]"
+                data-testid={`recommendation-debug-${placement}-${item.product.id}`}
+              >
+                <p className="font-semibold text-[var(--foreground)]">
+                  {item.scoreExplanation.algorithm} · {item.scoreExplanation.finalScore ?? "n/a"}
+                </p>
+                {item.scoreExplanation.reasons.length ? (
+                  <p className="mt-1 leading-5">
+                    {item.scoreExplanation.reasons.join(" | ")}
+                  </p>
+                ) : null}
+                {item.scoreExplanation.scoreBreakdown ? (
+                  <p className="mt-2 font-mono leading-5">
+                    cat {item.scoreExplanation.scoreBreakdown.categoryScore} · text {item.scoreExplanation.scoreBreakdown.textScore} · pop {item.scoreExplanation.scoreBreakdown.popularityScore} · fresh {item.scoreExplanation.scoreBreakdown.freshnessScore} · rating {item.scoreExplanation.scoreBreakdown.ratingScore} · stock {item.scoreExplanation.scoreBreakdown.stockScore} · shop {item.scoreExplanation.scoreBreakdown.shopScore} · penalty {item.scoreExplanation.scoreBreakdown.penaltyScore}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         ))}
       </section>
     </section>

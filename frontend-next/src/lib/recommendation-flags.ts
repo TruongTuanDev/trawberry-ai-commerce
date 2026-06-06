@@ -21,6 +21,11 @@ export function getRecommendationFlags() {
       process.env.NEXT_PUBLIC_RECOMMENDATION_TRACKING_ENABLED,
     true,
   );
+  const recommendationExplainabilityEnabled = readBoolean(
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED ??
+      process.env.NEXT_PUBLIC_RECOMMENDATION_EXPLAINABILITY_ENABLED,
+    false,
+  );
 
   return {
     recommendationsEnabled,
@@ -28,6 +33,8 @@ export function getRecommendationFlags() {
       recommendationsEnabled && publicRecommendationsEnabled,
     recommendationTrackingEnabled:
       recommendationsEnabled && recommendationTrackingEnabled,
+    recommendationExplainabilityEnabled:
+      recommendationsEnabled && recommendationExplainabilityEnabled,
   };
 }
 
@@ -36,6 +43,7 @@ export function readRecommendationFlagsFromDocument() {
     return {
       publicRecommendationsEnabled: false,
       recommendationTrackingEnabled: false,
+      recommendationExplainabilityEnabled: false,
     };
   }
 
@@ -44,5 +52,7 @@ export function readRecommendationFlagsFromDocument() {
       document.body.dataset.publicRecommendationsEnabled === "true",
     recommendationTrackingEnabled:
       document.body.dataset.recommendationTrackingEnabled === "true",
+    recommendationExplainabilityEnabled:
+      document.body.dataset.recommendationExplainabilityEnabled === "true",
   };
 }

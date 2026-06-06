@@ -1,6 +1,50 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PublicProductResponseDto } from '../../public-products/dto/public-product-response.dto';
 
+class RecommendationScoreBreakdownDto {
+  @ApiProperty()
+  categoryScore!: number;
+
+  @ApiProperty()
+  textScore!: number;
+
+  @ApiProperty()
+  popularityScore!: number;
+
+  @ApiProperty()
+  freshnessScore!: number;
+
+  @ApiProperty()
+  ratingScore!: number;
+
+  @ApiProperty()
+  stockScore!: number;
+
+  @ApiProperty()
+  shopScore!: number;
+
+  @ApiProperty()
+  penaltyScore!: number;
+}
+
+class RecommendationScoreExplanationDto {
+  @ApiProperty()
+  algorithm!: string;
+
+  @ApiProperty({ nullable: true })
+  finalScore!: number | null;
+
+  @ApiProperty({ type: String, isArray: true })
+  reasons!: string[];
+
+  @ApiProperty({
+    type: RecommendationScoreBreakdownDto,
+    nullable: true,
+    required: false,
+  })
+  scoreBreakdown?: RecommendationScoreBreakdownDto | null;
+}
+
 class RecommendationResponseItemDto {
   @ApiProperty({ type: PublicProductResponseDto })
   product!: PublicProductResponseDto;
@@ -13,6 +57,13 @@ class RecommendationResponseItemDto {
 
   @ApiProperty({ type: String, isArray: true })
   reasonCodes!: string[];
+
+  @ApiProperty({
+    type: RecommendationScoreExplanationDto,
+    required: false,
+    nullable: true,
+  })
+  scoreExplanation?: RecommendationScoreExplanationDto;
 }
 
 export class RecommendationProductsResponseDto {

@@ -1,5 +1,31 @@
 # Project Status
 
+## Recommendation Explainability and Safer Weight Tuning Phase 2.1 - 2026-06-06
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - explicit centralized scoring weights for safer tuning
+  - optional internal score explainability via `items[].scoreExplanation`
+  - safe debug gating with `debug=true` plus `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  - frontend-safe explainability rendering only when internal flags are enabled
+  - tracking that continues to use only the backend-returned algorithm
+- Explainability payload includes:
+  - `algorithm`
+  - `finalScore`
+  - `reasons`
+  - `scoreBreakdown`
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: blocked by missing backend runtime at `127.0.0.1:3001`
+- Remaining gaps:
+  - recommendation explainability is internal/debug-only by design
+  - recommendation E2E still requires a live local backend/frontend runtime pair
+
 ## Recommendation Smart Ranking Phase 2 - 2026-06-06
 
 - Status: implemented in `backend-nest` and `frontend-next`
@@ -10,6 +36,7 @@
   - additive search recommendation block via `GET /api/public/recommendations/search`
   - richer recommendation payloads with `rank`, `score`, and `reasonCodes`
   - best-effort impression/click tracking with `algorithm`, `rank`, and `score`
+  - frontend tracking now preserves the exact backend recommendation algorithm instead of hardcoding `rule_based_v2`
 - Frontend coverage now includes recommendation sections on:
   - homepage
   - public product detail

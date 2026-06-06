@@ -99,19 +99,79 @@ export type RecommendationPreferenceProfile = {
   searchTerms: string[];
 };
 
+export type RecommendationScoreBreakdown = {
+  categoryScore: number;
+  textScore: number;
+  popularityScore: number;
+  freshnessScore: number;
+  ratingScore: number;
+  stockScore: number;
+  shopScore: number;
+  penaltyScore: number;
+};
+
 export type ScoredRecommendation = {
   score: number;
   reasonCodes: RecommendationReasonCode[];
-  debug: {
-    categoryScore: number;
-    textScore: number;
-    popularityScore: number;
-    freshnessScore: number;
-    ratingScore: number;
-    stockScore: number;
-    shopScore: number;
-    penaltyScore: number;
-  };
+  scoreBreakdown: RecommendationScoreBreakdown;
+};
+
+export const RECOMMENDATION_SCORING_WEIGHTS = {
+  category: {
+    sameCategory: 35,
+    matchingCategoryName: 28,
+    basedOnViewedCategory: 24,
+  },
+  text: {
+    match: 5,
+    max: 20,
+  },
+  popularity: {
+    perFeedback: 1.25,
+    max: 15,
+    reasonThreshold: 6,
+  },
+  freshness: {
+    max: 10,
+    decayDays: 3,
+    reasonThreshold: 4,
+  },
+  rating: {
+    max: 10,
+    reasonThreshold: 7,
+  },
+  stock: {
+    base: 2,
+    perTenUnits: 10,
+    max: 5,
+  },
+  shop: {
+    hasImage: 2,
+    sameShop: 3,
+    max: 5,
+  },
+  penalty: {
+    missingImage: 4,
+    outOfStock: 2,
+  },
+} as const;
+
+export const RECOMMENDATION_REASON_LABELS: Record<
+  RecommendationReasonCode,
+  string
+> = {
+  same_category: 'Same category as the source product',
+  matching_category_name: 'Matching category name fallback matched',
+  based_on_viewed_category: 'Aligned with recent viewed category interest',
+  same_color: 'Matches preferred or source color',
+  same_brand: 'Matches preferred or source brand',
+  keyword_match: 'Matched search or source text intent',
+  popular: 'Strong feedback volume popularity signal',
+  fresh: 'Recently published or updated item',
+  high_rating: 'High rating signal',
+  in_stock: 'Currently in stock',
+  same_shop: 'From the same shop as the source product',
+  has_image: 'Has product imagery available',
 };
 
 @Injectable()
@@ -182,7 +242,7 @@ export class RecommendationScoringService {
     return {
       score: Number(score.toFixed(2)),
       reasonCodes: [...reasonCodes],
-      debug: {
+      scoreBreakdown: {
         categoryScore,
         textScore,
         popularityScore,
@@ -218,7 +278,7 @@ export class RecommendationScoringService {
       candidate.categoryId === input.sourceProduct.categoryId
     ) {
       reasonCodes.add('same_category');
-      return 35;
+      return RECOMMENDATION_SCORING_WEIGHTS.category.sameCategory;
     }
 
     const sourceTerms = [
@@ -235,7 +295,7 @@ export class RecommendationScoringService {
       )
     ) {
       reasonCodes.add('matching_category_name');
-      return 28;
+      return RECOMMENDATION_SCORING_WEIGHTS.category.matchingCategoryName;
     }
 
     if (
@@ -252,7 +312,7 @@ export class RecommendationScoringService {
           )))
     ) {
       reasonCodes.add('based_on_viewed_category');
-      return 24;
+      return RECOMMENDATION_SCORING_WEIGHTS.category.basedOnViewedCategory;
     }
 
     return 0;
@@ -307,7 +367,10 @@ export class RecommendationScoringService {
       reasonCodes.add('keyword_match');
     }
 
-    return Math.min(20, matches * 5);
+    return Math.min(
+      RECOMMENDATION_SCORING_WEIGHTS.text.max,
+      matches * RECOMMENDATION_SCORING_WEIGHTS.text.match,
+    );
   }
 
   private resolvePopularityScore(
@@ -315,8 +378,11 @@ export class RecommendationScoringService {
     reasonCodes: Set<RecommendationReasonCode>,
   ) {
     const feedbackCount = Math.max(0, candidate.feedbackCount ?? 0);
-    const score = Math.min(15, feedbackCount * 1.25);
-    if (score >= 6) {
+    const score = Math.min(
+      RECOMMENDATION_SCORING_WEIGHTS.popularity.max,
+      feedbackCount * RECOMMENDATION_SCORING_WEIGHTS.popularity.perFeedback,
+    );
+    if (score >= RECOMMENDATION_SCORING_WEIGHTS.popularity.reasonThreshold) {
       reasonCodes.add('popular');
     }
     return Number(score.toFixed(2));
@@ -332,8 +398,12 @@ export class RecommendationScoringService {
       0,
       (Date.now() - reference.getTime()) / (1000 * 60 * 60 * 24),
     );
-    const score = Math.max(0, 10 - ageDays / 3);
-    if (score >= 4) {
+    const score = Math.max(
+      0,
+      RECOMMENDATION_SCORING_WEIGHTS.freshness.max -
+        ageDays / RECOMMENDATION_SCORING_WEIGHTS.freshness.decayDays,
+    );
+    if (score >= RECOMMENDATION_SCORING_WEIGHTS.freshness.reasonThreshold) {
       reasonCodes.add('fresh');
     }
     return Number(score.toFixed(2));
@@ -344,8 +414,14 @@ export class RecommendationScoringService {
     reasonCodes: Set<RecommendationReasonCode>,
   ) {
     const rating = Number(candidate.averageRating?.toString() ?? '0');
-    const score = Math.max(0, Math.min(10, (rating / 5) * 10));
-    if (score >= 7) {
+    const score = Math.max(
+      0,
+      Math.min(
+        RECOMMENDATION_SCORING_WEIGHTS.rating.max,
+        (rating / 5) * RECOMMENDATION_SCORING_WEIGHTS.rating.max,
+      ),
+    );
+    if (score >= RECOMMENDATION_SCORING_WEIGHTS.rating.reasonThreshold) {
       reasonCodes.add('high_rating');
     }
     return Number(score.toFixed(2));
@@ -361,7 +437,11 @@ export class RecommendationScoringService {
     }
 
     reasonCodes.add('in_stock');
-    return Math.min(5, 2 + quantity / 10);
+    return Math.min(
+      RECOMMENDATION_SCORING_WEIGHTS.stock.max,
+      RECOMMENDATION_SCORING_WEIGHTS.stock.base +
+        quantity / RECOMMENDATION_SCORING_WEIGHTS.stock.perTenUnits,
+    );
   }
 
   private resolveShopScore(
@@ -374,7 +454,7 @@ export class RecommendationScoringService {
     let score = 0;
 
     if (candidate.images.length > 0) {
-      score += 2;
+      score += RECOMMENDATION_SCORING_WEIGHTS.shop.hasImage;
       reasonCodes.add('has_image');
     }
 
@@ -382,21 +462,21 @@ export class RecommendationScoringService {
       input.sourceProduct &&
       input.sourceProduct.shopId === candidate.shopId
     ) {
-      score += 3;
+      score += RECOMMENDATION_SCORING_WEIGHTS.shop.sameShop;
       reasonCodes.add('same_shop');
     }
 
-    return Math.min(5, score);
+    return Math.min(RECOMMENDATION_SCORING_WEIGHTS.shop.max, score);
   }
 
   private resolvePenaltyScore(candidate: RecommendationProductRecord) {
     let penalty = 0;
 
     if (candidate.images.length === 0) {
-      penalty += 4;
+      penalty += RECOMMENDATION_SCORING_WEIGHTS.penalty.missingImage;
     }
     if (this.resolveAvailableQuantity(candidate.variants) <= 0) {
-      penalty += 2;
+      penalty += RECOMMENDATION_SCORING_WEIGHTS.penalty.outOfStock;
     }
 
     return penalty;

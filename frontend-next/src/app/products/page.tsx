@@ -83,6 +83,7 @@ function ProductsPageContent({
   router: ReturnType<typeof useRouter>;
 }) {
   const { t } = useI18n("customer");
+  const recommendationFlags = readRecommendationFlagsFromDocument();
   const hydrateCart = useCartStore((state) => state.hydrate);
   const [items, setItems] = useState<PublicProduct[]>([]);
   const [meta, setMeta] = useState<ProductsMeta>(initialMeta);
@@ -91,6 +92,8 @@ function ProductsPageContent({
   const [searchRecommendations, setSearchRecommendations] = useState<
     RecommendationProductItem[]
   >([]);
+  const [searchRecommendationAlgorithm, setSearchRecommendationAlgorithm] =
+    useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestKey, setRequestKey] = useState(0);
@@ -297,8 +300,7 @@ function ProductsPageContent({
 
   useEffect(() => {
     const query = filters.q.trim();
-    const { publicRecommendationsEnabled } = readRecommendationFlagsFromDocument();
-    if (!query || !publicRecommendationsEnabled) {
+    if (!query || !recommendationFlags.publicRecommendationsEnabled) {
       return;
     }
 
@@ -306,12 +308,16 @@ function ProductsPageContent({
 
     const run = async () => {
       try {
-        const response = await getSearchProductRecommendations(query, 8);
+        const response = await getSearchProductRecommendations(query, 8, {
+          debug: recommendationFlags.recommendationExplainabilityEnabled,
+        });
         if (mounted) {
+          setSearchRecommendationAlgorithm(response.algorithm);
           setSearchRecommendations(response.items);
         }
       } catch {
         if (mounted) {
+          setSearchRecommendationAlgorithm(null);
           setSearchRecommendations([]);
         }
       }
@@ -322,11 +328,16 @@ function ProductsPageContent({
     return () => {
       mounted = false;
     };
-  }, [filters.q]);
+  }, [
+    filters.q,
+    recommendationFlags.publicRecommendationsEnabled,
+    recommendationFlags.recommendationExplainabilityEnabled,
+  ]);
 
-  const visibleSearchRecommendations = filters.q.trim()
-    ? searchRecommendations
-    : [];
+  const visibleSearchRecommendations =
+    filters.q.trim() && recommendationFlags.publicRecommendationsEnabled
+      ? searchRecommendations
+      : [];
 
   const applyFilters = (targetFilters = filters) => {
     const params = new URLSearchParams();
@@ -1332,10 +1343,11 @@ function ProductsPageContent({
               titleKey="similarBySearch"
               items={visibleSearchRecommendations}
               placement="search"
-              trackingEnabled={
-                readRecommendationFlagsFromDocument()
-                  .recommendationTrackingEnabled
+              algorithm={searchRecommendationAlgorithm}
+              showExplainability={
+                recommendationFlags.recommendationExplainabilityEnabled
               }
+              trackingEnabled={recommendationFlags.recommendationTrackingEnabled}
             />
           ) : null}
 

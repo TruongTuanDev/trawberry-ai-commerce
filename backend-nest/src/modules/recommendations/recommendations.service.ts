@@ -11,9 +11,12 @@ import { TrackProductViewDto } from './dto/track-product-view.dto';
 import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dto';
 import { TrackSearchDto } from './dto/track-search.dto';
 import {
+  RECOMMENDATION_REASON_LABELS,
   RecommendationPreferenceProfile,
   RecommendationProductRecord,
+  type RecommendationReasonCode,
   RecommendationScoringService,
+  type RecommendationScoreBreakdown,
   type RecommendationVariantRecord,
   type RecommendationPlacement,
 } from './recommendation-scoring.service';
@@ -23,6 +26,12 @@ type RecommendationApiItem = {
   rank: number;
   score: number | null;
   reasonCodes: string[];
+  scoreExplanation?: {
+    algorithm: string;
+    finalScore: number | null;
+    reasons: string[];
+    scoreBreakdown: RecommendationScoreBreakdown | null;
+  };
 };
 
 @Injectable()
@@ -307,10 +316,14 @@ export class RecommendationsService {
         .slice(0, query.limit)
         .map((product) => ({
           product,
-          scored: { score: null, reasonCodes: [] as string[] },
+          scored: {
+            score: null,
+            reasonCodes: [] as RecommendationReasonCode[],
+            scoreBreakdown: null,
+          },
         }));
 
-      return this.buildResponse('home', 'rule_based_v1', items, false);
+      return this.buildResponse('home', 'rule_based_v1', items, query.debug);
     } catch {
       return this.emptyResponse('home');
     }
@@ -351,14 +364,18 @@ export class RecommendationsService {
         .slice(0, query.limit)
         .map((product) => ({
           product,
-          scored: { score: null, reasonCodes: [] as string[] },
+          scored: {
+            score: null,
+            reasonCodes: [] as RecommendationReasonCode[],
+            scoreBreakdown: null,
+          },
         }));
 
       return this.buildResponse(
         'product_detail',
         'rule_based_v1',
         items,
-        false,
+        query.debug,
       );
     } catch {
       return this.emptyResponse('product_detail');
@@ -431,18 +448,34 @@ export class RecommendationsService {
       product: RecommendationProductRecord;
       scored: {
         score: number | null;
-        reasonCodes: string[];
-        debug?: Record<string, number>;
+        reasonCodes: RecommendationReasonCode[];
+        scoreBreakdown?: RecommendationScoreBreakdown | null;
       };
     }>,
     debug = false,
   ) {
-    const mappedItems: RecommendationApiItem[] = items.map((item, index) => ({
-      product: this.mapProduct(item.product),
-      rank: index + 1,
-      score: debug ? item.scored.score : item.scored.score,
-      reasonCodes: item.scored.reasonCodes,
-    }));
+    const includeExplainability = this.shouldIncludeExplainability(debug);
+    const mappedItems: RecommendationApiItem[] = items.map((item, index) => {
+      const mappedItem: RecommendationApiItem = {
+        product: this.mapProduct(item.product),
+        rank: index + 1,
+        score: item.scored.score,
+        reasonCodes: item.scored.reasonCodes,
+      };
+
+      if (includeExplainability) {
+        mappedItem.scoreExplanation = {
+          algorithm,
+          finalScore: item.scored.score,
+          reasons: item.scored.reasonCodes.map(
+            (reasonCode) => RECOMMENDATION_REASON_LABELS[reasonCode],
+          ),
+          scoreBreakdown: item.scored.scoreBreakdown ?? null,
+        };
+      }
+
+      return mappedItem;
+    });
 
     return {
       algorithm,
@@ -589,6 +622,12 @@ export class RecommendationsService {
     return (
       this.readFlag('RECOMMENDATIONS_ENABLED', true) &&
       this.readFlag('RECOMMENDATION_TRACKING_ENABLED', true)
+    );
+  }
+
+  private shouldIncludeExplainability(debug = false) {
+    return (
+      debug && this.readFlag('RECOMMENDATION_EXPLAINABILITY_ENABLED', false)
     );
   }
 

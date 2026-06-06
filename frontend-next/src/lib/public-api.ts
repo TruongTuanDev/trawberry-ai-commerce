@@ -75,6 +75,21 @@ export type RecommendationProductItem = {
   rank: number;
   score: number | null;
   reasonCodes: string[];
+  scoreExplanation?: {
+    algorithm: string;
+    finalScore: number | null;
+    reasons: string[];
+    scoreBreakdown: {
+      categoryScore: number;
+      textScore: number;
+      popularityScore: number;
+      freshnessScore: number;
+      ratingScore: number;
+      stockScore: number;
+      shopScore: number;
+      penaltyScore: number;
+    } | null;
+  };
 };
 
 export type RecommendationProductsResponse = {
@@ -580,14 +595,24 @@ export async function getPublicProduct(productId: string) {
   });
 }
 
-export async function getHomeRecommendations(limit = 12) {
+export async function getHomeRecommendations(
+  limit = 12,
+  options?: {
+    debug?: boolean;
+  },
+) {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  if (options?.debug) {
+    params.set("debug", "true");
+  }
   const response = await apiRequest<RecommendationProductsResponse | {
     algorithm: string;
     placement?: RecommendationPlacement;
     items: Array<PublicProduct | RecommendationProductItem>;
     products?: PublicProduct[];
   }>(
-    `/api/public/recommendations/home?limit=${limit}`,
+    `/api/public/recommendations/home?${params.toString()}`,
     {
       method: "GET",
     },
@@ -598,14 +623,22 @@ export async function getHomeRecommendations(limit = 12) {
 export async function getSimilarProductRecommendations(
   productId: string,
   limit = 12,
+  options?: {
+    debug?: boolean;
+  },
 ) {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  if (options?.debug) {
+    params.set("debug", "true");
+  }
   const response = await apiRequest<RecommendationProductsResponse | {
     algorithm: string;
     placement?: RecommendationPlacement;
     items: Array<PublicProduct | RecommendationProductItem>;
     products?: PublicProduct[];
   }>(
-    `/api/public/recommendations/products/${productId}/similar?limit=${limit}`,
+    `/api/public/recommendations/products/${productId}/similar?${params.toString()}`,
     {
       method: "GET",
     },
@@ -616,10 +649,16 @@ export async function getSimilarProductRecommendations(
 export async function getSearchProductRecommendations(
   q: string,
   limit = 12,
+  options?: {
+    debug?: boolean;
+  },
 ) {
   const params = new URLSearchParams();
   params.set("q", q);
   params.set("limit", String(limit));
+  if (options?.debug) {
+    params.set("debug", "true");
+  }
   const response = await apiRequest<RecommendationProductsResponse | {
     algorithm: string;
     placement?: RecommendationPlacement;
@@ -738,13 +777,14 @@ function normalizeRecommendationResponse(
       return item;
     }
 
-    return {
-      product: item,
-      rank: index + 1,
-      score: null,
-      reasonCodes: [],
-    };
-  });
+      return {
+        product: item,
+        rank: index + 1,
+        score: null,
+        reasonCodes: [],
+        scoreExplanation: undefined,
+      };
+    });
 
   return {
     algorithm: response.algorithm,

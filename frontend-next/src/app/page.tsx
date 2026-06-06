@@ -58,14 +58,26 @@ async function loadHomepageSlides() {
 
 async function loadHomepageRecommendations(enabled: boolean) {
   if (!enabled) {
-    return [] as RecommendationProductItem[];
+    return {
+      algorithm: null,
+      items: [] as RecommendationProductItem[],
+    };
   }
 
   try {
-    const response = await getHomeRecommendations(8);
-    return response.items;
+    const recommendationFlags = getRecommendationFlags();
+    const response = await getHomeRecommendations(8, {
+      debug: recommendationFlags.recommendationExplainabilityEnabled,
+    });
+    return {
+      algorithm: response.algorithm,
+      items: response.items,
+    };
   } catch {
-    return [] as RecommendationProductItem[];
+    return {
+      algorithm: null,
+      items: [] as RecommendationProductItem[],
+    };
   }
 }
 
@@ -73,7 +85,7 @@ export default async function HomePage() {
   const recommendationFlags = getRecommendationFlags();
   const { items, total } = await loadHomepageCatalog();
   const slides = await loadHomepageSlides();
-  const recommendationItems = await loadHomepageRecommendations(
+  const recommendations = await loadHomepageRecommendations(
     recommendationFlags.publicRecommendationsEnabled,
   );
   const cookieStore = await cookies();
@@ -85,11 +97,15 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl space-y-8">
           <PublicHomepageHeroSlider initialSlides={slides} />
 
-          {recommendationItems.length ? (
+          {recommendations.items.length ? (
             <PublicRecommendationSection
               titleKey="recommendedForYou"
-              items={recommendationItems}
+              items={recommendations.items}
               placement="home"
+              algorithm={recommendations.algorithm}
+              showExplainability={
+                recommendationFlags.recommendationExplainabilityEnabled
+              }
               trackingEnabled={recommendationFlags.recommendationTrackingEnabled}
             />
           ) : null}
