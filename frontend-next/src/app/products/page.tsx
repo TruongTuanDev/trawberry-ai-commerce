@@ -530,13 +530,13 @@ function ProductsPageContent({
                       }}
                       className={`h-9 px-4 rounded-full text-[13px] font-bold transition flex items-center gap-2.5 cursor-pointer border select-none shrink-0 ${
                         filters.inStock === "true"
-                          ? "bg-[#f100bb] text-white border-transparent"
+                          ? "bg-[var(--brand-primary)] text-white border-transparent"
                           : "bg-[#f6f6fa] text-gray-800 border-transparent hover:bg-[#ececf3]"
                       }`}
                     >
                       <span>{t("catalog.sale")}</span>
                       <div className={`w-7 h-4 rounded-full p-0.5 transition shrink-0 ${filters.inStock === "true" ? "bg-white" : "bg-gray-300"}`}>
-                        <div className={`w-3 h-3 rounded-full bg-[#f100bb] transition transform ${filters.inStock === "true" ? "translate-x-3" : ""}`} />
+                        <div className={`w-3 h-3 rounded-full bg-[var(--brand-primary)] transition transform ${filters.inStock === "true" ? "translate-x-3" : ""}`} />
                       </div>
                     </button>
 
@@ -548,7 +548,7 @@ function ProductsPageContent({
                         data-testid="catalog-filter-sort-trigger"
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "sort" || filters.sort !== "newest"
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -586,13 +586,13 @@ function ProductsPageContent({
                               }}
                               className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between cursor-pointer ${
                                 filters.sort === opt.value
-                                  ? "bg-[#4f46e5]/5 text-[#4f46e5]"
+                                  ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)]"
                                   : "text-gray-700 hover:bg-gray-50"
                               }`}
                             >
                               <span>{opt.label}</span>
                               {filters.sort === opt.value && (
-                                <svg className="w-3.5 h-3.5 text-[#4f46e5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-3.5 h-3.5 text-[var(--brand-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                                 </svg>
                               )}
@@ -623,7 +623,7 @@ function ProductsPageContent({
                           activeDropdown === "category" ||
                           filters.categoryId ||
                           filters.categorySlug
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -659,7 +659,7 @@ function ProductsPageContent({
                               value={categorySearch}
                               onChange={(event) => setCategorySearch(event.target.value)}
                               placeholder={t("catalog.searchCategory")}
-                              className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#4f46e5] font-bold"
+                              className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[var(--brand-primary)] font-bold"
                             />
                           ) : null}
                           {filteredCategoryOptions.length > 0 ? (
@@ -683,7 +683,7 @@ function ProductsPageContent({
                                     }}
                                     className={`w-full rounded-xl px-3 py-2 text-left text-xs transition cursor-pointer ${
                                       isSelected
-                                        ? "bg-[#4f46e5]/5 text-[#4f46e5]"
+                                        ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)]"
                                         : "text-gray-700 hover:bg-gray-50"
                                     }`}
                                   >
@@ -716,7 +716,7 @@ function ProductsPageContent({
                                 setActiveDropdown(null);
                                 submitFiltersSoon();
                               }}
-                              className="flex-1 py-2 text-center rounded-xl bg-[#4f46e5] text-white text-xs font-bold hover:bg-[#3730a3] transition cursor-pointer select-none"
+                              className="flex-1 py-2 text-center rounded-xl bg-[var(--brand-primary)] text-white text-xs font-bold hover:bg-[var(--brand-primary-dark)] transition cursor-pointer select-none"
                             >
                               {t("catalog.ok")}
                             </button>
@@ -748,7 +748,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "price" ? null : "price")}
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "price" || filters.minPrice || filters.maxPrice
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -802,7 +802,7 @@ function ProductsPageContent({
                                   if (form) form.requestSubmit();
                                 }, 50);
                               }}
-                              className="flex-1 py-2 text-center rounded-xl bg-[#4f46e5] hover:bg-[#3730a3] text-white text-xs font-bold transition cursor-pointer select-none"
+                              className="flex-1 py-2 text-center rounded-xl bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-xs font-bold transition cursor-pointer select-none"
                             >
                               {t("catalog.apply")}
                             </button>
@@ -832,7 +832,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "delivery" ? null : "delivery")}
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "delivery"
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -846,7 +846,7 @@ function ProductsPageContent({
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.deliveryTime")}</div>
                           {["Завтра", "До 2 дней", "До 3 дней", "До 5 дней"].map((d) => (
                             <label key={d} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
-                              <input type="radio" name="mock-delivery" className="accent-[#4f46e5]" />
+                              <input type="radio" name="mock-delivery" className="accent-[var(--brand-primary)]" />
                               <span>{d}</span>
                             </label>
                           ))}
@@ -862,7 +862,7 @@ function ProductsPageContent({
                         data-testid="catalog-filter-color-trigger"
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "color" || filters.color
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -883,7 +883,7 @@ function ProductsPageContent({
                             value={filters.color}
                             onChange={(event) => setFilters((current) => ({ ...current, color: event.target.value }))}
                             placeholder={t("catalog.searchOrEnter")}
-                            className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#4f46e5] font-bold"
+                            className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[var(--brand-primary)] font-bold"
                           />
                           {facets?.colors && facets.colors.length > 0 ? (
                             <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto pr-1">
@@ -901,7 +901,7 @@ function ProductsPageContent({
                                   }}
                                   className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                                     filters.color === c.value
-                                      ? "bg-[#4f46e5]/5 text-[#4f46e5] font-bold"
+                                      ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)] font-bold"
                                       : "text-gray-700 hover:bg-gray-50"
                                   }`}
                                 >
@@ -921,7 +921,7 @@ function ProductsPageContent({
                                   if (form) form.requestSubmit();
                                 }, 50);
                               }}
-                              className="flex-1 py-2 text-center rounded-xl bg-[#4f46e5] text-white text-xs font-bold hover:bg-[#3730a3] transition cursor-pointer select-none"
+                              className="flex-1 py-2 text-center rounded-xl bg-[var(--brand-primary)] text-white text-xs font-bold hover:bg-[var(--brand-primary-dark)] transition cursor-pointer select-none"
                             >
                               {t("catalog.ok")}
                             </button>
@@ -951,7 +951,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "sizes" ? null : "sizes")}
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "sizes"
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -965,7 +965,7 @@ function ProductsPageContent({
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.sizes")}</div>
                           <div className="grid grid-cols-3 gap-2">
                             {["42", "44", "46", "48", "50", "52"].map((s) => (
-                              <button key={s} type="button" className="py-1.5 px-2 border rounded-lg text-xs font-bold hover:border-[#4f46e5] hover:text-[#4f46e5] transition">
+                              <button key={s} type="button" className="py-1.5 px-2 border rounded-lg text-xs font-bold hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)] transition">
                                 {s}
                               </button>
                             ))}
@@ -981,7 +981,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "height" ? null : "height")}
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "height"
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -995,7 +995,7 @@ function ProductsPageContent({
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.childHeightTitle")}</div>
                           {["92-98", "104-110", "116-122", "128-134"].map((h) => (
                             <label key={h} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
-                              <input type="checkbox" className="rounded text-[#4f46e5]" />
+                              <input type="checkbox" className="rounded text-[var(--brand-primary)]" />
                               <span>{h} {t("catalog.cm", { defaultValue: "см" })}</span>
                             </label>
                           ))}
@@ -1010,7 +1010,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "gender" ? null : "gender")}
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "gender" || filters.gender
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -1031,7 +1031,7 @@ function ProductsPageContent({
                             value={filters.gender}
                             onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value }))}
                             placeholder={t("catalog.enterOrChoose")}
-                            className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#4f46e5] font-bold"
+                            className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[var(--brand-primary)] font-bold"
                           />
                           {facets?.genders && facets.genders.length > 0 ? (
                             <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto">
@@ -1049,7 +1049,7 @@ function ProductsPageContent({
                                   }}
                                   className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                                     filters.gender === g.value
-                                      ? "bg-[#4f46e5]/5 text-[#4f46e5] font-bold"
+                                      ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)] font-bold"
                                       : "text-gray-700 hover:bg-gray-50"
                                   }`}
                                 >
@@ -1069,7 +1069,7 @@ function ProductsPageContent({
                                   if (form) form.requestSubmit();
                                 }, 50);
                               }}
-                              className="flex-1 py-2 text-center rounded-xl bg-[#4f46e5] text-white text-xs font-bold hover:bg-[#3730a3] transition cursor-pointer select-none"
+                              className="flex-1 py-2 text-center rounded-xl bg-[var(--brand-primary)] text-white text-xs font-bold hover:bg-[var(--brand-primary-dark)] transition cursor-pointer select-none"
                             >
                               {t("catalog.ok")}
                             </button>
@@ -1099,7 +1099,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "brand" ? null : "brand")}
                         className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
                           activeDropdown === "brand" || filters.brand
-                            ? "bg-[#4f46e5]/5 border-[#4f46e5] text-[#4f46e5]"
+                            ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
                       >
@@ -1120,7 +1120,7 @@ function ProductsPageContent({
                             value={filters.brand}
                             onChange={(event) => setFilters((current) => ({ ...current, brand: event.target.value }))}
                             placeholder={t("catalog.searchOrEnter")}
-                            className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[#4f46e5] font-bold"
+                            className="px-3.5 py-2 rounded-xl text-xs border border-gray-200 text-gray-700 outline-none w-full focus:border-[var(--brand-primary)] font-bold"
                           />
                           {facets?.brands && facets.brands.length > 0 ? (
                             <div className="flex flex-col gap-1 max-h-[140px] overflow-y-auto pr-1">
@@ -1138,7 +1138,7 @@ function ProductsPageContent({
                                   }}
                                   className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                                     filters.brand === b.value
-                                      ? "bg-[#4f46e5]/5 text-[#4f46e5] font-bold"
+                                      ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)] font-bold"
                                       : "text-gray-700 hover:bg-gray-50"
                                   }`}
                                 >
@@ -1158,7 +1158,7 @@ function ProductsPageContent({
                                   if (form) form.requestSubmit();
                                 }, 50);
                               }}
-                              className="flex-1 py-2 text-center rounded-xl bg-[#4f46e5] text-white text-xs font-bold hover:bg-[#3730a3] transition cursor-pointer select-none"
+                              className="flex-1 py-2 text-center rounded-xl bg-[var(--brand-primary)] text-white text-xs font-bold hover:bg-[var(--brand-primary-dark)] transition cursor-pointer select-none"
                             >
                               {t("catalog.ok")}
                             </button>
@@ -1187,7 +1187,7 @@ function ProductsPageContent({
                     <button
                       type="button"
                       onClick={() => setLayoutCols("4")}
-                      className={`p-1.5 rounded-lg transition hover:bg-gray-100 cursor-pointer ${layoutCols === "4" ? "text-[#4f46e5] bg-[#4f46e5]/5" : "text-gray-400"}`}
+                      className={`p-1.5 rounded-lg transition hover:bg-gray-100 cursor-pointer ${layoutCols === "4" ? "text-[var(--brand-primary)] bg-[var(--brand-primary-soft)]" : "text-gray-400"}`}
                       aria-label={t("catalog.layout4Cols")}
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -1197,7 +1197,7 @@ function ProductsPageContent({
                     <button
                       type="button"
                       onClick={() => setLayoutCols("3")}
-                      className={`p-1.5 rounded-lg transition hover:bg-gray-100 cursor-pointer ${layoutCols === "3" ? "text-[#4f46e5] bg-[#4f46e5]/5" : "text-gray-400"}`}
+                      className={`p-1.5 rounded-lg transition hover:bg-gray-100 cursor-pointer ${layoutCols === "3" ? "text-[var(--brand-primary)] bg-[var(--brand-primary-soft)]" : "text-gray-400"}`}
                       aria-label={t("catalog.layout3Cols")}
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -1269,6 +1269,67 @@ function ProductsPageContent({
               {t(meta.total === 1 ? "catalog.productsFound" : "catalog.productsFoundPlural", { count: meta.total })}
             </p>
           </div>
+
+          {/* Horizontally scrollable Category Chips */}
+          {categoryOptions.length > 0 ? (
+            <div
+              className="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-thin select-none"
+              data-testid="category-chips-container"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setFilters((current) => ({ ...current, categoryId: "", categorySlug: "" }));
+                  submitFiltersSoon();
+                }}
+                className={`h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 shrink-0 border cursor-pointer ${
+                  !filters.categoryId && !filters.categorySlug
+                    ? "bg-[var(--brand-primary)] text-white border-transparent shadow-[0_4px_12px_rgba(203,17,171,0.2)]"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                }`}
+              >
+                {t("catalog.allCategories")}
+              </button>
+              {categoryOptions.map((category) => {
+                const categoryValue = category.id;
+                const isSelected = filters.categoryId === categoryValue;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => {
+                      setFilters((current) => ({
+                        ...current,
+                        categoryId: isSelected ? "" : categoryValue,
+                        categorySlug: "",
+                      }));
+                      submitFiltersSoon();
+                    }}
+                    className={`h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 shrink-0 border cursor-pointer flex items-center gap-1.5 ${
+                      isSelected
+                        ? "bg-[var(--brand-primary)] text-white border-transparent shadow-[0_4px_12px_rgba(203,17,171,0.2)]"
+                        : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
+                    }`}
+                  >
+                    <span>{category.name}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold transition-all duration-200 ${
+                        isSelected
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {category.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-200 px-4 py-3 text-center text-xs font-semibold text-gray-400 select-none">
+              {t("catalog.noCategoriesFound")}
+            </div>
+          )}
 
           {loading ? (
             <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>

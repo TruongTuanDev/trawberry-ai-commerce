@@ -236,7 +236,7 @@ export function PublicHeader() {
             className="flex shrink-0 items-center"
             data-testid="public-logo"
           >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[var(--accent)] shadow-sm md:hidden">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[var(--brand-primary-dark)] shadow-sm md:hidden">
               tr
             </span>
             <span className="hidden font-[family-name:var(--font-sans-app)] text-2xl font-extrabold tracking-tight text-white hover:opacity-90 md:inline">
@@ -362,7 +362,7 @@ export function PublicHeader() {
             <Link
               href="/customer/register"
               prefetch={false}
-              className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[var(--accent)]"
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[var(--brand-primary-dark)]"
             >
               {t("publicHeader.register")}
             </Link>

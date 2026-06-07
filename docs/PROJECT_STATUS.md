@@ -1,5 +1,22 @@
 # Project Status
 
+## Storefront Homepage and Product Listing Polish Phase UI.3 - 2026-06-07
+
+- Status: implemented in `frontend-next` and `docs`
+- Storefront homepage & product listing polish:
+  - refactored the homepage hero slider and custom mobile/desktop layouts with deep storefront gradients (`linear-gradient(135deg, #0b0f19 0%, #3b0764 50%, #701a75 100%)`), upgraded headline typography, CTAs, and active dot transitions
+  - replaced indigo gradients in the promo slider with glassmorphic purple/magenta highlight cards and readable text contrast
+  - added a horizontally scrollable category chips container with item counts and an "All categories" chip to both the homepage and the main products catalog
+  - refactored search/filter/sort controls, styled active states with brand colors, and ensured query states, hidden E2E hooks, and testing IDs remain unchanged
+  - polished product card consistency and custom scrollbar styles utilizing neon magenta brand accents
+- Safety & AI Try-On Guardrails:
+  - strictly preserved `public-product-detail-page-client.tsx` untouched to prevent regressions on the AI Try-On logic
+  - no modifications to any backend schemas, routing, CPC billing ledger rules, or recommendation event tracking
+- Verification status:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass (2 tests passed)
+
 ## Product Detail and Checkout-like UX Polish Phase UI.2 - 2026-06-07
 
 - Status: implemented in `frontend-next` and `docs`

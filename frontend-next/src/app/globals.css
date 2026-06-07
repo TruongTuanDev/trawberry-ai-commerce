@@ -243,15 +243,15 @@ textarea,
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(79, 70, 229, 0.15);
+  background: rgba(203, 17, 171, 0.15);
   border-radius: 9999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+  background: var(--brand-primary);
 }
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(79, 70, 229, 0.15) transparent;
+  scrollbar-color: rgba(203, 17, 171, 0.15) transparent;
 }
 
 /* Glass Card styling */

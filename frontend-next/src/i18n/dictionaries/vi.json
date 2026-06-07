@@ -494,6 +494,14 @@
     "notImageProof": "Proof này không phải ảnh. Hãy mở file gốc ở tab mới để xem nội dung.",
     "openOriginal": "Mở file gốc"
   },
+  "catalog": {
+    "allCategories": "Tất cả danh mục",
+    "category": "Danh mục",
+    "chooseCategory": "Chọn danh mục",
+    "cm": "cm",
+    "noCategoriesFound": "Không tìm thấy danh mục",
+    "searchCategory": "Tìm danh mục"
+  },
   "sellerProducts": {
     "catalog": "Catalog",
     "description": "Catalog của seller tách khỏi marketplace public. Sản phẩm import sẽ ở trạng thái private cho đến khi seller review và publish.",

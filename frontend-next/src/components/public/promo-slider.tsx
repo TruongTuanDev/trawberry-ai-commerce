@@ -21,7 +21,7 @@ const slides: PromoSlide[] = [
     subtitle: "Standout products, popular brands, and high-visibility offers shoppers notice first.",
     badge: "-35%",
     accent: "From 999 RUB",
-    background: "linear-gradient(135deg, #1e293b 0%, #312e81 48%, #4f46e5 100%)",
+    background: "linear-gradient(135deg, #3b0764 0%, #701a75 50%, #cb11ab 100%)",
   },
   {
     id: "discounts",
@@ -30,7 +30,7 @@ const slides: PromoSlide[] = [
     subtitle: "Big markdowns across top-selling categories to keep the storefront lively and clear.",
     badge: "Up to 80%",
     accent: "Shop today",
-    background: "linear-gradient(135deg, #334155 0%, #1e1b4b 38%, #312e81 100%)",
+    background: "linear-gradient(135deg, #0f172a 0%, #581c87 50%, #b00f92 100%)",
   },
   {
     id: "new",
@@ -39,7 +39,7 @@ const slides: PromoSlide[] = [
     subtitle: "Fresh arrivals from active sellers help customers discover what is new faster.",
     badge: "New",
     accent: "Weekly update",
-    background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4f46e5 100%)",
+    background: "linear-gradient(135deg, #4c0519 0%, #831843 45%, #cb11ab 100%)",
   },
   {
     id: "delivery",
@@ -48,7 +48,7 @@ const slides: PromoSlide[] = [
     subtitle: "From search to cart, the journey stays simple so shoppers move through the catalog smoothly.",
     badge: "24/7",
     accent: "Easy checkout",
-    background: "linear-gradient(135deg, #312e81 0%, #1e293b 36%, #0f172a 100%)",
+    background: "linear-gradient(135deg, #1e1b4b 0%, #3b0764 50%, #b00f92 100%)",
   },
   {
     id: "sellers",
@@ -57,7 +57,7 @@ const slides: PromoSlide[] = [
     subtitle: "Products from multiple sellers come together in one consistent marketplace view.",
     badge: "More choice",
     accent: "Many sellers",
-    background: "linear-gradient(135deg, #1e293b 0%, #312e81 55%, #3b82f6 100%)",
+    background: "linear-gradient(135deg, #09090b 0%, #2e1065 60%, #cb11ab 100%)",
   },
 ];
 
@@ -131,12 +131,12 @@ export function PromoSlider({
                 Shoppers can type a keyword quickly and jump into the right products in seconds.
               </p>
             </div>
-            <div className="rounded-[1.7rem] border border-amber-300 bg-amber-400 p-5 text-slate-950 shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-900/70">
+            <div className="rounded-[1.7rem] border border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-pink-600/20 p-5 text-white backdrop-blur shadow-[0_18px_36px_rgba(203,17,171,0.1)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--brand-primary-soft)]">
                 Shop with confidence
               </p>
               <p className="mt-3 text-xl font-black">Clear offers and discovery</p>
-              <p className="mt-2 text-sm leading-6 text-slate-900/90">
+              <p className="mt-2 text-sm leading-6 text-white/86">
                 Promotions, categories, and products stay visible in one strong marketplace layout.
               </p>
             </div>

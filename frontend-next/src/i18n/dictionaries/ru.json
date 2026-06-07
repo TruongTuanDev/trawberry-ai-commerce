@@ -490,7 +490,13 @@
       "minPrice": "Мин. цена",
       "maxPrice": "Макс. цена",
       "sort": "Сортировка"
-    }
+    },
+    "allCategories": "Все категории",
+    "category": "Категория",
+    "chooseCategory": "Выбрать категорию",
+    "cm": "см",
+    "noCategoriesFound": "Категории не найдены",
+    "searchCategory": "Поиск категории"
   },
   "sellerShell": {
     "brand": "Strawberry",

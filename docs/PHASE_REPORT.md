@@ -1,5 +1,22 @@
 # Phase Report
 
+## 2026-06-07 Storefront Homepage and Product Listing Polish Phase UI.3
+
+- Status: Implemented and pushed to main
+- Scope:
+  - hero slider: improved fallback slides with custom gradients, CTA gradients, button scaling hover states, and brand active slider dot transitions
+  - promo slider: styled cards with glassmorphism and replaced legacy indigo gradients with brand purple/magenta gradients
+  - category navigation: integrated horizontal scrollable category navigation chips with active states and item counts to products listing and the homepage
+  - search & catalog filter controls: styled dropdowns, range inputs, active chips, and reset buttons with storefront primary magenta brand colors, preserving query triggers and automation hooks
+  - typography & scrollbar: updated custom scrollbar colors to use brand primary magenta variables and optimized typography contrast
+- Safety & Integrity:
+  - verified that the AI Try-On client page `public-product-detail-page-client.tsx` remains completely untouched
+  - verified checkout, campaigns charging, and CPC ledger business logic remain unaffected
+- Verification:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pass (2 passed)
+
 ## 2026-06-07 Product Detail and Checkout-like UX Polish Phase UI.2
 
 - Status: Implemented and pushed to main

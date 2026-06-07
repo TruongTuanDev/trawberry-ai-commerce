@@ -494,6 +494,7 @@
     "productsFoundPlural": "{{count}} products found",
     "searchResults": "Search results",
     "catalogTitle": "Catalog",
+    "allCategories": "All categories",
     "noResults": "No matching products found",
     "noProducts": "No products available yet",
     "noResultsDesc": "Try a different keyword or remove some filters to see more products.",

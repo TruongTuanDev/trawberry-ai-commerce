@@ -62,16 +62,16 @@ export function PublicHomepageHeroSlider({
 
     return (
       <section
-        className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl min-h-[360px] sm:min-h-[400px] md:min-h-[480px] flex items-center"
+        className="relative overflow-hidden rounded-[2.5rem] bg-[linear-gradient(135deg,#0b0f19_0%,#3b0764_50%,#701a75_100%)] text-white shadow-2xl min-h-[360px] sm:min-h-[400px] md:min-h-[480px] flex items-center"
         data-testid="hero-slider-fallback"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(255,207,51,0.15),transparent_35%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(203,17,171,0.25),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(79,70,229,0.2),transparent_40%)]" />
         <div className="relative z-10 w-full max-w-4xl px-8 sm:px-12 py-10 space-y-6">
           <div className="space-y-4">
-            <span className="inline-block rounded-full bg-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/90">
+            <span className="inline-block rounded-full bg-white/10 border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/90">
               Welcome
             </span>
-            <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-white drop-shadow-md">
+            <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-white drop-shadow-md leading-tight">
               {fallbackTitle}
             </h2>
             <p className="max-w-2xl text-base sm:text-lg md:text-xl text-white/80 leading-relaxed drop-shadow">
@@ -80,8 +80,8 @@ export function PublicHomepageHeroSlider({
           </div>
           <div>
             <Link
-              href="/catalog"
-              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-indigo-600 hover:bg-amber-400 hover:text-slate-950 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+              href="/products"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-primary px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 shadow-[0_10px_25px_rgba(203,17,171,0.3)] hover:shadow-[0_14px_30px_rgba(203,17,171,0.4)] hover:scale-103 hover:opacity-95"
             >
               {fallbackCta}
             </Link>
@@ -159,7 +159,7 @@ export function PublicHomepageHeroSlider({
                       <div>
                         <Link
                           href={slide.ctaUrl}
-                          className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-amber-400 hover:text-slate-950 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                          className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-slate-900 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary-dark)] transition-all duration-300 shadow-md hover:shadow-lg hover:scale-103"
                           data-testid={`slide-cta-link-${index}`}
                         >
                           {ctaLabel}
@@ -206,7 +206,7 @@ export function PublicHomepageHeroSlider({
                 aria-label={`Go to slide ${index + 1}`}
                 onClick={() => setActiveIndex(index)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
-                  index === activeIndex ? "w-8 bg-white" : "w-2.5 bg-white/50 hover:bg-white/80"
+                  index === activeIndex ? "w-8 bg-[var(--brand-primary)]" : "w-2.5 bg-white/50 hover:bg-white/80"
                 }`}
                 data-testid={`slider-dot-${index}`}
               />
