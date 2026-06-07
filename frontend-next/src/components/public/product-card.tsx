@@ -73,7 +73,7 @@ export function ProductCard({
               </span>
             ) : null}
           </div>
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[#cb11ab] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[var(--accent)] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
             {"♡"}
           </span>
         </div>
@@ -129,9 +129,9 @@ export function ProductCard({
         </div>
 
         <div className="mt-auto space-y-4">
-          <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,#fff8fe_0%,#ffffff_100%)] p-3">
+          <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,var(--panel-strong)_0%,#ffffff_100%)] p-3">
             <div>
-              <p className="text-3xl font-black tracking-tight text-[#cb11ab]">
+              <p className="text-3xl font-black tracking-tight text-[var(--accent)]">
                 {formattedPrice ?? t("productDetail.contactShop")}
               </p>
               {formattedOldPrice ? (

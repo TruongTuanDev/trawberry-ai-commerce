@@ -8,18 +8,6 @@ import {
   type RecommendationSponsoredPresetCatalog,
 } from "@/lib/public-api";
 
-function formatMovement(value: number | null) {
-  if (value === null) {
-    return "n/a";
-  }
-  if (value > 0) {
-    return `up ${value}`;
-  }
-  if (value < 0) {
-    return `down ${Math.abs(value)}`;
-  }
-  return "no change";
-}
 
 export function RecommendationRankingQaPanel({
   comparison,
@@ -188,18 +176,18 @@ export function RecommendationRankingQaPanel({
         </div>
       </section>
 
-      <div className="overflow-x-auto">
+      <div className="table-shell overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
-              <th className="border-b border-[var(--border)] px-3 py-3">Product</th>
-              <th className="border-b border-[var(--border)] px-3 py-3">V1 rank</th>
-              <th className="border-b border-[var(--border)] px-3 py-3">V2 rank</th>
-              <th className="border-b border-[var(--border)] px-3 py-3">Movement</th>
-              <th className="border-b border-[var(--border)] px-3 py-3">V1 score</th>
-              <th className="border-b border-[var(--border)] px-3 py-3">V2 score</th>
+            <tr className="bg-[var(--panel-strong)] text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+              <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">Product</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">V1 rank</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">V2 rank</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">Movement</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">V1 score</th>
+              <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">V2 score</th>
               {debugEnabled ? (
-                <th className="border-b border-[var(--border)] px-3 py-3">
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
                   Explainability
                 </th>
               ) : null}
@@ -207,28 +195,36 @@ export function RecommendationRankingQaPanel({
           </thead>
           <tbody>
             {comparison.items.map((item) => (
-              <tr key={item.productId} className="align-top">
-                <td className="border-b border-[var(--border)] px-3 py-3">
+              <tr key={item.productId} className="align-top hover:bg-slate-50/50 transition">
+                <td className="border-b border-[var(--border)] px-4 py-3">
                   <p className="font-semibold text-[var(--foreground)]">
                     {item.productName}
                   </p>
-                  <p className="mt-1 text-xs text-[var(--muted)]">
+                  <p className="mt-1 text-xs font-[family-name:var(--font-mono-app)] text-[var(--muted)]">
                     {item.productId}
                   </p>
                 </td>
-                <td className="border-b border-[var(--border)] px-3 py-3">
+                <td className="border-b border-[var(--border)] px-4 py-3 font-semibold font-[family-name:var(--font-mono-app)] text-[var(--foreground)]">
                   {item.ruleBasedV1?.rank ?? "n/a"}
                 </td>
-                <td className="border-b border-[var(--border)] px-3 py-3">
+                <td className="border-b border-[var(--border)] px-4 py-3 font-semibold font-[family-name:var(--font-mono-app)] text-[var(--foreground)]">
                   {item.ruleBasedV2?.rank ?? "n/a"}
                 </td>
-                <td className="border-b border-[var(--border)] px-3 py-3 font-semibold text-[var(--foreground)]">
-                  {formatMovement(item.rankMovement)}
+                <td className="border-b border-[var(--border)] px-4 py-3 font-semibold">
+                  {item.rankMovement === null ? (
+                    <span className="text-[var(--muted)]">n/a</span>
+                  ) : item.rankMovement > 0 ? (
+                    <span className="premium-badge premium-badge-success">↑ {item.rankMovement}</span>
+                  ) : item.rankMovement < 0 ? (
+                    <span className="premium-badge premium-badge-danger">↓ {Math.abs(item.rankMovement)}</span>
+                  ) : (
+                    <span className="premium-badge bg-slate-100 text-slate-500 border-slate-200">no change</span>
+                  )}
                 </td>
-                <td className="border-b border-[var(--border)] px-3 py-3">
+                <td className="border-b border-[var(--border)] px-4 py-3 font-[family-name:var(--font-mono-app)]">
                   {item.ruleBasedV1?.finalScore ?? "n/a"}
                 </td>
-                <td className="border-b border-[var(--border)] px-3 py-3">
+                <td className="border-b border-[var(--border)] px-4 py-3 font-[family-name:var(--font-mono-app)]">
                   {item.ruleBasedV2?.finalScore ?? "n/a"}
                 </td>
                 {debugEnabled ? (

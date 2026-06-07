@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
 import { I18nBootstrap } from "@/components/i18n/i18n-bootstrap";
@@ -7,6 +8,18 @@ import { ToastProvider } from "@/components/ui/toast-provider";
 import { LOCALE_COOKIE_KEY, normalizeLocale } from "@/i18n/config";
 import { getRecommendationFlags } from "@/lib/recommendation-flags";
 import { getVisualSearchFlags } from "@/lib/visual-search-flags";
+
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-sans-app",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-app",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
  title: "Skidkaberry AI Commerce",
@@ -24,7 +37,7 @@ export default async function RootLayout({
   const visualSearchFlags = getVisualSearchFlags();
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body
         className="min-h-screen"
         data-public-recommendations-enabled={String(

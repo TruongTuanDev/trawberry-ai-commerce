@@ -203,31 +203,35 @@ export function SellerBillingPageClient() {
           <p className="text-sm text-[var(--danger)]">{error}</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5 xl:col-span-2">
-              <p className="text-sm text-[var(--muted)]">{BILLING_COPY.currentShop}</p>
-              <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
+            <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm hover:shadow-md transition duration-200 xl:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{BILLING_COPY.currentShop}</p>
+              <p className="mt-3 text-lg font-bold text-[var(--foreground)]">
                 {currentShop?.name ?? BILLING_COPY.selectShop}
               </p>
             </article>
-            <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">{BILLING_COPY.balance}</p>
-              <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
+            <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm hover:shadow-md transition duration-200">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{BILLING_COPY.balance}</p>
+              <p className="mt-3 text-2xl font-black text-[var(--foreground)]">
                 {wallet ? formatMoney(wallet.balance, currency) : formatMoney("0", currency)}
               </p>
             </article>
-            <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">{BILLING_COPY.reservedBalance}</p>
-              <p className="mt-3 text-lg font-semibold text-[var(--warning)]">
+            <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm hover:shadow-md transition duration-200">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{BILLING_COPY.reservedBalance}</p>
+              <p className="mt-3 text-2xl font-black text-[var(--warning)]">
                 {wallet
                   ? formatMoney(wallet.reservedBalance, currency)
                   : formatMoney("0", currency)}
               </p>
             </article>
-            <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-sm text-[var(--muted)]">{BILLING_COPY.walletStatus}</p>
-              <p className="mt-3 text-lg font-semibold uppercase text-[var(--foreground)]">
-                {wallet?.status ?? "active"}
-              </p>
+            <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm hover:shadow-md transition duration-200">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">{BILLING_COPY.walletStatus}</p>
+              <div className="mt-3">
+                <span className={`premium-badge ${
+                  wallet?.status === "active" ? "premium-badge-success" : "premium-badge-warning"
+                }`}>
+                  {wallet?.status ?? "active"}
+                </span>
+              </div>
             </article>
           </div>
         )}
@@ -323,46 +327,50 @@ export function SellerBillingPageClient() {
         title={BILLING_COPY.ledgerTitle}
         description={BILLING_COPY.ledgerDescription}
       >
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-[var(--muted)]">
-              <tr>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.date}</th>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.type}</th>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.amount}</th>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.balanceAfter}</th>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.reservedAfter}</th>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.campaign}</th>
-                <th className="px-3 py-2 font-medium">{BILLING_COPY.columns.description}</th>
+        <div className="table-shell overflow-x-auto">
+          <table className="min-w-full border-separate border-spacing-0 text-sm">
+            <thead>
+              <tr className="bg-[var(--panel-strong)] text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.date}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.type}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.amount}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.balanceAfter}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.reservedAfter}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.campaign}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">{BILLING_COPY.columns.description}</th>
               </tr>
             </thead>
             <tbody>
               {ledger.map((entry) => (
-                <tr key={entry.id} className="border-t border-[var(--border)]">
-                  <td className="px-3 py-3 text-[var(--muted)]">{formatDate(entry.createdAt)}</td>
-                  <td className="px-3 py-3 font-medium uppercase text-[var(--foreground)]">
-                    {entry.type}
+                <tr key={entry.id} className="hover:bg-slate-50/50 transition">
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--muted)]">{formatDate(entry.createdAt)}</td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 font-medium uppercase text-[var(--foreground)]">
+                    <span className={`premium-badge ${
+                      entry.type === "DEBIT" ? "premium-badge-danger" : "premium-badge-success"
+                    }`}>
+                      {entry.type}
+                    </span>
                   </td>
-                  <td className="px-3 py-3 text-[var(--foreground)]">
+                  <td className="border-b border-[var(--border)] px-4 py-3 font-semibold text-[var(--foreground)]">
                     {formatMoney(entry.amount, entry.currency)}
                   </td>
-                  <td className="px-3 py-3 text-[var(--foreground)]">
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--foreground)]">
                     {formatMoney(entry.balanceAfter, entry.currency)}
                   </td>
-                  <td className="px-3 py-3 text-[var(--foreground)]">
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--foreground)]">
                     {formatMoney(entry.reservedAfter, entry.currency)}
                   </td>
-                  <td className="px-3 py-3 text-[var(--muted)]">
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-xs text-[var(--muted)]">
                     {entry.campaign ? `${entry.campaign.name} (${entry.campaign.id.slice(0, 8)})` : "-"}
                   </td>
-                  <td className="px-3 py-3 text-[var(--muted)]">
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--muted)]">
                     {entry.description ?? entry.referenceType ?? "-"}
                   </td>
                 </tr>
               ))}
               {ledger.length < 1 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-[var(--muted)]">
+                  <td colSpan={7} className="px-4 py-6 text-center text-[var(--muted)]">
                     {BILLING_COPY.noLedger}
                   </td>
                 </tr>

@@ -219,12 +219,12 @@ function MetricCard({
   detail: string;
 }) {
   return (
-    <article className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+    <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm hover:shadow-md transition duration-200">
+      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
         {title}
       </p>
-      <p className="mt-3 text-3xl font-black text-[var(--foreground)]">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{detail}</p>
+      <p className="mt-3 text-3xl font-black tracking-tight text-[var(--foreground)]">{value}</p>
+      <p className="mt-2 text-xs leading-5 text-[var(--muted)]">{detail}</p>
     </article>
   );
 }
@@ -239,14 +239,14 @@ function AnalyticsTable({
   rows: string[][];
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
-      <h2 className="text-xl font-black text-[var(--foreground)]">{title}</h2>
-      <div className="mt-4 overflow-x-auto">
+    <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-bold tracking-tight text-[var(--foreground)]">{title}</h2>
+      <div className="table-shell mt-4 overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+            <tr className="bg-[var(--panel-strong)] text-left text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
               {columns.map((column) => (
-                <th key={column} className="border-b border-[var(--border)] px-3 py-3">
+                <th key={column} className="border-b border-[var(--border)] px-4 py-3 font-semibold">
                   {column}
                 </th>
               ))}
@@ -255,11 +255,11 @@ function AnalyticsTable({
           <tbody>
             {rows.length ? (
               rows.map((row, index) => (
-                <tr key={`${title}-${index}`}>
+                <tr key={`${title}-${index}`} className="hover:bg-slate-50/50 transition">
                   {row.map((value, valueIndex) => (
                     <td
                       key={`${title}-${index}-${valueIndex}`}
-                      className="border-b border-[var(--border)] px-3 py-3 text-[var(--foreground)]"
+                      className="border-b border-[var(--border)] px-4 py-3 text-[var(--foreground)]"
                     >
                       {value}
                     </td>
@@ -270,7 +270,7 @@ function AnalyticsTable({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-3 py-6 text-sm text-[var(--muted)]"
+                  className="px-4 py-6 text-center text-sm text-[var(--muted)] bg-white"
                 >
                   No analytics data in the selected range.
                 </td>

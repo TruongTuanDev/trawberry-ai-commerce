@@ -236,7 +236,7 @@ export function PublicHeader() {
             className="flex shrink-0 items-center"
             data-testid="public-logo"
           >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[#cb11ab] shadow-sm md:hidden">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[var(--accent)] shadow-sm md:hidden">
               tr
             </span>
             <span className="hidden font-[family-name:var(--font-sans-app)] text-2xl font-extrabold tracking-tight text-white hover:opacity-90 md:inline">
@@ -329,7 +329,7 @@ export function PublicHeader() {
                 <CartIcon />
                 {cartCount > 0 && (
                   <span
-                    className="cart-badge-pop absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ffcf33] px-1 text-[9px] font-bold text-[#5c0f59]"
+                    className="cart-badge-pop absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold text-slate-950"
                     data-testid="public-cart-count"
                   >
                     {cartCount}
@@ -362,7 +362,7 @@ export function PublicHeader() {
             <Link
               href="/customer/register"
               prefetch={false}
-              className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[#cb11ab]"
+              className="inline-flex h-8 flex-1 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-[var(--accent)]"
             >
               {t("publicHeader.register")}
             </Link>

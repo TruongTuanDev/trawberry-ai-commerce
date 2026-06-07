@@ -612,33 +612,43 @@ export function SellerCampaignsPageClient() {
               return (
                 <article
                   key={campaign.id}
-                  className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5"
+                  className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5 shadow-sm"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-[var(--foreground)]">{campaign.name}</h3>
-                      <p className="mt-2 text-sm text-[var(--muted)]">
-                        {campaign.status} | {campaign.scenarioTypes.join(", ")}
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className={`premium-badge ${
+                          campaign.status === "active" ? "premium-badge-success" :
+                          campaign.status === "paused" ? "premium-badge-warning" :
+                          campaign.status === "draft" ? "premium-badge-info" :
+                          "bg-slate-100 text-slate-600 border-slate-200"
+                        }`}>
+                          {campaign.status}
+                        </span>
+                        <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                          {campaign.scenarioTypes.join(", ")}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        {copy.summary.totalTargets}: {campaign.summary.totalTargets}
+                    <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-700">
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1">
+                        {copy.summary.totalTargets}: <strong className="text-[var(--foreground)]">{campaign.summary.totalTargets}</strong>
                       </span>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        {copy.summary.activeTargets}: {campaign.summary.activeTargets}
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1">
+                        {copy.summary.activeTargets}: <strong className="text-[var(--foreground)]">{campaign.summary.activeTargets}</strong>
                       </span>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        {copy.summary.spentAmount}: {campaign.billing.spentAmount}
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1">
+                        {copy.summary.spentAmount}: <strong className="text-[var(--foreground)]">{campaign.billing.spentAmount}</strong>
                       </span>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        {copy.summary.remainingBudget}: {campaign.billing.remainingBudget ?? "∞"}
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1">
+                        {copy.summary.remainingBudget}: <strong className="text-[var(--foreground)]">{campaign.billing.remainingBudget ?? "∞"}</strong>
                       </span>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        {copy.summary.billableClicks}: {campaign.billing.billableClicks}
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1">
+                        {copy.summary.billableClicks}: <strong className="text-[var(--foreground)]">{campaign.billing.billableClicks}</strong>
                       </span>
-                      <span className="rounded-full border border-[var(--border)] px-3 py-1">
-                        {copy.summary.removedTargets}: {campaign.summary.removedTargets}
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1">
+                        {copy.summary.removedTargets}: <strong className="text-[var(--foreground)]">{campaign.summary.removedTargets}</strong>
                       </span>
                     </div>
                   </div>

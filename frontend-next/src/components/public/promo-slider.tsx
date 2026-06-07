@@ -21,7 +21,7 @@ const slides: PromoSlide[] = [
     subtitle: "Standout products, popular brands, and high-visibility offers shoppers notice first.",
     badge: "-35%",
     accent: "From 999 RUB",
-    background: "linear-gradient(135deg, #cb11ab 0%, #8e1cff 48%, #5b34ff 100%)",
+    background: "linear-gradient(135deg, #1e293b 0%, #312e81 48%, #4f46e5 100%)",
   },
   {
     id: "discounts",
@@ -30,7 +30,7 @@ const slides: PromoSlide[] = [
     subtitle: "Big markdowns across top-selling categories to keep the storefront lively and clear.",
     badge: "Up to 80%",
     accent: "Shop today",
-    background: "linear-gradient(135deg, #f52ba7 0%, #c212dc 38%, #7e31ff 100%)",
+    background: "linear-gradient(135deg, #334155 0%, #1e1b4b 38%, #312e81 100%)",
   },
   {
     id: "new",
@@ -39,7 +39,7 @@ const slides: PromoSlide[] = [
     subtitle: "Fresh arrivals from active sellers help customers discover what is new faster.",
     badge: "New",
     accent: "Weekly update",
-    background: "linear-gradient(135deg, #9b2bff 0%, #cb11ab 45%, #ff5d85 100%)",
+    background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4f46e5 100%)",
   },
   {
     id: "delivery",
@@ -48,7 +48,7 @@ const slides: PromoSlide[] = [
     subtitle: "From search to cart, the journey stays simple so shoppers move through the catalog smoothly.",
     badge: "24/7",
     accent: "Easy checkout",
-    background: "linear-gradient(135deg, #6e2dff 0%, #a100ff 36%, #cb11ab 100%)",
+    background: "linear-gradient(135deg, #312e81 0%, #1e293b 36%, #0f172a 100%)",
   },
   {
     id: "sellers",
@@ -57,7 +57,7 @@ const slides: PromoSlide[] = [
     subtitle: "Products from multiple sellers come together in one consistent marketplace view.",
     badge: "More choice",
     accent: "Many sellers",
-    background: "linear-gradient(135deg, #cb11ab 0%, #8f14d6 55%, #4f6dff 100%)",
+    background: "linear-gradient(135deg, #1e293b 0%, #312e81 55%, #3b82f6 100%)",
   },
 ];
 
@@ -81,7 +81,7 @@ export function PromoSlider({
   return (
     <section
       className={clsx(
-        "relative overflow-hidden rounded-[2rem] text-white shadow-[0_24px_60px_rgba(132,17,146,0.24)]",
+        "relative overflow-hidden rounded-[2rem] text-white shadow-[0_24px_60px_rgba(15,23,42,0.15)]",
         compact ? "min-h-[280px]" : "min-h-[320px] sm:min-h-[360px]",
       )}
       style={{ background: activeSlide.background }}
@@ -98,7 +98,7 @@ export function PromoSlider({
               <span className="rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/88">
                 {activeSlide.eyebrow}
               </span>
-              <span className="rounded-full bg-[#ffcf33] px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-[#5f0b67]">
+              <span className="rounded-full bg-[#ffcf33] px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-950">
                 {activeSlide.badge}
               </span>
             </div>
@@ -131,12 +131,12 @@ export function PromoSlider({
                 Shoppers can type a keyword quickly and jump into the right products in seconds.
               </p>
             </div>
-            <div className="rounded-[1.7rem] border border-white/14 bg-[#ffcf33] p-5 text-[#5e0a66] shadow-[0_18px_36px_rgba(74,0,90,0.16)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7a1276]/70">
+            <div className="rounded-[1.7rem] border border-amber-300 bg-amber-400 p-5 text-slate-950 shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-900/70">
                 Shop with confidence
               </p>
               <p className="mt-3 text-xl font-black">Clear offers and discovery</p>
-              <p className="mt-2 text-sm leading-6 text-[#5e0a66]/86">
+              <p className="mt-2 text-sm leading-6 text-slate-900/90">
                 Promotions, categories, and products stay visible in one strong marketplace layout.
               </p>
             </div>

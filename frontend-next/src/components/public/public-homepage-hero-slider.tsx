@@ -62,7 +62,7 @@ export function PublicHomepageHeroSlider({
 
     return (
       <section
-        className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-[#cb11ab] via-[#8e1cff] to-[#5b34ff] text-white shadow-2xl min-h-[360px] sm:min-h-[400px] md:min-h-[480px] flex items-center"
+        className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-2xl min-h-[360px] sm:min-h-[400px] md:min-h-[480px] flex items-center"
         data-testid="hero-slider-fallback"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(255,207,51,0.15),transparent_35%)]" />
@@ -81,7 +81,7 @@ export function PublicHomepageHeroSlider({
           <div>
             <Link
               href="/catalog"
-              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#8e1cff] hover:bg-[#ffcf33] hover:text-[#5f0b67] transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-indigo-600 hover:bg-amber-400 hover:text-slate-950 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
             >
               {fallbackCta}
             </Link>
@@ -159,7 +159,7 @@ export function PublicHomepageHeroSlider({
                       <div>
                         <Link
                           href={slide.ctaUrl}
-                          className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-[#ffcf33] hover:text-[#5f0b67] transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
+                          className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-semibold text-slate-900 hover:bg-amber-400 hover:text-slate-950 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
                           data-testid={`slide-cta-link-${index}`}
                         >
                           {ctaLabel}
