@@ -233,7 +233,10 @@
     "view": "Просмотреть",
     "questionsCount": "вопросов: {{count}}",
     "readyForCheckout": "Выбор маркетплейса готов к оформлению",
-    "mobileQty": "Кол-во"
+    "mobileQty": "Кол-во",
+    "safeCheckout": "Безопасная оплата",
+    "fastShipping": "Надёжная доставка",
+    "support247": "Поддержка 24/7"
   },
   "cart": {
     "backToProducts": "Назад к товарам",
@@ -1779,6 +1782,7 @@
     "similarProducts": "Похожие товары",
     "basedOnWhatYouViewed": "На основе ваших просмотров",
     "popularNow": "Популярно сейчас",
-    "similarBySearch": "Похоже по запросу"
+    "similarBySearch": "Похоже по запросу",
+    "sponsored": "Реклама"
   }
 }

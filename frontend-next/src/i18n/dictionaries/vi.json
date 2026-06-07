@@ -222,7 +222,10 @@
     "composition": "Chất liệu",
     "source": "Nguồn",
     "reviews": "{{rating}} · {{count}} đánh giá",
-    "quantityExceeded": "Số lượng vượt quá tồn kho hiện có."
+    "quantityExceeded": "Số lượng vượt quá tồn kho hiện có.",
+    "safeCheckout": "Thanh toán an toàn",
+    "fastShipping": "Giao hàng tin cậy",
+    "support247": "Hỗ trợ 24/7"
   },
   "recommendations": {
     "kicker": "Khám phá thông minh",

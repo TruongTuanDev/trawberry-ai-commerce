@@ -219,6 +219,13 @@ export function PublicProductDetailPageClient({
     currentPrice,
     selectedVariant?.originalPrice ?? product?.oldPrice ?? null,
   );
+  const discountPercent = useMemo(() => {
+    if (!currentPrice || !oldPrice) return null;
+    const currentNum = Number(currentPrice);
+    const oldNum = Number(oldPrice);
+    if (oldNum <= currentNum) return null;
+    return Math.round(((oldNum - currentNum) / oldNum) * 100);
+  }, [currentPrice, oldPrice]);
   const specRows = [
     { label: t("productDetail.sku"), value: selectedVariant?.sellerSku ?? product?.sellerSku ?? null },
     { label: t("productDetail.brand"), value: product?.brand ?? null },
@@ -400,7 +407,7 @@ export function PublicProductDetailPageClient({
                           <MessageShopButton
                             shopSlug={product.shop.slug}
                             productId={product.id}
-                            className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                            className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--panel)] px-3 py-1 text-[11px] font-semibold text-[var(--foreground)] transition hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
                             testId="public-product-message-shop-button"
                           />
                         ) : null}
@@ -412,10 +419,21 @@ export function PublicProductDetailPageClient({
                         {product.name}
                       </h1>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
-                        {reviewLabel ? <span>{reviewLabel}</span> : null}
-                        {product.feedbackCount > 0 ? <span>{t("productDetail.questionsCount", { count: product.feedbackCount })}</span> : null}
+                        {reviewLabel ? (
+                          <span className="inline-flex items-center gap-1 font-medium bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200/50">
+                            <span className="text-amber-500">★</span>
+                            <span>{reviewLabel}</span>
+                          </span>
+                        ) : null}
+                        {product.feedbackCount > 0 ? (
+                          <span className="bg-slate-50 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200/50 font-medium">
+                            {t("productDetail.questionsCount", { count: product.feedbackCount })}
+                          </span>
+                        ) : null}
                         {!reviewLabel && product.feedbackCount === 0 ? (
-                          <span>{t("productDetail.readyForCheckout")}</span>
+                          <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200/50 font-medium">
+                            {t("productDetail.readyForCheckout")}
+                          </span>
                         ) : null}
                       </div>
                     </div>
@@ -465,7 +483,7 @@ export function PublicProductDetailPageClient({
                                   setHasChosenSize(true);
                                   setQuantity(1);
                                 }}
-                              className={`min-w-20 rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${active ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--muted)]"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
+                              className={`min-w-20 rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${active ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--brand-primary)]/40"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
                                 disabled={!variant.inStock}
                                 data-testid={active ? "product-selected-size" : `product-size-${variant.id}`}
                               >
@@ -531,16 +549,21 @@ export function PublicProductDetailPageClient({
                   </div>
 
                   <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">
-                    <div className="rounded-[2rem] border border-[var(--border)] bg-white p-5 shadow-[0_12px_40px_rgba(203,17,171,0.08)]">
+                    <div className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-[0_12px_40px_rgba(203,17,171,0.08)]">
                       <div className="space-y-2">
-                        <div className="flex flex-wrap items-end gap-3">
-                          <p className="text-gradient-primary text-4xl font-bold">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-[var(--brand-primary)] text-4xl font-black tracking-tight">
                             {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
                           </p>
                           {oldPrice ? (
                             <p className="pb-1 text-base text-[var(--muted)] line-through">
                               {formatMoney(oldPrice)}
                             </p>
+                          ) : null}
+                          {discountPercent ? (
+                            <span className="rounded-lg bg-rose-50 border border-rose-100 px-2 py-0.5 text-xs font-bold text-rose-600">
+                              -{discountPercent}%
+                            </span>
                           ) : null}
                         </div>
                         <p className="text-sm text-[var(--muted)]">
@@ -549,7 +572,7 @@ export function PublicProductDetailPageClient({
                       </div>
 
                       <div className="mt-5 space-y-4">
-                        <div className="rounded-[1.5rem] bg-[var(--panel)] p-4">
+                        <div className="rounded-[1.5rem] bg-slate-50 border border-slate-100 p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                             {t("productDetail.quantity")}
                           </p>
@@ -566,7 +589,7 @@ export function PublicProductDetailPageClient({
                         </div>
 
                         {cartItem ? (
-                          <div className="rounded-[1.5rem] border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent-strong)]">
+                          <div className="rounded-[1.5rem] border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm font-semibold text-[var(--brand-primary-dark)] text-center shadow-sm">
                             {t("productDetail.inCartCount", { count: cartItem.quantity })}
                           </div>
                         ) : null}
@@ -584,23 +607,43 @@ export function PublicProductDetailPageClient({
                           type="button"
                           onClick={handleBuyNow}
                           disabled={!hasReadyVariant}
-                          className="w-full rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-5 py-3.5 text-sm font-semibold text-[var(--accent-strong)] transition-all duration-200 hover:bg-[var(--accent-soft)]/80 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-5 py-3.5 text-sm font-semibold text-[var(--brand-primary-dark)] transition-all duration-200 hover:bg-[var(--brand-primary-soft)]/85 hover:border-[var(--brand-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                           data-testid="continue-to-checkout"
                         >
                           {t("productDetail.buyNow")}
                         </button>
+                        <button
+                          type="button"
+                          onClick={handleOpenAiTryOn}
+                          className="w-full rounded-full border border-[var(--border)] bg-white px-5 py-3.5 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+                          data-testid="product-ai-try-on-button"
+                        >
+                          {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
+                        </button>
                       </div>
 
-                      <div className="mt-5 space-y-3 border-t border-[var(--border)] pt-5 text-sm text-[var(--muted)]">
-                        <p>{selectedVariant?.inStock ? t("productDetail.deliveryCalculatedAtCheckout") : t("productDetail.pickupDeliveryByAgreement")}</p>
-                        <p>{t("productDetail.shopLabel")}: <span className="font-semibold text-[var(--foreground)]">{product.shop.name}</span></p>
-                        <p>{t("productDetail.stockLabel")}: <span className="font-semibold text-[var(--foreground)]">{stockLabel}</span></p>
+                      <div className="mt-6 space-y-4 border-t border-slate-100 pt-5 text-xs text-slate-500">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-emerald-500 text-sm">📦</span>
+                          <span>{selectedVariant?.inStock ? t("productDetail.deliveryCalculatedAtCheckout") : t("productDetail.pickupDeliveryByAgreement")}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-[var(--brand-primary)] text-sm">🛡️</span>
+                          <span className="font-semibold text-slate-700">{t("productDetail.safeCheckout")}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-slate-400 text-sm">🏪</span>
+                          <span>{t("productDetail.shopLabel")}: <span className="font-semibold text-slate-800">{product.shop.name}</span></span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-slate-400 text-sm">⚡</span>
+                          <span>{t("productDetail.stockLabel")}: <span className="font-semibold text-slate-800">{stockLabel}</span></span>
+                        </div>
                         {product.shop.paymentInstructions ? (
-                          <p>{product.shop.paymentInstructions}</p>
+                          <div className="rounded-xl bg-slate-50 border border-slate-100/50 p-3 leading-relaxed text-[11px] text-slate-600">
+                            {product.shop.paymentInstructions}
+                          </div>
                         ) : null}
-                        <p className="text-xs leading-6">
-                          {t("productDetail.trustedValidationNotice")}
-                        </p>
                       </div>
                     </div>
                   </aside>
@@ -627,9 +670,21 @@ export function PublicProductDetailPageClient({
                 <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_12px_40px_rgba(203,17,171,0.16)] backdrop-blur">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-gradient-primary text-xl font-bold">
-                        {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-[var(--brand-primary)] text-xl font-black tracking-tight">
+                          {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
+                        </p>
+                        {oldPrice ? (
+                          <p className="text-xs text-[var(--muted)] line-through">
+                            {formatMoney(oldPrice)}
+                          </p>
+                        ) : null}
+                        {discountPercent ? (
+                          <span className="rounded bg-rose-50 border border-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600">
+                            -{discountPercent}%
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-1 text-xs text-[var(--muted)]">
                         {selectedVariant ? t("productDetail.selectedSizeLabel", { size: selectedVariantLabel }) : t("productDetail.selectSize")}
                       </p>
@@ -665,7 +720,7 @@ export function PublicProductDetailPageClient({
                       type="button"
                       onClick={handleBuyNow}
                       disabled={!hasReadyVariant}
-                      className="min-w-0 flex-1 rounded-full border border-[var(--accent-soft)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent-strong)] transition-all duration-200 hover:bg-[var(--accent-soft)]/80 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="min-w-0 flex-1 rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm font-semibold text-[var(--brand-primary-dark)] transition-all duration-200 hover:bg-[var(--brand-primary-soft)]/85 hover:border-[var(--brand-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid="mobile-buy-now"
                     >
                       {t("productDetail.buyNow")}
@@ -674,7 +729,7 @@ export function PublicProductDetailPageClient({
                   <button
                     type="button"
                     onClick={handleOpenAiTryOn}
-                    className="mt-2 w-full rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+                    className="mt-2 w-full rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
                     data-testid="mobile-product-ai-try-on"
                   >
                     {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}

@@ -234,7 +234,10 @@
     "view": "View",
     "questionsCount": "{{count}} questions",
     "readyForCheckout": "Marketplace selection ready for checkout",
-    "mobileQty": "Qty"
+    "mobileQty": "Qty",
+    "safeCheckout": "Secure Checkout",
+    "fastShipping": "Reliable Delivery",
+    "support247": "24/7 Platform Support"
   },
   "cart": {
     "backToProducts": "Back to products",
@@ -2600,7 +2603,8 @@
     "similarProducts": "Similar products",
     "basedOnWhatYouViewed": "Based on what you viewed",
     "popularNow": "Popular now",
-    "similarBySearch": "Similar to your search"
+    "similarBySearch": "Similar to your search",
+    "sponsored": "Sponsored"
   },
   "visualSearch": {
     "categoryHint": "Category hint",

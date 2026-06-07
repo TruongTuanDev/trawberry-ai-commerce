@@ -131,7 +131,7 @@ export function PublicRecommendationSection({
             {item.sponsored ? (
               <div className="px-1">
                 <span className="inline-flex rounded-full border border-[var(--border)] bg-[var(--panel-strong)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Sponsored
+                  {t("recommendations.sponsored")}
                 </span>
               </div>
             ) : null}

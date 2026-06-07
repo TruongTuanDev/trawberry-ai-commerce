@@ -73,7 +73,7 @@ export function ProductCard({
               </span>
             ) : null}
           </div>
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[var(--accent)] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/88 text-base text-[var(--brand-primary)] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
             {"♡"}
           </span>
         </div>
@@ -86,7 +86,7 @@ export function ProductCard({
           ) : null}
         </div>
 
-        <div className="aspect-[4/5] overflow-hidden rounded-b-[1.6rem] bg-[linear-gradient(180deg,#f6f1ff_0%,#f1f1f6_100%)]">
+        <div className="aspect-[4/5] overflow-hidden rounded-b-[1.6rem] bg-[linear-gradient(180deg,#fdf2fc_0%,#fbf5fa_100%)]">
           <FallbackImage
             src={product.images[0]?.url}
             alt={product.name}
@@ -131,7 +131,7 @@ export function ProductCard({
         <div className="mt-auto space-y-4">
           <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,var(--panel-strong)_0%,#ffffff_100%)] p-3">
             <div>
-              <p className="text-3xl font-black tracking-tight text-[var(--accent)]">
+              <p className="text-3xl font-black tracking-tight text-[var(--brand-primary)]">
                 {formattedPrice ?? t("productDetail.contactShop")}
               </p>
               {formattedOldPrice ? (
@@ -149,7 +149,7 @@ export function ProductCard({
 
           {inCartQuantity > 0 && primaryVariant ? (
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-[var(--accent-strong)]">
+              <span className="text-sm font-semibold text-[var(--brand-primary-dark)]">
                 {t("productDetail.inCart")}
               </span>
               <QuantityStepper

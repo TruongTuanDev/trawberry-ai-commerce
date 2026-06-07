@@ -17,6 +17,10 @@
   --muted: #64748b;
   --shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
   --shadow-hover: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --brand-primary: #cb11ab;
+  --brand-primary-dark: #b00f92;
+  --brand-primary-soft: #fdf2fc;
+  --brand-gradient: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
 }
 
 @theme inline {
@@ -44,7 +48,7 @@ body {
 }
 
 ::selection {
-  background: rgba(79, 70, 229, 0.15);
+  background: rgba(203, 17, 171, 0.15);
   color: var(--foreground);
 }
 
@@ -76,7 +80,7 @@ textarea,
 }
 
 :focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 75%, white 25%);
+  outline: 2px solid color-mix(in srgb, var(--brand-primary) 75%, white 25%);
   outline-offset: 2px;
 }
 
@@ -91,15 +95,15 @@ textarea,
   pointer-events: none;
   opacity: 0.02;
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234f46e5' fill-opacity='0.1'%3E%3Ccircle cx='12' cy='12' r='1'/%3E%3Ccircle cx='64' cy='32' r='1'/%3E%3Ccircle cx='115' cy='18' r='1'/%3E%3Ccircle cx='150' cy='74' r='1'/%3E%3Ccircle cx='32' cy='95' r='1'/%3E%3Ccircle cx='90' cy='140' r='1'/%3E%3Ccircle cx='170' cy='150' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23cb11ab' fill-opacity='0.1'%3E%3Ccircle cx='12' cy='12' r='1'/%3E%3Ccircle cx='64' cy='32' r='1'/%3E%3Ccircle cx='115' cy='18' r='1'/%3E%3Ccircle cx='150' cy='74' r='1'/%3E%3Ccircle cx='32' cy='95' r='1'/%3E%3Ccircle cx='90' cy='140' r='1'/%3E%3Ccircle cx='170' cy='150' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(90deg, var(--accent) 0%, var(--foreground) 100%);
+  background: var(--brand-gradient);
 }
 
 .text-gradient-primary {
-  background: linear-gradient(90deg, var(--accent) 0%, var(--foreground) 100%);
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -114,18 +118,18 @@ textarea,
 
 .public-button-primary {
   border-radius: 9999px;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--foreground) 100%);
+  background: var(--brand-gradient);
   color: white;
   font-weight: 600;
   border: none;
-  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 10px 24px rgba(203, 17, 171, 0.15);
 }
 
 .public-button-primary:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 14px 28px rgba(79, 70, 229, 0.22),
-    0 0 18px rgba(79, 70, 229, 0.1);
+    0 14px 28px rgba(203, 17, 171, 0.22),
+    0 0 18px rgba(203, 17, 171, 0.1);
 }
 
 .public-button-primary:active {
