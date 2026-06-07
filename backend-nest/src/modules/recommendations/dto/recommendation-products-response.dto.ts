@@ -27,6 +27,21 @@ class RecommendationScoreBreakdownDto {
   penaltyScore!: number;
 
   @ApiProperty()
+  personalizationScore!: number;
+
+  @ApiProperty()
+  recentViewScore!: number;
+
+  @ApiProperty()
+  categoryAffinityScore!: number;
+
+  @ApiProperty()
+  searchIntentScore!: number;
+
+  @ApiProperty()
+  clickAffinityScore!: number;
+
+  @ApiProperty()
   sponsoredBoostScore!: number;
 
   @ApiProperty()

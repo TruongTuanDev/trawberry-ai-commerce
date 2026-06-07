@@ -1,5 +1,30 @@
 # Project Status
 
+## User Behavior Personalization Foundation Phase 5.1 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - bounded behavior-personalization behind `RECOMMENDATION_PERSONALIZATION_ENABLED`
+  - recent-view, category-affinity, search-intent, and recommendation-click affinity scoring
+  - anonymous-session recommendation reads using the existing `x-guest-session-id` flow
+  - internal explainability and QA visibility for personalization score components
+  - continued public API backward compatibility and backend-returned algorithm tracking
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pending
+  - `backend-nest npm run lint`: pending
+  - `backend-nest npm test -- --runInBand`: pending
+  - `backend-nest npm run build`: pending
+  - `frontend-next npm run lint`: pending
+  - `frontend-next npm run build`: pending
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pending
+  - campaign and billing regression coverage: pending
+- Remaining gaps:
+  - personalization is still heuristic-based and intentionally not ML-driven
+  - there is no analytics dashboard or seller-facing recommendation reporting yet
+  - cross-device identity stitching and richer profile management remain future work
+- Next recommended phase:
+  - Phase 5.2: Recommendation Analytics Dashboard
+
 ## Final V1 Report and Demo Freeze Phase 4.5 - 2026-06-07
 
 - Status: demo-ready and frozen for final reporting in `backend-nest` and `frontend-next`

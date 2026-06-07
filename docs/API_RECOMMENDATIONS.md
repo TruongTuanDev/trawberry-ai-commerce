@@ -1,5 +1,60 @@
 # API Recommendations
 
+## Phase 5.1 behavior personalization foundation
+
+Phase 5.1 adds a safe lightweight personalization layer to `rule_based_v2` while keeping the public recommendation contract backward compatible.
+
+New backend flag:
+
+- `RECOMMENDATION_PERSONALIZATION_ENABLED`
+
+Behavior signals reused by the recommendation stack:
+
+- `POST /api/public/tracking/product-view`
+- `POST /api/public/tracking/search`
+- `POST /api/public/recommendations/events` for:
+  - `impression`
+  - `click`
+
+Personalization behavior:
+
+- supports authenticated `customerId` or anonymous `guestSessionId`
+- uses time-decayed recent views, search intent, and recommendation click affinity
+- remains additive and bounded
+- falls back safely when no usable behavior exists
+
+Internal-only explainability additions:
+
+- `scoreBreakdown.personalizationScore`
+- `scoreBreakdown.recentViewScore`
+- `scoreBreakdown.categoryAffinityScore`
+- `scoreBreakdown.searchIntentScore`
+- `scoreBreakdown.clickAffinityScore`
+
+These fields are visible only when:
+
+- request query includes `debug=true`
+- backend runtime sets `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+
+Privacy and safety:
+
+- no raw user ids, guest session ids, cookies, or private history payloads are returned in public recommendation responses
+- personalization does not bypass sponsored eligibility, wallet checks, CPC charging, budget checks, or idempotency protection
+- `category_interest` is treated as an internal derived signal, not a new public payload surface
+
+Anonymous personalization:
+
+- public recommendation `GET` requests now safely accept the existing `x-guest-session-id` header
+- frontend uses that header when available so behavior can improve later requests for anonymous sessions
+
+Out of scope for Phase 5.1:
+
+- machine-learning ranking
+- vector search
+- collaborative filtering
+- recommendation analytics dashboards
+- checkout, payment, shipping, or WB sync changes
+
 ## Phase 4.3 recommendation attribution update
 
 Recommendation tracking now supports the V1 sponsored campaign billing loop while keeping public read APIs backward compatible.

@@ -1,5 +1,67 @@
 # Phase Report
 
+## 2026-06-07 User Behavior Personalization Foundation Phase 5.1
+
+- Status: Implemented on current branch
+- Scope:
+  - added a lightweight behavior-personalization foundation for the active recommendation stack only
+  - reused existing safe tracking primitives instead of introducing risky profile storage:
+    - product views
+    - search queries
+    - recommendation impressions
+    - recommendation clicks
+  - added internal behavior aggregation with:
+    - recent view affinity
+    - derived category affinity
+    - search intent token affinity
+    - recommendation click affinity
+    - time decay
+  - kept the personalization layer:
+    - additive
+    - bounded
+    - disabled by default behind `RECOMMENDATION_PERSONALIZATION_ENABLED`
+  - extended internal explainability and QA score breakdowns with:
+    - `personalizationScore`
+    - `recentViewScore`
+    - `categoryAffinityScore`
+    - `searchIntentScore`
+    - `clickAffinityScore`
+  - allowed anonymous recommendation `GET` requests to reuse the existing `x-guest-session-id` flow so behavior can safely influence later requests
+  - kept public recommendation APIs backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, AI Try-On, or legacy strawberry app business logic was modified
+  - no ML ranking, vector search, collaborative filtering, or analytics dashboard work was introduced
+  - no raw user ids, guest session ids, cookies, or private behavior history are exposed in public recommendation payloads
+  - sponsored CPC attribution, budget checks, wallet checks, and idempotent charging remain intact
+- QA / local verification flow:
+  1. enable `RECOMMENDATION_PERSONALIZATION_ENABLED=true`
+  2. optionally enable `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  3. browse a few products, run a few searches, and click recommendation cards
+  4. reload homepage, search recommendations, or similar-product recommendations
+  5. verify ranking stays stable without behavior data and shows bounded personalization only when the flag is on
+  6. if QA tools are enabled, compare ranking output in `/admin/recommendations-qa`
+- Verification:
+  - `backend-nest npm run prisma:generate`: pending
+  - `backend-nest npm run lint`: pending
+  - `backend-nest npm test -- --runInBand`: pending
+  - `backend-nest npm run build`: pending
+  - `frontend-next npm run lint`: pending
+  - `frontend-next npm run build`: pending
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: pending
+  - campaign and billing regression coverage: pending
+  - `git diff --check`: pending
+  - `git ls-files | Select-String "\.env"`: pending
+  - `git ls-files data.xlsx`: pending
+- Remaining gaps:
+  - personalization is still lightweight and heuristic-based by design
+  - there is no recommendation analytics dashboard yet
+  - there is no persisted user-profile management or cross-device identity stitching
+- Next recommended phase:
+  - Phase 5.2: Recommendation Analytics Dashboard
+
 ## 2026-06-07 Final V1 Report and Demo Freeze Phase 4.5
 
 - Status: Implemented on current branch

@@ -149,6 +149,17 @@ describe('RecommendationScoringService', () => {
       brands: new Set<string>(),
       colors: new Set<string>(),
       searchTerms: [],
+      recentViewProductScores: new Map<string, number>(),
+      recentViewBrandScores: new Map<string, number>(),
+      recentViewColorScores: new Map<string, number>(),
+      categoryAffinityScores: new Map<string, number>(),
+      categoryTermAffinityScores: new Map<string, number>(),
+      searchIntentScores: new Map<string, number>(),
+      clickAffinityProductScores: new Map<string, number>(),
+      clickAffinityCategoryScores: new Map<string, number>(),
+      clickAffinityCategoryTermScores: new Map<string, number>(),
+      clickAffinityBrandScores: new Map<string, number>(),
+      clickAffinityColorScores: new Map<string, number>(),
     });
 
     expect(scored.scoreBreakdown.categoryScore).toBe(
@@ -311,6 +322,71 @@ describe('RecommendationScoringService', () => {
     expect(scored.sponsoredReason).toBeNull();
     expect(scored.campaignReadiness.campaignReadinessStatus).toBe('ineligible');
   });
+
+  it('adds bounded recent-view and category-affinity personalization scores', () => {
+    const candidate = buildProduct({
+      id: 'candidate-personalized-view',
+      categoryId: 77n,
+      categoryName: 'Dresses',
+      brand: 'North Berry',
+      color: 'Blue',
+    });
+
+    const scored = service.scoreHomeProduct(candidate, {
+      ...emptyPreferenceProfile(),
+      recentViewBrandScores: new Map([['north berry', 0.9]]),
+      recentViewColorScores: new Map([['blue', 0.8]]),
+      categoryAffinityScores: new Map([['77', 0.85]]),
+      categoryTermAffinityScores: new Map([['dresses', 0.75]]),
+    });
+
+    expect(scored.scoreBreakdown.recentViewScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.categoryAffinityScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.personalizationScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.personalizationScore).toBeLessThanOrEqual(18);
+    expect(scored.reasonCodes).toEqual(
+      expect.arrayContaining([
+        'based_on_recent_views',
+        'based_on_category_affinity',
+      ]),
+    );
+  });
+
+  it('adds bounded search-intent and click-affinity personalization scores', () => {
+    const candidate = buildProduct({
+      id: 'candidate-personalized-search',
+      title: 'Blue linen dress',
+      description: 'Summer linen dress in blue',
+      categoryId: 55n,
+      categoryName: 'Dresses',
+      brand: 'North Berry',
+      color: 'Blue',
+    });
+
+    const scored = service.scoreSearchProduct('summer dress', candidate, {
+      ...emptyPreferenceProfile(),
+      searchIntentScores: new Map([
+        ['linen', 0.8],
+        ['dress', 0.7],
+        ['blue', 0.4],
+      ]),
+      clickAffinityProductScores: new Map([[candidate.id, 0.5]]),
+      clickAffinityCategoryScores: new Map([['55', 0.7]]),
+      clickAffinityBrandScores: new Map([['north berry', 0.6]]),
+      clickAffinityColorScores: new Map([['blue', 0.5]]),
+      clickAffinityCategoryTermScores: new Map([['dresses', 0.65]]),
+    });
+
+    expect(scored.scoreBreakdown.searchIntentScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.clickAffinityScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.personalizationScore).toBeLessThanOrEqual(18);
+    expect(scored.reasonCodes).toEqual(
+      expect.arrayContaining([
+        'based_on_search_intent',
+        'based_on_recommendation_clicks',
+      ]),
+    );
+  });
 });
 
 function emptyPreferenceProfile(): RecommendationPreferenceProfile {
@@ -320,6 +396,17 @@ function emptyPreferenceProfile(): RecommendationPreferenceProfile {
     brands: new Set<string>(),
     colors: new Set<string>(),
     searchTerms: [],
+    recentViewProductScores: new Map<string, number>(),
+    recentViewBrandScores: new Map<string, number>(),
+    recentViewColorScores: new Map<string, number>(),
+    categoryAffinityScores: new Map<string, number>(),
+    categoryTermAffinityScores: new Map<string, number>(),
+    searchIntentScores: new Map<string, number>(),
+    clickAffinityProductScores: new Map<string, number>(),
+    clickAffinityCategoryScores: new Map<string, number>(),
+    clickAffinityCategoryTermScores: new Map<string, number>(),
+    clickAffinityBrandScores: new Map<string, number>(),
+    clickAffinityColorScores: new Map<string, number>(),
   };
 }
 

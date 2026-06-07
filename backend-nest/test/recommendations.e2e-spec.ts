@@ -452,6 +452,194 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.products).toHaveLength(2);
   });
 
+  it('keeps personalization disabled by default even when behavior logs exist', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    prismaMock.productViewLog.findMany.mockResolvedValue([
+      {
+        productId: '00000000-0000-0000-0000-000000000003',
+        createdAt: new Date('2026-06-07T00:00:00Z'),
+      },
+    ]);
+    prismaMock.searchLog.findMany.mockResolvedValue([
+      {
+        query: 'city shoes',
+        normalizedQuery: 'city shoes',
+        createdAt: new Date('2026-06-07T00:00:00Z'),
+      },
+    ]);
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3&debug=true')
+      .set('x-guest-session-id', 'guest-personalization-off')
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          scoreBreakdown?: {
+            personalizationScore: number;
+            recentViewScore: number;
+            categoryAffinityScore: number;
+            searchIntentScore: number;
+            clickAffinityScore: number;
+          } | null;
+        };
+      }>;
+    }>(response);
+    const viewedProduct = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000003',
+    );
+
+    expect(viewedProduct?.scoreExplanation?.scoreBreakdown).toMatchObject({
+      personalizationScore: 0,
+      recentViewScore: 0,
+      categoryAffinityScore: 0,
+      searchIntentScore: 0,
+      clickAffinityScore: 0,
+    });
+  });
+
+  it('adds bounded personalization scores when the env flag is enabled', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_PERSONALIZATION_ENABLED = 'true';
+    products = [
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000001',
+        title: 'Base jacket',
+        categoryId: 11n,
+        categoryName: 'Jackets',
+        brand: 'North Berry',
+      }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000002',
+        title: 'Blue linen dress',
+        categoryId: 22n,
+        categoryName: 'Dresses',
+        brand: 'North Berry',
+        feedbackCount: 2,
+      }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000003',
+        title: 'Black shoes',
+        categoryId: 33n,
+        categoryName: 'Shoes',
+        brand: 'City Berry',
+        feedbackCount: 14,
+      }),
+    ];
+    prismaMock.productViewLog.findMany.mockResolvedValue([
+      {
+        productId: '00000000-0000-0000-0000-000000000002',
+        createdAt: new Date('2026-06-08T00:00:00Z'),
+      },
+    ]);
+    prismaMock.searchLog.findMany.mockResolvedValue([
+      {
+        query: 'linen dress',
+        normalizedQuery: 'linen dress',
+        createdAt: new Date('2026-06-08T00:00:00Z'),
+      },
+    ]);
+    prismaMock.recommendationEvent.findMany.mockResolvedValue([
+      {
+        productId: '00000000-0000-0000-0000-000000000002',
+        createdAt: new Date('2026-06-08T00:00:00Z'),
+      },
+    ]);
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=3&debug=true')
+      .set('x-guest-session-id', 'guest-personalization-on')
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          scoreBreakdown?: {
+            personalizationScore: number;
+            recentViewScore: number;
+            categoryAffinityScore: number;
+            searchIntentScore: number;
+            clickAffinityScore: number;
+          } | null;
+        };
+      }>;
+    }>(response);
+    const personalizedItem = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000002',
+    );
+
+    expect(
+      personalizedItem?.scoreExplanation?.scoreBreakdown?.personalizationScore,
+    ).toBeGreaterThan(0);
+    expect(
+      personalizedItem?.scoreExplanation?.scoreBreakdown?.personalizationScore,
+    ).toBeLessThanOrEqual(18);
+    expect(
+      personalizedItem?.scoreExplanation?.scoreBreakdown?.recentViewScore,
+    ).toBeGreaterThan(0);
+    expect(
+      personalizedItem?.scoreExplanation?.scoreBreakdown?.categoryAffinityScore,
+    ).toBeGreaterThan(0);
+    expect(
+      personalizedItem?.scoreExplanation?.scoreBreakdown?.searchIntentScore,
+    ).toBeGreaterThan(0);
+    expect(
+      personalizedItem?.scoreExplanation?.scoreBreakdown?.clickAffinityScore,
+    ).toBeGreaterThan(0);
+  });
+
+  it('uses personalization safely in search recommendations without leaking actor data', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_PERSONALIZATION_ENABLED = 'true';
+    prismaMock.searchLog.findMany.mockResolvedValue([
+      {
+        query: 'similar jacket',
+        normalizedQuery: 'similar jacket',
+        createdAt: new Date('2026-06-08T00:00:00Z'),
+      },
+      {
+        query: 'north berry jacket',
+        normalizedQuery: 'north berry jacket',
+        createdAt: new Date('2026-06-08T12:00:00Z'),
+      },
+    ]);
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/public/recommendations/search?q=similar%20jacket&limit=2&debug=true',
+      )
+      .set('x-guest-session-id', 'guest-search-personalization')
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          scoreBreakdown?: {
+            searchIntentScore: number;
+          } | null;
+        };
+      }>;
+    }>(response);
+    const serialized = JSON.stringify(body);
+
+    expect(
+      body.items[0]?.scoreExplanation?.scoreBreakdown?.searchIntentScore ?? 0,
+    ).toBeGreaterThanOrEqual(0);
+    expect(serialized).not.toContain('guest-search-personalization');
+    expect(serialized).not.toContain('customerId');
+    expect(serialized).not.toContain('guestSessionId');
+  });
+
   it('keeps sponsored ranking disabled by default even when config ids are present', async () => {
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
     process.env.RECOMMENDATION_SPONSORED_PRODUCT_IDS =
@@ -2658,6 +2846,11 @@ function buildSnapshotItem(
     stockScore: number;
     shopScore: number;
     penaltyScore: number;
+    personalizationScore?: number;
+    recentViewScore?: number;
+    categoryAffinityScore?: number;
+    searchIntentScore?: number;
+    clickAffinityScore?: number;
     sponsoredBoostScore?: number;
     businessBoostScore?: number;
     maxSponsoredBoost?: number;
@@ -2686,6 +2879,11 @@ function buildSnapshotItem(
       reasons,
       scoreBreakdown: {
         ...scoreBreakdown,
+        personalizationScore: scoreBreakdown.personalizationScore ?? 0,
+        recentViewScore: scoreBreakdown.recentViewScore ?? 0,
+        categoryAffinityScore: scoreBreakdown.categoryAffinityScore ?? 0,
+        searchIntentScore: scoreBreakdown.searchIntentScore ?? 0,
+        clickAffinityScore: scoreBreakdown.clickAffinityScore ?? 0,
         sponsoredBoostScore: scoreBreakdown.sponsoredBoostScore ?? 0,
         businessBoostScore: scoreBreakdown.businessBoostScore ?? 0,
         maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,

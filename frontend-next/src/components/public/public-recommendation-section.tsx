@@ -137,7 +137,7 @@ export function PublicRecommendationSection({
                 ) : null}
                 {item.scoreExplanation.scoreBreakdown ? (
                   <p className="mt-2 font-mono leading-5">
-                    cat {item.scoreExplanation.scoreBreakdown.categoryScore} · text {item.scoreExplanation.scoreBreakdown.textScore} · pop {item.scoreExplanation.scoreBreakdown.popularityScore} · fresh {item.scoreExplanation.scoreBreakdown.freshnessScore} · rating {item.scoreExplanation.scoreBreakdown.ratingScore} · stock {item.scoreExplanation.scoreBreakdown.stockScore} · shop {item.scoreExplanation.scoreBreakdown.shopScore} · penalty {item.scoreExplanation.scoreBreakdown.penaltyScore}
+                    cat {item.scoreExplanation.scoreBreakdown.categoryScore} · text {item.scoreExplanation.scoreBreakdown.textScore} · pop {item.scoreExplanation.scoreBreakdown.popularityScore} · fresh {item.scoreExplanation.scoreBreakdown.freshnessScore} · rating {item.scoreExplanation.scoreBreakdown.ratingScore} · stock {item.scoreExplanation.scoreBreakdown.stockScore} · shop {item.scoreExplanation.scoreBreakdown.shopScore} · pers {item.scoreExplanation.scoreBreakdown.personalizationScore} · recent {item.scoreExplanation.scoreBreakdown.recentViewScore} · affinity {item.scoreExplanation.scoreBreakdown.categoryAffinityScore} · intent {item.scoreExplanation.scoreBreakdown.searchIntentScore} · clicks {item.scoreExplanation.scoreBreakdown.clickAffinityScore} · penalty {item.scoreExplanation.scoreBreakdown.penaltyScore}
                   </p>
                 ) : null}
               </div>

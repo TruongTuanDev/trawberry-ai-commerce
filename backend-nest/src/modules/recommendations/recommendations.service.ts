@@ -227,7 +227,12 @@ export class RecommendationsService {
     }
   }
 
-  async getSimilarProducts(productId: string, query: RecommendationQueryDto) {
+  async getSimilarProducts(
+    productId: string,
+    query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
     if (!this.isPublicRecommendationsEnabled()) {
       return this.emptyResponse('product_detail');
     }
@@ -244,7 +249,12 @@ export class RecommendationsService {
         );
       }
 
-      const items = await this.loadSimilarRecommendationsV2(productId, query);
+      const items = await this.loadSimilarRecommendationsV2(
+        productId,
+        query,
+        request,
+        user,
+      );
       return this.buildResponse(
         'product_detail',
         'rule_based_v2',
@@ -256,7 +266,11 @@ export class RecommendationsService {
     }
   }
 
-  async getSearchRecommendations(query: RecommendationQueryDto) {
+  async getSearchRecommendations(
+    query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
     const searchQuery = query.q?.trim() ?? '';
     if (!this.isPublicRecommendationsEnabled() || !searchQuery) {
       return this.emptyResponse('search');
@@ -267,7 +281,11 @@ export class RecommendationsService {
     }
 
     try {
-      const items = await this.loadSearchRecommendationsV2(query);
+      const items = await this.loadSearchRecommendationsV2(
+        query,
+        request,
+        user,
+      );
       return this.buildResponse('search', 'rule_based_v2', items, query.debug);
     } catch {
       return this.emptyResponse('search');
@@ -306,13 +324,22 @@ export class RecommendationsService {
       case 'product_detail':
         [v1Items, v2Items] = await Promise.all([
           this.loadSimilarRecommendationsV1(query.productId!, normalizedQuery),
-          this.loadSimilarRecommendationsV2(query.productId!, normalizedQuery),
+          this.loadSimilarRecommendationsV2(
+            query.productId!,
+            normalizedQuery,
+            request,
+            user,
+          ),
         ]);
         sponsoredQaSummary = await this.buildSponsoredQaSummary('similar');
         break;
       case 'search':
         v1Items = [];
-        v2Items = await this.loadSearchRecommendationsV2(normalizedQuery);
+        v2Items = await this.loadSearchRecommendationsV2(
+          normalizedQuery,
+          request,
+          user,
+        );
         sponsoredQaSummary = await this.buildSponsoredQaSummary('search');
         break;
     }
@@ -839,6 +866,8 @@ export class RecommendationsService {
   private async loadSimilarRecommendationsV2(
     productId: string,
     query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
   ) {
     const sourceProduct = await this.prisma.product.findFirst({
       where: {
@@ -856,6 +885,11 @@ export class RecommendationsService {
       sourceProduct,
       query.limit,
     );
+    const preferenceProfile = await this.buildPreferenceProfile(
+      query,
+      request,
+      user,
+    );
 
     const sponsoredRanking = await this.getSponsoredRankingConfig('similar');
 
@@ -869,6 +903,7 @@ export class RecommendationsService {
           ...this.scoring.scoreSimilarProduct(
             sourceProduct,
             product,
+            preferenceProfile,
             sponsoredRanking,
           ),
         },
@@ -877,7 +912,11 @@ export class RecommendationsService {
       .slice(0, query.limit);
   }
 
-  private async loadSearchRecommendationsV2(query: RecommendationQueryDto) {
+  private async loadSearchRecommendationsV2(
+    query: RecommendationQueryDto,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
     const searchQuery = query.q?.trim() ?? '';
     if (!searchQuery) {
       return [] as RecommendationRankedItem[];
@@ -919,6 +958,11 @@ export class RecommendationsService {
       take: 150,
       orderBy: [{ updatedAt: 'desc' }, { publishedAt: 'desc' }],
     });
+    const preferenceProfile = await this.buildPreferenceProfile(
+      query,
+      request,
+      user,
+    );
 
     const sponsoredRanking = await this.getSponsoredRankingConfig('search');
 
@@ -930,6 +974,7 @@ export class RecommendationsService {
           ...this.scoring.scoreSearchProduct(
             searchQuery,
             product,
+            preferenceProfile,
             sponsoredRanking,
           ),
         },
@@ -1130,7 +1175,7 @@ export class RecommendationsService {
       }));
   }
 
-  private buildComparisonSnapshotExport(
+  private async buildComparisonSnapshotExport(
     query: RecommendationQaCompareQueryDto,
     comparisonItems: RecommendationQaComparisonRow[],
     v1Items: RecommendationRankedItem[],
@@ -1150,7 +1195,7 @@ export class RecommendationsService {
       scenarioType:
         query.placement === 'product_detail' ? 'similar' : query.placement,
       placement: query.placement,
-      sponsoredRanking: this.buildSponsoredQaSummary(
+      sponsoredRanking: await this.buildSponsoredQaSummary(
         query.placement === 'product_detail' ? 'similar' : query.placement,
       ),
       productId:
@@ -1280,6 +1325,21 @@ export class RecommendationsService {
         (newBreakdown?.shopScore ?? 0) - (oldBreakdown?.shopScore ?? 0),
       penaltyScore:
         (newBreakdown?.penaltyScore ?? 0) - (oldBreakdown?.penaltyScore ?? 0),
+      personalizationScore:
+        (newBreakdown?.personalizationScore ?? 0) -
+        (oldBreakdown?.personalizationScore ?? 0),
+      recentViewScore:
+        (newBreakdown?.recentViewScore ?? 0) -
+        (oldBreakdown?.recentViewScore ?? 0),
+      categoryAffinityScore:
+        (newBreakdown?.categoryAffinityScore ?? 0) -
+        (oldBreakdown?.categoryAffinityScore ?? 0),
+      searchIntentScore:
+        (newBreakdown?.searchIntentScore ?? 0) -
+        (oldBreakdown?.searchIntentScore ?? 0),
+      clickAffinityScore:
+        (newBreakdown?.clickAffinityScore ?? 0) -
+        (oldBreakdown?.clickAffinityScore ?? 0),
       sponsoredBoostScore:
         (newBreakdown?.sponsoredBoostScore ?? 0) -
         (oldBreakdown?.sponsoredBoostScore ?? 0),
@@ -1571,6 +1631,56 @@ export class RecommendationsService {
     };
   }
 
+  private createEmptyPreferenceProfile(): RecommendationPreferenceProfile {
+    return {
+      categoryIds: new Set<string>(),
+      categoryTerms: new Set<string>(),
+      brands: new Set<string>(),
+      colors: new Set<string>(),
+      searchTerms: [],
+      recentViewProductScores: new Map<string, number>(),
+      recentViewBrandScores: new Map<string, number>(),
+      recentViewColorScores: new Map<string, number>(),
+      categoryAffinityScores: new Map<string, number>(),
+      categoryTermAffinityScores: new Map<string, number>(),
+      searchIntentScores: new Map<string, number>(),
+      clickAffinityProductScores: new Map<string, number>(),
+      clickAffinityCategoryScores: new Map<string, number>(),
+      clickAffinityCategoryTermScores: new Map<string, number>(),
+      clickAffinityBrandScores: new Map<string, number>(),
+      clickAffinityColorScores: new Map<string, number>(),
+    };
+  }
+
+  private addWeightedSignal(
+    target: Map<string, number>,
+    key: string | null | undefined,
+    value: number,
+  ) {
+    const normalizedKey = key?.trim();
+    if (!normalizedKey || value <= 0) {
+      return;
+    }
+
+    target.set(
+      normalizedKey,
+      Number(((target.get(normalizedKey) ?? 0) + value).toFixed(4)),
+    );
+  }
+
+  private calculateBehaviorWeight(
+    createdAt: Date | null | undefined,
+    index: number,
+    multiplier: number,
+  ) {
+    const ageDays = createdAt
+      ? Math.max(0, (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    const recencyWeight = Math.pow(0.72, ageDays / 7);
+    const indexWeight = Math.max(0.45, 1 - index * 0.08);
+    return Number((recencyWeight * indexWeight * multiplier).toFixed(4));
+  }
+
   private async buildPreferenceProfile(
     query: RecommendationQueryDto,
     request: Request,
@@ -1583,54 +1693,64 @@ export class RecommendationsService {
     );
 
     if (!customerId && !guestSessionId) {
-      return {
-        categoryIds: new Set<string>(),
-        categoryTerms: new Set<string>(),
-        brands: new Set<string>(),
-        colors: new Set<string>(),
-        searchTerms: [],
-      };
+      return this.createEmptyPreferenceProfile();
     }
 
     const actorWhere = customerId ? { customerId } : { guestSessionId };
+    const personalizationEnabled = this.isPersonalizationEnabled();
 
-    const [views, searches] = await Promise.all([
+    const [views, searches, clicks] = await Promise.all([
       this.prisma.productViewLog.findMany({
         where: actorWhere,
         orderBy: { createdAt: 'desc' },
-        take: 20,
+        take: personalizationEnabled ? 24 : 20,
         select: {
           productId: true,
+          createdAt: true,
         },
       }),
       this.prisma.searchLog.findMany({
         where: actorWhere,
         orderBy: { createdAt: 'desc' },
-        take: 12,
+        take: personalizationEnabled ? 16 : 12,
         select: {
           query: true,
           normalizedQuery: true,
+          createdAt: true,
         },
       }),
+      personalizationEnabled
+        ? this.prisma.recommendationEvent.findMany({
+            where: {
+              ...actorWhere,
+              type: 'click',
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+            select: {
+              productId: true,
+              createdAt: true,
+            },
+          })
+        : Promise.resolve(
+            [] as Array<{ productId: string; createdAt: Date | null }>,
+          ),
     ]);
 
-    const categoryIds = new Set<string>();
-    const categoryTerms = new Set<string>();
-    const brands = new Set<string>();
-    const colors = new Set<string>();
-    const searchTerms = new Set<string>();
+    const profile = this.createEmptyPreferenceProfile();
 
-    const viewedProductIds = views
-      .map((view) => view.productId)
+    const behaviorProductIds = [...views, ...clicks]
+      .map((event) => event.productId)
       .filter((value): value is string => Boolean(value));
-    const viewedProducts = viewedProductIds.length
+    const behaviorProducts = behaviorProductIds.length
       ? await this.prisma.product.findMany({
           where: {
             id: {
-              in: viewedProductIds,
+              in: [...new Set(behaviorProductIds)],
             },
           },
           select: {
+            id: true,
             categoryId: true,
             categoryName: true,
             sourceCategoryName: true,
@@ -1644,42 +1764,147 @@ export class RecommendationsService {
           },
         })
       : [];
+    const behaviorProductsById = new Map(
+      behaviorProducts.map((product) => [product.id, product]),
+    );
 
-    for (const product of viewedProducts) {
+    for (const product of behaviorProducts) {
       if (!product) {
         continue;
       }
       if (product.categoryId) {
-        categoryIds.add(product.categoryId.toString());
+        profile.categoryIds.add(product.categoryId.toString());
       }
       [product.category?.name, product.categoryName, product.sourceCategoryName]
         .map((value) => this.normalizeQuery(value ?? ''))
         .filter(Boolean)
-        .forEach((value) => categoryTerms.add(value));
+        .forEach((value) => profile.categoryTerms.add(value));
       if (product.brand?.trim()) {
-        brands.add(this.normalizeQuery(product.brand));
+        profile.brands.add(this.normalizeQuery(product.brand));
       }
       if (product.color?.trim()) {
-        colors.add(this.normalizeQuery(product.color));
+        profile.colors.add(this.normalizeQuery(product.color));
       }
     }
 
-    for (const search of searches) {
+    views.forEach((view, index) => {
+      if (!view.productId) {
+        return;
+      }
+      const product = behaviorProductsById.get(view.productId);
+      if (!product || !personalizationEnabled) {
+        return;
+      }
+
+      const weight = this.calculateBehaviorWeight(view.createdAt, index, 1);
+      this.addWeightedSignal(
+        profile.recentViewProductScores,
+        product.id,
+        Math.min(1, weight),
+      );
+
+      if (product.brand?.trim()) {
+        this.addWeightedSignal(
+          profile.recentViewBrandScores,
+          this.normalizeQuery(product.brand),
+          weight,
+        );
+      }
+      if (product.color?.trim()) {
+        this.addWeightedSignal(
+          profile.recentViewColorScores,
+          this.normalizeQuery(product.color),
+          weight * 0.85,
+        );
+      }
+      if (product.categoryId) {
+        this.addWeightedSignal(
+          profile.categoryAffinityScores,
+          product.categoryId.toString(),
+          weight,
+        );
+      }
+      [product.category?.name, product.categoryName, product.sourceCategoryName]
+        .map((value) => this.normalizeQuery(value ?? ''))
+        .filter(Boolean)
+        .forEach((value) =>
+          this.addWeightedSignal(
+            profile.categoryTermAffinityScores,
+            value,
+            weight * 0.95,
+          ),
+        );
+    });
+
+    searches.forEach((search, index) => {
       const normalized =
         search.normalizedQuery ?? this.normalizeQuery(search.query);
       normalized
         .split(' ')
         .filter((token) => token.length >= 2)
-        .forEach((token) => searchTerms.add(token));
-    }
+        .forEach((token) => {
+          profile.searchTerms.push(token);
+          if (personalizationEnabled) {
+            this.addWeightedSignal(
+              profile.searchIntentScores,
+              token,
+              this.calculateBehaviorWeight(search.createdAt, index, 0.9),
+            );
+          }
+        });
+    });
 
-    return {
-      categoryIds,
-      categoryTerms,
-      brands,
-      colors,
-      searchTerms: [...searchTerms],
-    };
+    profile.searchTerms = [...new Set(profile.searchTerms)];
+
+    clicks.forEach((click, index) => {
+      if (!click.productId) {
+        return;
+      }
+      const product = behaviorProductsById.get(click.productId);
+      if (!product) {
+        return;
+      }
+
+      const weight = this.calculateBehaviorWeight(click.createdAt, index, 1.1);
+      this.addWeightedSignal(
+        profile.clickAffinityProductScores,
+        product.id,
+        Math.min(1, weight),
+      );
+      if (product.categoryId) {
+        this.addWeightedSignal(
+          profile.clickAffinityCategoryScores,
+          product.categoryId.toString(),
+          weight,
+        );
+      }
+      [product.category?.name, product.categoryName, product.sourceCategoryName]
+        .map((value) => this.normalizeQuery(value ?? ''))
+        .filter(Boolean)
+        .forEach((value) =>
+          this.addWeightedSignal(
+            profile.clickAffinityCategoryTermScores,
+            value,
+            weight,
+          ),
+        );
+      if (product.brand?.trim()) {
+        this.addWeightedSignal(
+          profile.clickAffinityBrandScores,
+          this.normalizeQuery(product.brand),
+          weight,
+        );
+      }
+      if (product.color?.trim()) {
+        this.addWeightedSignal(
+          profile.clickAffinityColorScores,
+          this.normalizeQuery(product.color),
+          weight * 0.8,
+        );
+      }
+    });
+
+    return profile;
   }
 
   private isPublicRecommendationsEnabled() {
@@ -1708,6 +1933,13 @@ export class RecommendationsService {
 
   private isQaToolsEnabled() {
     return this.readFlag('RECOMMENDATION_QA_TOOLS_ENABLED', false);
+  }
+
+  private isPersonalizationEnabled() {
+    return (
+      this.readFlag('RECOMMENDATIONS_ENABLED', true) &&
+      this.readFlag('RECOMMENDATION_PERSONALIZATION_ENABLED', false)
+    );
   }
 
   private async buildSponsoredQaSummary(

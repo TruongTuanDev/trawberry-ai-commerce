@@ -140,6 +140,11 @@ export type RecommendationProductItem = {
       stockScore: number;
       shopScore: number;
       penaltyScore: number;
+      personalizationScore: number;
+      recentViewScore: number;
+      categoryAffinityScore: number;
+      searchIntentScore: number;
+      clickAffinityScore: number;
       sponsoredBoostScore: number;
       businessBoostScore: number;
       maxSponsoredBoost: number;
@@ -177,6 +182,11 @@ export type RecommendationQaAlgorithmSnapshot = {
     stockScore: number;
     shopScore: number;
     penaltyScore: number;
+    personalizationScore: number;
+    recentViewScore: number;
+    categoryAffinityScore: number;
+    searchIntentScore: number;
+    clickAffinityScore: number;
     sponsoredBoostScore: number;
     businessBoostScore: number;
     maxSponsoredBoost: number;
@@ -281,6 +291,11 @@ export type RecommendationQaDiffResponse = {
       stockScore: number;
       shopScore: number;
       penaltyScore: number;
+      personalizationScore: number;
+      recentViewScore: number;
+      categoryAffinityScore: number;
+      searchIntentScore: number;
+      clickAffinityScore: number;
       sponsoredBoostScore: number;
       businessBoostScore: number;
       maxSponsoredBoost: number;
@@ -892,6 +907,7 @@ export async function getHomeRecommendations(
   },
 ) {
   const params = new URLSearchParams();
+  const guestSessionId = getGuestSessionId();
   params.set("limit", String(limit));
   if (options?.debug) {
     params.set("debug", "true");
@@ -905,6 +921,7 @@ export async function getHomeRecommendations(
     `/api/public/recommendations/home?${params.toString()}`,
     {
       method: "GET",
+      headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
     },
   );
   return normalizeRecommendationResponse(response, "home");
@@ -918,6 +935,7 @@ export async function getSimilarProductRecommendations(
   },
 ) {
   const params = new URLSearchParams();
+  const guestSessionId = getGuestSessionId();
   params.set("limit", String(limit));
   if (options?.debug) {
     params.set("debug", "true");
@@ -931,6 +949,7 @@ export async function getSimilarProductRecommendations(
     `/api/public/recommendations/products/${productId}/similar?${params.toString()}`,
     {
       method: "GET",
+      headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
     },
   );
   return normalizeRecommendationResponse(response, "product_detail");
@@ -944,6 +963,7 @@ export async function getSearchProductRecommendations(
   },
 ) {
   const params = new URLSearchParams();
+  const guestSessionId = getGuestSessionId();
   params.set("q", q);
   params.set("limit", String(limit));
   if (options?.debug) {
@@ -956,6 +976,7 @@ export async function getSearchProductRecommendations(
     products?: PublicProduct[];
   }>(`/api/public/recommendations/search?${params.toString()}`, {
     method: "GET",
+    headers: guestSessionId ? { "x-guest-session-id": guestSessionId } : undefined,
   });
   return normalizeRecommendationResponse(response, "search");
 }

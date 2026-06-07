@@ -50,6 +50,7 @@ export class RecommendationsController {
   }
 
   @Get('recommendations/products/:productId/similar')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary: 'Get safe similar products for one public product.',
   })
@@ -57,16 +58,31 @@ export class RecommendationsController {
   getSimilarProducts(
     @Param('productId') productId: string,
     @Query() query: RecommendationQueryDto,
+    @Req() request: Request,
+    @CurrentUser() user?: AuthenticatedUser | null,
   ) {
-    return this.recommendationsService.getSimilarProducts(productId, query);
+    return this.recommendationsService.getSimilarProducts(
+      productId,
+      query,
+      request,
+      user,
+    );
   }
 
   @Get('recommendations/search')
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get keyword-based recommendation suggestions.' })
   @ApiOkResponse({ type: RecommendationProductsResponseDto })
-  getSearchRecommendations(@Query() query: RecommendationQueryDto) {
-    return this.recommendationsService.getSearchRecommendations(query);
+  getSearchRecommendations(
+    @Query() query: RecommendationQueryDto,
+    @Req() request: Request,
+    @CurrentUser() user?: AuthenticatedUser | null,
+  ) {
+    return this.recommendationsService.getSearchRecommendations(
+      query,
+      request,
+      user,
+    );
   }
 
   @Post('tracking/product-view')

@@ -48,6 +48,26 @@ class RecommendationQaDiffScoreBreakdownDto {
 
   @ApiProperty()
   @IsNumber()
+  personalizationScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  recentViewScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  categoryAffinityScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  searchIntentScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  clickAffinityScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
   sponsoredBoostScore!: number;
 
   @ApiProperty()
@@ -419,6 +439,21 @@ class RecommendationQaDiffScoreBreakdownDeltaDto {
 
   @ApiProperty()
   penaltyScore!: number;
+
+  @ApiProperty()
+  personalizationScore!: number;
+
+  @ApiProperty()
+  recentViewScore!: number;
+
+  @ApiProperty()
+  categoryAffinityScore!: number;
+
+  @ApiProperty()
+  searchIntentScore!: number;
+
+  @ApiProperty()
+  clickAffinityScore!: number;
 
   @ApiProperty()
   sponsoredBoostScore!: number;
