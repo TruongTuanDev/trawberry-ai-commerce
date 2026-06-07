@@ -630,33 +630,29 @@ describe('RecommendationsController (e2e)', () => {
       }),
     );
 
-    const [
-      overviewResponse,
-      algorithmsResponse,
-      scenariosResponse,
-      productsResponse,
-    ] = await Promise.all([
-      request(app.getHttpServer())
-        .get(
-          '/api/admin/recommendations/analytics/overview?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
-        )
-        .expect(200),
-      request(app.getHttpServer())
-        .get(
-          '/api/admin/recommendations/analytics/algorithms?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
-        )
-        .expect(200),
-      request(app.getHttpServer())
-        .get(
-          '/api/admin/recommendations/analytics/scenarios?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
-        )
-        .expect(200),
-      request(app.getHttpServer())
-        .get(
-          '/api/admin/recommendations/analytics/products?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z&limit=5',
-        )
-        .expect(200),
-    ]);
+    const overviewResponse = await request(app.getHttpServer())
+      .get(
+        '/api/admin/recommendations/analytics/overview?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+      )
+      .expect(200);
+
+    const algorithmsResponse = await request(app.getHttpServer())
+      .get(
+        '/api/admin/recommendations/analytics/algorithms?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+      )
+      .expect(200);
+
+    const scenariosResponse = await request(app.getHttpServer())
+      .get(
+        '/api/admin/recommendations/analytics/scenarios?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+      )
+      .expect(200);
+
+    const productsResponse = await request(app.getHttpServer())
+      .get(
+        '/api/admin/recommendations/analytics/products?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z&limit=5',
+      )
+      .expect(200);
 
     const overview = readBody<{
       summary: {
@@ -3657,10 +3653,8 @@ function buildSnapshotItem(
           scoreBreakdown.engagementScore ??
           scoreBreakdown.productEngagementScore ??
           0,
-        algorithmPerformanceHint:
-          scoreBreakdown.algorithmPerformanceHint ?? 0,
-        scenarioPerformanceHint:
-          scoreBreakdown.scenarioPerformanceHint ?? 0,
+        algorithmPerformanceHint: scoreBreakdown.algorithmPerformanceHint ?? 0,
+        scenarioPerformanceHint: scoreBreakdown.scenarioPerformanceHint ?? 0,
         sponsoredBoostScore: scoreBreakdown.sponsoredBoostScore ?? 0,
         businessBoostScore: scoreBreakdown.businessBoostScore ?? 0,
         maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,
