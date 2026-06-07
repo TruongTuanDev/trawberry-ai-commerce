@@ -512,6 +512,7 @@
     "payments": "Платежи",
     "toConfirm": "На подтверждение",
     "paymentSettings": "Настройки оплаты",
+    "recommendationAnalytics": "Recommendation analytics",
     "finance": "Финансы",
     "onboarding": "Онбординг",
     "settings": "Настройки",
@@ -1730,6 +1731,7 @@
       "queues": "Очереди",
       "supportCases": "Обращения",
       "reports": "Отчеты",
+      "recommendationsAnalytics": "Recommendation analytics",
       "homepageSlides": "Баннеры главной",
       "aiSettings": "AI настройки"
     }

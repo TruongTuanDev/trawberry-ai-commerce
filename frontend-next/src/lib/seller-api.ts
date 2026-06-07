@@ -477,6 +477,88 @@ export type SellerCampaignPerformance = {
   recentEvents: SellerCampaignEvent[];
 };
 
+export type SellerRecommendationAnalyticsOverview = {
+  shopId: string;
+  shopName: string;
+  range: {
+    range: "today" | "last7d" | "last30d" | "custom";
+    from: string;
+    to: string;
+  };
+  summary: {
+    overall: {
+      impressions: number;
+      clicks: number;
+      ctr: number;
+    };
+    sponsored: {
+      impressions: number;
+      clicks: number;
+      ctr: number;
+      chargedAmount: string;
+    };
+    personalization: {
+      trackedImpressions: number;
+      trackedClicks: number;
+      personalizedImpressions: number;
+      personalizedClicks: number;
+      personalizedCtr: number;
+      nonPersonalizedImpressions: number;
+      nonPersonalizedClicks: number;
+      nonPersonalizedCtr: number;
+    };
+  };
+  algorithms: Array<{
+    algorithm: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    sponsoredImpressions: number;
+    sponsoredClicks: number;
+    sponsoredCtr: number;
+    chargedAmount: string;
+    trackedPersonalizedImpressions: number;
+    trackedPersonalizedClicks: number;
+    trackedPersonalizedCtr: number;
+  }>;
+  scenarios: Array<{
+    scenarioType: "home" | "similar" | "search";
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    sponsoredImpressions: number;
+    sponsoredClicks: number;
+    sponsoredCtr: number;
+    chargedAmount: string;
+  }>;
+  topRecommendedProducts: Array<{
+    productId: string;
+    productName: string;
+    shopId: string;
+    shopName: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    sponsoredImpressions: number;
+    sponsoredClicks: number;
+    sponsoredCtr: number;
+    chargedAmount: string;
+  }>;
+  topClickedProducts: Array<{
+    productId: string;
+    productName: string;
+    shopId: string;
+    shopName: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    sponsoredImpressions: number;
+    sponsoredClicks: number;
+    sponsoredCtr: number;
+    chargedAmount: string;
+  }>;
+};
+
 export type SellerOrderListItem = {
   id: string;
   orderNumber: string;
@@ -1619,6 +1701,40 @@ export async function listSellerCampaignEvents(
 ) {
   return apiRequest<SellerCampaignEvent[]>(
     `/api/seller/shops/${shopId}/campaigns/${campaignId}/events`,
+    {
+      method: "GET",
+      token,
+    },
+  );
+}
+
+export async function getSellerRecommendationAnalyticsOverview(
+  shopId: string,
+  query?: {
+    range?: "today" | "last7d" | "last30d" | "custom";
+    from?: string;
+    to?: string;
+    limit?: number;
+  },
+  token?: string,
+) {
+  const params = new URLSearchParams();
+  if (query?.range) {
+    params.set("range", query.range);
+  }
+  if (query?.from) {
+    params.set("from", query.from);
+  }
+  if (query?.to) {
+    params.set("to", query.to);
+  }
+  if (query?.limit !== undefined) {
+    params.set("limit", String(query.limit));
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<SellerRecommendationAnalyticsOverview>(
+    `/api/seller/shops/${shopId}/recommendations/analytics/overview${suffix}`,
     {
       method: "GET",
       token,

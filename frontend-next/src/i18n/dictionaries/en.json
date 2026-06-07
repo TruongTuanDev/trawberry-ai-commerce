@@ -549,6 +549,7 @@
     "toConfirm": "To confirm",
     "paymentSettings": "Payment settings",
     "campaigns": "Campaigns",
+    "recommendationAnalytics": "Recommendation analytics",
     "finance": "Finance",
     "onboarding": "Onboarding",
     "settings": "Settings",
@@ -2467,6 +2468,7 @@
       "queues": "Queues",
       "supportCases": "Support cases",
       "reports": "Reports",
+      "recommendationsAnalytics": "Recommendation analytics",
       "homepageSlides": "Homepage slides",
       "aiSettings": "AI settings"
     }

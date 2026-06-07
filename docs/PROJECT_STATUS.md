@@ -1,5 +1,30 @@
 # Project Status
 
+## Recommendation Analytics Dashboard Phase 5.2 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - admin recommendation analytics at `/admin/recommendations-analytics`
+  - seller-safe shop-scoped recommendation analytics at `/seller/recommendations-analytics`
+  - aggregated metrics for impressions, clicks, CTR, sponsored activity, charged CPC amount, and tracked personalization performance
+  - algorithm, scenario, and top-product analytics backed by existing recommendation events
+  - continued backend-returned algorithm tracking and public API backward compatibility
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: skipped, local runtime unavailable
+  - campaign and billing regression coverage: pass
+- Remaining gaps:
+  - analytics is still table/card based rather than chart-heavy
+  - tracked personalization analytics depends on new event metadata and is not retroactive
+  - there is still no weight-tuning workflow directly connected to analytics outputs
+- Next recommended phase:
+  - Phase 5.3: Ranking Weight Tuning from Analytics
+
 ## User Behavior Personalization Foundation Phase 5.1 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

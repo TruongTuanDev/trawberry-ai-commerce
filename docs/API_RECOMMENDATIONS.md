@@ -1,5 +1,146 @@
 # API Recommendations
 
+## Phase 5.2 recommendation analytics dashboard
+
+Phase 5.2 adds internal marketplace analytics for existing recommendation behavior while keeping public recommendation APIs backward compatible.
+
+Analytics data source:
+
+- existing `RecommendationEvent` records
+
+Supported metrics:
+
+- impressions
+- clicks
+- CTR
+- sponsored impressions/clicks/CTR
+- sponsored charged amount
+- algorithm breakdown
+- scenario breakdown
+- top recommended products
+- top clicked products
+- tracked personalized vs non-personalized performance
+
+Privacy guarantees:
+
+- no raw user ids
+- no guest session ids
+- no cookies
+- no raw private tracking payloads
+
+### `GET /api/admin/recommendations/analytics/overview`
+
+Purpose:
+
+- platform-level summary metrics for recommendation performance
+
+Query params:
+
+- `range=today|last7d|last30d|custom`
+- `from=<iso-date>` when `range=custom`
+- `to=<iso-date>` when `range=custom`
+
+Response fields:
+
+- `range`
+- `summary.overall`
+- `summary.sponsored`
+- `summary.personalization`
+
+### `GET /api/admin/recommendations/analytics/algorithms`
+
+Purpose:
+
+- aggregate recommendation performance by algorithm
+
+Response fields:
+
+- `range`
+- `items[]`
+  - `algorithm`
+  - `impressions`
+  - `clicks`
+  - `ctr`
+  - `sponsoredImpressions`
+  - `sponsoredClicks`
+  - `sponsoredCtr`
+  - `chargedAmount`
+  - `trackedPersonalizedImpressions`
+  - `trackedPersonalizedClicks`
+  - `trackedPersonalizedCtr`
+
+### `GET /api/admin/recommendations/analytics/scenarios`
+
+Purpose:
+
+- aggregate recommendation performance by scenario
+
+Response fields:
+
+- `range`
+- `items[]`
+  - `scenarioType`
+  - `impressions`
+  - `clicks`
+  - `ctr`
+  - `sponsoredImpressions`
+  - `sponsoredClicks`
+  - `sponsoredCtr`
+  - `chargedAmount`
+
+### `GET /api/admin/recommendations/analytics/products`
+
+Purpose:
+
+- show top recommended and top clicked products for the selected range
+
+Query params:
+
+- same range filters as overview
+- `limit=1..25`
+
+Response fields:
+
+- `range`
+- `topRecommendedProducts[]`
+- `topClickedProducts[]`
+
+Each product row includes only safe public summary fields plus aggregate metrics:
+
+- `productId`
+- `productName`
+- `shopId`
+- `shopName`
+- `impressions`
+- `clicks`
+- `ctr`
+- `sponsoredImpressions`
+- `sponsoredClicks`
+- `sponsoredCtr`
+- `chargedAmount`
+
+### `GET /api/seller/shops/:shopId/recommendations/analytics/overview`
+
+Purpose:
+
+- seller-safe shop-scoped recommendation analytics
+
+Behavior:
+
+- protected by existing seller auth plus shop ownership access
+- only events for products owned by the requested shop are included
+
+Response fields:
+
+- `shopId`
+- `shopName`
+- `range`
+- `summary`
+- `algorithms`
+- `scenarios`
+- `topRecommendedProducts`
+- `topClickedProducts`
+
 ## Phase 5.1 behavior personalization foundation
 
 Phase 5.1 adds a safe lightweight personalization layer to `rule_based_v2` while keeping the public recommendation contract backward compatible.

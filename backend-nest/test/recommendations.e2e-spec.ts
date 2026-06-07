@@ -5,6 +5,10 @@ import { Prisma } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import {
+  AdminJwtAuthGuard,
+  SellerJwtAuthGuard,
+} from '../src/common/guards/jwt-auth.guard';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { BillingService } from '../src/modules/billing/billing.service';
 import { RecommendationsService } from '../src/modules/recommendations/recommendations.service';
@@ -133,6 +137,57 @@ describe('RecommendationsController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideGuard(AdminJwtAuthGuard)
+      .useValue({
+        canActivate: (context: {
+          switchToHttp: () => {
+            getRequest: () => {
+              headers: Record<string, string | undefined>;
+              user?: {
+                userId: string;
+                sub: string;
+                email: string;
+                role: string;
+              };
+            };
+          };
+        }) => {
+          const request = context.switchToHttp().getRequest();
+          request.user = {
+            userId: request.headers['x-test-user-id'] ?? 'admin-user-1',
+            sub: request.headers['x-test-user-id'] ?? 'admin-user-1',
+            email: 'admin@example.com',
+            role: request.headers['x-test-role'] ?? 'ADMIN',
+          };
+          return true;
+        },
+      })
+      .overrideGuard(SellerJwtAuthGuard)
+      .useValue({
+        canActivate: (context: {
+          switchToHttp: () => {
+            getRequest: () => {
+              headers: Record<string, string | undefined>;
+              user?: {
+                userId: string;
+                sub: string;
+                email: string;
+                role: string;
+              };
+            };
+          };
+        }) => {
+          const request = context.switchToHttp().getRequest();
+          const userId = request.headers['x-test-user-id'] ?? 'seller-user-1';
+          request.user = {
+            userId,
+            sub: userId,
+            email: `${userId}@example.com`,
+            role: request.headers['x-test-role'] ?? 'SELLER',
+          };
+          return true;
+        },
+      })
       .compile();
 
     const nextApp: INestApplication<App> =
@@ -176,6 +231,16 @@ describe('RecommendationsController (e2e)', () => {
         categoryName: 'Shoes',
         brand: 'City Berry',
       }),
+      buildProduct({
+        id: '00000000-0000-0000-0000-000000000004',
+        title: 'Seller two product',
+        categoryId: 33n,
+        categoryName: 'Dresses',
+        brand: 'South Berry',
+        shopId: '20000000-0000-0000-0000-000000000002',
+        shopName: 'Second Shop',
+        shopSlug: 'second-shop',
+      }),
     ];
     recommendationEvents = [];
     const walletState = {
@@ -190,15 +255,35 @@ describe('RecommendationsController (e2e)', () => {
     };
 
     prismaMock.shop.findUnique.mockImplementation(({ where, select }) => {
-      if (
-        where.id === 'shop-1' ||
-        products.some((product) => product.shopId === where.id)
-      ) {
+      const matchingProduct = products.find(
+        (product) => product.shopId === where.id,
+      );
+      if (where.id === 'shop-1') {
         if (select?.sellerProfile) {
           return Promise.resolve({
             id: where.id,
             sellerProfile: { userId: 'seller-user-1' },
           });
+        }
+        if (select?.name) {
+          return Promise.resolve({ name: 'Ready Shop' });
+        }
+        return Promise.resolve({ id: where.id });
+      }
+      if (matchingProduct) {
+        if (select?.sellerProfile) {
+          return Promise.resolve({
+            id: where.id,
+            sellerProfile: {
+              userId:
+                where.id === '20000000-0000-0000-0000-000000000002'
+                  ? 'seller-user-2'
+                  : 'seller-user-1',
+            },
+          });
+        }
+        if (select?.name) {
+          return Promise.resolve({ name: matchingProduct.shop.name });
         }
         return Promise.resolve({ id: where.id });
       }
@@ -226,10 +311,14 @@ describe('RecommendationsController (e2e)', () => {
             ? String((where.id as { not?: string }).not)
             : null;
 
+        const shopId =
+          where && typeof where.shopId === 'string' ? where.shopId : null;
+
         return products.filter(
           (product) =>
             product.id !== excludedId &&
-            (!includedIds || includedIds.has(product.id)),
+            (!includedIds || includedIds.has(product.id)) &&
+            (!shopId || product.shopId === shopId),
         );
       },
     );
@@ -323,6 +412,30 @@ describe('RecommendationsController (e2e)', () => {
             return false;
           }
           if (where?.charged !== undefined && event.charged !== where.charged) {
+            return false;
+          }
+          if (
+            where?.createdAt?.gte &&
+            new Date(String(event.createdAt)) < where.createdAt.gte
+          ) {
+            return false;
+          }
+          if (
+            where?.createdAt?.lte &&
+            new Date(String(event.createdAt)) > where.createdAt.lte
+          ) {
+            return false;
+          }
+          if (
+            where?.productId?.in &&
+            !where.productId.in.includes(event.productId)
+          ) {
+            return false;
+          }
+          if (
+            typeof where?.productId === 'string' &&
+            event.productId !== where.productId
+          ) {
             return false;
           }
           return true;
@@ -450,6 +563,404 @@ describe('RecommendationsController (e2e)', () => {
     expect(body.items[0]?.score).toBeNull();
     expect(body.items[0]?.reasonCodes).toEqual([]);
     expect(body.products).toHaveLength(2);
+  });
+
+  it('returns admin recommendation analytics overview, algorithms, scenarios, and products without leaking raw actor data', async () => {
+    recommendationEvents.push(
+      buildAnalyticsEvent({
+        id: 'analytics-impression-1',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        sponsored: true,
+        charged: false,
+        metadata: { personalized: true },
+        createdAt: new Date('2026-06-07T09:00:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-click-1',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'click',
+        sponsored: true,
+        charged: true,
+        cost: new Prisma.Decimal('1.25'),
+        metadata: { personalized: true },
+        createdAt: new Date('2026-06-07T09:05:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-impression-2',
+        productId: '00000000-0000-0000-0000-000000000003',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v1',
+        scenarioType: 'search',
+        type: 'impression',
+        sponsored: false,
+        charged: false,
+        metadata: { personalized: false },
+        createdAt: new Date('2026-06-07T11:00:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-click-2',
+        productId: '00000000-0000-0000-0000-000000000003',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v1',
+        scenarioType: 'search',
+        type: 'click',
+        sponsored: false,
+        charged: false,
+        metadata: { personalized: false },
+        createdAt: new Date('2026-06-07T11:10:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-impression-3',
+        productId: '00000000-0000-0000-0000-000000000004',
+        shopId: '20000000-0000-0000-0000-000000000002',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'similar',
+        type: 'impression',
+        sponsored: false,
+        charged: false,
+        metadata: null,
+        createdAt: new Date('2026-06-07T12:00:00.000Z'),
+      }),
+    );
+
+    const [
+      overviewResponse,
+      algorithmsResponse,
+      scenariosResponse,
+      productsResponse,
+    ] = await Promise.all([
+      request(app.getHttpServer())
+        .get(
+          '/api/admin/recommendations/analytics/overview?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+        )
+        .expect(200),
+      request(app.getHttpServer())
+        .get(
+          '/api/admin/recommendations/analytics/algorithms?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+        )
+        .expect(200),
+      request(app.getHttpServer())
+        .get(
+          '/api/admin/recommendations/analytics/scenarios?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+        )
+        .expect(200),
+      request(app.getHttpServer())
+        .get(
+          '/api/admin/recommendations/analytics/products?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z&limit=5',
+        )
+        .expect(200),
+    ]);
+
+    const overview = readBody<{
+      summary: {
+        overall: { impressions: number; clicks: number; ctr: number };
+        sponsored: {
+          impressions: number;
+          clicks: number;
+          ctr: number;
+          chargedAmount: string;
+        };
+        personalization: {
+          trackedImpressions: number;
+          trackedClicks: number;
+          personalizedImpressions: number;
+          personalizedClicks: number;
+          personalizedCtr: number;
+          nonPersonalizedImpressions: number;
+          nonPersonalizedClicks: number;
+          nonPersonalizedCtr: number;
+        };
+      };
+    }>(overviewResponse);
+    expect(overview.summary.overall).toEqual({
+      impressions: 3,
+      clicks: 2,
+      ctr: 66.67,
+    });
+    expect(overview.summary.sponsored).toEqual({
+      impressions: 1,
+      clicks: 1,
+      ctr: 100,
+      chargedAmount: '1.25',
+    });
+    expect(overview.summary.personalization).toEqual({
+      trackedImpressions: 2,
+      trackedClicks: 2,
+      personalizedImpressions: 1,
+      personalizedClicks: 1,
+      personalizedCtr: 100,
+      nonPersonalizedImpressions: 1,
+      nonPersonalizedClicks: 1,
+      nonPersonalizedCtr: 100,
+    });
+    expect(JSON.stringify(overview)).not.toContain('userId');
+    expect(JSON.stringify(overview)).not.toContain('guestSessionId');
+    expect(JSON.stringify(overview)).not.toContain('recentViewScore');
+
+    const algorithms = readBody<{
+      items: Array<{
+        algorithm: string;
+        impressions: number;
+        clicks: number;
+        ctr: number;
+        sponsoredCtr: number;
+        chargedAmount: string;
+      }>;
+    }>(algorithmsResponse);
+    expect(algorithms.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          algorithm: 'rule_based_v2',
+          impressions: 2,
+          clicks: 1,
+          ctr: 50,
+          sponsoredCtr: 100,
+          chargedAmount: '1.25',
+        }),
+        expect.objectContaining({
+          algorithm: 'rule_based_v1',
+          impressions: 1,
+          clicks: 1,
+          ctr: 100,
+          sponsoredCtr: 0,
+          chargedAmount: '0.00',
+        }),
+      ]),
+    );
+
+    const scenarios = readBody<{
+      items: Array<{
+        scenarioType: 'home' | 'similar' | 'search';
+        impressions: number;
+        clicks: number;
+        ctr: number;
+      }>;
+    }>(scenariosResponse);
+    expect(scenarios.items).toEqual([
+      expect.objectContaining({
+        scenarioType: 'home',
+        impressions: 1,
+        clicks: 1,
+        ctr: 100,
+      }),
+      expect.objectContaining({
+        scenarioType: 'similar',
+        impressions: 1,
+        clicks: 0,
+        ctr: 0,
+      }),
+      expect.objectContaining({
+        scenarioType: 'search',
+        impressions: 1,
+        clicks: 1,
+        ctr: 100,
+      }),
+    ]);
+
+    const products = readBody<{
+      topRecommendedProducts: Array<{
+        productId: string;
+        productName: string;
+        shopName: string;
+        impressions: number;
+        clicks: number;
+        chargedAmount: string;
+      }>;
+      topClickedProducts: Array<{
+        productId: string;
+        productName: string;
+        clicks: number;
+      }>;
+    }>(productsResponse);
+    expect(products.topRecommendedProducts[0]).toEqual(
+      expect.objectContaining({
+        productId: '00000000-0000-0000-0000-000000000002',
+        productName: 'Similar jacket',
+        shopName: 'Ready Shop',
+        impressions: 1,
+        clicks: 1,
+        chargedAmount: '1.25',
+      }),
+    );
+    expect(products.topClickedProducts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          productId: '00000000-0000-0000-0000-000000000002',
+          clicks: 1,
+        }),
+        expect.objectContaining({
+          productId: '00000000-0000-0000-0000-000000000003',
+          clicks: 1,
+        }),
+      ]),
+    );
+  });
+
+  it('returns zero-safe analytics responses when no recommendation events match the range', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/admin/recommendations/analytics/overview?range=custom&from=2026-06-09T00:00:00.000Z&to=2026-06-09T23:59:59.999Z',
+      )
+      .expect(200);
+
+    expect(
+      readBody<{
+        summary: {
+          overall: { impressions: number; clicks: number; ctr: number };
+          sponsored: {
+            impressions: number;
+            clicks: number;
+            ctr: number;
+            chargedAmount: string;
+          };
+        };
+      }>(response),
+    ).toEqual(
+      expect.objectContaining({
+        summary: expect.objectContaining({
+          overall: { impressions: 0, clicks: 0, ctr: 0 },
+          sponsored: {
+            impressions: 0,
+            clicks: 0,
+            ctr: 0,
+            chargedAmount: '0.00',
+          },
+        }),
+      }),
+    );
+  });
+
+  it('filters analytics by date range', async () => {
+    recommendationEvents.push(
+      buildAnalyticsEvent({
+        id: 'analytics-date-old',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-05T08:00:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-date-new',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T08:00:00.000Z'),
+      }),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/admin/recommendations/analytics/overview?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+      )
+      .expect(200);
+
+    expect(
+      readBody<{
+        summary: {
+          overall: { impressions: number; clicks: number; ctr: number };
+        };
+      }>(response).summary.overall,
+    ).toEqual({
+      impressions: 1,
+      clicks: 0,
+      ctr: 0,
+    });
+  });
+
+  it('limits seller recommendation analytics to the seller shop and blocks other sellers', async () => {
+    recommendationEvents.push(
+      buildAnalyticsEvent({
+        id: 'seller-analytics-own',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        sponsored: true,
+        createdAt: new Date('2026-06-07T10:00:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'seller-analytics-own-click',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'click',
+        sponsored: true,
+        charged: true,
+        cost: new Prisma.Decimal('2.00'),
+        createdAt: new Date('2026-06-07T10:05:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'seller-analytics-other-shop',
+        productId: '00000000-0000-0000-0000-000000000004',
+        shopId: '20000000-0000-0000-0000-000000000002',
+        algorithm: 'rule_based_v1',
+        scenarioType: 'search',
+        type: 'click',
+        createdAt: new Date('2026-06-07T10:10:00.000Z'),
+      }),
+    );
+
+    const response = await request(app.getHttpServer())
+      .get(
+        '/api/seller/shops/10000000-0000-0000-0000-000000000001/recommendations/analytics/overview?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+      )
+      .set('x-test-user-id', 'seller-user-1')
+      .set('x-test-role', 'SELLER')
+      .expect(200);
+
+    const body = readBody<{
+      shopId: string;
+      shopName: string;
+      summary: {
+        overall: { impressions: number; clicks: number; ctr: number };
+        sponsored: {
+          impressions: number;
+          clicks: number;
+          ctr: number;
+          chargedAmount: string;
+        };
+      };
+      topClickedProducts: Array<{ productId: string }>;
+    }>(response);
+    expect(body.shopId).toBe('10000000-0000-0000-0000-000000000001');
+    expect(body.shopName).toBe('Ready Shop');
+    expect(body.summary.overall).toEqual({
+      impressions: 1,
+      clicks: 1,
+      ctr: 100,
+    });
+    expect(body.summary.sponsored).toEqual({
+      impressions: 1,
+      clicks: 1,
+      ctr: 100,
+      chargedAmount: '2.00',
+    });
+    expect(body.topClickedProducts).toEqual([
+      expect.objectContaining({
+        productId: '00000000-0000-0000-0000-000000000002',
+      }),
+    ]);
+
+    await request(app.getHttpServer())
+      .get(
+        '/api/seller/shops/10000000-0000-0000-0000-000000000001/recommendations/analytics/overview?range=custom&from=2026-06-07T00:00:00.000Z&to=2026-06-07T23:59:59.999Z',
+      )
+      .set('x-test-user-id', 'seller-user-2')
+      .set('x-test-role', 'SELLER')
+      .expect(403);
   });
 
   it('keeps personalization disabled by default even when behavior logs exist', async () => {
@@ -2590,6 +3101,48 @@ describe('RecommendationsController (e2e)', () => {
   });
 });
 
+function buildAnalyticsEvent({
+  id,
+  productId,
+  shopId,
+  algorithm,
+  scenarioType,
+  type,
+  sponsored = false,
+  charged = false,
+  cost = null,
+  metadata = null,
+  createdAt,
+}: {
+  id: string;
+  productId: string;
+  shopId: string;
+  algorithm: string;
+  scenarioType: 'home' | 'similar' | 'search';
+  type: 'impression' | 'click';
+  sponsored?: boolean;
+  charged?: boolean;
+  cost?: Prisma.Decimal | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: Date;
+}) {
+  return {
+    id,
+    type,
+    placement: scenarioType === 'similar' ? 'product_detail' : scenarioType,
+    productId,
+    shopId,
+    campaignId: sponsored ? `campaign-${productId}` : null,
+    algorithm,
+    scenarioType,
+    sponsored,
+    charged,
+    cost,
+    metadata,
+    createdAt,
+  };
+}
+
 function buildProduct({
   id,
   title,
@@ -2598,6 +3151,9 @@ function buildProduct({
   brand,
   feedbackCount = 12,
   averageRating = '4.7',
+  shopId = '10000000-0000-0000-0000-000000000001',
+  shopName = 'Ready Shop',
+  shopSlug = 'ready-shop',
 }: {
   id: string;
   title: string;
@@ -2606,10 +3162,13 @@ function buildProduct({
   brand: string;
   feedbackCount?: number;
   averageRating?: string;
+  shopId?: string;
+  shopName?: string;
+  shopSlug?: string;
 }): StoredProduct {
   return {
     id,
-    shopId: '10000000-0000-0000-0000-000000000001',
+    shopId,
     wbTitle: title,
     localTitle: title,
     wbDescription: `${title} description`,
@@ -2662,9 +3221,9 @@ function buildProduct({
       },
     ],
     shop: {
-      id: '10000000-0000-0000-0000-000000000001',
-      name: 'Ready Shop',
-      slug: 'ready-shop',
+      id: shopId,
+      name: shopName,
+      slug: shopSlug,
       logoUrl: null,
       paymentInstructions: 'Manual transfer',
       status: 'ACTIVE',

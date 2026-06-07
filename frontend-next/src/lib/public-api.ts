@@ -1114,6 +1114,7 @@ type TrackRecommendationEventPayload = {
   guestSessionId?: string;
   idempotencyKey?: string;
   sponsored?: boolean;
+  personalized?: boolean;
   trackingToken?: string | null;
 };
 

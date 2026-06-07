@@ -68,6 +68,11 @@ export class TrackRecommendationEventDto {
 
   @ApiProperty({ required: false, nullable: true })
   @IsOptional()
+  @IsBoolean()
+  personalized?: boolean;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
   @IsString()
   @MaxLength(2000)
   trackingToken?: string;

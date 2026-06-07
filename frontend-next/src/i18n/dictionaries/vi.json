@@ -376,6 +376,7 @@
     "payments": "Thanh toán",
     "toConfirm": "Chờ xác nhận",
     "paymentSettings": "Cài đặt thanh toán",
+    "recommendationAnalytics": "Recommendation analytics",
     "finance": "Tài chính",
     "onboarding": "Onboarding",
     "settings": "Cài đặt",
@@ -1125,6 +1126,7 @@
       "queues": "Hàng đợi",
       "supportCases": "Case hỗ trợ",
       "reports": "Báo cáo",
+      "recommendationsAnalytics": "Recommendation analytics",
       "homepageSlides": "Banner trang chủ",
       "aiSettings": "Cài đặt AI"
     }

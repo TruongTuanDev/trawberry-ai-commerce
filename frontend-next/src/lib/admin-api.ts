@@ -347,6 +347,90 @@ export type AdminDashboardSummary = {
   };
 };
 
+export type RecommendationAnalyticsRangePreset =
+  | "today"
+  | "last7d"
+  | "last30d"
+  | "custom";
+
+export type RecommendationAnalyticsRange = {
+  range: RecommendationAnalyticsRangePreset;
+  from: string;
+  to: string;
+};
+
+export type RecommendationAnalyticsOverview = {
+  range: RecommendationAnalyticsRange;
+  summary: {
+    overall: {
+      impressions: number;
+      clicks: number;
+      ctr: number;
+    };
+    sponsored: {
+      impressions: number;
+      clicks: number;
+      ctr: number;
+      chargedAmount: string;
+    };
+    personalization: {
+      trackedImpressions: number;
+      trackedClicks: number;
+      personalizedImpressions: number;
+      personalizedClicks: number;
+      personalizedCtr: number;
+      nonPersonalizedImpressions: number;
+      nonPersonalizedClicks: number;
+      nonPersonalizedCtr: number;
+    };
+  };
+};
+
+export type RecommendationAnalyticsAlgorithmRow = {
+  algorithm: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  sponsoredImpressions: number;
+  sponsoredClicks: number;
+  sponsoredCtr: number;
+  chargedAmount: string;
+  trackedPersonalizedImpressions: number;
+  trackedPersonalizedClicks: number;
+  trackedPersonalizedCtr: number;
+};
+
+export type RecommendationAnalyticsScenarioRow = {
+  scenarioType: "home" | "similar" | "search";
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  sponsoredImpressions: number;
+  sponsoredClicks: number;
+  sponsoredCtr: number;
+  chargedAmount: string;
+};
+
+export type RecommendationAnalyticsProductRow = {
+  productId: string;
+  productName: string;
+  shopId: string;
+  shopName: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  sponsoredImpressions: number;
+  sponsoredClicks: number;
+  sponsoredCtr: number;
+  chargedAmount: string;
+};
+
+export type RecommendationAnalyticsProductsResponse = {
+  range: RecommendationAnalyticsRange;
+  topRecommendedProducts: RecommendationAnalyticsProductRow[];
+  topClickedProducts: RecommendationAnalyticsProductRow[];
+};
+
 export type AdminQueueSlaStatus = "OK" | "WARNING" | "BREACHED";
 
 export type AdminQueueResponse<T> = {
@@ -775,6 +859,82 @@ export async function getAdminDashboardSummary(query?: {
   return apiRequest<AdminDashboardSummary>(`/api/admin/dashboard/summary${suffix}`, {
     method: "GET",
   });
+}
+
+function recommendationAnalyticsSuffix(query?: {
+  range?: RecommendationAnalyticsRangePreset;
+  from?: string;
+  to?: string;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (query?.range) params.set("range", query.range);
+  if (query?.from) params.set("from", query.from);
+  if (query?.to) params.set("to", query.to);
+  if (query?.limit !== undefined) params.set("limit", String(query.limit));
+  return params.toString() ? `?${params.toString()}` : "";
+}
+
+export async function getAdminRecommendationAnalyticsOverview(query?: {
+  range?: RecommendationAnalyticsRangePreset;
+  from?: string;
+  to?: string;
+  limit?: number;
+}) {
+  return apiRequest<RecommendationAnalyticsOverview>(
+    `/api/admin/recommendations/analytics/overview${recommendationAnalyticsSuffix(query)}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getAdminRecommendationAnalyticsAlgorithms(query?: {
+  range?: RecommendationAnalyticsRangePreset;
+  from?: string;
+  to?: string;
+  limit?: number;
+}) {
+  return apiRequest<{
+    range: RecommendationAnalyticsRange;
+    items: RecommendationAnalyticsAlgorithmRow[];
+  }>(
+    `/api/admin/recommendations/analytics/algorithms${recommendationAnalyticsSuffix(query)}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getAdminRecommendationAnalyticsScenarios(query?: {
+  range?: RecommendationAnalyticsRangePreset;
+  from?: string;
+  to?: string;
+  limit?: number;
+}) {
+  return apiRequest<{
+    range: RecommendationAnalyticsRange;
+    items: RecommendationAnalyticsScenarioRow[];
+  }>(
+    `/api/admin/recommendations/analytics/scenarios${recommendationAnalyticsSuffix(query)}`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+export async function getAdminRecommendationAnalyticsProducts(query?: {
+  range?: RecommendationAnalyticsRangePreset;
+  from?: string;
+  to?: string;
+  limit?: number;
+}) {
+  return apiRequest<RecommendationAnalyticsProductsResponse>(
+    `/api/admin/recommendations/analytics/products${recommendationAnalyticsSuffix(query)}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 function queueSuffix(query?: Record<string, string | number | undefined>) {

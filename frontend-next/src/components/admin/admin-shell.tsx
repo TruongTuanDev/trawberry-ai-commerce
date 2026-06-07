@@ -22,6 +22,11 @@ const navLinks = [
   { href: "/admin/queues", key: "adminShell.nav.queues", match: "/admin/queues" },
   { href: "/admin/support-cases", key: "adminShell.nav.supportCases", match: "/admin/support-cases" },
   { href: "/admin/reports", key: "adminShell.nav.reports", match: "/admin/reports" },
+  {
+    href: "/admin/recommendations-analytics",
+    key: "adminShell.nav.recommendationsAnalytics",
+    match: "/admin/recommendations-analytics",
+  },
   { href: "/admin/homepage-slides", key: "adminShell.nav.homepageSlides", match: "/admin/homepage-slides" },
   { href: "/admin/ai-settings", key: "adminShell.nav.aiSettings", match: "/admin/ai-settings" },
 ];

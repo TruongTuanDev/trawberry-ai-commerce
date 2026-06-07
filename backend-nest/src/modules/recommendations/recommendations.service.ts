@@ -10,9 +10,20 @@ import { CampaignsService } from '../campaigns/campaigns.service';
 import { ProductReadinessService } from '../products/product-readiness.service';
 import { RecommendationQaCompareQueryDto } from './dto/recommendation-qa-compare-query.dto';
 import {
+  RecommendationAnalyticsRangePreset,
+  RecommendationAnalyticsQueryDto,
+} from './dto/recommendation-analytics-query.dto';
+import {
   RecommendationQaDiffRequestDto,
   RecommendationQaSnapshotDto,
 } from './dto/recommendation-qa-diff.dto';
+import {
+  type RecommendationAnalyticsOverviewResponseDto,
+  type RecommendationAnalyticsProductsResponseDto,
+  type RecommendationAnalyticsAlgorithmsResponseDto,
+  type RecommendationAnalyticsScenariosResponseDto,
+  type SellerRecommendationAnalyticsOverviewResponseDto,
+} from './dto/recommendation-analytics-response.dto';
 import {
   RecommendationQaPackDto,
   RecommendationQaPackThresholdsDto,
@@ -191,6 +202,50 @@ type RecommendationQaPackThresholdKey =
   | 'maxAbsoluteRankMovement'
   | 'minUnchangedCount'
   | 'maxTotalChangedCount';
+
+type RecommendationAnalyticsEventRecord = {
+  id: string;
+  type: string;
+  placement: string;
+  productId: string;
+  shopId: string | null;
+  campaignId: string | null;
+  algorithm: string;
+  scenarioType: string | null;
+  sponsored: boolean;
+  charged: boolean;
+  cost: Prisma.Decimal | null;
+  metadata: Prisma.JsonValue | null;
+  createdAt: Date;
+};
+
+type RecommendationAnalyticsProductSummary = {
+  productId: string;
+  productName: string;
+  shopId: string;
+  shopName: string;
+};
+
+type RecommendationAnalyticsRow = {
+  impressions: number;
+  clicks: number;
+  sponsoredImpressions: number;
+  sponsoredClicks: number;
+  chargedAmount: Prisma.Decimal;
+  trackedPersonalizedImpressions: number;
+  trackedPersonalizedClicks: number;
+  personalizedImpressions: number;
+  personalizedClicks: number;
+  nonPersonalizedImpressions: number;
+  nonPersonalizedClicks: number;
+};
+
+type RecommendationAnalyticsDateRange = {
+  range: RecommendationAnalyticsRangePreset;
+  from: Date;
+  to: Date;
+  limit: number;
+};
 
 @Injectable()
 export class RecommendationsService {
@@ -502,6 +557,91 @@ export class RecommendationsService {
     };
   }
 
+  async getAdminRecommendationAnalyticsOverview(
+    query: RecommendationAnalyticsQueryDto,
+  ): Promise<RecommendationAnalyticsOverviewResponseDto> {
+    const analytics = await this.buildRecommendationAnalytics(query);
+    return {
+      range: this.mapAnalyticsRange(analytics.range),
+      summary: this.buildAnalyticsOverviewSummary(analytics.events),
+    };
+  }
+
+  async getAdminRecommendationAnalyticsProducts(
+    query: RecommendationAnalyticsQueryDto,
+  ): Promise<RecommendationAnalyticsProductsResponseDto> {
+    const analytics = await this.buildRecommendationAnalytics(query);
+    return {
+      range: this.mapAnalyticsRange(analytics.range),
+      topRecommendedProducts: this.buildTopProductRows(
+        analytics.events,
+        analytics.productSummaries,
+        analytics.range.limit,
+        'impressions',
+      ),
+      topClickedProducts: this.buildTopProductRows(
+        analytics.events,
+        analytics.productSummaries,
+        analytics.range.limit,
+        'clicks',
+      ),
+    };
+  }
+
+  async getAdminRecommendationAnalyticsAlgorithms(
+    query: RecommendationAnalyticsQueryDto,
+  ): Promise<RecommendationAnalyticsAlgorithmsResponseDto> {
+    const analytics = await this.buildRecommendationAnalytics(query);
+    return {
+      range: this.mapAnalyticsRange(analytics.range),
+      items: this.buildAlgorithmRows(analytics.events),
+    };
+  }
+
+  async getAdminRecommendationAnalyticsScenarios(
+    query: RecommendationAnalyticsQueryDto,
+  ): Promise<RecommendationAnalyticsScenariosResponseDto> {
+    const analytics = await this.buildRecommendationAnalytics(query);
+    return {
+      range: this.mapAnalyticsRange(analytics.range),
+      items: this.buildScenarioRows(analytics.events),
+    };
+  }
+
+  async getSellerRecommendationAnalyticsOverview(
+    shopId: string,
+    query: RecommendationAnalyticsQueryDto,
+  ): Promise<SellerRecommendationAnalyticsOverviewResponseDto> {
+    const analytics = await this.buildRecommendationAnalytics(query, {
+      shopId,
+    });
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { name: true },
+    });
+
+    return {
+      shopId,
+      shopName: shop?.name ?? 'Unknown shop',
+      range: this.mapAnalyticsRange(analytics.range),
+      summary: this.buildAnalyticsOverviewSummary(analytics.events),
+      algorithms: this.buildAlgorithmRows(analytics.events),
+      scenarios: this.buildScenarioRows(analytics.events),
+      topRecommendedProducts: this.buildTopProductRows(
+        analytics.events,
+        analytics.productSummaries,
+        analytics.range.limit,
+        'impressions',
+      ),
+      topClickedProducts: this.buildTopProductRows(
+        analytics.events,
+        analytics.productSummaries,
+        analytics.range.limit,
+        'clicks',
+      ),
+    };
+  }
+
   async trackProductView(
     dto: TrackProductViewDto,
     request: Request,
@@ -585,6 +725,10 @@ export class RecommendationsService {
       dto.guestSessionId,
       request,
     );
+    const product = await this.prisma.product.findUnique({
+      where: { id: dto.productId },
+      select: { shopId: true },
+    });
     const tracking = this.verifyRecommendationTrackingToken(dto.trackingToken, {
       productId: dto.productId,
       placement,
@@ -601,10 +745,12 @@ export class RecommendationsService {
             sourceProductId: dto.sourceProductId ?? null,
             customerId: user?.userId ?? null,
             guestSessionId,
-            shopId: tracking?.shopId ?? null,
+            shopId: tracking?.shopId ?? product?.shopId ?? null,
             campaignId: tracking?.campaignId ?? null,
             algorithm,
-            scenarioType: tracking?.scenarioType ?? null,
+            scenarioType:
+              tracking?.scenarioType ??
+              this.mapPlacementToScenarioType(placement),
             billingMode: tracking?.billingMode ?? null,
             sponsored: Boolean(tracking),
             charged: false,
@@ -616,12 +762,22 @@ export class RecommendationsService {
             cost: null,
             ledgerEntryId: null,
             idempotencyKey: dto.idempotencyKey?.trim() || null,
-            metadata: tracking
-              ? {
-                  trackingTokenVersion: 'v1',
-                  sponsored: true,
-                }
-              : undefined,
+            metadata:
+              tracking || typeof dto.personalized === 'boolean'
+                ? {
+                    ...(tracking
+                      ? {
+                          trackingTokenVersion: 'v1',
+                          sponsored: true,
+                        }
+                      : {}),
+                    ...(typeof dto.personalized === 'boolean'
+                      ? {
+                          personalized: dto.personalized,
+                        }
+                      : {}),
+                  }
+                : undefined,
             rank: dto.rank ?? null,
             score:
               typeof dto.score === 'number'
@@ -1440,6 +1596,442 @@ export class RecommendationsService {
       },
       items,
     };
+  }
+
+  private async buildRecommendationAnalytics(
+    query: RecommendationAnalyticsQueryDto,
+    options?: { shopId?: string },
+  ) {
+    const range = this.resolveRecommendationAnalyticsRange(query);
+    const sellerProducts = options?.shopId
+      ? await this.prisma.product.findMany({
+          where: { shopId: options.shopId },
+          select: {
+            id: true,
+            shopId: true,
+            localTitle: true,
+            wbTitle: true,
+            shop: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        })
+      : [];
+    const sellerProductIds = options?.shopId
+      ? sellerProducts.map((product) => product.id)
+      : null;
+
+    const events = (await this.prisma.recommendationEvent.findMany({
+      where: {
+        createdAt: {
+          gte: range.from,
+          lte: range.to,
+        },
+        ...(sellerProductIds
+          ? {
+              productId: {
+                in: sellerProductIds,
+              },
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        type: true,
+        placement: true,
+        productId: true,
+        shopId: true,
+        campaignId: true,
+        algorithm: true,
+        scenarioType: true,
+        sponsored: true,
+        charged: true,
+        cost: true,
+        metadata: true,
+        createdAt: true,
+      },
+    })) as RecommendationAnalyticsEventRecord[];
+
+    const productIds = [...new Set(events.map((event) => event.productId))];
+    const productSummaries = new Map<
+      string,
+      RecommendationAnalyticsProductSummary
+    >();
+
+    if (sellerProducts.length) {
+      sellerProducts.forEach((product) => {
+        productSummaries.set(product.id, {
+          productId: product.id,
+          productName: product.localTitle ?? product.wbTitle,
+          shopId: product.shopId,
+          shopName: product.shop.name,
+        });
+      });
+    }
+
+    const missingProductIds = productIds.filter(
+      (productId) => !productSummaries.has(productId),
+    );
+    if (missingProductIds.length) {
+      const products = await this.prisma.product.findMany({
+        where: {
+          id: {
+            in: missingProductIds,
+          },
+        },
+        select: {
+          id: true,
+          shopId: true,
+          localTitle: true,
+          wbTitle: true,
+          shop: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+      products.forEach((product) => {
+        productSummaries.set(product.id, {
+          productId: product.id,
+          productName: product.localTitle ?? product.wbTitle,
+          shopId: product.shopId,
+          shopName: product.shop.name,
+        });
+      });
+    }
+
+    return {
+      range,
+      events,
+      productSummaries,
+    };
+  }
+
+  private resolveRecommendationAnalyticsRange(
+    query: RecommendationAnalyticsQueryDto,
+  ): RecommendationAnalyticsDateRange {
+    const range = query.range ?? 'last7d';
+    const now = new Date();
+    const from = new Date(now);
+    const to = new Date(now);
+
+    switch (range) {
+      case 'today':
+        from.setHours(0, 0, 0, 0);
+        break;
+      case 'last30d':
+        from.setDate(from.getDate() - 29);
+        from.setHours(0, 0, 0, 0);
+        break;
+      case 'custom':
+        if (query.from) {
+          from.setTime(new Date(query.from).getTime());
+        } else {
+          from.setHours(0, 0, 0, 0);
+        }
+        if (query.to) {
+          to.setTime(new Date(query.to).getTime());
+          to.setHours(23, 59, 59, 999);
+        }
+        break;
+      case 'last7d':
+      default:
+        from.setDate(from.getDate() - 6);
+        from.setHours(0, 0, 0, 0);
+        break;
+    }
+
+    return {
+      range,
+      from,
+      to,
+      limit: Math.max(1, Math.min(query.limit ?? 10, 25)),
+    };
+  }
+
+  private mapAnalyticsRange(range: RecommendationAnalyticsDateRange) {
+    return {
+      range: range.range,
+      from: range.from.toISOString(),
+      to: range.to.toISOString(),
+    };
+  }
+
+  private buildAnalyticsOverviewSummary(
+    events: RecommendationAnalyticsEventRecord[],
+  ) {
+    const metrics = this.accumulateAnalyticsRows(events);
+    return {
+      overall: {
+        impressions: metrics.impressions,
+        clicks: metrics.clicks,
+        ctr: this.calculateCtr(metrics.impressions, metrics.clicks),
+      },
+      sponsored: {
+        impressions: metrics.sponsoredImpressions,
+        clicks: metrics.sponsoredClicks,
+        ctr: this.calculateCtr(
+          metrics.sponsoredImpressions,
+          metrics.sponsoredClicks,
+        ),
+        chargedAmount: metrics.chargedAmount.toFixed(2),
+      },
+      personalization: {
+        trackedImpressions:
+          metrics.personalizedImpressions + metrics.nonPersonalizedImpressions,
+        trackedClicks:
+          metrics.personalizedClicks + metrics.nonPersonalizedClicks,
+        personalizedImpressions: metrics.personalizedImpressions,
+        personalizedClicks: metrics.personalizedClicks,
+        personalizedCtr: this.calculateCtr(
+          metrics.personalizedImpressions,
+          metrics.personalizedClicks,
+        ),
+        nonPersonalizedImpressions: metrics.nonPersonalizedImpressions,
+        nonPersonalizedClicks: metrics.nonPersonalizedClicks,
+        nonPersonalizedCtr: this.calculateCtr(
+          metrics.nonPersonalizedImpressions,
+          metrics.nonPersonalizedClicks,
+        ),
+      },
+    };
+  }
+
+  private buildAlgorithmRows(events: RecommendationAnalyticsEventRecord[]) {
+    const rows = new Map<string, RecommendationAnalyticsRow>();
+    events.forEach((event) => {
+      this.consumeAnalyticsEvent(
+        rows,
+        event.algorithm?.trim() || 'unknown',
+        event,
+      );
+    });
+
+    return [...rows.entries()]
+      .map(([algorithm, metrics]) => ({
+        algorithm,
+        impressions: metrics.impressions,
+        clicks: metrics.clicks,
+        ctr: this.calculateCtr(metrics.impressions, metrics.clicks),
+        sponsoredImpressions: metrics.sponsoredImpressions,
+        sponsoredClicks: metrics.sponsoredClicks,
+        sponsoredCtr: this.calculateCtr(
+          metrics.sponsoredImpressions,
+          metrics.sponsoredClicks,
+        ),
+        chargedAmount: metrics.chargedAmount.toFixed(2),
+        trackedPersonalizedImpressions: metrics.personalizedImpressions,
+        trackedPersonalizedClicks: metrics.personalizedClicks,
+        trackedPersonalizedCtr: this.calculateCtr(
+          metrics.personalizedImpressions,
+          metrics.personalizedClicks,
+        ),
+      }))
+      .sort((left, right) => right.impressions - left.impressions);
+  }
+
+  private buildScenarioRows(events: RecommendationAnalyticsEventRecord[]) {
+    const rows = new Map<
+      'home' | 'similar' | 'search',
+      RecommendationAnalyticsRow
+    >();
+    events.forEach((event) => {
+      const scenarioType = this.resolveAnalyticsScenarioType(event);
+      if (!scenarioType) {
+        return;
+      }
+      this.consumeAnalyticsEvent(rows, scenarioType, event);
+    });
+
+    return (['home', 'similar', 'search'] as const).map((scenarioType) => {
+      const metrics = rows.get(scenarioType) ?? this.createEmptyAnalyticsRow();
+      return {
+        scenarioType,
+        impressions: metrics.impressions,
+        clicks: metrics.clicks,
+        ctr: this.calculateCtr(metrics.impressions, metrics.clicks),
+        sponsoredImpressions: metrics.sponsoredImpressions,
+        sponsoredClicks: metrics.sponsoredClicks,
+        sponsoredCtr: this.calculateCtr(
+          metrics.sponsoredImpressions,
+          metrics.sponsoredClicks,
+        ),
+        chargedAmount: metrics.chargedAmount.toFixed(2),
+      };
+    });
+  }
+
+  private buildTopProductRows(
+    events: RecommendationAnalyticsEventRecord[],
+    productSummaries: Map<string, RecommendationAnalyticsProductSummary>,
+    limit: number,
+    sortBy: 'impressions' | 'clicks',
+  ) {
+    const rows = new Map<string, RecommendationAnalyticsRow>();
+    events.forEach((event) => {
+      this.consumeAnalyticsEvent(rows, event.productId, event);
+    });
+
+    return [...rows.entries()]
+      .map(([productId, metrics]) => {
+        const product = productSummaries.get(productId);
+        return {
+          productId,
+          productName: product?.productName ?? 'Unknown product',
+          shopId: product?.shopId ?? '',
+          shopName: product?.shopName ?? 'Unknown shop',
+          impressions: metrics.impressions,
+          clicks: metrics.clicks,
+          ctr: this.calculateCtr(metrics.impressions, metrics.clicks),
+          sponsoredImpressions: metrics.sponsoredImpressions,
+          sponsoredClicks: metrics.sponsoredClicks,
+          sponsoredCtr: this.calculateCtr(
+            metrics.sponsoredImpressions,
+            metrics.sponsoredClicks,
+          ),
+          chargedAmount: metrics.chargedAmount.toFixed(2),
+        };
+      })
+      .sort((left, right) => {
+        if (sortBy === 'clicks') {
+          return (
+            right.clicks - left.clicks ||
+            right.impressions - left.impressions ||
+            right.ctr - left.ctr
+          );
+        }
+        return (
+          right.impressions - left.impressions ||
+          right.clicks - left.clicks ||
+          right.ctr - left.ctr
+        );
+      })
+      .slice(0, limit);
+  }
+
+  private accumulateAnalyticsRows(
+    events: RecommendationAnalyticsEventRecord[],
+  ) {
+    return events.reduce((accumulator, event) => {
+      this.applyAnalyticsEventToRow(accumulator, event);
+      return accumulator;
+    }, this.createEmptyAnalyticsRow());
+  }
+
+  private consumeAnalyticsEvent<TKey>(
+    rows: Map<TKey, RecommendationAnalyticsRow>,
+    key: TKey,
+    event: RecommendationAnalyticsEventRecord,
+  ) {
+    const current = rows.get(key) ?? this.createEmptyAnalyticsRow();
+    this.applyAnalyticsEventToRow(current, event);
+    rows.set(key, current);
+  }
+
+  private createEmptyAnalyticsRow(): RecommendationAnalyticsRow {
+    return {
+      impressions: 0,
+      clicks: 0,
+      sponsoredImpressions: 0,
+      sponsoredClicks: 0,
+      chargedAmount: new Prisma.Decimal(0),
+      trackedPersonalizedImpressions: 0,
+      trackedPersonalizedClicks: 0,
+      personalizedImpressions: 0,
+      personalizedClicks: 0,
+      nonPersonalizedImpressions: 0,
+      nonPersonalizedClicks: 0,
+    };
+  }
+
+  private applyAnalyticsEventToRow(
+    row: RecommendationAnalyticsRow,
+    event: RecommendationAnalyticsEventRecord,
+  ) {
+    const isImpression = event.type === 'impression';
+    const isClick = event.type === 'click';
+    if (!isImpression && !isClick) {
+      return;
+    }
+
+    if (isImpression) {
+      row.impressions += 1;
+    }
+    if (isClick) {
+      row.clicks += 1;
+    }
+    if (event.sponsored) {
+      if (isImpression) {
+        row.sponsoredImpressions += 1;
+      }
+      if (isClick) {
+        row.sponsoredClicks += 1;
+      }
+    }
+    if (event.charged && event.cost) {
+      row.chargedAmount = row.chargedAmount.plus(event.cost);
+    }
+
+    const personalized = this.readPersonalizedMetadata(event.metadata);
+    if (personalized === true) {
+      if (isImpression) {
+        row.trackedPersonalizedImpressions += 1;
+        row.personalizedImpressions += 1;
+      }
+      if (isClick) {
+        row.trackedPersonalizedClicks += 1;
+        row.personalizedClicks += 1;
+      }
+    } else if (personalized === false) {
+      if (isImpression) {
+        row.nonPersonalizedImpressions += 1;
+      }
+      if (isClick) {
+        row.nonPersonalizedClicks += 1;
+      }
+    }
+  }
+
+  private readPersonalizedMetadata(metadata: Prisma.JsonValue | null) {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return null;
+    }
+    const value = (metadata as { personalized?: unknown }).personalized;
+    return typeof value === 'boolean' ? value : null;
+  }
+
+  private calculateCtr(impressions: number, clicks: number) {
+    if (impressions <= 0 || clicks <= 0) {
+      return 0;
+    }
+    return Number(((clicks / impressions) * 100).toFixed(2));
+  }
+
+  private resolveAnalyticsScenarioType(
+    event: RecommendationAnalyticsEventRecord,
+  ): 'home' | 'similar' | 'search' | null {
+    if (event.scenarioType === 'home') {
+      return 'home';
+    }
+    if (event.scenarioType === 'similar') {
+      return 'similar';
+    }
+    if (event.scenarioType === 'search') {
+      return 'search';
+    }
+    if (event.placement === 'home') {
+      return 'home';
+    }
+    if (event.placement === 'product_detail') {
+      return 'similar';
+    }
+    if (event.placement === 'search') {
+      return 'search';
+    }
+    return null;
   }
 
   private evaluateQaPackThresholds(

@@ -61,6 +61,10 @@ export function getSellerNavGroups(t: Translate): SellerNavGroup[] {
       items: [
         item("/seller/campaigns", "Campaigns"),
         item("/seller/billing", "Billing"),
+        item(
+          "/seller/recommendations-analytics",
+          t("sellerShell.recommendationAnalytics"),
+        ),
         item("/seller/payment-settings", t("sellerShell.paymentSettings")),
         item("/seller/payments-to-confirm", t("sellerShell.toConfirm")),
         item("/seller/payments", t("sellerShell.payments")),

@@ -1,5 +1,58 @@
 # Phase Report
 
+## 2026-06-07 Recommendation Analytics Dashboard Phase 5.2
+
+- Status: Implemented on current branch
+- Scope:
+  - added recommendation analytics aggregation for the active recommendation stack only
+  - added admin APIs:
+    - `GET /api/admin/recommendations/analytics/overview`
+    - `GET /api/admin/recommendations/analytics/algorithms`
+    - `GET /api/admin/recommendations/analytics/scenarios`
+    - `GET /api/admin/recommendations/analytics/products`
+  - added seller-safe shop-scoped API:
+    - `GET /api/seller/shops/:shopId/recommendations/analytics/overview`
+  - added frontend dashboards:
+    - `/admin/recommendations-analytics`
+    - `/seller/recommendations-analytics`
+  - reused existing `RecommendationEvent` data instead of adding duplicate storage
+  - added tracked personalization analytics support through the safe `personalized` tracking marker
+  - kept public recommendation APIs backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, AI Try-On, or legacy strawberry app business logic was modified
+  - analytics responses expose aggregate metrics only and do not return raw user/session identifiers
+  - sponsored CPC charging, wallet protection, budget protection, and idempotent event handling remain intact
+- Local QA guide:
+  1. generate homepage, similar-product, and search recommendation traffic locally
+  2. click a mix of organic and sponsored recommendation cards
+  3. open `/admin/recommendations-analytics`
+  4. verify overview, algorithm, scenario, and product tables
+  5. open `/seller/recommendations-analytics`
+  6. verify only the current seller shop data appears
+  7. use `today`, `last7d`, `last30d`, or `custom` range filters to confirm date scoping
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: skipped, local runtime unavailable at `127.0.0.1:3000` and `127.0.0.1:3001`
+  - campaign and billing regression coverage: pass via `npm test -- --runInBand --runTestsByPath test/campaigns.e2e-spec.ts test/billing.e2e-spec.ts`
+  - `git diff --check`: pass
+  - `git diff --cached --check`: pass
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass
+- Remaining gaps:
+  - analytics remains event-aggregate only and is intentionally not a full BI system
+  - personalization analytics depends on tracked recommendation events and is not retroactive for older traffic
+  - no charting or snapshot export was added to the analytics dashboard in this phase
+- Next recommended phase:
+  - Phase 5.3: Ranking Weight Tuning from Analytics
+
 ## 2026-06-07 User Behavior Personalization Foundation Phase 5.1
 
 - Status: Implemented on current branch

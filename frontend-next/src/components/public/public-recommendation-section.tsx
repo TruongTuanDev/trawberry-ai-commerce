@@ -18,6 +18,17 @@ function createRecommendationEventKey(prefix: string) {
   return `${prefix}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
 }
 
+function isPersonalizedRecommendation(item: RecommendationProductItem) {
+  return item.reasonCodes.some((reasonCode) =>
+    [
+      "based_on_recent_views",
+      "based_on_category_affinity",
+      "based_on_search_intent",
+      "based_on_recommendation_clicks",
+    ].includes(reasonCode),
+  );
+}
+
 export function PublicRecommendationSection({
   titleKey,
   items,
@@ -62,6 +73,7 @@ export function PublicRecommendationSection({
         guestSessionId,
         idempotencyKey: `imp:${impressionKey}:${item.product.id}`,
         sponsored: item.sponsored ?? false,
+        personalized: isPersonalizedRecommendation(item),
         trackingToken: item.trackingToken ?? null,
       });
     });
@@ -111,6 +123,7 @@ export function PublicRecommendationSection({
                     `click:${placement}:${item.product.id}`,
                   ),
                   sponsored: item.sponsored ?? false,
+                  personalized: isPersonalizedRecommendation(item),
                   trackingToken: item.trackingToken ?? null,
                 });
               }}
