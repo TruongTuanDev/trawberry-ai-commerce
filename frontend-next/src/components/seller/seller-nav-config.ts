@@ -67,7 +67,6 @@ export function getSellerNavGroups(t: Translate): SellerNavGroup[] {
         ),
         item("/seller/payment-settings", t("sellerShell.paymentSettings")),
         item("/seller/payments-to-confirm", t("sellerShell.toConfirm")),
-        item("/seller/payments", t("sellerShell.payments")),
         item("/seller/finance", t("sellerShell.finance")),
       ],
     },
