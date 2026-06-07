@@ -1,5 +1,18 @@
 # Phase Report
 
+## 2026-06-07 Product Detail and Checkout-like UX Polish Phase UI.2
+
+- Status: Implemented and pushed to main
+- Scope:
+  - brand accent variables: restored the core magenta storefront branding (`#cb11ab`, `#b00f92`) for buyer workflows while keeping dashboard variables clean/slate
+  - product gallery: refactored `product-gallery.tsx` for responsive scrollable lists (horizontal on mobile, vertical on desktop) and active state indicator borders
+  - purchase panel UX: redesigned desktop aside block and mobile sticky panel to present dominant pricing, discount badge calculations, custom stepper components, and trust indicators
+  - recommendations section: adjusted card sizes and translated "Sponsored" labels under `en.json` and `ru.json`
+  - safety checks: preserved the out-of-scope AI Try-On modal diff in `public-product-detail-page-client.tsx` without reverting or breaking existing functions
+- Verification:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+
 ## 2026-06-07 Professional Frontend Design Refactor Phase UI.1
 
 - Status: Implemented on current branch

@@ -1,5 +1,22 @@
 # Project Status
 
+## Product Detail and Checkout-like UX Polish Phase UI.2 - 2026-06-07
+
+- Status: implemented in `frontend-next` and `docs`
+- Brand accent restoration and purchase UX polish:
+  - restored the original neon magenta/purple brand accent (`#cb11ab`, `#b00f92`, purple/magenta gradients) via `--brand-primary` CSS variables in `globals.css`
+  - refactored the product detail page's image gallery to support scrollable mobile/desktop thumbnail grids, clear active outlines, and image fallbacks
+  - redesigned the pricing, rating (amber star highlights), size selector, and stock badge hierarchy
+  - refactored the desktop sticky purchase panel with a custom quantity stepper, discount badge, in-cart counter, and trust metrics (safe checkout, delivery time)
+  - redesigned the mobile sticky CTA block to show dynamic price, discount badge, qty selector, and optimized brand buttons
+  - localized recommendation sponsored tags and ensured compact responsive layouts
+- Safety & AI Try-On Guardrails:
+  - preserved all AI Try-On modal handlers, state hooks, and markup in `public-product-detail-page-client.tsx`
+  - no changes made to NestJS backend APIs or database schemas
+- Verification status:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+
 ## Professional Frontend Design Refactor Phase UI.1 - 2026-06-07
 
 - Status: implemented in `frontend-next` and `docs`
