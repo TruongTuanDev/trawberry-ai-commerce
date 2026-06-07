@@ -1,5 +1,62 @@
 # Phase Report
 
+## 2026-06-07 Ranking Weight Tuning from Analytics Phase 5.3
+
+- Status: Implemented on current branch
+- Scope:
+  - added a bounded analytics-based tuning layer for the active recommendation stack only
+  - kept tuning disabled by default behind `RECOMMENDATION_ANALYTICS_TUNING_ENABLED`
+  - reused existing recommendation analytics events instead of adding a new tracking store
+  - added internal score breakdown support for:
+    - `analyticsPerformanceScore`
+    - `ctrScore`
+    - `productEngagementScore`
+    - `algorithmPerformanceHint`
+    - `scenarioPerformanceHint`
+  - added internal explainability markers:
+    - `analyticsSignalsUsed`
+    - `analyticsTuningEnabled`
+  - extended internal QA comparison output and snapshot/diff support to carry analytics tuning breakdowns safely
+  - added an internal analytics note on `/admin/recommendations-analytics`
+  - kept public recommendation APIs backward compatible:
+    - `GET /api/public/recommendations/home`
+    - `GET /api/public/recommendations/products/:productId/similar`
+    - `GET /api/public/recommendations/search`
+- Safety guarantee:
+  - no checkout, cart, order, payment, shipping, WB sync, AI Try-On, or legacy strawberry app business logic was modified
+  - analytics tuning is additive, bounded, and subordinate to organic relevance
+  - public non-debug payloads do not expose analytics tuning internals
+  - no raw user ids, guest session ids, cookies, or private tracking payloads are returned
+  - sponsored CPC charging, wallet protection, budget protection, fallback algorithm behavior, and personalization remain intact
+- Local QA guide:
+  1. enable backend `RECOMMENDATION_ANALYTICS_TUNING_ENABLED=true`
+  2. optionally enable backend `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+  3. optionally enable frontend `NEXT_PUBLIC_RECOMMENDATION_ANALYTICS_TUNING_ENABLED=true`
+  4. generate homepage, similar-product, and search recommendation traffic plus a few clicks
+  5. open `/admin/recommendations-analytics` to review CTR and top-product performance
+  6. open `/admin/recommendations-qa`
+  7. compare the same scenario and inspect bounded analytics tuning fields in debug mode only
+  8. confirm normal public recommendation responses still do not include analytics internals
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: blocked, local backend runtime unavailable at `127.0.0.1:3001` (`ECONNREFUSED`)
+  - campaign and billing regression coverage: pass via full backend suite
+  - `git diff --check`: pass
+  - `git diff --cached --check`: pass before staging
+  - `git ls-files | Select-String "\.env"`: pass, only `.env.example` files are tracked
+  - `git ls-files data.xlsx`: pass
+- Remaining gaps:
+  - this phase does not add live weight editing or an ML ranking pipeline
+  - tuning still depends on existing event quality and remains heuristic by design
+  - there is still no automated tuning recommendation workflow from the dashboard
+- Next recommended phase:
+  - Phase 5.4: controlled tuning presets or internal weight-adjustment workflows
+
 ## 2026-06-07 Recommendation Analytics Dashboard Phase 5.2
 
 - Status: Implemented on current branch

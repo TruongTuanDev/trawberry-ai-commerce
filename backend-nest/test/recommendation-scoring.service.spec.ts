@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import {
   RecommendationScoringService,
   RECOMMENDATION_SCORING_WEIGHTS,
+  type RecommendationAnalyticsTuningConfig,
   type RecommendationPreferenceProfile,
   type RecommendationProductRecord,
 } from '../src/modules/recommendations/recommendation-scoring.service';
@@ -387,6 +388,190 @@ describe('RecommendationScoringService', () => {
       ]),
     );
   });
+
+  it('keeps analytics tuning disabled by default when no config is provided', () => {
+    const candidate = buildProduct({
+      id: 'candidate-no-analytics-config',
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+    );
+
+    expect(scored.analyticsTuningEnabled).toBe(false);
+    expect(scored.analyticsSignalsUsed).toEqual([]);
+    expect(scored.scoreBreakdown.analyticsPerformanceScore).toBe(0);
+    expect(scored.scoreBreakdown.ctrScore).toBe(0);
+    expect(scored.scoreBreakdown.productEngagementScore).toBe(0);
+  });
+
+  it('keeps analytics tuning safe when a candidate has no analytics signals', () => {
+    const candidate = buildProduct({
+      id: 'candidate-missing-signals',
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      undefined,
+      analyticsTuningConfig(),
+    );
+
+    expect(scored.analyticsTuningEnabled).toBe(true);
+    expect(scored.analyticsSignalsUsed).toEqual([
+      'algorithm_hint',
+      'scenario_hint',
+    ]);
+    expect(scored.scoreBreakdown.analyticsPerformanceScore).toBe(0);
+    expect(scored.scoreBreakdown.ctrScore).toBe(0);
+    expect(scored.scoreBreakdown.productEngagementScore).toBe(0);
+  });
+
+  it('applies a bounded analytics boost for strong ctr and engagement', () => {
+    const candidate = buildProduct({
+      id: 'candidate-analytics-boost',
+      feedbackCount: 6,
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      undefined,
+      analyticsTuningConfig({
+        productSignalsById: new Map([
+          [
+            candidate.id,
+            {
+              impressions: 20,
+              clicks: 8,
+              ctr: 40,
+            },
+          ],
+        ]),
+        algorithmPerformanceHint: 10,
+        scenarioPerformanceHint: 12,
+      }),
+    );
+
+    expect(scored.analyticsTuningEnabled).toBe(true);
+    expect(scored.scoreBreakdown.ctrScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.productEngagementScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.analyticsPerformanceScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.analyticsPerformanceScore).toBeLessThanOrEqual(
+      3,
+    );
+    expect(scored.analyticsSignalsUsed).toEqual(
+      expect.arrayContaining([
+        'ctr',
+        'engagement',
+        'algorithm_hint',
+        'scenario_hint',
+      ]),
+    );
+  });
+
+  it('applies a bounded analytics penalty for deeply underperforming ctr without burying new products', () => {
+    const weakCandidate = buildProduct({
+      id: 'candidate-analytics-weak',
+      feedbackCount: 8,
+    });
+    const newCandidate = buildProduct({
+      id: 'candidate-analytics-new',
+      feedbackCount: 8,
+    });
+
+    const tuning = analyticsTuningConfig({
+      maxLowCtrPenalty: 0.5,
+      productSignalsById: new Map([
+        [
+          weakCandidate.id,
+          {
+            impressions: 18,
+            clicks: 0,
+            ctr: 0,
+          },
+        ],
+        [
+          newCandidate.id,
+          {
+            impressions: 2,
+            clicks: 0,
+            ctr: 0,
+          },
+        ],
+      ]),
+      algorithmPerformanceHint: 10,
+      scenarioPerformanceHint: 12,
+    });
+
+    const weakScored = service.scoreHomeProduct(
+      weakCandidate,
+      emptyPreferenceProfile(),
+      undefined,
+      tuning,
+    );
+    const newScored = service.scoreHomeProduct(
+      newCandidate,
+      emptyPreferenceProfile(),
+      undefined,
+      tuning,
+    );
+
+    expect(weakScored.scoreBreakdown.ctrScore).toBeLessThan(0);
+    expect(
+      weakScored.scoreBreakdown.analyticsPerformanceScore,
+    ).toBeGreaterThanOrEqual(-0.5);
+    expect(newScored.scoreBreakdown.analyticsPerformanceScore).toBe(0);
+    expect(newScored.score).toBeGreaterThan(weakScored.score);
+  });
+
+  it('lets analytics, personalization, and sponsored boosts coexist safely', () => {
+    const candidate = buildProduct({
+      id: 'candidate-analytics-sponsored',
+      categoryId: 88n,
+      categoryName: 'Outerwear',
+      brand: 'North Berry',
+      color: 'Blue',
+      feedbackCount: 18,
+    });
+
+    const scored = service.scoreHomeProduct(
+      candidate,
+      {
+        ...emptyPreferenceProfile(),
+        recentViewBrandScores: new Map([['north berry', 0.8]]),
+        categoryAffinityScores: new Map([['88', 0.7]]),
+      },
+      sponsoredConfig({
+        sponsoredProductIds: [candidate.id],
+        businessBoostShopIds: ['shop-1'],
+        sponsoredBoost: 4,
+        businessBoost: 2,
+        maxSponsoredBoost: 5,
+      }),
+      analyticsTuningConfig({
+        productSignalsById: new Map([
+          [
+            candidate.id,
+            {
+              impressions: 15,
+              clicks: 5,
+              ctr: 33.33,
+            },
+          ],
+        ]),
+        algorithmPerformanceHint: 9,
+        scenarioPerformanceHint: 10,
+      }),
+    );
+
+    expect(scored.scoreBreakdown.personalizationScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.analyticsPerformanceScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.sponsoredBoostScore).toBeGreaterThan(0);
+    expect(scored.scoreBreakdown.businessBoostScore).toBeGreaterThan(0);
+    expect(scored.sponsored).toBe(true);
+  });
 });
 
 function emptyPreferenceProfile(): RecommendationPreferenceProfile {
@@ -448,6 +633,32 @@ function sponsoredConfig(
       billingMode: 'none',
       rolloutMode: overrides?.enabled === false ? 'disabled' : 'internal',
     },
+  };
+}
+
+function analyticsTuningConfig(
+  overrides?: Partial<RecommendationAnalyticsTuningConfig>,
+): RecommendationAnalyticsTuningConfig {
+  return {
+    enabled: overrides?.enabled ?? true,
+    minEventsForCtrBoost: overrides?.minEventsForCtrBoost ?? 5,
+    minClicksForEngagementBoost: overrides?.minClicksForEngagementBoost ?? 2,
+    maxAnalyticsBoost: overrides?.maxAnalyticsBoost ?? 3,
+    maxCtrBoost: overrides?.maxCtrBoost ?? 2,
+    maxLowCtrPenalty: overrides?.maxLowCtrPenalty ?? 0.5,
+    maxEngagementBoost: overrides?.maxEngagementBoost ?? 1.25,
+    algorithmPerformanceHint: overrides?.algorithmPerformanceHint ?? 8,
+    scenarioPerformanceHint: overrides?.scenarioPerformanceHint ?? 9,
+    productSignalsById:
+      overrides?.productSignalsById ??
+      new Map<
+        string,
+        {
+          impressions: number;
+          clicks: number;
+          ctr: number;
+        }
+      >(),
   };
 }
 

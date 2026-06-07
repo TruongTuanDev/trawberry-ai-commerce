@@ -133,15 +133,49 @@ export type RecommendationScoreBreakdown = {
   categoryAffinityScore: number;
   searchIntentScore: number;
   clickAffinityScore: number;
+  analyticsPerformanceScore: number;
+  ctrScore: number;
+  productEngagementScore: number;
+  engagementScore: number;
+  algorithmPerformanceHint: number;
+  scenarioPerformanceHint: number;
   sponsoredBoostScore: number;
   businessBoostScore: number;
   maxSponsoredBoost: number;
+};
+
+export type RecommendationAnalyticsSignalKey =
+  | 'ctr'
+  | 'engagement'
+  | 'algorithm_hint'
+  | 'scenario_hint';
+
+export type RecommendationAnalyticsTuningConfig = {
+  enabled: boolean;
+  minEventsForCtrBoost: number;
+  minClicksForEngagementBoost: number;
+  maxAnalyticsBoost: number;
+  maxCtrBoost: number;
+  maxLowCtrPenalty: number;
+  maxEngagementBoost: number;
+  algorithmPerformanceHint: number;
+  scenarioPerformanceHint: number;
+  productSignalsById: Map<
+    string,
+    {
+      impressions: number;
+      clicks: number;
+      ctr: number;
+    }
+  >;
 };
 
 export type ScoredRecommendation = {
   score: number;
   reasonCodes: RecommendationReasonCode[];
   scoreBreakdown: RecommendationScoreBreakdown;
+  analyticsSignalsUsed: RecommendationAnalyticsSignalKey[];
+  analyticsTuningEnabled: boolean;
   sponsoredReason: string | null;
   sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
   campaignReadiness: RecommendationCampaignReadinessMetadata;
@@ -275,6 +309,7 @@ export class RecommendationScoringService {
       | RecommendationPreferenceProfile
       | RecommendationSponsoredRankingConfig,
     sponsoredRanking?: RecommendationSponsoredRankingConfig,
+    analyticsTuning?: RecommendationAnalyticsTuningConfig,
   ): ScoredRecommendation {
     const preferenceProfile = this.isSponsoredRankingConfig(
       preferenceProfileOrSponsored,
@@ -292,6 +327,7 @@ export class RecommendationScoringService {
       sourceProduct: source,
       preferenceProfile,
       sponsoredRanking: resolvedSponsoredRanking,
+      analyticsTuning,
     });
   }
 
@@ -299,11 +335,13 @@ export class RecommendationScoringService {
     candidate: RecommendationProductRecord,
     preferenceProfile: RecommendationPreferenceProfile,
     sponsoredRanking?: RecommendationSponsoredRankingConfig,
+    analyticsTuning?: RecommendationAnalyticsTuningConfig,
   ): ScoredRecommendation {
     return this.scoreCandidate(candidate, {
       placement: 'home',
       preferenceProfile,
       sponsoredRanking,
+      analyticsTuning,
     });
   }
 
@@ -314,6 +352,7 @@ export class RecommendationScoringService {
       | RecommendationPreferenceProfile
       | RecommendationSponsoredRankingConfig,
     sponsoredRanking?: RecommendationSponsoredRankingConfig,
+    analyticsTuning?: RecommendationAnalyticsTuningConfig,
   ): ScoredRecommendation {
     const preferenceProfile = this.isSponsoredRankingConfig(
       preferenceProfileOrSponsored,
@@ -331,6 +370,7 @@ export class RecommendationScoringService {
       query,
       preferenceProfile,
       sponsoredRanking: resolvedSponsoredRanking,
+      analyticsTuning,
     });
   }
 
@@ -342,6 +382,7 @@ export class RecommendationScoringService {
       preferenceProfile?: RecommendationPreferenceProfile;
       query?: string;
       sponsoredRanking?: RecommendationSponsoredRankingConfig;
+      analyticsTuning?: RecommendationAnalyticsTuningConfig;
     },
   ): ScoredRecommendation {
     const reasonCodes = new Set<RecommendationReasonCode>();
@@ -372,13 +413,19 @@ export class RecommendationScoringService {
       shopScore +
       personalization.personalizationScore -
       penaltyScore;
-    const sponsoredBoost = this.resolveSponsoredBoost(
+    const analyticsTuning = this.resolveAnalyticsTuningScore(
       candidate,
       organicScore,
+      input.analyticsTuning,
+    );
+    const sponsoredBoost = this.resolveSponsoredBoost(
+      candidate,
+      organicScore + analyticsTuning.analyticsPerformanceScore,
       input.sponsoredRanking,
     );
     const score =
       organicScore +
+      analyticsTuning.analyticsPerformanceScore +
       sponsoredBoost.sponsoredBoostScore +
       sponsoredBoost.businessBoostScore;
 
@@ -399,10 +446,18 @@ export class RecommendationScoringService {
         categoryAffinityScore: personalization.categoryAffinityScore,
         searchIntentScore: personalization.searchIntentScore,
         clickAffinityScore: personalization.clickAffinityScore,
+        analyticsPerformanceScore: analyticsTuning.analyticsPerformanceScore,
+        ctrScore: analyticsTuning.ctrScore,
+        productEngagementScore: analyticsTuning.productEngagementScore,
+        engagementScore: analyticsTuning.productEngagementScore,
+        algorithmPerformanceHint: analyticsTuning.algorithmPerformanceHint,
+        scenarioPerformanceHint: analyticsTuning.scenarioPerformanceHint,
         sponsoredBoostScore: sponsoredBoost.sponsoredBoostScore,
         businessBoostScore: sponsoredBoost.businessBoostScore,
         maxSponsoredBoost: sponsoredBoost.maxSponsoredBoost,
       },
+      analyticsSignalsUsed: analyticsTuning.analyticsSignalsUsed,
+      analyticsTuningEnabled: analyticsTuning.analyticsTuningEnabled,
       sponsoredReason: sponsoredBoost.sponsoredReason,
       sponsoredPreset: input.sponsoredRanking?.enabled
         ? input.sponsoredRanking.preset
@@ -1147,5 +1202,120 @@ export class RecommendationScoringService {
         exactProduct + categoryScore + brandScore + colorScore,
       ).toFixed(2),
     );
+  }
+
+  private resolveAnalyticsTuningScore(
+    candidate: RecommendationProductRecord,
+    organicScore: number,
+    analyticsTuning: RecommendationAnalyticsTuningConfig | undefined,
+  ) {
+    const disabled = {
+      analyticsPerformanceScore: 0,
+      ctrScore: 0,
+      productEngagementScore: 0,
+      algorithmPerformanceHint: 0,
+      scenarioPerformanceHint: 0,
+      analyticsSignalsUsed: [] as RecommendationAnalyticsSignalKey[],
+      analyticsTuningEnabled: Boolean(analyticsTuning?.enabled),
+    };
+
+    if (!analyticsTuning?.enabled) {
+      return disabled;
+    }
+
+    const productSignals = analyticsTuning.productSignalsById.get(candidate.id);
+    if (!productSignals) {
+      return disabled;
+    }
+
+    const analyticsSignalsUsed: RecommendationAnalyticsSignalKey[] = [];
+    const impressions = productSignals.impressions;
+    const clicks = productSignals.clicks;
+    const productCtr = productSignals.ctr;
+
+    let ctrScore = 0;
+    if (impressions >= analyticsTuning.minEventsForCtrBoost) {
+      const ctrBaseline = Math.max(
+        1,
+        analyticsTuning.scenarioPerformanceHint,
+        analyticsTuning.algorithmPerformanceHint,
+      );
+      const ctrDeltaRatio = (productCtr - ctrBaseline) / ctrBaseline;
+
+      if (ctrDeltaRatio > 0) {
+        ctrScore = Math.min(
+          analyticsTuning.maxCtrBoost,
+          ctrDeltaRatio * analyticsTuning.maxCtrBoost,
+        );
+      } else if (
+        impressions >= analyticsTuning.minEventsForCtrBoost * 2 &&
+        productCtr < ctrBaseline * 0.35
+      ) {
+        ctrScore = -Math.min(
+          analyticsTuning.maxLowCtrPenalty,
+          Math.abs(ctrDeltaRatio) * analyticsTuning.maxLowCtrPenalty,
+        );
+      }
+
+      if (ctrScore !== 0) {
+        analyticsSignalsUsed.push('ctr');
+      }
+    }
+
+    let productEngagementScore = 0;
+    if (clicks >= analyticsTuning.minClicksForEngagementBoost) {
+      productEngagementScore = Math.min(
+        analyticsTuning.maxEngagementBoost,
+        (Math.log1p(clicks) / Math.log(11)) *
+          analyticsTuning.maxEngagementBoost,
+      );
+      if (productEngagementScore > 0) {
+        analyticsSignalsUsed.push('engagement');
+      }
+    }
+
+    const cappedAnalyticsScore = Math.max(
+      -analyticsTuning.maxLowCtrPenalty,
+      Math.min(
+        analyticsTuning.maxAnalyticsBoost,
+        ctrScore + productEngagementScore,
+      ),
+    );
+
+    if (analyticsTuning.algorithmPerformanceHint > 0) {
+      analyticsSignalsUsed.push('algorithm_hint');
+    }
+    if (analyticsTuning.scenarioPerformanceHint > 0) {
+      analyticsSignalsUsed.push('scenario_hint');
+    }
+
+    const scaleCap = Math.max(
+      analyticsTuning.maxAnalyticsBoost,
+      Math.abs(cappedAnalyticsScore),
+    );
+    const relevanceSafetyCap = Math.max(
+      analyticsTuning.maxLowCtrPenalty,
+      Math.min(scaleCap, Number((Math.max(0, organicScore) * 0.12).toFixed(2))),
+    );
+    const analyticsPerformanceScore = Number(
+      Math.max(
+        -analyticsTuning.maxLowCtrPenalty,
+        Math.min(relevanceSafetyCap, cappedAnalyticsScore),
+      ).toFixed(2),
+    );
+
+    return {
+      analyticsPerformanceScore,
+      ctrScore: Number(ctrScore.toFixed(2)),
+      productEngagementScore: Number(productEngagementScore.toFixed(2)),
+      algorithmPerformanceHint: Number(
+        analyticsTuning.algorithmPerformanceHint.toFixed(2),
+      ),
+      scenarioPerformanceHint: Number(
+        analyticsTuning.scenarioPerformanceHint.toFixed(2),
+      ),
+      analyticsSignalsUsed: [...new Set(analyticsSignalsUsed)],
+      analyticsTuningEnabled: true,
+    };
   }
 }

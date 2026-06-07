@@ -67,6 +67,12 @@ function buildSnapshotItem(
     categoryAffinityScore?: number;
     searchIntentScore?: number;
     clickAffinityScore?: number;
+    analyticsPerformanceScore?: number;
+    ctrScore?: number;
+    productEngagementScore?: number;
+    engagementScore?: number;
+    algorithmPerformanceHint?: number;
+    scenarioPerformanceHint?: number;
     sponsoredBoostScore?: number;
     businessBoostScore?: number;
     maxSponsoredBoost?: number;
@@ -100,6 +106,19 @@ function buildSnapshotItem(
         categoryAffinityScore: scoreBreakdown.categoryAffinityScore ?? 0,
         searchIntentScore: scoreBreakdown.searchIntentScore ?? 0,
         clickAffinityScore: scoreBreakdown.clickAffinityScore ?? 0,
+        analyticsPerformanceScore:
+          scoreBreakdown.analyticsPerformanceScore ?? 0,
+        ctrScore: scoreBreakdown.ctrScore ?? 0,
+        productEngagementScore:
+          scoreBreakdown.productEngagementScore ??
+          scoreBreakdown.engagementScore ??
+          0,
+        engagementScore:
+          scoreBreakdown.engagementScore ??
+          scoreBreakdown.productEngagementScore ??
+          0,
+        algorithmPerformanceHint: scoreBreakdown.algorithmPerformanceHint ?? 0,
+        scenarioPerformanceHint: scoreBreakdown.scenarioPerformanceHint ?? 0,
         sponsoredBoostScore: scoreBreakdown.sponsoredBoostScore ?? 0,
         businessBoostScore: scoreBreakdown.businessBoostScore ?? 0,
         maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,

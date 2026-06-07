@@ -1,5 +1,31 @@
 # Project Status
 
+## Ranking Weight Tuning from Analytics Phase 5.3 - 2026-06-07
+
+- Status: implemented in `backend-nest` and `frontend-next`
+- Recommendation stack now also supports:
+  - bounded analytics-based tuning behind `RECOMMENDATION_ANALYTICS_TUNING_ENABLED`
+  - safe per-product CTR and engagement tuning on top of `rule_based_v2`
+  - internal explainability markers for analytics tuning signals and tuning state
+  - QA comparison, snapshot, and diff visibility for analytics tuning breakdowns
+  - an admin analytics note when analytics-based tuning is active
+  - continued backend-returned algorithm tracking and public API backward compatibility
+- Verification status:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/recommendations.spec.ts --workers=1`: blocked, local backend runtime unavailable at `127.0.0.1:3001`
+  - campaign and billing regression coverage: pass via the full backend suite
+- Remaining gaps:
+  - tuning is still heuristic and bounded rather than operator-managed or ML-driven
+  - there is still no direct tuning-control UI or automated suggestion workflow
+  - analytics quality still depends on recommendation event coverage
+- Next recommended phase:
+  - Phase 5.4: controlled tuning presets or internal weight-adjustment workflows
+
 ## Recommendation Analytics Dashboard Phase 5.2 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

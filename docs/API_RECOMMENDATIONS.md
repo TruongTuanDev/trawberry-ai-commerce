@@ -1,5 +1,48 @@
 # API Recommendations
 
+## Phase 5.3 analytics-based ranking tuning
+
+Phase 5.3 adds a bounded internal tuning layer for `rule_based_v2` while keeping public recommendation APIs backward compatible.
+
+New backend flag:
+
+- `RECOMMENDATION_ANALYTICS_TUNING_ENABLED`
+
+Optional tuning bounds:
+
+- `RECOMMENDATION_ANALYTICS_MIN_EVENTS_FOR_CTR_BOOST`
+- `RECOMMENDATION_ANALYTICS_MIN_CLICKS_FOR_ENGAGEMENT_BOOST`
+- `RECOMMENDATION_ANALYTICS_MAX_BOOST`
+- `RECOMMENDATION_ANALYTICS_MAX_CTR_BOOST`
+- `RECOMMENDATION_ANALYTICS_LOW_CTR_PENALTY`
+- `RECOMMENDATION_ANALYTICS_MAX_ENGAGEMENT_BOOST`
+
+Internal-only explainability additions:
+
+- `scoreExplanation.analyticsSignalsUsed`
+- `scoreExplanation.analyticsTuningEnabled`
+- `scoreBreakdown.analyticsPerformanceScore`
+- `scoreBreakdown.ctrScore`
+- `scoreBreakdown.productEngagementScore`
+- `scoreBreakdown.engagementScore`
+- `scoreBreakdown.algorithmPerformanceHint`
+- `scoreBreakdown.scenarioPerformanceHint`
+
+Visibility rules:
+
+- normal public recommendation responses still do not expose analytics tuning fields
+- these fields appear only when:
+  - request uses `debug=true`
+  - backend runtime sets `RECOMMENDATION_EXPLAINABILITY_ENABLED=true`
+- internal QA comparison and snapshot tooling may also show the same safe fields
+
+Safety guarantees:
+
+- no raw user ids, guest session ids, cookies, or private tracking payloads are exposed
+- analytics tuning is additive and bounded
+- sparse or low-data products are not heavily penalized
+- sponsored ranking, CPC charging, wallet checks, budget checks, and personalization all remain intact
+
 ## Phase 5.2 recommendation analytics dashboard
 
 Phase 5.2 adds internal marketplace analytics for existing recommendation behavior while keeping public recommendation APIs backward compatible.

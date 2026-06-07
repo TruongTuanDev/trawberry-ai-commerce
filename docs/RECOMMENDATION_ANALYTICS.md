@@ -1,5 +1,31 @@
 # Recommendation Analytics
 
+## Phase 5.3 ranking tuning bridge
+
+Phase 5.3 reuses the Phase 5.2 analytics layer as a bounded tuning input for `rule_based_v2`.
+
+New flag:
+
+- `RECOMMENDATION_ANALYTICS_TUNING_ENABLED`
+
+New internal-only tuning fields:
+
+- `analyticsPerformanceScore`
+- `ctrScore`
+- `productEngagementScore`
+- `algorithmPerformanceHint`
+- `scenarioPerformanceHint`
+- `analyticsSignalsUsed`
+- `analyticsTuningEnabled`
+
+Safety notes:
+
+- public read APIs remain backward compatible
+- normal public responses do not expose analytics tuning internals
+- tuning fields appear only in internal explainability or QA/debug workflows
+- analytics tuning stays additive, bounded, and subordinate to organic relevance
+- sponsored CPC, wallet, and budget protections remain unchanged
+
 ## Phase 5.2 scope
 
 Phase 5.2 adds a practical recommendation analytics layer for the active NestJS + Next.js stack only.

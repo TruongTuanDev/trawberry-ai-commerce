@@ -68,6 +68,30 @@ class RecommendationQaDiffScoreBreakdownDto {
 
   @ApiProperty()
   @IsNumber()
+  analyticsPerformanceScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  ctrScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  productEngagementScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  engagementScore!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  algorithmPerformanceHint!: number;
+
+  @ApiProperty()
+  @IsNumber()
+  scenarioPerformanceHint!: number;
+
+  @ApiProperty()
+  @IsNumber()
   sponsoredBoostScore!: number;
 
   @ApiProperty()
@@ -454,6 +478,24 @@ class RecommendationQaDiffScoreBreakdownDeltaDto {
 
   @ApiProperty()
   clickAffinityScore!: number;
+
+  @ApiProperty()
+  analyticsPerformanceScore!: number;
+
+  @ApiProperty()
+  ctrScore!: number;
+
+  @ApiProperty()
+  productEngagementScore!: number;
+
+  @ApiProperty()
+  engagementScore!: number;
+
+  @ApiProperty()
+  algorithmPerformanceHint!: number;
+
+  @ApiProperty()
+  scenarioPerformanceHint!: number;
 
   @ApiProperty()
   sponsoredBoostScore!: number;

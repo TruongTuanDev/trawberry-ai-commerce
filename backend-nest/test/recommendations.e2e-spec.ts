@@ -2445,6 +2445,203 @@ describe('RecommendationsController (e2e)', () => {
     ).toBeGreaterThanOrEqual(0);
   });
 
+  it('keeps analytics tuning internals hidden in normal public recommendation responses', async () => {
+    process.env.RECOMMENDATION_ANALYTICS_TUNING_ENABLED = 'true';
+    recommendationEvents.push(
+      buildAnalyticsEvent({
+        id: 'analytics-hidden-impression',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T13:00:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-hidden-click',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'click',
+        createdAt: new Date('2026-06-07T13:05:00.000Z'),
+      }),
+    );
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2')
+      .expect(200);
+
+    const body = readBody<{
+      algorithm: string;
+      items: Array<{
+        scoreExplanation?: unknown;
+      }>;
+    }>(response);
+
+    expect(body.algorithm).toBe('rule_based_v2');
+    expect(body.items[0]?.scoreExplanation).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain('analyticsSignalsUsed');
+    expect(JSON.stringify(body)).not.toContain('analyticsPerformanceScore');
+  });
+
+  it('shows bounded analytics tuning breakdown only in internal explainability mode', async () => {
+    process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
+    process.env.RECOMMENDATION_ANALYTICS_TUNING_ENABLED = 'true';
+    recommendationEvents.push(
+      buildAnalyticsEvent({
+        id: 'analytics-debug-impression-1',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        metadata: { personalized: true },
+        createdAt: new Date('2026-06-07T14:00:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-impression-2',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        metadata: { personalized: true },
+        createdAt: new Date('2026-06-07T14:01:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-impression-3',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T14:02:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-impression-4',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T14:03:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-impression-5',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T14:04:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-click-1',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'click',
+        metadata: { personalized: true },
+        createdAt: new Date('2026-06-07T14:05:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-click-2',
+        productId: '00000000-0000-0000-0000-000000000002',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'click',
+        createdAt: new Date('2026-06-07T14:06:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-other-impression-1',
+        productId: '00000000-0000-0000-0000-000000000003',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T14:07:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-other-impression-2',
+        productId: '00000000-0000-0000-0000-000000000003',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T14:08:00.000Z'),
+      }),
+      buildAnalyticsEvent({
+        id: 'analytics-debug-other-impression-3',
+        productId: '00000000-0000-0000-0000-000000000003',
+        shopId: '10000000-0000-0000-0000-000000000001',
+        algorithm: 'rule_based_v2',
+        scenarioType: 'home',
+        type: 'impression',
+        createdAt: new Date('2026-06-07T14:09:00.000Z'),
+      }),
+    );
+    await app.close();
+    app = await buildApp();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2&debug=true')
+      .expect(200);
+
+    const body = readBody<{
+      items: Array<{
+        product: { id: string };
+        scoreExplanation?: {
+          analyticsSignalsUsed?: string[];
+          analyticsTuningEnabled?: boolean;
+          scoreBreakdown?: {
+            analyticsPerformanceScore: number;
+            ctrScore: number;
+            productEngagementScore: number;
+            algorithmPerformanceHint: number;
+            scenarioPerformanceHint: number;
+          } | null;
+        };
+      }>;
+    }>(response);
+    const tunedItem = body.items.find(
+      (item) => item.product.id === '00000000-0000-0000-0000-000000000002',
+    );
+
+    expect(tunedItem?.scoreExplanation?.analyticsTuningEnabled).toBe(true);
+    expect(tunedItem?.scoreExplanation?.analyticsSignalsUsed).toEqual(
+      expect.arrayContaining([
+        'ctr',
+        'engagement',
+        'algorithm_hint',
+        'scenario_hint',
+      ]),
+    );
+    expect(
+      tunedItem?.scoreExplanation?.scoreBreakdown?.analyticsPerformanceScore ??
+        0,
+    ).toBeGreaterThan(0);
+    expect(
+      tunedItem?.scoreExplanation?.scoreBreakdown?.ctrScore ?? 0,
+    ).toBeGreaterThan(0);
+    expect(
+      tunedItem?.scoreExplanation?.scoreBreakdown?.productEngagementScore ?? 0,
+    ).toBeGreaterThan(0);
+    expect(
+      tunedItem?.scoreExplanation?.scoreBreakdown?.algorithmPerformanceHint ??
+        0,
+    ).toBeGreaterThan(0);
+    expect(
+      tunedItem?.scoreExplanation?.scoreBreakdown?.scenarioPerformanceHint ?? 0,
+    ).toBeGreaterThan(0);
+    expect(JSON.stringify(tunedItem)).not.toContain('guestSessionId');
+    expect(JSON.stringify(tunedItem)).not.toContain('customerId');
+  });
+
   it('falls back to a safe preset and clamps unbounded sponsored boost overrides', async () => {
     process.env.RECOMMENDATION_EXPLAINABILITY_ENABLED = 'true';
     process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
@@ -3410,6 +3607,12 @@ function buildSnapshotItem(
     categoryAffinityScore?: number;
     searchIntentScore?: number;
     clickAffinityScore?: number;
+    analyticsPerformanceScore?: number;
+    ctrScore?: number;
+    productEngagementScore?: number;
+    engagementScore?: number;
+    algorithmPerformanceHint?: number;
+    scenarioPerformanceHint?: number;
     sponsoredBoostScore?: number;
     businessBoostScore?: number;
     maxSponsoredBoost?: number;
@@ -3443,6 +3646,21 @@ function buildSnapshotItem(
         categoryAffinityScore: scoreBreakdown.categoryAffinityScore ?? 0,
         searchIntentScore: scoreBreakdown.searchIntentScore ?? 0,
         clickAffinityScore: scoreBreakdown.clickAffinityScore ?? 0,
+        analyticsPerformanceScore:
+          scoreBreakdown.analyticsPerformanceScore ?? 0,
+        ctrScore: scoreBreakdown.ctrScore ?? 0,
+        productEngagementScore:
+          scoreBreakdown.productEngagementScore ??
+          scoreBreakdown.engagementScore ??
+          0,
+        engagementScore:
+          scoreBreakdown.engagementScore ??
+          scoreBreakdown.productEngagementScore ??
+          0,
+        algorithmPerformanceHint:
+          scoreBreakdown.algorithmPerformanceHint ?? 0,
+        scenarioPerformanceHint:
+          scoreBreakdown.scenarioPerformanceHint ?? 0,
         sponsoredBoostScore: scoreBreakdown.sponsoredBoostScore ?? 0,
         businessBoostScore: scoreBreakdown.businessBoostScore ?? 0,
         maxSponsoredBoost: scoreBreakdown.maxSponsoredBoost ?? 0,

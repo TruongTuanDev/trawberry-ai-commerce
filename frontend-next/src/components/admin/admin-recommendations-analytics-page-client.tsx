@@ -12,6 +12,7 @@ import {
   type RecommendationAnalyticsRangePreset,
   type RecommendationAnalyticsScenarioRow,
 } from "@/lib/admin-api";
+import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 
 const RANGE_OPTIONS: Array<{
   value: RecommendationAnalyticsRangePreset;
@@ -32,6 +33,7 @@ function formatCurrency(value: string) {
 }
 
 export function AdminRecommendationsAnalyticsPageClient() {
+  const recommendationFlags = readRecommendationFlagsFromDocument();
   const [range, setRange] = useState<RecommendationAnalyticsRangePreset>("last7d");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -143,6 +145,13 @@ export function AdminRecommendationsAnalyticsPageClient() {
             </div>
           ) : null}
         </div>
+        {recommendationFlags.recommendationAnalyticsTuningEnabled ? (
+          <div className="mt-4 rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Analytics-based ranking tuning is enabled for internal evaluation. Public
+            recommendation payloads stay backward compatible, while QA/debug views may
+            show bounded CTR and engagement tuning hints.
+          </div>
+        ) : null}
       </section>
 
       {loading ? (

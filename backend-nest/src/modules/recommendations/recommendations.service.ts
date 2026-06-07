@@ -56,6 +56,8 @@ import { TrackRecommendationEventDto } from './dto/track-recommendation-event.dt
 import { TrackSearchDto } from './dto/track-search.dto';
 import {
   RECOMMENDATION_REASON_LABELS,
+  type RecommendationAnalyticsSignalKey,
+  type RecommendationAnalyticsTuningConfig,
   RecommendationPreferenceProfile,
   RecommendationProductRecord,
   type RecommendationReasonCode,
@@ -80,6 +82,8 @@ type RecommendationApiItem = {
     finalScore: number | null;
     reasons: string[];
     scoreBreakdown: RecommendationScoreBreakdown | null;
+    analyticsSignalsUsed?: RecommendationAnalyticsSignalKey[];
+    analyticsTuningEnabled?: boolean;
     sponsoredReason?: string | null;
     sponsoredPreset?: RecommendationSponsoredPresetMetadata | null;
     campaignReadiness?: RecommendationCampaignReadinessMetadata | null;
@@ -103,6 +107,8 @@ type RecommendationRankedItem = {
     score: number | null;
     reasonCodes: RecommendationReasonCode[];
     scoreBreakdown: RecommendationScoreBreakdown | null;
+    analyticsSignalsUsed: RecommendationAnalyticsSignalKey[];
+    analyticsTuningEnabled: boolean;
     sponsoredReason: string | null;
     sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
     campaignReadiness: RecommendationCampaignReadinessMetadata;
@@ -117,6 +123,8 @@ type RecommendationAlgorithmSnapshot = {
   finalScore: number | null;
   reasons: string[];
   scoreBreakdown: RecommendationScoreBreakdown | null;
+  analyticsSignalsUsed?: RecommendationAnalyticsSignalKey[];
+  analyticsTuningEnabled?: boolean;
   sponsoredReason: string | null;
   sponsoredPreset: RecommendationSponsoredPresetMetadata | null;
   campaignReadiness: RecommendationCampaignReadinessMetadata | null;
@@ -189,6 +197,20 @@ type RecommendationQaDiffResult = {
       stockScore: number;
       shopScore: number;
       penaltyScore: number;
+      personalizationScore: number;
+      recentViewScore: number;
+      categoryAffinityScore: number;
+      searchIntentScore: number;
+      clickAffinityScore: number;
+      analyticsPerformanceScore: number;
+      ctrScore: number;
+      productEngagementScore: number;
+      engagementScore: number;
+      algorithmPerformanceHint: number;
+      scenarioPerformanceHint: number;
+      sponsoredBoostScore: number;
+      businessBoostScore: number;
+      maxSponsoredBoost: number;
     } | null;
   }>;
 };
@@ -642,6 +664,129 @@ export class RecommendationsService {
     };
   }
 
+  private async buildAnalyticsTuningConfig(
+    scenarioType: 'home' | 'similar' | 'search',
+    candidates: RecommendationProductRecord[],
+    algorithm: string,
+  ): Promise<RecommendationAnalyticsTuningConfig | undefined> {
+    if (!this.isAnalyticsTuningEnabled() || candidates.length < 1) {
+      return undefined;
+    }
+
+    const candidateIds = [
+      ...new Set(candidates.map((candidate) => candidate.id)),
+    ];
+    const lookbackStart = new Date();
+    lookbackStart.setDate(lookbackStart.getDate() - 30);
+    lookbackStart.setHours(0, 0, 0, 0);
+
+    const events = (await this.prisma.recommendationEvent.findMany({
+      where: {
+        createdAt: {
+          gte: lookbackStart,
+        },
+        type: {
+          in: ['impression', 'click'],
+        },
+      },
+      select: {
+        id: true,
+        type: true,
+        placement: true,
+        productId: true,
+        shopId: true,
+        campaignId: true,
+        algorithm: true,
+        scenarioType: true,
+        sponsored: true,
+        charged: true,
+        cost: true,
+        metadata: true,
+        createdAt: true,
+      },
+    })) as RecommendationAnalyticsEventRecord[];
+
+    const scenarioEvents = events.filter(
+      (event) => this.resolveAnalyticsScenarioType(event) === scenarioType,
+    );
+    const algorithmEvents = scenarioEvents.filter(
+      (event) => (event.algorithm?.trim() || 'unknown') === algorithm,
+    );
+
+    const productSignalsById = new Map<
+      string,
+      {
+        impressions: number;
+        clicks: number;
+        ctr: number;
+      }
+    >();
+
+    candidateIds.forEach((candidateId) => {
+      const productEvents = scenarioEvents.filter(
+        (event) => event.productId === candidateId,
+      );
+      const metrics = this.accumulateAnalyticsRows(productEvents);
+      productSignalsById.set(candidateId, {
+        impressions: metrics.impressions,
+        clicks: metrics.clicks,
+        ctr: this.calculateCtr(metrics.impressions, metrics.clicks),
+      });
+    });
+
+    const scenarioMetrics = this.accumulateAnalyticsRows(scenarioEvents);
+    const algorithmMetrics = this.accumulateAnalyticsRows(algorithmEvents);
+
+    return {
+      enabled: true,
+      minEventsForCtrBoost: this.readNumberFlag(
+        'RECOMMENDATION_ANALYTICS_MIN_EVENTS_FOR_CTR_BOOST',
+        5,
+        3,
+        50,
+      ),
+      minClicksForEngagementBoost: this.readNumberFlag(
+        'RECOMMENDATION_ANALYTICS_MIN_CLICKS_FOR_ENGAGEMENT_BOOST',
+        2,
+        1,
+        20,
+      ),
+      maxAnalyticsBoost: this.readNumberFlag(
+        'RECOMMENDATION_ANALYTICS_MAX_BOOST',
+        3,
+        0,
+        6,
+      ),
+      maxCtrBoost: this.readNumberFlag(
+        'RECOMMENDATION_ANALYTICS_MAX_CTR_BOOST',
+        2,
+        0,
+        4,
+      ),
+      maxLowCtrPenalty: this.readNumberFlag(
+        'RECOMMENDATION_ANALYTICS_LOW_CTR_PENALTY',
+        0.5,
+        0,
+        2,
+      ),
+      maxEngagementBoost: this.readNumberFlag(
+        'RECOMMENDATION_ANALYTICS_MAX_ENGAGEMENT_BOOST',
+        1.25,
+        0,
+        3,
+      ),
+      algorithmPerformanceHint: this.calculateCtr(
+        algorithmMetrics.impressions,
+        algorithmMetrics.clicks,
+      ),
+      scenarioPerformanceHint: this.calculateCtr(
+        scenarioMetrics.impressions,
+        scenarioMetrics.clicks,
+      ),
+      productSignalsById,
+    };
+  }
+
   async trackProductView(
     dto: TrackProductViewDto,
     request: Request,
@@ -913,6 +1058,8 @@ export class RecommendationsService {
           score: this.scoreHomeProductV1(product),
           reasonCodes: [] as RecommendationReasonCode[],
           scoreBreakdown: null,
+          analyticsSignalsUsed: [],
+          analyticsTuningEnabled: false,
           sponsoredReason: null,
           sponsoredPreset: null,
           campaignReadiness: {
@@ -947,6 +1094,11 @@ export class RecommendationsService {
     ]);
 
     const sponsoredRanking = await this.getSponsoredRankingConfig('home');
+    const analyticsTuning = await this.buildAnalyticsTuningConfig(
+      'home',
+      products,
+      'rule_based_v2',
+    );
 
     return products
       .filter((product) => this.isPublicVisible(product))
@@ -957,6 +1109,7 @@ export class RecommendationsService {
             product,
             preferenceProfile,
             sponsoredRanking,
+            analyticsTuning,
           ),
         },
       }))
@@ -1001,6 +1154,8 @@ export class RecommendationsService {
           score: this.scoreSimilarProductV1(sourceProduct, product),
           reasonCodes: [] as RecommendationReasonCode[],
           scoreBreakdown: null,
+          analyticsSignalsUsed: [],
+          analyticsTuningEnabled: false,
           sponsoredReason: null,
           sponsoredPreset: null,
           campaignReadiness: {
@@ -1048,6 +1203,11 @@ export class RecommendationsService {
     );
 
     const sponsoredRanking = await this.getSponsoredRankingConfig('similar');
+    const analyticsTuning = await this.buildAnalyticsTuningConfig(
+      'similar',
+      candidates,
+      'rule_based_v2',
+    );
 
     return candidates
       .filter(
@@ -1061,6 +1221,7 @@ export class RecommendationsService {
             product,
             preferenceProfile,
             sponsoredRanking,
+            analyticsTuning,
           ),
         },
       }))
@@ -1121,6 +1282,11 @@ export class RecommendationsService {
     );
 
     const sponsoredRanking = await this.getSponsoredRankingConfig('search');
+    const analyticsTuning = await this.buildAnalyticsTuningConfig(
+      'search',
+      candidates,
+      'rule_based_v2',
+    );
 
     return candidates
       .filter((product) => this.isPublicVisible(product))
@@ -1132,6 +1298,7 @@ export class RecommendationsService {
             product,
             preferenceProfile,
             sponsoredRanking,
+            analyticsTuning,
           ),
         },
       }))
@@ -1238,6 +1405,8 @@ export class RecommendationsService {
           algorithm,
           finalScore: item.scored.score,
           reasons: this.buildExplainabilityReasons(item.scored),
+          analyticsSignalsUsed: item.scored.analyticsSignalsUsed,
+          analyticsTuningEnabled: item.scored.analyticsTuningEnabled,
           scoreBreakdown: item.scored.scoreBreakdown ?? null,
           sponsoredReason: item.scored.sponsoredReason,
           sponsoredPreset: item.scored.sponsoredPreset,
@@ -1394,6 +1563,12 @@ export class RecommendationsService {
       reasons: includeExplainability
         ? this.buildExplainabilityReasons(item.scored)
         : [],
+      analyticsSignalsUsed: includeExplainability
+        ? item.scored.analyticsSignalsUsed
+        : [],
+      analyticsTuningEnabled: includeExplainability
+        ? item.scored.analyticsTuningEnabled
+        : false,
       scoreBreakdown: includeExplainability ? item.scored.scoreBreakdown : null,
       sponsoredReason: includeExplainability
         ? item.scored.sponsoredReason
@@ -1496,6 +1671,22 @@ export class RecommendationsService {
       clickAffinityScore:
         (newBreakdown?.clickAffinityScore ?? 0) -
         (oldBreakdown?.clickAffinityScore ?? 0),
+      analyticsPerformanceScore:
+        (newBreakdown?.analyticsPerformanceScore ?? 0) -
+        (oldBreakdown?.analyticsPerformanceScore ?? 0),
+      ctrScore: (newBreakdown?.ctrScore ?? 0) - (oldBreakdown?.ctrScore ?? 0),
+      productEngagementScore:
+        (newBreakdown?.productEngagementScore ?? 0) -
+        (oldBreakdown?.productEngagementScore ?? 0),
+      engagementScore:
+        (newBreakdown?.engagementScore ?? 0) -
+        (oldBreakdown?.engagementScore ?? 0),
+      algorithmPerformanceHint:
+        (newBreakdown?.algorithmPerformanceHint ?? 0) -
+        (oldBreakdown?.algorithmPerformanceHint ?? 0),
+      scenarioPerformanceHint:
+        (newBreakdown?.scenarioPerformanceHint ?? 0) -
+        (oldBreakdown?.scenarioPerformanceHint ?? 0),
       sponsoredBoostScore:
         (newBreakdown?.sponsoredBoostScore ?? 0) -
         (oldBreakdown?.sponsoredBoostScore ?? 0),
@@ -2531,6 +2722,13 @@ export class RecommendationsService {
     return (
       this.readFlag('RECOMMENDATIONS_ENABLED', true) &&
       this.readFlag('RECOMMENDATION_PERSONALIZATION_ENABLED', false)
+    );
+  }
+
+  private isAnalyticsTuningEnabled() {
+    return (
+      this.readFlag('RECOMMENDATIONS_ENABLED', true) &&
+      this.readFlag('RECOMMENDATION_ANALYTICS_TUNING_ENABLED', false)
     );
   }
 

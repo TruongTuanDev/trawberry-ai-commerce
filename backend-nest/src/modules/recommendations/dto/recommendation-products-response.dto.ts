@@ -42,6 +42,24 @@ class RecommendationScoreBreakdownDto {
   clickAffinityScore!: number;
 
   @ApiProperty()
+  analyticsPerformanceScore!: number;
+
+  @ApiProperty()
+  ctrScore!: number;
+
+  @ApiProperty()
+  productEngagementScore!: number;
+
+  @ApiProperty()
+  engagementScore!: number;
+
+  @ApiProperty()
+  algorithmPerformanceHint!: number;
+
+  @ApiProperty()
+  scenarioPerformanceHint!: number;
+
+  @ApiProperty()
   sponsoredBoostScore!: number;
 
   @ApiProperty()
@@ -142,6 +160,12 @@ class RecommendationScoreExplanationDto {
 
   @ApiProperty({ type: String, isArray: true })
   reasons!: string[];
+
+  @ApiProperty({ type: String, isArray: true, required: false })
+  analyticsSignalsUsed?: string[];
+
+  @ApiProperty({ required: false })
+  analyticsTuningEnabled?: boolean;
 
   @ApiProperty({
     type: RecommendationScoreBreakdownDto,

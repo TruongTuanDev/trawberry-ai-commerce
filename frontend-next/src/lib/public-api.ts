@@ -131,6 +131,8 @@ export type RecommendationProductItem = {
     algorithm: string;
     finalScore: number | null;
     reasons: string[];
+    analyticsSignalsUsed?: string[];
+    analyticsTuningEnabled?: boolean;
     scoreBreakdown: {
       categoryScore: number;
       textScore: number;
@@ -145,6 +147,12 @@ export type RecommendationProductItem = {
       categoryAffinityScore: number;
       searchIntentScore: number;
       clickAffinityScore: number;
+      analyticsPerformanceScore: number;
+      ctrScore: number;
+      productEngagementScore: number;
+      engagementScore: number;
+      algorithmPerformanceHint: number;
+      scenarioPerformanceHint: number;
       sponsoredBoostScore: number;
       businessBoostScore: number;
       maxSponsoredBoost: number;
@@ -173,6 +181,8 @@ export type RecommendationQaAlgorithmSnapshot = {
   rank: number | null;
   finalScore: number | null;
   reasons: string[];
+  analyticsSignalsUsed?: string[];
+  analyticsTuningEnabled?: boolean;
   scoreBreakdown: {
     categoryScore: number;
     textScore: number;
@@ -187,6 +197,12 @@ export type RecommendationQaAlgorithmSnapshot = {
     categoryAffinityScore: number;
     searchIntentScore: number;
     clickAffinityScore: number;
+    analyticsPerformanceScore: number;
+    ctrScore: number;
+    productEngagementScore: number;
+    engagementScore: number;
+    algorithmPerformanceHint: number;
+    scenarioPerformanceHint: number;
     sponsoredBoostScore: number;
     businessBoostScore: number;
     maxSponsoredBoost: number;
@@ -296,6 +312,12 @@ export type RecommendationQaDiffResponse = {
       categoryAffinityScore: number;
       searchIntentScore: number;
       clickAffinityScore: number;
+      analyticsPerformanceScore: number;
+      ctrScore: number;
+      productEngagementScore: number;
+      engagementScore: number;
+      algorithmPerformanceHint: number;
+      scenarioPerformanceHint: number;
       sponsoredBoostScore: number;
       businessBoostScore: number;
       maxSponsoredBoost: number;
