@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/use-i18n";
-import { FallbackImage } from "@/components/ui/fallback-image";
 import { QuantityStepper } from "@/components/public/quantity-stepper";
+import { StockBadge } from "@/components/public/stock-badge";
 import {
   formatMoney,
   getCartQuantity,
@@ -14,7 +14,7 @@ import {
   getVariantLabel,
   hasSelectableVariants,
 } from "@/components/public/public-product-utils";
-import { StockBadge } from "@/components/public/stock-badge";
+import { FallbackImage } from "@/components/ui/fallback-image";
 import type { PublicProduct } from "@/lib/public-api";
 import { useCartStore } from "@/stores/cart-store";
 
@@ -96,7 +96,7 @@ export function ProductCard({
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-4">
+      <div className="flex flex-1 flex-col gap-4 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -129,7 +129,7 @@ export function ProductCard({
         </div>
 
         <div className="mt-auto space-y-4">
-          <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,var(--panel-strong)_0%,#ffffff_100%)] p-3">
+          <div className="flex items-end justify-between gap-3 rounded-[1.35rem] bg-[linear-gradient(180deg,#fff8fd_0%,#ffffff_100%)] p-3 ring-1 ring-[var(--brand-primary)]/6">
             <div>
               <p className="text-3xl font-black tracking-tight text-[var(--brand-primary)]">
                 {formattedPrice ?? t("productDetail.contactShop")}
@@ -167,7 +167,7 @@ export function ProductCard({
               type="button"
               onClick={handleQuickAdd}
               disabled={!primaryVariant?.inStock}
-              className="public-button-primary w-full px-4 py-3.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="public-button-primary w-full px-4 py-3.5 text-sm shadow-[0_16px_28px_rgba(203,17,171,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
               data-testid={`product-primary-action-${product.id}`}
             >
               {requiresSelection
