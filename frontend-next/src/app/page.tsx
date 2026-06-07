@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { PublicRecommendationSection } from "@/components/public/public-recommendation-section";
 import { ProductCard } from "@/components/public/product-card";
 import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
-import { PromoSlider } from "@/components/public/promo-slider";
 import { PublicShell } from "@/components/public/public-shell";
 import {
   getHomeRecommendations,
@@ -135,7 +134,6 @@ export default async function HomePage() {
       <main className="px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-7xl space-y-8">
           <PublicHomepageHeroSlider initialSlides={slides} />
-          <PromoSlider />
 
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
