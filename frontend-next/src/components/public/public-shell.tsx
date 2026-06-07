@@ -11,7 +11,7 @@ export function PublicShell({
 }) {
   return (
     <div
-      className="grain-overlay min-h-screen"
+      className="grain-overlay min-h-screen public-storefront"
       data-testid="public-shell"
       style={{
         background:

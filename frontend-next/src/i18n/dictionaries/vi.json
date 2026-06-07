@@ -306,8 +306,14 @@
     "yandexReady": "Sẵn sàng cho Yandex",
     "manualDeliveryAllowed": "Cho phép giao thủ công",
     "structuredAddressMissing": "Địa chỉ cấu trúc còn thiếu chi tiết",
-    "missingDetails": "Thiếu thông tin: {{fields}}",
-    "coordinatesMissing": "Thiếu tọa độ; seller có thể phải kiểm tra thủ công trước khi gửi qua Yandex."
+    "coordinatesMissing": "Thiếu tọa độ; seller có thể phải kiểm tra thủ công trước khi gửi qua Yandex.",
+    "orderCreatedSuccess": "Đơn hàng đã được tạo thành công!",
+    "orderCreateFailed": "Không thể tạo đơn hàng. Vui lòng kiểm tra tồn kho.",
+    "payShopDirectly": "Thanh toán trực tiếp cho cửa hàng",
+    "payShopAfterDelivery": "Thanh toán cho cửa hàng sau khi giao hàng",
+    "itemsCountText": "{{count}} mặt hàng",
+    "deliveries": "Giao hàng",
+    "free": "Miễn phí (Duyệt thủ công)"
   },
   "orderTrack": {
     "title": "Theo dõi đơn công khai",

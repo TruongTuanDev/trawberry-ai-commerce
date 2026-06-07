@@ -473,12 +473,12 @@ export function CheckoutPageClient({
       <main className="px-4 py-8 sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl space-y-6">
           {loading ? (
-            <section className="card-panel rounded-[2rem] px-6 py-10 text-sm text-[var(--muted)]">
+            <section className="checkout-panel p-6 sm:p-10 text-sm text-[var(--muted)]">
               {t("checkout.loading")}
             </section>
           ) : order ? (
             <section
-              className="card-panel rounded-[2.25rem] px-6 py-8 sm:px-8"
+              className="checkout-panel p-6 sm:p-8 rounded-[2rem]"
               data-testid="checkout-confirmation"
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
@@ -568,13 +568,13 @@ export function CheckoutPageClient({
               </div>
             </section>
           ) : !items.length ? (
-            <section className="card-panel rounded-[2rem] px-6 py-10 text-center">
+            <section className="checkout-panel p-6 sm:p-10 text-center">
               <p className="text-sm text-[var(--muted)]">
                 {t("checkout.empty")}
               </p>
               <Link
                 href="/products"
-                className="public-button-primary mt-5 inline-flex px-5 py-3 text-sm"
+                className="public-button-primary mt-5 inline-flex px-5 py-3 text-sm font-bold shadow-[0_8px_20px_rgba(203,17,171,0.15)] hover:shadow-[0_12px_24px_rgba(203,17,171,0.22)] active:scale-98 transition"
               >
                 {t("checkout.openMarketplace")}
               </Link>
@@ -583,7 +583,7 @@ export function CheckoutPageClient({
             <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
               <section className="space-y-6">
                 {error ? (
-                  <div className="rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]">
+                  <div className="rounded-2xl border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)]/50 px-4 py-3 text-sm text-[var(--brand-primary-dark)]">
                     {error}
                   </div>
                 ) : null}
@@ -625,35 +625,42 @@ export function CheckoutPageClient({
                       <div className="mt-4 space-y-3">
                         {activeValidation?.items
                           .filter((item) => item.status !== "OK")
-                          .map((item) => (
-                            <div
-                              key={cartItemKey(item.productId, item.variantId)}
-                              className={`rounded-2xl border px-3 py-3 text-sm ${getValidationTone(item.status)}`}
-                            >
-                              {getValidationMessage({
-                                status: item.status,
-                                productName: item.productName,
-                                variantName: item.variantName,
-                                currentStock: item.currentStock,
-                                maxQuantity: item.maxQuantity,
-                                requestedQuantity: item.requestedQuantity,
-                                unitPrice: item.unitPrice,
-                                localUnitPrice: Number(
-                                  items.find(
-                                    (entry) =>
-                                      entry.productId === item.productId &&
-                                      entry.variantId === item.variantId,
-                                  )?.unitPrice ?? 0,
-                                ),
-                              }, t)}
-                            </div>
-                          ))}
+                          .map((item) => {
+                            const localUnitPrice = Number(
+                              items.find(
+                                (entry) =>
+                                  entry.productId === item.productId &&
+                                  entry.variantId === item.variantId,
+                              )?.unitPrice ?? 0,
+                            );
+
+                            return (
+                              <div
+                                key={cartItemKey(item.productId, item.variantId)}
+                                className={`rounded-2xl border px-3 py-3 text-sm ${getValidationTone(item.status)}`}
+                              >
+                                {getValidationMessage(
+                                  {
+                                    status: item.status,
+                                    productName: item.productName,
+                                    variantName: item.variantName,
+                                    currentStock: item.currentStock,
+                                    maxQuantity: item.maxQuantity,
+                                    requestedQuantity: item.requestedQuantity,
+                                    unitPrice: item.unitPrice,
+                                    localUnitPrice,
+                                  },
+                                  t,
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
                     )}
                   </section>
                 ) : null}
 
-                <section className="card-panel rounded-[2rem] px-6 py-8 sm:px-8">
+                <section className="checkout-panel p-6 sm:p-8">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                     {t("checkout.customerInfo")}
                   </p>
@@ -710,7 +717,7 @@ export function CheckoutPageClient({
                               {selectedSavedAddress.fullName}
                             </p>
                             {selectedSavedAddress.isDefault ? (
-                              <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+                              <span className="rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-primary-dark)]">
                                 {t("checkout.default")}
                               </span>
                             ) : null}
@@ -844,7 +851,7 @@ export function CheckoutPageClient({
               </section>
 
               <section className="space-y-6">
-                <section className="card-panel rounded-[2rem] px-6 py-6">
+                <section className="checkout-panel p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     {t("checkout.orderSummary")}
                   </p>
@@ -915,7 +922,7 @@ export function CheckoutPageClient({
                   </div>
                 </section>
 
-                <section className="card-panel rounded-[2rem] px-6 py-6">
+                <section className="checkout-panel p-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     {t("checkout.paymentMethod")}
                   </p>
@@ -989,7 +996,7 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`cursor-pointer rounded-[1.35rem] border px-4 py-4 transition-all duration-200 ${checked ? "border-[var(--accent)] bg-[var(--accent-soft)]/30 shadow-[0_4px_14px_rgba(203,17,171,0.1)]" : "border-[var(--border)] bg-white/70 hover:border-[var(--muted)]"}`}
+      className={`cursor-pointer rounded-[1.35rem] border px-4 py-4 transition-all duration-200 ${checked ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]/40 shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white/70 hover:border-[var(--muted)]"}`}
     >
       <input
         type="radio"

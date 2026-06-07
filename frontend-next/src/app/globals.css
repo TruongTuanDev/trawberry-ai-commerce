@@ -21,6 +21,7 @@
   --brand-primary-dark: #b00f92;
   --brand-primary-soft: #fdf2fc;
   --brand-gradient: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+  --storefront-gradient: linear-gradient(90deg, #e63bbd 0%, #cb11ab 35%, #8a2be2 100%);
 }
 
 @theme inline {
@@ -325,4 +326,75 @@ textarea,
   border-radius: 1.25rem;
   overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+/* Storefront Scoped Gradients and Buttons */
+.bg-gradient-storefront {
+  background: var(--storefront-gradient);
+}
+
+.public-storefront .public-button-primary {
+  background: var(--storefront-gradient);
+  box-shadow: 0 10px 24px rgba(203, 17, 171, 0.15);
+}
+
+.public-storefront .public-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 28px rgba(203, 17, 171, 0.22),
+    0 0 18px rgba(203, 17, 171, 0.1);
+}
+
+.public-storefront .public-button-primary:active {
+  transform: translateY(1px);
+}
+
+.public-storefront .text-gradient-primary {
+  background: var(--storefront-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Storefront Layout Panel Styles */
+.public-storefront .cart-panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(203, 17, 171, 0.02);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+}
+
+.public-storefront .cart-summary-card {
+  border: 1px solid rgba(203, 17, 171, 0.1);
+  background: linear-gradient(180deg, #ffffff 0%, #fffbfd 100%);
+  box-shadow: 0 20px 40px rgba(203, 17, 171, 0.04);
+  border-radius: 2rem;
+  padding: 1.5rem;
+}
+
+.public-storefront .cart-quantity-control {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  padding: 0.25rem;
+}
+
+.public-storefront .cart-line-item {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 1.5rem;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.public-storefront .cart-line-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+}
+
+.public-storefront .checkout-panel {
+  border: 1px solid var(--border);
+  background: white;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02);
+  border-radius: 1.75rem;
 }

@@ -323,12 +323,14 @@
     "structuredAddressMissing": "Structured address still needs more detail",
     "missingDetails": "Missing details: {{fields}}",
     "coordinatesMissing": "Coordinates missing; the seller may need to verify the address manually before Yandex dispatch.",
-    "payShopAfterDelivery": "Pay {{shopName}} after delivery",
+    "payShopAfterDelivery": "Pay the seller after delivery",
     "payShopDirectly": "Pay {{shopName}} directly",
     "fullNamePhoneAddressRequired": "Full name, phone, and address are required.",
     "orderCreatedSuccess": "Order placed successfully!",
     "orderCreateFailed": "Unable to create order.",
-    "itemsCountText": "{{count}} item(s)"
+    "itemsCountText": "{{count}} items",
+    "deliveries": "Deliveries",
+    "free": "Free (Manual review)"
   },
   "orderTrack": {
     "title": "Track a public order",

@@ -176,7 +176,7 @@ export function PublicHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-primary text-white shadow-md">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-storefront text-white shadow-md">
       <div className="mx-auto max-w-[1600px] px-4 py-2 sm:px-6">
         <div className="mb-2 hidden items-center justify-between gap-6 border-b border-white/10 pb-2 text-xs font-semibold text-white/80 lg:flex">
           <div className="flex items-center gap-1.5 text-white/90">

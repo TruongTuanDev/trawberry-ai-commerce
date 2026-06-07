@@ -327,7 +327,9 @@
     "fullNamePhoneAddressRequired": "Полное имя, телефон и адрес обязательны.",
     "orderCreatedSuccess": "Заказ успешно оформлен!",
     "orderCreateFailed": "Не удалось создать заказ.",
-    "itemsCountText": "{{count}} товар(ов)"
+    "itemsCountText": "{{count}} товар(ов)",
+    "deliveries": "Доставка",
+    "free": "Бесплатно (Ручная проверка)"
   },
   "orderTrack": {
     "title": "Отследить публичный заказ",
