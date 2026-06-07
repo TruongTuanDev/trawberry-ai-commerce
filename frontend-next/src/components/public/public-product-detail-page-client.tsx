@@ -521,31 +521,6 @@ export function PublicProductDetailPageClient({
                       ) : null}
                     </div>
 
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {t("productDetail.characteristics")}
-                      </p>
-                      <div className="space-y-2 rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-4">
-                        {specRows.map((row) => (
-                          <div
-                            key={row.label}
-                            className="grid gap-1 border-b border-dashed border-[var(--border)]/80 py-2 last:border-none sm:grid-cols-[150px_minmax(0,1fr)]"
-                          >
-                            <p className="text-sm text-[var(--muted)]">{row.label}</p>
-                            <p className="text-sm font-medium text-[var(--foreground)]">{row.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-5">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {t("productDetail.description")}
-                      </p>
-                      <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                        {product.description ?? t("productDetail.noDescription")}
-                      </p>
-                    </div>
                   </div>
 
                   <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">
@@ -649,6 +624,36 @@ export function PublicProductDetailPageClient({
                   </aside>
                 </div>
               </section>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
+                  <h3 className="text-lg font-bold text-[var(--foreground)]">
+                    {t("productDetail.description")}
+                  </h3>
+                  <p className="mt-4 text-sm leading-7 text-[var(--muted)] whitespace-pre-line">
+                    {product.description ?? t("productDetail.noDescription")}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
+                    <h3 className="text-lg font-bold text-[var(--foreground)] mb-4">
+                      {t("productDetail.characteristics")}
+                    </h3>
+                    <div className="space-y-1">
+                      {specRows.map((row) => (
+                        <div
+                          key={row.label}
+                          className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2.5 last:border-none sm:grid-cols-[160px_minmax(0,1fr)]"
+                        >
+                          <p className="text-sm text-[var(--muted)]">{row.label}</p>
+                          <p className="text-sm font-semibold text-[var(--foreground)]">{row.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <PublicProductReviewsSection product={product} />
               <PublicRecommendationSection
