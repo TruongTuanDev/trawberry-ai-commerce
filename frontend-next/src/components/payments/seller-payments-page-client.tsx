@@ -125,7 +125,25 @@ export function SellerPaymentsPageClient({
   return (
     <div className="space-y-6">
       <SectionCard eyebrow={t("seller.payments.title")} title={title ?? t("seller.payments.title")} description={description ?? t("seller.payments.subtitle")}>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(79,70,229,0.06),rgba(255,255,255,0.96))] p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Seller queue
+              </p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                Review buyer proof first, then move approved orders into fulfillment. The queue below stays operationally focused and does not change payment business rules.
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Open reviews
+              </p>
+              <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{pendingCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           {proofTabs.map((tab) => (
             <button
               key={tab.value}
@@ -190,7 +208,7 @@ export function SellerPaymentsPageClient({
                   </div>
                   <div className="text-sm text-[var(--muted)]">
                     {payment.items.slice(0, 2).map((item) => (
-                      <p key={item.id}>
+                      <p key={item.id} className="rounded-xl bg-[var(--panel-strong)] px-3 py-2">
                         {item.productTitleSnapshot} x {item.quantity}
                       </p>
                     ))}
@@ -214,7 +232,7 @@ export function SellerPaymentsPageClient({
                       <span className="text-sm text-[var(--muted)]">{t("common.status.none")}</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button variant="success" size="sm" onClick={() => void handleDecision(payment, "confirm")} disabled={isRunning || payment.paymentProofStatus !== "BUYER_MARKED_PAID"} loading={isRunning}>
                       {t("common.actions.confirm")}
                     </Button>
@@ -225,7 +243,11 @@ export function SellerPaymentsPageClient({
                 </article>
               ))
             ) : (
-              <div className="px-5 py-8 text-sm text-[var(--muted)]">{t("seller.payments.empty")}</div>
+              <div className="px-5 py-8">
+                <div className="rounded-[1.5rem] border border-dashed border-[var(--border)] bg-[var(--panel-strong)] px-5 py-8 text-sm text-[var(--muted)]">
+                  {t("seller.payments.empty")}
+                </div>
+              </div>
             )}
           </div>
         </div>

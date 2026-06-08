@@ -106,6 +106,32 @@ export function SellerRecommendationsAnalyticsPageClient() {
             </p>
           </div>
         </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              What to watch
+            </p>
+            <p className="mt-1 font-semibold text-[var(--foreground)]">
+              CTR, sponsored clicks, and personalization lift
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Growth loop
+            </p>
+            <p className="mt-1 font-semibold text-[var(--foreground)]">
+              Use this with campaigns and billing to tune spend safely
+            </p>
+          </div>
+          <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              Data source
+            </p>
+            <p className="mt-1 font-semibold text-[var(--foreground)]">
+              Existing recommendation analytics only
+            </p>
+          </div>
+        </div>
         <div className="mt-5 flex flex-wrap gap-3">
           {RANGE_OPTIONS.map((option) => (
             <button

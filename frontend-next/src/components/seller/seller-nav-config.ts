@@ -31,8 +31,17 @@ export function getSellerNavGroups(t: Translate): SellerNavGroup[] {
       ],
     },
     {
-      key: "catalog",
-      label: t("sellerShell.groups.catalog"),
+      key: "orders",
+      label: "Orders",
+      items: [
+        item("/seller/orders", t("sellerShell.orders")),
+        item("/seller/payments-to-confirm", t("sellerShell.toConfirm")),
+        item("/seller/returns", t("sellerShell.returns")),
+      ],
+    },
+    {
+      key: "products",
+      label: "Products",
       items: [
         item("/seller/products", t("sellerShell.products")),
         item("/seller/import/wildberries", t("sellerShell.wbExcel")),
@@ -41,13 +50,16 @@ export function getSellerNavGroups(t: Translate): SellerNavGroup[] {
       ],
     },
     {
-      key: "sales",
-      label: t("sellerShell.groups.sales"),
+      key: "growth",
+      label: "Growth",
       items: [
-        item("/seller/orders", t("sellerShell.orders")),
-        item("/seller/returns", t("sellerShell.returns")),
         item("/seller/reviews", t("sellerShell.reviews")),
         item("/seller/messages", t("sellerShell.messages")),
+        item("/seller/campaigns", t("sellerShell.campaigns")),
+        item(
+          "/seller/recommendations-analytics",
+          t("sellerShell.recommendationAnalytics"),
+        ),
       ],
     },
     {
@@ -56,23 +68,17 @@ export function getSellerNavGroups(t: Translate): SellerNavGroup[] {
       items: [item("/seller/support-cases", t("sellerShell.support"))],
     },
     {
-      key: "payments",
-      label: t("sellerShell.groups.payments"),
+      key: "finance",
+      label: "Finance",
       items: [
-        item("/seller/campaigns", "Campaigns"),
         item("/seller/billing", "Billing"),
-        item(
-          "/seller/recommendations-analytics",
-          t("sellerShell.recommendationAnalytics"),
-        ),
         item("/seller/payment-settings", t("sellerShell.paymentSettings")),
-        item("/seller/payments-to-confirm", t("sellerShell.toConfirm")),
         item("/seller/finance", t("sellerShell.finance")),
       ],
     },
     {
       key: "settings",
-      label: t("sellerShell.groups.settings"),
+      label: "Support & settings",
       items: [
         item("/seller/onboarding", t("sellerShell.onboarding")),
         item("/seller/settings", t("sellerShell.settings")),

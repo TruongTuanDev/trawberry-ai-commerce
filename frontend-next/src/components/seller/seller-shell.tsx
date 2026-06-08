@@ -129,7 +129,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-[1600px] overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow)] lg:h-[calc(100vh-3rem)] lg:min-h-0">
         <aside className="hidden w-72 flex-col justify-between border-r border-[var(--border)] bg-white p-6 text-[var(--foreground)] lg:sticky lg:top-0 lg:flex lg:h-full lg:overflow-y-auto">
           <div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
+            <div className="rounded-[1.75rem] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(79,70,229,0.08),rgba(255,255,255,0.96))] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
                 {t("sellerShell.brand")}
               </p>
@@ -139,6 +139,24 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                 {t("sellerShell.description")}
               </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <div className="rounded-[1.25rem] border border-white/70 bg-white/80 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                    Default workflow
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                    Review / Fulfill / Grow
+                  </p>
+                </div>
+                <div className="rounded-[1.25rem] border border-white/70 bg-white/80 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                    Best for
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                    Daily seller operations
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="mt-6">{renderNavigation("desktop")}</div>
           </div>
@@ -165,7 +183,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
-          <header className="relative z-20 border-b border-[var(--border)] bg-[rgba(255,250,243,0.92)] px-4 py-4 backdrop-blur sm:px-6">
+          <header className="relative z-20 border-b border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.9))] px-4 py-4 backdrop-blur sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -184,6 +202,9 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                     {t("sellerShell.centerTitle")}
                   </h1>
                 </div>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                  Move through review, fulfillment, catalog, and growth work from a single workspace.
+                </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <LanguageSwitcher role="seller" />
@@ -328,19 +349,30 @@ function SellerNavigation({
           return (
             <section
               key={group.key}
-              className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-3 py-3"
+              className={clsx(
+                "rounded-[1.5rem] border bg-[var(--panel)] px-3 py-3 transition",
+                isActiveGroup
+                  ? "border-[var(--accent)]/30 shadow-[0_12px_30px_rgba(79,70,229,0.12)]"
+                  : "border-[var(--border)]",
+              )}
             >
               <button
                 type="button"
                 onClick={() => onToggleGroup(group.key)}
                 className="flex w-full items-center justify-between gap-3 rounded-2xl px-2 py-2 text-left"
               >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+                <span
+                  className={clsx(
+                    "text-[11px] font-semibold uppercase tracking-[0.24em]",
+                    isActiveGroup ? "text-[var(--accent)]" : "text-[var(--muted)]",
+                  )}
+                >
                   {group.label}
                 </span>
                 <ChevronDown
                   className={clsx(
-                    "h-4 w-4 text-[var(--muted)] transition-transform",
+                    "h-4 w-4 transition-transform",
+                    isActiveGroup ? "text-[var(--accent)]" : "text-[var(--muted)]",
                     isCollapsed ? "" : "rotate-180",
                   )}
                 />
@@ -359,7 +391,7 @@ function SellerNavigation({
                           "flex items-center rounded-2xl px-4 py-2.5 text-sm font-medium transition",
                           active
                             ? "bg-gradient-primary text-white shadow-md"
-                            : "text-[var(--muted)] hover:bg-white hover:text-[var(--foreground)]",
+                            : "text-[var(--muted)] hover:bg-[var(--panel-strong)] hover:text-[var(--foreground)]",
                         )}
                       >
                         {item.label}

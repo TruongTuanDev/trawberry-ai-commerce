@@ -197,6 +197,34 @@ export function SellerBillingPageClient() {
         title={BILLING_COPY.title}
         description={BILLING_COPY.description}
       >
+        <div className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(79,70,229,0.06),rgba(255,255,255,0.96))] p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Finance workflow
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                Track wallet health, reserve usage, and campaign spend in one place.
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Available now
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                Wallet, ledger, demo credit tools
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Protected scope
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                No checkout or customer billing behavior changed
+              </p>
+            </div>
+          </div>
+        </div>
         {loading ? (
           <p className="text-sm text-[var(--muted)]">{BILLING_COPY.loading}</p>
         ) : error ? (

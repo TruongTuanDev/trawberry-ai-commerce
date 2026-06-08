@@ -18,6 +18,29 @@ function formatRub(value: string) {
   }).format(Number(value || 0));
 }
 
+const WORKSPACE_LINKS = [
+  {
+    href: "/seller/payments-to-confirm",
+    title: "Review payments",
+    description: "Confirm buyer proofs before orders move into fulfillment.",
+  },
+  {
+    href: "/seller/orders",
+    title: "Manage orders",
+    description: "Pick up new orders, hand off deliveries, and close completed work.",
+  },
+  {
+    href: "/seller/products",
+    title: "Update products",
+    description: "Tighten pricing, stock, and publishing readiness from one queue.",
+  },
+  {
+    href: "/seller/campaigns",
+    title: "Plan growth",
+    description: "Tune campaigns and recommendation visibility without touching storefront logic.",
+  },
+];
+
 export function SellerDashboardPageClient() {
   const { t } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
@@ -114,6 +137,39 @@ export function SellerDashboardPageClient() {
     ];
   }, [metrics, t]);
 
+  const priorities = useMemo(() => {
+    if (!metrics) {
+      return [];
+    }
+
+    return [
+      {
+        label: "Payments waiting for review",
+        value: metrics.pendingPaymentOrders,
+        href: "/seller/payments-to-confirm",
+        tone:
+          metrics.pendingPaymentOrders > 0
+            ? "border-amber-200 bg-amber-50 text-amber-900"
+            : "border-[var(--border)] bg-white text-[var(--foreground)]",
+      },
+      {
+        label: "Orders in delivery",
+        value: metrics.deliveryInProgressOrders,
+        href: "/seller/orders?status=IN_TRANSIT",
+        tone:
+          metrics.deliveryInProgressOrders > 0
+            ? "border-sky-200 bg-sky-50 text-sky-900"
+            : "border-[var(--border)] bg-white text-[var(--foreground)]",
+      },
+      {
+        label: "Confirmed revenue today",
+        value: formatRub(metrics.confirmedRevenueToday),
+        href: "/seller/finance",
+        tone: "border-emerald-200 bg-emerald-50 text-emerald-900",
+      },
+    ];
+  }, [metrics]);
+
   return (
     <div className="space-y-6" data-testid="seller-dashboard-page">
       <SectionCard
@@ -121,7 +177,7 @@ export function SellerDashboardPageClient() {
         title={t("seller.dashboard.title")}
         description={t("seller.dashboard.description")}
       >
-        <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(79,70,229,0.08),rgba(255,255,255,0.96))] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
               {t("seller.dashboard.activeShop")}
@@ -166,6 +222,63 @@ export function SellerDashboardPageClient() {
           <p className="text-sm text-[var(--danger)]">{error}</p>
         ) : metrics ? (
           <>
+            <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                      Seller workflow
+                    </p>
+                    <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">
+                      Start with the queues that unblock revenue
+                    </h3>
+                  </div>
+                  <Link
+                    href="/seller/orders"
+                    className="rounded-full border border-[var(--border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--foreground)]"
+                  >
+                    Open orders
+                  </Link>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  {priorities.map((priority) => (
+                    <Link
+                      key={priority.label}
+                      href={priority.href}
+                      className={`rounded-[1.25rem] border px-4 py-4 transition hover:-translate-y-0.5 ${priority.tone}`}
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em]">
+                        {priority.label}
+                      </p>
+                      <p className="mt-3 text-2xl font-bold">{priority.value}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Quick access
+                </p>
+                <div className="mt-4 space-y-3">
+                  {WORKSPACE_LINKS.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="block rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-4 transition hover:border-[var(--accent)]/30 hover:bg-white"
+                    >
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {link.title}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                        {link.description}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {cards.map((metric) => (
                 <article
@@ -215,16 +328,43 @@ export function SellerDashboardPageClient() {
         title={t("seller.dashboard.financeTitle")}
         description={t("seller.dashboard.financeDescription")}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            {t("seller.dashboard.financeHelp")}
-          </p>
-          <Link
-            href="/seller/finance"
-            className="public-button-primary inline-flex items-center justify-center px-5 py-3 text-sm"
-          >
-            {t("seller.dashboard.openLedger")}
-          </Link>
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
+            <p className="max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              {t("seller.dashboard.financeHelp")}
+            </p>
+            <Link
+              href="/seller/finance"
+              className="public-button-primary mt-4 inline-flex items-center justify-center px-5 py-3 text-sm"
+            >
+              {t("seller.dashboard.openLedger")}
+            </Link>
+          </div>
+          <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Monthly snapshot
+            </p>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[var(--muted)]">Confirmed revenue</span>
+                <span className="font-semibold text-[var(--foreground)]">
+                  {formatRub(metrics?.confirmedRevenueThisMonth ?? "0")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[var(--muted)]">Estimated platform fee</span>
+                <span className="font-semibold text-[var(--foreground)]">
+                  {formatRub(metrics?.estimatedPlatformFeeThisMonth ?? "0")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[var(--muted)]">Days left in cycle</span>
+                <span className="font-semibold text-[var(--foreground)]">
+                  {metrics?.daysLeftInMonth ?? 0}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </SectionCard>
     </div>

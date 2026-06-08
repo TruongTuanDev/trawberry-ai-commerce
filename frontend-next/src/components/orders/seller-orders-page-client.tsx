@@ -283,6 +283,35 @@ export function SellerOrdersPageClient() {
         title={t("sellerOrders.title")}
         description={t("sellerOrders.description")}
       >
+        <div className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(79,70,229,0.06),rgba(255,255,255,0.96))] p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Next action
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                Start in New, then assemble, hand off, and close delivery.
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Visible queues
+              </p>
+              <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
+                {summary.NEW + summary.ASSEMBLING + summary.IN_TRANSIT}
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                Completed this view
+              </p>
+              <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
+                {summary.COMPLETED}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Seller order filters">
           {localizedSellerTabs.map((tab) => (
             <button
@@ -373,6 +402,9 @@ export function SellerOrdersPageClient() {
                       {order.orderNumber}
                     </Link>
                     <p className="mt-1 text-xs text-[var(--muted)]">{order.sellerDisplayLabel}</p>
+                    <p className="mt-2 inline-flex rounded-full bg-[var(--panel-strong)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
+                      {order.sellerStatusBucket}
+                    </p>
                   </div>
                   <div className="text-sm text-[var(--muted)]">
                     <p className="font-semibold text-[var(--foreground)]">{order.customer.name}</p>
@@ -403,7 +435,7 @@ export function SellerOrdersPageClient() {
                       </a>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {order.sellerStatusBucket === "NEW" && (
                       <Button
                         variant="primary"
