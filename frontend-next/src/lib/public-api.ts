@@ -916,9 +916,15 @@ export async function getCategories() {
   });
 }
 
-export async function getPublicProduct(productId: string) {
+export async function getPublicProduct(
+  productId: string,
+  options?: {
+    signal?: AbortSignal;
+  },
+) {
   return apiRequest<PublicProduct>(`/api/public/products/${productId}`, {
     method: "GET",
+    signal: options?.signal,
   });
 }
 
@@ -1378,9 +1384,10 @@ export type PublicHomepageSlide = {
   displayOrder: number;
 };
 
-export async function getPublicHomepageSlides() {
+export async function getPublicHomepageSlides(options?: { signal?: AbortSignal }) {
   return apiRequest<PublicHomepageSlide[]>("/api/public/homepage-slides", {
     method: "GET",
+    signal: options?.signal,
   });
 }
 

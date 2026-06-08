@@ -36,23 +36,29 @@ import { useCartStore } from "@/stores/cart-store";
 
 export function PublicProductDetailPageClient({
   productId,
+  initialProduct,
   recommendationsEnabled,
   recommendationTrackingEnabled,
 }: {
   productId: string;
+  initialProduct: PublicProduct | null;
   recommendationsEnabled: boolean;
   recommendationTrackingEnabled: boolean;
 }) {
   const { locale, t } = useI18n("customer");
   const recommendationFlags = readRecommendationFlagsFromDocument();
   const router = useRouter();
-  const [product, setProduct] = useState<PublicProduct | null>(null);
+  const [product, setProduct] = useState<PublicProduct | null>(initialProduct);
   const [similarProducts, setSimilarProducts] = useState<RecommendationProductItem[]>([]);
   const [similarProductsAlgorithm, setSimilarProductsAlgorithm] =
     useState<string | null>(null);
   const [aiTryOnConfig, setAiTryOnConfig] = useState<PublicAiTryOnConfig | null>(null);
   const [aiTryOnOpen, setAiTryOnOpen] = useState(false);
-  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(
+    initialProduct?.variants.find((variant) => variant.inStock)?.id ??
+      initialProduct?.variants[0]?.id ??
+      "",
+  );
   const [hasChosenSize, setHasChosenSize] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
@@ -66,7 +72,7 @@ export function PublicProductDetailPageClient({
     product?.variants[0] ??
     null;
   const cartItem = product && selectedVariant ? getCartItem(items, product.id, selectedVariant.id) : null;
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
   const normalizedError = error?.toLowerCase() ?? "";
   const maxQuantity =
@@ -106,10 +112,23 @@ export function PublicProductDetailPageClient({
 
   useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
+
+    if (requestKey === 0 && initialProduct) {
+      return () => {
+        mounted = false;
+        window.clearTimeout(timeout);
+        controller.abort();
+      };
+    }
 
     const run = async () => {
+      setLoading(true);
       try {
-        const result = await getPublicProduct(productId);
+        const result = await getPublicProduct(productId, {
+          signal: controller.signal,
+        });
         if (!mounted) return;
         setProduct(result);
         setSimilarProducts([]);
@@ -123,11 +142,16 @@ export function PublicProductDetailPageClient({
       } catch (err) {
         if (mounted) {
           setError(
-            err instanceof Error ? err.message : "Unable to load product.",
+            err instanceof Error && err.name === "AbortError"
+              ? t("productDetail.tryAgain")
+              : err instanceof Error
+                ? err.message
+                : "Unable to load product.",
           );
         }
       } finally {
         if (mounted) {
+          window.clearTimeout(timeout);
           setLoading(false);
         }
       }
@@ -137,8 +161,10 @@ export function PublicProductDetailPageClient({
 
     return () => {
       mounted = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, [productId, requestKey]);
+  }, [initialProduct, productId, requestKey, t]);
 
   useEffect(() => {
     if (!product || !recommendationsEnabled) {

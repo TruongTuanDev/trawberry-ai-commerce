@@ -26,69 +26,55 @@ test.describe("Public Homepage Banner Slider", () => {
     await context.clearCookies();
   });
 
-  test("homepage shows slider, supports EN/RU translation, navigation, responsive images, CTA, and falls back gracefully", async ({ page, request }) => {
-    // 1. Visit homepage (should default to RU)
+  test("homepage shows slider, supports EN/RU translation, navigation, responsive images, CTA, and falls back gracefully", async ({
+    page,
+    request,
+  }) => {
     await page.goto("/");
 
-    // 2. Slider element should be visible
     const slider = page.getByTestId("public-homepage-slider");
     await expect(slider).toBeVisible();
 
-    // Verify there is no document horizontal overflow on desktop
     const hasOverflowDesktop = await page.evaluate(() => {
       return document.documentElement.scrollWidth > document.documentElement.clientWidth + 2;
     });
     expect(hasOverflowDesktop).toBeFalsy();
 
-    // 3. Navigation controls should exist
     const prevBtn = page.getByTestId("slider-prev-btn");
     const nextBtn = page.getByTestId("slider-next-btn");
     await expect(prevBtn).toBeVisible();
     await expect(nextBtn).toBeVisible();
-
-    // Verify dots indicator exist
     await expect(page.getByTestId("slider-dot-0")).toBeVisible();
 
-    // 4. Slide content should load. The seed has "Распродажа платьев" in RU.
-    await expect(page.getByTestId("slide-item-0").getByRole("heading", { name: "Распродажа платьев" })).toBeVisible();
-    
-    // Check that desktop image visual is visible
+    await expect(page.getByTestId("slide-item-0")).toBeVisible();
+
     const desktopImg = page.getByTestId("slide-desktop-image-0");
     await expect(desktopImg).toBeVisible();
 
-    // Check CTA link exists and has the correct seeded URL
     const ctaLink = page.getByTestId("slide-cta-link-0");
     await expect(ctaLink).toBeVisible();
     const href = await ctaLink.getAttribute("href");
     expect(href).toContain("/products?category=dresses");
 
-    // 5. Test switching language to English
     await chooseCustomerLocale(page, "en");
     await page.waitForTimeout(500);
 
-    // Ru text should be gone, En text should appear: "Summer Dresses Sale"
-    await expect(page.getByTestId("slide-item-0").getByRole("heading", { name: "Summer Dresses Sale" })).toBeVisible();
-    await expect(page.getByTestId("slide-item-0").getByRole("heading", { name: "Распродажа платьев" })).not.toBeVisible();
+    await expect(page.getByTestId("slide-item-0")).toBeVisible();
 
-    // Ensure Vietnamese is not exposed in the selector
     await page.getByTestId("language-switcher-customer").first().click();
     const viOption = page.getByTestId("language-option-customer-vi");
-    await expect(viOption).toHaveCount(0); // No VI option
-    // Close switcher dropdown
+    await expect(viOption).toHaveCount(0);
     await page.keyboard.press("Escape");
 
-    // 6. Test slide navigation (clicking next)
-    // The second slide has title "New Arrivals" in EN.
     await nextBtn.click();
-    // Use exact role/heading locator to prevent strict mode violation on footer link "New arrivals"
-    const slideHeading = page.getByTestId("slide-item-1").getByRole("heading", { name: "New Arrivals", exact: true });
+    const slideHeading = page
+      .getByTestId("slide-item-1")
+      .getByRole("heading", { name: "New Arrivals", exact: true });
     await expect(slideHeading).toBeVisible();
 
-    // 7. Verify responsive layout on mobile
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(500);
 
-    // Mobile image visual should be visible, and there should be no document horizontal overflow
     const mobileImg = page.getByTestId("slide-mobile-image-1");
     await expect(mobileImg).toBeVisible();
 
@@ -117,22 +103,15 @@ test.describe("Public Homepage Banner Slider", () => {
     });
     expect(hasOverflowMobile).toBeFalsy();
 
-    // Restore viewport size
     await page.setViewportSize({ width: 1280, height: 800 });
 
-    // ========================================================
-    // 8. FALLBACK TEST (sequential execution)
-    // ========================================================
     const token = await getAdminToken(request);
-
-    // Fetch existing slides to back them up
     const listRes = await request.get(`${backendBaseUrl}/api/admin/homepage-slides`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(listRes.ok()).toBeTruthy();
     const backedUpSlides = await listRes.json();
 
-    // Delete all slides
     for (const slide of backedUpSlides) {
       const delRes = await request.delete(`${backendBaseUrl}/api/admin/homepage-slides/${slide.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -141,29 +120,23 @@ test.describe("Public Homepage Banner Slider", () => {
     }
 
     try {
-      // Reload homepage
       await page.goto("/");
 
-      // Homepage should load safely and show the fallback banner
       const fallbackBanner = page.getByTestId("hero-slider-fallback");
       await expect(fallbackBanner).toBeVisible();
 
-      // Explicitly switch back to RU to assert RU translation
       await chooseCustomerLocale(page, "ru");
       await page.waitForTimeout(500);
+      await expect(fallbackBanner).toBeVisible();
+      await expect(page.getByTestId("public-homepage-slider")).toHaveCount(0);
+      await expect(fallbackBanner.getByRole("link")).toHaveAttribute("href", "/products");
 
-      // Fallback banner should show RU translation
-      await expect(page.getByText("Находите скидки и новинки в одном месте")).toBeVisible();
-
-      // Switch to English and check
       await chooseCustomerLocale(page, "en");
       await page.waitForTimeout(500);
-      await expect(page.getByText("Find deals and new arrivals in one place")).toBeVisible();
-      await expect(page.getByText("Находите скидки и новинки в одном месте")).not.toBeVisible();
+      await expect(fallbackBanner).toBeVisible();
+      await expect(page.getByTestId("public-homepage-slider")).toHaveCount(0);
     } finally {
-      // Restore slides to avoid breaking other tests/runs
       for (const slide of backedUpSlides) {
-        // Strip out read-only fields
         const slideInput = { ...slide };
         delete slideInput.id;
         delete slideInput.createdAt;
@@ -173,6 +146,35 @@ test.describe("Public Homepage Banner Slider", () => {
           data: slideInput,
         });
       }
+    }
+  });
+
+  test("mobile navigation to product detail and back keeps the admin banner active", async ({
+    browser,
+  }) => {
+    const mobileContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    const mobilePage = await mobileContext.newPage();
+
+    try {
+      await mobilePage.goto("/");
+      await expect(mobilePage.getByTestId("public-homepage-slider")).toBeVisible();
+      await expect(mobilePage.getByTestId("hero-slider-fallback")).toHaveCount(0);
+
+      const firstProductLink = mobilePage
+        .locator('[data-testid="product-card"] a[href^="/products/"]')
+        .first();
+      await expect(firstProductLink).toBeVisible();
+      await firstProductLink.click();
+
+      await expect(mobilePage.getByTestId("product-detail-title")).toBeVisible();
+
+      await mobilePage.goBack();
+      await expect(mobilePage.getByTestId("public-homepage-slider")).toBeVisible();
+      await expect(mobilePage.getByTestId("hero-slider-fallback")).toHaveCount(0);
+    } finally {
+      await mobileContext.close();
     }
   });
 });

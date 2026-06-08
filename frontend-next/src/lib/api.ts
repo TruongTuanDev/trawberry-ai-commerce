@@ -6,6 +6,20 @@ function normalizeApiBaseUrl(rawApiUrl: string) {
     .replace(/\/api$/i, "");
 }
 
+function isLoopbackHost(hostname: string) {
+  const normalized = hostname.trim().toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized === "[::1]"
+  );
+}
+
+function canInferDevApiPortFromLocation(location: Location) {
+  return location.protocol === "http:" && location.port === "3000";
+}
+
 const getApiUrl = () => {
   if (typeof window === "undefined") {
     return normalizeApiBaseUrl(
@@ -25,15 +39,33 @@ const getApiUrl = () => {
   }
 
   const normalizedApiUrl = normalizeApiBaseUrl(configuredApiUrl);
+  let configuredUrl: URL | null = null;
+
+  try {
+    configuredUrl = new URL(normalizedApiUrl);
+  } catch {
+    return sameOriginUrl;
+  }
+
+  if (
+    !isLoopbackHost(window.location.hostname) &&
+    isLoopbackHost(configuredUrl.hostname)
+  ) {
+    if (canInferDevApiPortFromLocation(window.location) && configuredUrl.port) {
+      return `${window.location.protocol}//${window.location.hostname}:${configuredUrl.port}`;
+    }
+
+    return sameOriginUrl;
+  }
 
   if (
     window.location.protocol === "https:" &&
-    normalizedApiUrl.startsWith("http://")
+    configuredUrl.protocol === "http:"
   ) {
     return sameOriginUrl;
   }
 
-  return normalizedApiUrl;
+  return configuredUrl.toString().replace(/\/+$/, "");
 };
 
 const API_URL = getApiUrl();

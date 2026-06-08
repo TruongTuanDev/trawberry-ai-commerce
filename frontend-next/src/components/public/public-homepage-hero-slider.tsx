@@ -2,10 +2,13 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/i18n/use-i18n";
-import type { PublicHomepageSlide } from "@/lib/public-api";
+import {
+  getPublicHomepageSlides,
+  type PublicHomepageSlide,
+} from "@/lib/public-api";
 
 type PublicHomepageHeroSliderProps = {
   initialSlides?: PublicHomepageSlide[];
@@ -17,11 +20,77 @@ export function PublicHomepageHeroSlider({
   const { locale: currentLocale, t } = useI18n("customer");
   const locale = currentLocale === "ru" ? "ru" : "en"; // Force RU/EN only, no VI exposure
 
+  const [slides, setSlides] = useState<PublicHomepageSlide[]>(initialSlides);
+  const [slidesLoading, setSlidesLoading] = useState(initialSlides.length === 0);
+  const [slidesResolved, setSlidesResolved] = useState(initialSlides.length > 0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const autoplayTimerRef = useRef<number | null>(null);
+  const slidesRef = useRef<PublicHomepageSlide[]>(initialSlides);
 
-  const slides = initialSlides || [];
+  useEffect(() => {
+    slidesRef.current = slides;
+  }, [slides]);
+
+  useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+
+    const refreshSlides = async (showLoader: boolean) => {
+      if (showLoader && slidesRef.current.length === 0) {
+        setSlidesLoading(true);
+      }
+
+      try {
+        const nextSlides = await getPublicHomepageSlides({
+          signal: controller.signal,
+        });
+
+        if (!mounted) {
+          return;
+        }
+
+        if (nextSlides.length > 0) {
+          setSlides(nextSlides);
+          setSlidesResolved(true);
+          setSlidesLoading(false);
+          setActiveIndex((current) => Math.min(current, nextSlides.length - 1));
+          return;
+        }
+
+        if (slidesRef.current.length === 0) {
+          setSlides([]);
+          setSlidesResolved(true);
+          setSlidesLoading(false);
+          setActiveIndex(0);
+        }
+      } catch {
+        if (!mounted || controller.signal.aborted) {
+          return;
+        }
+
+        if (slidesRef.current.length === 0) {
+          setSlidesResolved(true);
+          setSlidesLoading(false);
+        }
+      }
+    };
+
+    if (initialSlides.length === 0) {
+      void refreshSlides(true);
+    }
+
+    const handlePageShow = () => {
+      void refreshSlides(false);
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      mounted = false;
+      controller.abort();
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [initialSlides]);
 
   // Autoplay functionality: 5–7s (using 6 seconds here), paused on hover
   useEffect(() => {
@@ -53,8 +122,26 @@ export function PublicHomepageHeroSlider({
     setActiveIndex((prev) => (prev + 1) % slides.length);
   };
 
-  // Safe fallback if no active slides exist
-  if (slides.length === 0) {
+  if (slidesLoading && slides.length === 0) {
+    return (
+      <section
+        className="relative overflow-hidden rounded-[2.5rem] border border-[var(--border)] bg-white/80 min-h-[300px] sm:min-h-[400px] md:min-h-[480px]"
+        data-testid="hero-slider-loading"
+      >
+        <div className="animate-pulse h-full min-h-[300px] px-8 py-10 sm:min-h-[400px] sm:px-12 md:min-h-[480px]">
+          <div className="max-w-4xl space-y-5">
+            <div className="h-7 w-32 rounded-full bg-[var(--panel-strong)]" />
+            <div className="h-14 w-3/4 rounded-3xl bg-[var(--panel-strong)]" />
+            <div className="h-5 w-2/3 rounded-full bg-[var(--panel-strong)]" />
+            <div className="h-12 w-44 rounded-full bg-[var(--panel-strong)]" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Safe fallback if no active slides exist after resolving attempts
+  if (slidesResolved && slides.length === 0) {
     const fallbackTitle = t("home.heroFallbackTitle");
     const fallbackSubtitle = t("home.heroFallbackSubtitle");
     const fallbackCta = t("home.heroCtaFallback");
