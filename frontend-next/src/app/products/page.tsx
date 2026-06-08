@@ -30,6 +30,8 @@ type ProductsMeta = {
 };
 
 const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 };
+const RECENT_SEARCHES_KEY = "public-catalog-recent-searches";
+const RECENT_SEARCH_LIMIT = 5;
 
 function readFilters(searchParams: { get(name: string): string | null }) {
   return {
@@ -101,6 +103,30 @@ function ProductsPageContent({
   const [categorySearch, setCategorySearch] = useState("");
   const [layoutCols, setLayoutCols] = useState<"3" | "4">("4");
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+
+    try {
+      const stored = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (!stored) {
+        return [];
+      }
+
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .slice(0, RECENT_SEARCH_LIMIT);
+    } catch {
+      return [];
+    }
+  });
   const [slides, setSlides] = useState<PublicHomepageSlide[]>([]);
   const trackedSearchKeyRef = useRef<string>("");
   const categoryOptions = useMemo(() => facets?.categories ?? [], [facets]);
@@ -230,6 +256,31 @@ function ProductsPageContent({
     ].slice(0, 5);
   }, [filters.q]);
 
+  const popularSuggestions = useMemo(
+    () =>
+      [
+        t("catalog.popularSuggestion1"),
+        t("catalog.popularSuggestion2"),
+        t("catalog.popularSuggestion3"),
+        t("catalog.popularSuggestion4"),
+        t("catalog.popularSuggestion5"),
+      ].filter((value, index, values) => Boolean(value) && values.indexOf(value) === index),
+    [t],
+  );
+
+  const visibleSuggestionChips = useMemo(() => {
+    const keyword = filters.q.trim();
+    const candidates = keyword
+      ? [keyword, ...recentSearches, ...popularSuggestions, ...suggestionChips]
+      : [...recentSearches, ...popularSuggestions, ...suggestionChips];
+
+    return candidates
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .filter((value, index, values) => values.indexOf(value) === index)
+      .slice(0, RECENT_SEARCH_LIMIT);
+  }, [filters.q, popularSuggestions, recentSearches, suggestionChips]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -339,6 +390,29 @@ function ProductsPageContent({
       ? searchRecommendations
       : [];
 
+  const storeRecentSearch = (value: string) => {
+    const normalized = value.trim();
+    if (!normalized || typeof window === "undefined") {
+      return;
+    }
+
+    setRecentSearches((current) => {
+      const next = [normalized, ...current.filter((item) => item !== normalized)].slice(
+        0,
+        RECENT_SEARCH_LIMIT,
+      );
+      window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(RECENT_SEARCHES_KEY);
+    }
+  };
+
   const applyFilters = (targetFilters = filters) => {
     const params = new URLSearchParams();
     if (targetFilters.q.trim()) params.set("q", targetFilters.q.trim());
@@ -353,6 +427,7 @@ function ProductsPageContent({
     if (targetFilters.sort && targetFilters.sort !== "newest") params.set("sort", targetFilters.sort);
     params.set("page", "1");
     try {
+      storeRecentSearch(targetFilters.q);
       const debug = typeof document !== "undefined" && document.getElementById("debug-info");
       if (debug) {
         debug.innerText = `apply: q=${targetFilters.q} params=${params.toString()}`;
@@ -372,6 +447,8 @@ function ProductsPageContent({
   };
 
   const clearFilters = () => {
+    setActiveDropdown(null);
+    setIsMobileFiltersOpen(false);
     setFilters(readFilters(new URLSearchParams()));
     if (typeof window !== "undefined") {
       window.location.assign("/products");
@@ -400,6 +477,87 @@ function ProductsPageContent({
     if (!isMounted) return false;
     return true;
   }, [isMounted]);
+
+  const applyFilterPatch = (
+    updater: Partial<typeof filters> | ((current: typeof filters) => typeof filters),
+  ) => {
+    const nextFilters =
+      typeof updater === "function" ? updater(filters) : { ...filters, ...updater };
+    setFilters(nextFilters);
+    applyFilters(nextFilters);
+  };
+
+  const activeFilterCount = activeFilterSummary.length;
+  const activeFilterChips = [
+    filters.q.trim()
+      ? {
+          key: "q",
+          label: `${t("catalog.filterSummary.keyword")}: ${filters.q.trim()}`,
+          onRemove: () => applyFilterPatch({ q: "" }),
+        }
+      : null,
+    (filters.categoryId || filters.categorySlug)
+      ? {
+          key: "category",
+          label: `${t("catalog.filterSummary.category")}: ${
+            selectedCategoryOption?.name ?? filters.categorySlug ?? filters.categoryId
+          }`,
+          onRemove: () => applyFilterPatch({ categoryId: "", categorySlug: "" }),
+        }
+      : null,
+    filters.brand.trim()
+      ? {
+          key: "brand",
+          label: `${t("catalog.filterSummary.brand")}: ${filters.brand.trim()}`,
+          onRemove: () => applyFilterPatch({ brand: "" }),
+        }
+      : null,
+    filters.color.trim()
+      ? {
+          key: "color",
+          label: `${t("catalog.filterSummary.color")}: ${filters.color.trim()}`,
+          onRemove: () => applyFilterPatch({ color: "" }),
+        }
+      : null,
+    filters.gender.trim()
+      ? {
+          key: "gender",
+          label: `${t("catalog.filterSummary.gender")}: ${filters.gender.trim()}`,
+          onRemove: () => applyFilterPatch({ gender: "" }),
+        }
+      : null,
+    filters.inStock
+      ? {
+          key: "stock",
+          label:
+            filters.inStock === "true"
+              ? t("catalog.filterSummary.inStockOnly")
+              : t("catalog.filterSummary.outOfStockOnly"),
+          onRemove: () => applyFilterPatch({ inStock: "" }),
+        }
+      : null,
+    filters.minPrice
+      ? {
+          key: "minPrice",
+          label: `${t("catalog.filterSummary.minPrice")}: ${filters.minPrice}`,
+          onRemove: () => applyFilterPatch({ minPrice: "" }),
+        }
+      : null,
+    filters.maxPrice
+      ? {
+          key: "maxPrice",
+          label: `${t("catalog.filterSummary.maxPrice")}: ${filters.maxPrice}`,
+          onRemove: () => applyFilterPatch({ maxPrice: "" }),
+        }
+      : null,
+    filters.sort !== "newest"
+      ? {
+          key: "sort",
+          label: `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}`,
+          onRemove: () => applyFilterPatch({ sort: "newest" }),
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; onRemove: () => void }>;
 
   return (
     <PublicShell>
@@ -506,16 +664,39 @@ function ProductsPageContent({
           {!hasActiveFilters && <PublicHomepageHeroSlider initialSlides={slides} />}
 
           <div className={showFilters ? "relative z-30 space-y-4 overflow-visible" : "hidden"}>
-              <section className="relative z-30 overflow-visible rounded-[1.8rem] border border-[var(--border)] bg-gray-50/70 p-3.5 shadow-sm backdrop-blur-md">
+              <section className="relative z-30 overflow-visible rounded-[1.8rem] border border-[var(--border)] bg-gradient-to-br from-white via-[var(--brand-primary-soft)]/35 to-gray-50 p-3.5 shadow-sm backdrop-blur-md sm:p-4">
                 <form
                   id="filter-form"
                   onSubmit={handleSearch}
                   className="flex w-full flex-col gap-3 overflow-visible xl:flex-row xl:items-center xl:justify-between"
                 >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand-primary-dark)]">
+                        {t("catalog.searchTitle")}
+                      </p>
+                      <p className="text-sm text-[var(--muted)]">
+                        {t("catalog.searchHint")}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileFiltersOpen((current) => !current)}
+                      className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--brand-primary)]/20 bg-white px-4 text-sm font-semibold text-[var(--brand-primary-dark)] shadow-sm transition hover:border-[var(--brand-primary)]/40 lg:hidden"
+                      data-testid="catalog-mobile-filters-toggle"
+                      aria-expanded={isMobileFiltersOpen}
+                    >
+                      <span>
+                        {activeFilterCount > 0
+                          ? t("catalog.filtersButtonActive", { count: activeFilterCount })
+                          : t("catalog.filtersButton")}
+                      </span>
+                    </button>
+                  </div>
 
                   {/* Wrapped Horizontal Filter Row */}
-                  <div className="flex w-full flex-wrap items-center gap-2 xl:flex-1">
-                    <div className="flex min-w-0 basis-full items-center rounded-2xl border border-[var(--border)] bg-white px-3 py-2 shadow-sm md:basis-auto md:min-w-[280px] md:flex-1">
+                  <div className="flex w-full flex-wrap items-center gap-3 xl:flex-1">
+                    <div className="flex min-w-0 basis-full items-center rounded-[1.6rem] border border-[var(--brand-primary)]/15 bg-white px-4 py-3 shadow-sm transition focus-within:border-[var(--brand-primary)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/15 md:basis-auto md:min-w-[320px] md:flex-1">
                       <svg
                         className="h-4 w-4 shrink-0 text-[var(--muted)]"
                         fill="none"
@@ -539,27 +720,73 @@ function ProductsPageContent({
                         className="min-w-0 flex-1 bg-transparent px-3 text-sm text-[var(--foreground)] outline-none"
                         aria-label="Search catalog"
                       />
+                      {filters.q ? (
+                        <button
+                          type="button"
+                          onClick={() => applyFilterPatch({ q: "" })}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--muted)] transition hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary-dark)]"
+                          aria-label={t("catalog.clearSearch")}
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M6 6l12 12M18 6L6 18"
+                            />
+                          </svg>
+                        </button>
+                      ) : null}
                       <button
                         type="submit"
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)] transition hover:bg-[var(--brand-primary)] hover:text-white"
+                        className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--brand-primary-dark)]"
                         aria-label="Search"
                       >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
-                          />
-                        </svg>
+                        <span>{t("publicHeader.searchProducts")}</span>
                       </button>
                     </div>
+                    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:hidden">
+                      <label className="flex min-w-0 items-center gap-3 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--foreground)] shadow-sm">
+                        <span className="shrink-0 font-semibold text-[var(--muted)]">
+                          {t("catalog.quickSortLabel")}
+                        </span>
+                        <select
+                          value={filters.sort}
+                          onChange={(event) => {
+                            setFilters((current) => ({ ...current, sort: event.target.value }));
+                            setTimeout(() => {
+                              const form = document.querySelector("#filter-form") as HTMLFormElement;
+                              if (form) form.requestSubmit();
+                            }, 50);
+                          }}
+                          className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                        >
+                          <option value="newest">{t("catalog.sortOptions.newest")}</option>
+                          <option value="price_asc">{t("catalog.sortOptions.price_asc")}</option>
+                          <option value="price_desc">{t("catalog.sortOptions.price_desc")}</option>
+                          <option value="name_asc">{t("catalog.sortOptions.name_asc")}</option>
+                          <option value="stock_desc">{t("catalog.sortOptions.stock_desc")}</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsMobileFiltersOpen((current) => !current)}
+                        className="inline-flex h-full items-center justify-center rounded-2xl border border-dashed border-[var(--brand-primary)]/30 bg-white px-4 py-3 text-sm font-semibold text-[var(--brand-primary-dark)] shadow-sm"
+                      >
+                        {isMobileFiltersOpen ? t("catalog.closeFilters") : t("catalog.openFiltersPanel")}
+                      </button>
+                    </div>
+                    <div
+                      className={`w-full flex-wrap items-center gap-2 ${
+                        isMobileFiltersOpen ? "flex" : "hidden"
+                      } lg:flex`}
+                    >
                     {/* РАССПРОДАЖА Switch */}
                     <button
                       type="button"
@@ -1223,6 +1450,7 @@ function ProductsPageContent({
                         </div>
                       )}
                     </div>
+                    </div>
                   </div>
 
                   {/* Grid Layout Switcher on far right */}
@@ -1251,30 +1479,79 @@ function ProductsPageContent({
                 </form>
               </section>
 
-              {/* Dynamic Suggestion Search Chips */}
-              {suggestionChips.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin sm:flex-wrap sm:items-center" data-testid="suggestion-chips-container">
-                  {suggestionChips.map((chip, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setFilters((current) => ({ ...current, q: chip }));
-                        setTimeout(() => {
-                          const form = document.querySelector("#filter-form") as HTMLFormElement;
-                          if (form) form.requestSubmit();
-                        }, 50);
-                      }}
-                      className="flex items-center gap-1.5 bg-[#f6f6fa] hover:bg-[#ececf3] text-gray-600 hover:text-gray-800 px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition select-none shrink-0 border border-transparent"
-                    >
-                      <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <span>{chip}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="space-y-3">
+                {(recentSearches.length > 0 || visibleSuggestionChips.length > 0) && (
+                  <div className="space-y-2" data-testid="suggestion-chips-container">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                        {recentSearches.length > 0
+                          ? t("catalog.recentSearches")
+                          : t("catalog.popularSearches")}
+                      </p>
+                      {recentSearches.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={clearRecentSearches}
+                          className="text-xs font-semibold text-[var(--brand-primary-dark)] transition hover:text-[var(--brand-primary)]"
+                        >
+                          {t("catalog.clearRecentSearches")}
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin sm:flex-wrap sm:items-center">
+                      {visibleSuggestionChips.map((chip, idx) => (
+                        <button
+                          key={`${chip}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            setFilters((current) => ({ ...current, q: chip }));
+                            setTimeout(() => {
+                              const form = document.querySelector("#filter-form") as HTMLFormElement;
+                              if (form) form.requestSubmit();
+                            }, 50);
+                          }}
+                          className="flex items-center gap-1.5 rounded-full border border-transparent bg-white px-3.5 py-2 text-xs font-semibold text-gray-600 transition hover:border-[var(--brand-primary)]/20 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary-dark)]"
+                        >
+                          <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <span>{chip}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {activeFilterChips.length > 0 ? (
+                  <div className="space-y-2" data-testid="catalog-active-filters">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                        {t("catalog.activeFilters")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="text-xs font-semibold text-[var(--brand-primary-dark)] transition hover:text-[var(--brand-primary)]"
+                      >
+                        {t("catalog.clearAll")}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {activeFilterChips.map((chip) => (
+                        <button
+                          key={chip.key}
+                          type="button"
+                          onClick={chip.onRemove}
+                          className="inline-flex items-center gap-2 rounded-full border border-[var(--brand-primary)]/15 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] shadow-sm transition hover:border-[var(--brand-primary)]/30 hover:text-[var(--brand-primary-dark)]"
+                          aria-label={`${t("catalog.removeFilter")} ${chip.label}`}
+                        >
+                          <span>{chip.label}</span>
+                          <span className="text-[var(--muted)]">x</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
           </div>
 
           {error ? (
@@ -1325,7 +1602,7 @@ function ProductsPageContent({
                   setFilters((current) => ({ ...current, categoryId: "", categorySlug: "" }));
                   submitFiltersSoon();
                 }}
-                className={`h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 shrink-0 border cursor-pointer ${
+                className={`h-10 px-4 rounded-full text-sm font-semibold transition-all duration-200 shrink-0 border cursor-pointer ${
                   !filters.categoryId && !filters.categorySlug
                     ? "bg-[var(--brand-primary)] text-white border-transparent shadow-[0_4px_12px_rgba(203,17,171,0.2)]"
                     : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
@@ -1348,7 +1625,7 @@ function ProductsPageContent({
                       }));
                       submitFiltersSoon();
                     }}
-                    className={`h-8 px-4 rounded-full text-xs font-semibold transition-all duration-200 shrink-0 border cursor-pointer flex items-center gap-1.5 ${
+                    className={`h-10 px-4 rounded-full text-sm font-semibold transition-all duration-200 shrink-0 border cursor-pointer flex items-center gap-1.5 ${
                       isSelected
                         ? "bg-[var(--brand-primary)] text-white border-transparent shadow-[0_4px_12px_rgba(203,17,171,0.2)]"
                         : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
@@ -1375,19 +1652,27 @@ function ProductsPageContent({
           )}
 
           {loading ? (
-            <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
-                  <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
-                  <div className="space-y-3 px-5 py-5">
-                    <div className="h-3 w-28 rounded bg-[var(--panel-strong)]" />
-                    <div className="h-6 w-3/4 rounded bg-[var(--panel-strong)]" />
-                    <div className="h-4 w-full rounded bg-[var(--panel-strong)]" />
-                    <div className="h-4 w-5/6 rounded bg-[var(--panel-strong)]" />
+            <div className="space-y-4">
+              <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary-dark)]">
+                  {t("catalog.loadingTitle")}
+                </p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{t("catalog.loadingDescription")}</p>
+              </div>
+              <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
+                    <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
+                    <div className="space-y-3 px-5 py-5">
+                      <div className="h-3 w-28 rounded bg-[var(--panel-strong)]" />
+                      <div className="h-6 w-3/4 rounded bg-[var(--panel-strong)]" />
+                      <div className="h-4 w-full rounded bg-[var(--panel-strong)]" />
+                      <div className="h-4 w-5/6 rounded bg-[var(--panel-strong)]" />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </section>
+                ))}
+              </section>
+            </div>
           ) : items.length ? (
             <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {items.map((product) => (
@@ -1419,6 +1704,20 @@ function ProductsPageContent({
                     >
                       {summary}
                     </span>
+                  ))}
+                </div>
+              ) : null}
+              {hasActiveFilters && visibleSuggestionChips.length > 0 ? (
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  {visibleSuggestionChips.slice(0, 3).map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => applyFilterPatch({ q: chip })}
+                      className="inline-flex rounded-full border border-[var(--brand-primary)]/15 bg-[var(--brand-primary-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary-dark)] transition hover:border-[var(--brand-primary)]/30"
+                    >
+                      {chip}
+                    </button>
                   ))}
                 </div>
               ) : null}
