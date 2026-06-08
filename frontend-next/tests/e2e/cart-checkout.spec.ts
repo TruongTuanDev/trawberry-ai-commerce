@@ -215,6 +215,8 @@ test("customer can cart checkout multiple items and track them", async ({
   await expect(
     page.getByRole("heading", { name: `E2E Cart Product ${stamp}` }),
   ).toBeVisible();
+  await expect(page.getByTestId("product-trust-section")).toBeVisible();
+  await expect(page.getByTestId("product-delivery-payment-info")).toBeVisible();
   await page.getByTestId("add-to-cart").click();
   await expect(page.getByTestId("public-cart-count")).toHaveText("1");
   await expect(page.getByTestId("continue-to-checkout")).toBeVisible();

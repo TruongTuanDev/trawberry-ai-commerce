@@ -19,7 +19,6 @@ import { PublicShell } from "@/components/public/public-shell";
 import { QuantityStepper } from "@/components/public/quantity-stepper";
 import { StockBadge } from "@/components/public/stock-badge";
 import { toast } from "@/components/ui/use-toast";
-import { FallbackImage } from "@/components/ui/fallback-image";
 import { useI18n } from "@/i18n/use-i18n";
 import {
   getGuestSessionId,
@@ -71,7 +70,10 @@ export function PublicProductDetailPageClient({
     product?.variants.find((variant) => variant.inStock) ??
     product?.variants[0] ??
     null;
-  const cartItem = product && selectedVariant ? getCartItem(items, product.id, selectedVariant.id) : null;
+  const cartItem =
+    product && selectedVariant
+      ? getCartItem(items, product.id, selectedVariant.id)
+      : null;
   const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState<string | null>(null);
   const normalizedError = error?.toLowerCase() ?? "";
@@ -87,7 +89,9 @@ export function PublicProductDetailPageClient({
     return Math.min(normalized, maxQuantity);
   }, [maxQuantity, quantity]);
   const displayQuantity = cartItem?.quantity ?? safeQuantity;
-  const selectedVariantLabel = selectedVariant ? getVariantLabel(selectedVariant) : t("productDetail.noVariant");
+  const selectedVariantLabel = selectedVariant
+    ? getVariantLabel(selectedVariant)
+    : t("productDetail.noVariant");
   const isUnavailableState =
     normalizedError.includes("not found") ||
     normalizedError.includes("no longer") ||
@@ -252,19 +256,13 @@ export function PublicProductDetailPageClient({
     if (oldNum <= currentNum) return null;
     return Math.round(((oldNum - currentNum) / oldNum) * 100);
   }, [currentPrice, oldPrice]);
-  const specRows = [
-    { label: t("productDetail.sku"), value: selectedVariant?.sellerSku ?? product?.sellerSku ?? null },
-    { label: t("productDetail.brand"), value: product?.brand ?? null },
-    { label: t("productDetail.category"), value: product?.categoryName ?? product?.sourceCategoryName ?? null },
-    { label: t("productDetail.color"), value: product?.color ?? null },
-    { label: t("productDetail.gender"), value: product?.gender ?? null },
-    { label: t("productDetail.composition"), value: product?.composition ?? null },
-    { label: t("productDetail.source"), value: product?.sourceCategoryName ?? null },
-  ].filter((row) => row.value);
 
   const reviewLabel =
     product?.averageRating && Number(product.feedbackCount) > 0
-      ? t("productDetail.reviews", { rating: Number(product.averageRating).toFixed(1), count: product.feedbackCount })
+      ? t("productDetail.reviews", {
+          rating: Number(product.averageRating).toFixed(1),
+          count: product.feedbackCount,
+        })
       : null;
 
   const stockLabel = !selectedVariant
@@ -272,7 +270,9 @@ export function PublicProductDetailPageClient({
     : !selectedVariant.inStock
       ? t("productDetail.outOfStock")
       : selectedVariant.trackInventory
-        ? t("productDetail.availableCount", { count: formatCount(selectedVariant.availableQuantity) })
+        ? t("productDetail.availableCount", {
+            count: formatCount(selectedVariant.availableQuantity),
+          })
         : t("productDetail.availableToOrder");
 
   const stockTone = !selectedVariant?.inStock
@@ -282,6 +282,77 @@ export function PublicProductDetailPageClient({
         selectedVariant.availableQuantity <= selectedVariant.lowStockThreshold
       ? "text-amber-700 bg-amber-50 border-amber-200"
       : "text-emerald-700 bg-emerald-50 border-emerald-200";
+
+  const isLowStockState = Boolean(
+    selectedVariant &&
+      selectedVariant.inStock &&
+      selectedVariant.trackInventory &&
+      selectedVariant.availableQuantity <= selectedVariant.lowStockThreshold,
+  );
+
+  const availabilitySummary = !selectedVariant
+    ? t("productDetail.selectSize")
+    : !selectedVariant.inStock
+      ? t("productDetail.productOutOfStock")
+      : isLowStockState
+        ? t("productDetail.productLowStock")
+        : t("productDetail.productInStock");
+
+  const specRows = [
+    {
+      label: t("productDetail.sku"),
+      value: selectedVariant?.sellerSku ?? product?.sellerSku ?? null,
+    },
+    { label: t("productDetail.brand"), value: product?.brand ?? null },
+    {
+      label: t("productDetail.category"),
+      value: product?.categoryName ?? product?.sourceCategoryName ?? null,
+    },
+    { label: t("productDetail.color"), value: product?.color ?? null },
+    { label: t("productDetail.gender"), value: product?.gender ?? null },
+    { label: t("productDetail.composition"), value: product?.composition ?? null },
+    { label: t("productDetail.source"), value: product?.sourceCategoryName ?? null },
+  ].filter((row) => row.value);
+
+  const highlightRows = [
+    { label: t("productDetail.soldBy"), value: product?.shop.name ?? null },
+    {
+      label: t("productDetail.category"),
+      value: product?.categoryName ?? product?.sourceCategoryName ?? null,
+    },
+    {
+      label: t("productDetail.selectedVariant"),
+      value: selectedVariantLabel !== t("productDetail.noVariant") ? selectedVariantLabel : null,
+    },
+    { label: t("productDetail.stockLabel"), value: stockLabel },
+  ].filter((row) => row.value);
+
+  const trustItems = [
+    t("productDetail.productTrustSecureCheckout"),
+    t("productDetail.productTrustOrderTracking"),
+    t("productDetail.productTrustVerifiedSeller"),
+    t("productDetail.productTrustReturnsPolicy"),
+  ];
+
+  const infoCards = [
+    {
+      title: t("productDetail.productDeliveryInfoTitle"),
+      body: selectedVariant?.inStock
+        ? t("productDetail.productDeliveryInfoBody")
+        : t("productDetail.pickupDeliveryByAgreement"),
+    },
+    {
+      title: t("productDetail.productPaymentInfoTitle"),
+      body: product?.shop.paymentInstructions ?? t("productDetail.productPaymentInfoBody"),
+    },
+    {
+      title: t("productDetail.productSupportInfoTitle"),
+      body: t("productDetail.productSupportInfoBody"),
+    },
+  ];
+
+  const descriptionText = product?.description?.trim() ?? "";
+  const shouldCollapseDescription = descriptionText.length > 280;
 
   const hasReadyVariant = Boolean(selectedVariant?.inStock && currentPrice);
   const hasSelectableInStockVariant = Boolean(
@@ -366,8 +437,20 @@ export function PublicProductDetailPageClient({
           </div>
 
           {loading ? (
-            <section className="card-panel rounded-[2rem] px-6 py-12 text-sm text-[var(--muted)]">
-              {t("productDetail.loadingProduct")}
+            <section
+              className="card-panel rounded-[2rem] bg-white px-5 py-6 sm:px-6"
+              aria-label={t("productDetail.loadingProduct")}
+            >
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.9fr)_320px]">
+                <div className="min-h-[420px] animate-pulse rounded-[2rem] bg-slate-100" />
+                <div className="space-y-4">
+                  <div className="h-4 w-28 animate-pulse rounded-full bg-slate-100" />
+                  <div className="h-10 w-full animate-pulse rounded-3xl bg-slate-100" />
+                  <div className="h-24 w-full animate-pulse rounded-[1.75rem] bg-slate-100" />
+                  <div className="h-40 w-full animate-pulse rounded-[1.75rem] bg-slate-100" />
+                </div>
+                <div className="min-h-[360px] animate-pulse rounded-[2rem] bg-slate-100" />
+              </div>
             </section>
           ) : error || !product ? (
             <section
@@ -375,7 +458,9 @@ export function PublicProductDetailPageClient({
               data-testid={isUnavailableState ? "product-unavailable-state" : "product-detail-error"}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                {isUnavailableState ? t("productDetail.unavailable") : t("productDetail.loadError")}
+                {isUnavailableState
+                  ? t("productDetail.unavailable")
+                  : t("productDetail.loadError")}
               </p>
               <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold">
                 {isUnavailableState
@@ -400,7 +485,7 @@ export function PublicProductDetailPageClient({
                     onClick={() => setRequestKey((current) => current + 1)}
                     className="public-button-secondary px-5 py-3 text-sm"
                   >
-                    {t("catalog.tryAgain")}
+                    {t("productDetail.productRetryLoad")}
                   </button>
                 ) : null}
               </div>
@@ -410,22 +495,29 @@ export function PublicProductDetailPageClient({
               <section className="card-panel rounded-[2rem] bg-white p-4 sm:rounded-[2.25rem] sm:p-6">
                 <div className="grid gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.9fr)_320px]">
                   <div className="min-w-0">
-                    <ProductGallery name={product.name} images={product.images} />
+                    <ProductGallery
+                      key={`${product.id}:${product.images.length}`}
+                      name={product.name}
+                      images={product.images}
+                    />
                   </div>
 
                   <div className="min-w-0 space-y-6">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-3">
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="inline-flex rounded-full border border-[var(--brand-primary)]/15 bg-[var(--brand-primary-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary-dark)]">
+                          {availabilitySummary}
+                        </span>
                         {product.shop.slug ? (
                           <Link
                             href={`/shops/${product.shop.slug}`}
-                            className="inline-flex min-w-0 break-all text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:text-[var(--accent-strong)]"
+                            className="inline-flex min-w-0 break-all rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] transition hover:border-[var(--brand-primary)]/25 hover:text-[var(--brand-primary-dark)]"
                             data-testid="public-product-shop-link"
                           >
                             {product.shop.name}
                           </Link>
                         ) : (
-                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                          <p className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                             {product.shop.name}
                           </p>
                         )}
@@ -438,54 +530,44 @@ export function PublicProductDetailPageClient({
                           />
                         ) : null}
                       </div>
+
                       <h1
-                        className="break-words text-3xl font-bold leading-tight text-[var(--foreground)] sm:text-4xl"
+                        className="break-words text-3xl font-black leading-tight text-[var(--foreground)] sm:text-4xl xl:text-[2.7rem]"
                         data-testid="product-detail-title"
                       >
                         {product.name}
                       </h1>
+
                       <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)]">
                         {reviewLabel ? (
-                          <span className="inline-flex items-center gap-1 font-medium bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200/50">
-                            <span className="text-amber-500">★</span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/50 bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
+                            <span className="text-amber-500">*</span>
                             <span>{reviewLabel}</span>
                           </span>
                         ) : null}
                         {product.feedbackCount > 0 ? (
-                          <span className="bg-slate-50 text-slate-600 px-2.5 py-1 rounded-full border border-slate-200/50 font-medium">
-                            {t("productDetail.questionsCount", { count: product.feedbackCount })}
+                          <span className="rounded-full border border-slate-200/50 bg-slate-50 px-2.5 py-1 font-medium text-slate-600">
+                            {t("productDetail.questionsCount", {
+                              count: product.feedbackCount,
+                            })}
                           </span>
                         ) : null}
                         {!reviewLabel && product.feedbackCount === 0 ? (
-                          <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200/50 font-medium">
+                          <span className="rounded-full border border-emerald-200/50 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
                             {t("productDetail.readyForCheckout")}
                           </span>
                         ) : null}
                       </div>
-                    </div>
 
-                    {product.images.length > 1 ? (
-                      <div className="space-y-3 xl:hidden">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          {t("productDetail.preview")}
+                      <div className="rounded-[1.5rem] border border-[var(--border)] bg-[linear-gradient(135deg,#ffffff_0%,#fff5fc_100%)] px-4 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          {t("productDetail.productWhyBuyTitle")}
                         </p>
-                        <div className="flex flex-wrap gap-3">
-                          {product.images.slice(0, 5).map((image, index) => (
-                            <div
-                              key={image.id}
-                              className="h-16 w-16 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
-                            >
-                              <FallbackImage
-                                src={image.url}
-                                alt={`${product.name} preview ${index + 1}`}
-                                className="h-full w-full object-cover"
-                                testId={index === 0 ? "product-preview-image" : undefined}
-                              />
-                            </div>
-                          ))}
-                        </div>
+                        <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                          {t("productDetail.trustedValidationNotice")}
+                        </p>
                       </div>
-                    ) : null}
+                    </div>
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-3">
@@ -496,28 +578,40 @@ export function PublicProductDetailPageClient({
                           {t("productDetail.chooseVariant")}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2.5 sm:gap-3" data-testid="product-size-selector">
+                      <div
+                        className="flex flex-wrap gap-2.5 sm:gap-3"
+                        data-testid="product-size-selector"
+                      >
                         {product.variants.map((variant) => {
-                          const label = [variant.sizeName, variant.russianSize].filter(Boolean).join(" / ") || getVariantLabel(variant);
+                          const label =
+                            [variant.sizeName, variant.russianSize].filter(Boolean).join(" / ") ||
+                            getVariantLabel(variant);
                           const active = selectedVariantId === variant.id;
+
                           return (
-                              <button
-                                key={variant.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedVariantId(variant.id);
-                                  setHasChosenSize(true);
-                                  setQuantity(1);
-                                }}
+                            <button
+                              key={variant.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedVariantId(variant.id);
+                                setHasChosenSize(true);
+                                setQuantity(1);
+                              }}
                               className={`min-w-20 flex-1 rounded-2xl border px-4 py-3 text-left transition-all duration-200 min-[430px]:flex-none ${active ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--brand-primary)]/40"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
-                                disabled={!variant.inStock}
-                                data-testid={active ? "product-selected-size" : `product-size-${variant.id}`}
-                              >
+                              disabled={!variant.inStock}
+                              data-testid={
+                                active
+                                  ? "product-selected-size"
+                                  : `product-size-${variant.id}`
+                              }
+                            >
                               <div className="text-sm font-semibold">{label}</div>
                               <div className="mt-1 text-xs">
                                 {variant.inStock
                                   ? variant.trackInventory
-                                    ? t("productDetail.pcsCount", { count: formatCount(variant.availableQuantity) })
+                                    ? t("productDetail.pcsCount", {
+                                        count: formatCount(variant.availableQuantity),
+                                      })
                                     : t("productDetail.available")
                                   : t("productDetail.outOfStock")}
                               </div>
@@ -545,15 +639,31 @@ export function PublicProductDetailPageClient({
                           {t("productDetail.allVariantsOutOfStock")}
                         </p>
                       ) : null}
+                      {highlightRows.length ? (
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          {highlightRows.map((row) => (
+                            <div
+                              key={row.label}
+                              className="rounded-[1.25rem] border border-white/70 bg-white px-3 py-3"
+                            >
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                                {row.label}
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+                                {row.value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-
                   </div>
 
                   <aside className="min-w-0 xl:sticky xl:top-24 xl:self-start">
                     <div className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-[0_12px_40px_rgba(203,17,171,0.08)]">
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-3">
-                          <p className="text-[var(--brand-primary)] text-4xl font-black tracking-tight">
+                          <p className="text-4xl font-black tracking-tight text-[var(--brand-primary)]">
                             {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
                           </p>
                           {oldPrice ? (
@@ -562,18 +672,25 @@ export function PublicProductDetailPageClient({
                             </p>
                           ) : null}
                           {discountPercent ? (
-                            <span className="rounded-lg bg-rose-50 border border-rose-100 px-2 py-0.5 text-xs font-bold text-rose-600">
+                            <span className="rounded-lg border border-rose-100 bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-600">
                               -{discountPercent}%
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-sm text-[var(--muted)]">
-                          {selectedVariant ? t("productDetail.selectedSizeLabel", { size: selectedVariantLabel }) : t("productDetail.selectSize")}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <StockBadge label={stockLabel} tone={stockTone} />
+                          <p className="text-sm text-[var(--muted)]">
+                            {selectedVariant
+                              ? t("productDetail.selectedSizeLabel", {
+                                  size: selectedVariantLabel,
+                                })
+                              : t("productDetail.selectSize")}
+                          </p>
+                        </div>
                       </div>
 
                       <div className="mt-5 space-y-4">
-                        <div className="rounded-[1.5rem] bg-slate-50 border border-slate-100 p-4">
+                        <div className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                             {t("productDetail.quantity")}
                           </p>
@@ -590,7 +707,7 @@ export function PublicProductDetailPageClient({
                         </div>
 
                         {cartItem ? (
-                          <div className="rounded-[1.5rem] border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm font-semibold text-[var(--brand-primary-dark)] text-center shadow-sm">
+                          <div className="rounded-[1.5rem] border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-4 py-3 text-center text-sm font-semibold text-[var(--brand-primary-dark)] shadow-sm">
                             {t("productDetail.inCartCount", { count: cartItem.quantity })}
                           </div>
                         ) : null}
@@ -608,7 +725,7 @@ export function PublicProductDetailPageClient({
                           type="button"
                           onClick={handleBuyNow}
                           disabled={!hasReadyVariant}
-                          className="w-full rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-5 py-3.5 text-sm font-semibold text-[var(--brand-primary-dark)] transition-all duration-200 hover:bg-[var(--brand-primary-soft)]/85 hover:border-[var(--brand-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-5 py-3.5 text-sm font-semibold text-[var(--brand-primary-dark)] transition-all duration-200 hover:border-[var(--brand-primary)]/20 hover:bg-[var(--brand-primary-soft)]/85 disabled:cursor-not-allowed disabled:opacity-50"
                           data-testid="continue-to-checkout"
                         >
                           {t("productDetail.buyNow")}
@@ -623,62 +740,108 @@ export function PublicProductDetailPageClient({
                         </button>
                       </div>
 
-                      <div className="mt-6 space-y-4 border-t border-slate-100 pt-5 text-xs text-slate-500">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-emerald-500 text-sm">📦</span>
-                          <span>{selectedVariant?.inStock ? t("productDetail.deliveryCalculatedAtCheckout") : t("productDetail.pickupDeliveryByAgreement")}</span>
+                      <div
+                        className="mt-6 space-y-4 border-t border-slate-100 pt-5"
+                        data-testid="product-trust-section"
+                      >
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {trustItems.map((item) => (
+                            <div
+                              key={item}
+                              className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-3 py-3 text-xs font-semibold leading-5 text-[var(--foreground)]"
+                            >
+                              {item}
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-[var(--brand-primary)] text-sm">🛡️</span>
-                          <span className="font-semibold text-slate-700">{t("productDetail.safeCheckout")}</span>
+
+                        <div className="space-y-3" data-testid="product-delivery-payment-info">
+                          {infoCards.map((card) => (
+                            <div
+                              key={card.title}
+                              className="rounded-[1.25rem] border border-[var(--border)] bg-slate-50/80 px-4 py-3"
+                            >
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                                {card.title}
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                                {card.body}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-slate-400 text-sm">🏪</span>
-                          <span>{t("productDetail.shopLabel")}: <span className="font-semibold text-slate-800">{product.shop.name}</span></span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-slate-400 text-sm">⚡</span>
-                          <span>{t("productDetail.stockLabel")}: <span className="font-semibold text-slate-800">{stockLabel}</span></span>
-                        </div>
-                        {product.shop.paymentInstructions ? (
-                          <div className="rounded-xl bg-slate-50 border border-slate-100/50 p-3 leading-relaxed text-[11px] text-slate-600">
-                            {product.shop.paymentInstructions}
-                          </div>
-                        ) : null}
+
+                        <p className="text-xs leading-6 text-[var(--muted)]">
+                          {t("productDetail.trustedValidationNotice")}
+                        </p>
                       </div>
                     </div>
                   </aside>
                 </div>
               </section>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
-                  <h3 className="text-lg font-bold text-[var(--foreground)]">
-                    {t("productDetail.description")}
-                  </h3>
-                  <p className="mt-4 text-sm leading-7 text-[var(--muted)] whitespace-pre-line">
-                    {product.description ?? t("productDetail.noDescription")}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
-                    <h3 className="text-lg font-bold text-[var(--foreground)] mb-4">
-                      {t("productDetail.characteristics")}
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                <div className="space-y-6">
+                  <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
+                    <h3 className="text-lg font-bold text-[var(--foreground)]">
+                      {t("productDetail.productHighlightsTitle")}
                     </h3>
-                    <div className="space-y-1">
-                      {specRows.map((row) => (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {highlightRows.map((row) => (
                         <div
                           key={row.label}
-                          className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2.5 last:border-none sm:grid-cols-[160px_minmax(0,1fr)]"
+                          className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4"
                         >
-                          <p className="text-sm text-[var(--muted)]">{row.label}</p>
-                          <p className="text-sm font-semibold text-[var(--foreground)]">{row.value}</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                            {row.label}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">
+                            {row.value}
+                          </p>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </section>
+
+                  <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
+                    <h3 className="text-lg font-bold text-[var(--foreground)]">
+                      {t("productDetail.productDescriptionTitle")}
+                    </h3>
+                    {shouldCollapseDescription ? (
+                      <details className="mt-4" open>
+                        <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--brand-primary-dark)]">
+                          {t("productDetail.description")}
+                        </summary>
+                        <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[var(--muted)]">
+                          {descriptionText}
+                        </p>
+                      </details>
+                    ) : (
+                      <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[var(--muted)]">
+                        {descriptionText || t("productDetail.noDescription")}
+                      </p>
+                    )}
+                  </section>
                 </div>
+
+                <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
+                  <h3 className="mb-4 text-lg font-bold text-[var(--foreground)]">
+                    {t("productDetail.productSpecsTitle")}
+                  </h3>
+                  <div className="space-y-1">
+                    {specRows.map((row) => (
+                      <div
+                        key={row.label}
+                        className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2.5 last:border-none sm:grid-cols-[160px_minmax(0,1fr)]"
+                      >
+                        <p className="text-sm text-[var(--muted)]">{row.label}</p>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          {row.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
 
               <PublicProductReviewsSection product={product} />
@@ -702,7 +865,7 @@ export function PublicProductDetailPageClient({
                   <div className="flex flex-col gap-3 min-[430px]:flex-row min-[430px]:items-start min-[430px]:justify-between min-[430px]:gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-[var(--brand-primary)] text-xl font-black tracking-tight">
+                        <p className="text-xl font-black tracking-tight text-[var(--brand-primary)]">
                           {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
                         </p>
                         {oldPrice ? (
@@ -711,14 +874,21 @@ export function PublicProductDetailPageClient({
                           </p>
                         ) : null}
                         {discountPercent ? (
-                          <span className="rounded bg-rose-50 border border-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600">
+                          <span className="rounded border border-rose-100 bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-600">
                             -{discountPercent}%
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        {selectedVariant ? t("productDetail.selectedSizeLabel", { size: selectedVariantLabel }) : t("productDetail.selectSize")}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <p className="text-xs text-[var(--muted)]">
+                          {selectedVariant
+                            ? t("productDetail.selectedSizeLabel", {
+                                size: selectedVariantLabel,
+                              })
+                            : t("productDetail.selectSize")}
+                        </p>
+                        <StockBadge label={stockLabel} tone={stockTone} />
+                      </div>
                     </div>
                     <div className="min-w-0 min-[430px]:text-right">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
@@ -751,7 +921,7 @@ export function PublicProductDetailPageClient({
                       type="button"
                       onClick={handleBuyNow}
                       disabled={!hasReadyVariant}
-                      className="min-w-0 flex-1 rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm font-semibold text-[var(--brand-primary-dark)] transition-all duration-200 hover:bg-[var(--brand-primary-soft)]/85 hover:border-[var(--brand-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="min-w-0 flex-1 rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-4 py-3 text-sm font-semibold text-[var(--brand-primary-dark)] transition-all duration-200 hover:border-[var(--brand-primary)]/20 hover:bg-[var(--brand-primary-soft)]/85 disabled:cursor-not-allowed disabled:opacity-50"
                       data-testid="mobile-buy-now"
                     >
                       {t("productDetail.buyNow")}
@@ -767,7 +937,6 @@ export function PublicProductDetailPageClient({
                   </button>
                 </div>
               </div>
-
             </>
           )}
         </div>

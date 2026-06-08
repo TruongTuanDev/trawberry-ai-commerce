@@ -85,16 +85,18 @@ export function PublicRecommendationSection({
 
   return (
     <section
-      className="space-y-5"
+      className="space-y-5 rounded-[2rem] border border-[var(--border)] bg-white px-4 py-5 shadow-[0_12px_30px_rgba(15,23,42,0.03)] sm:px-6 sm:py-6"
       data-testid={`recommendation-section-${placement}`}
     >
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-          {t("recommendations.kicker")}
-        </p>
-        <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)] sm:text-4xl">
-          {t(`recommendations.${titleKey}`)}
-        </h2>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            {t("recommendations.kicker")}
+          </p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--foreground)] sm:text-4xl">
+            {t(`recommendations.${titleKey}`)}
+          </h2>
+        </div>
       </div>
 
       <section
@@ -102,7 +104,10 @@ export function PublicRecommendationSection({
         data-testid={`recommendation-grid-${placement}`}
       >
         {items.map((item, index) => (
-          <div key={`${placement}-${item.product.id}`} className="space-y-2">
+          <div
+            key={`${placement}-${item.product.id}`}
+            className="space-y-2 rounded-[1.5rem] border border-transparent p-1"
+          >
             <ProductCard
               product={item.product}
               onProductNavigate={() => {
