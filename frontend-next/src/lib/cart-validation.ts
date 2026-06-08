@@ -90,6 +90,40 @@ export function getValidationMessage(
   }
 }
 
+export function getValidationAutomationMessage(input: {
+  status: CartValidationStatus;
+  productName: string | null;
+  variantName: string | null;
+  maxQuantity: number;
+  requestedQuantity: number;
+  unitPrice: number | null;
+  localUnitPrice?: number;
+}) {
+  const name = input.productName ?? "Item";
+  const variant = input.variantName ? ` (${input.variantName})` : "";
+
+  switch (input.status) {
+    case "PRODUCT_NOT_FOUND":
+      return `${name}${variant} was not found.`;
+    case "PRODUCT_NOT_PUBLIC":
+      return `${name}${variant} is no longer public and cannot be purchased.`;
+    case "PRODUCT_ARCHIVED":
+      return `${name}${variant} is archived and cannot be purchased.`;
+    case "VARIANT_NOT_FOUND":
+      return `${name}${variant} is no longer available.`;
+    case "OUT_OF_STOCK":
+      return `${name}${variant} is out of stock.`;
+    case "QUANTITY_EXCEEDS_STOCK":
+      return `Only ${input.maxQuantity} left for ${name}${variant}.`;
+    case "MISSING_PRICE":
+      return `Latest price is unavailable for ${name}${variant}.`;
+    case "PRICE_CHANGED":
+      return `Price changed for ${name}${variant} from ${formatMoneyNumber(input.localUnitPrice) ?? "N/A"} to ${formatMoneyNumber(input.unitPrice) ?? "N/A"}.`;
+    default:
+      return `${name}${variant} is ready.`;
+  }
+}
+
 export function getValidationTone(status: CartValidationStatus) {
   switch (status) {
     case "OK":

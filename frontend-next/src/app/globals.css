@@ -398,3 +398,16 @@ textarea,
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02);
   border-radius: 1.75rem;
 }
+
+@media (max-width: 639px) {
+  .public-storefront .cart-panel,
+  .public-storefront .checkout-panel,
+  .public-storefront .cart-summary-card {
+    border-radius: 1.35rem;
+    padding: 1rem;
+  }
+
+  .public-storefront .cart-quantity-control {
+    padding: 0.35rem;
+  }
+}

@@ -177,7 +177,7 @@ export function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-storefront text-white shadow-md">
-      <div className="mx-auto max-w-[1600px] px-4 py-2 sm:px-6">
+      <div className="mx-auto max-w-[1600px] px-3 py-2 sm:px-6">
         <div className="mb-2 hidden items-center justify-between gap-6 border-b border-white/10 pb-2 text-xs font-semibold text-white/80 lg:flex">
           <div className="flex items-center gap-1.5 text-white/90">
             <PinIcon />
@@ -229,14 +229,14 @@ export function PublicHeader() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 py-1 sm:gap-4 md:gap-6">
+        <div className="flex flex-wrap items-center gap-3 py-1 sm:flex-nowrap sm:gap-4 md:gap-6">
           <Link
             href="/"
             prefetch={false}
-            className="flex shrink-0 items-center"
+            className="order-1 flex shrink-0 items-center"
             data-testid="public-logo"
           >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[var(--brand-primary-dark)] shadow-sm md:hidden">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-[family-name:var(--font-mono-app)] text-sm font-bold text-[var(--brand-primary-dark)] shadow-sm md:hidden">
               tr
             </span>
             <span className="hidden font-[family-name:var(--font-sans-app)] text-2xl font-extrabold tracking-tight text-white hover:opacity-90 md:inline">
@@ -246,17 +246,20 @@ export function PublicHeader() {
 
           <button
             type="button"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/18 bg-white/10 text-white transition hover:bg-white/15 md:h-10 md:w-10"
+            className="order-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/18 bg-white/10 text-white transition hover:bg-white/15 md:h-10 md:w-10"
             aria-label={t("publicHeader.openCatalogMenu")}
           >
             <MenuIcon />
           </button>
 
-          <form onSubmit={handleSearch} className="max-w-4xl flex-1 min-w-0">
+          <form
+            onSubmit={handleSearch}
+            className="order-4 w-full min-w-0 sm:order-3 sm:max-w-4xl sm:flex-1"
+          >
             <label htmlFor="public-header-search" className="sr-only">
               {t("publicHeader.searchProducts")}
             </label>
-            <div className="public-header-search-wrap flex h-9 items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-[var(--foreground)] shadow-sm md:h-10">
+            <div className="public-header-search-wrap flex h-11 items-center gap-2 rounded-2xl bg-white px-3 py-2 text-[var(--foreground)] shadow-sm md:h-10 md:rounded-xl">
               <span className="flex-shrink-0 text-[var(--muted)]">
                 <SearchIcon />
               </span>
@@ -286,7 +289,7 @@ export function PublicHeader() {
             </div>
           </form>
 
-          <div className="flex shrink-0 items-center gap-3 sm:gap-5 md:gap-6">
+          <div className="order-3 ml-auto flex shrink-0 items-center gap-2 sm:order-4 sm:gap-5 md:gap-6">
             <Link
               href={customerAddressHref}
               prefetch={false}
@@ -308,7 +311,7 @@ export function PublicHeader() {
             <Link
               href={customerHref}
               prefetch={false}
-              className="flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
+              className="flex min-h-10 min-w-10 flex-col items-center justify-center rounded-xl text-center text-white/90 transition hover:bg-white/8 hover:text-white"
               data-testid="public-customer-link"
             >
               <span className="flex h-5 w-5 items-center justify-center">
@@ -322,7 +325,7 @@ export function PublicHeader() {
             <Link
               href="/cart"
               prefetch={false}
-              className="relative flex flex-col items-center justify-center text-center text-white/90 transition hover:text-white"
+              className="relative flex min-h-10 min-w-10 flex-col items-center justify-center rounded-xl text-center text-white/90 transition hover:bg-white/8 hover:text-white"
               data-testid="public-cart-link"
             >
               <div className="relative flex h-5 w-5 items-center justify-center">
@@ -369,6 +372,22 @@ export function PublicHeader() {
             </>
           )}
         </div>
+
+        <nav
+          className="flex gap-2 overflow-x-auto pb-1 pt-1 scrollbar-thin lg:hidden"
+          aria-label="Mobile public navigation"
+        >
+          {primaryLinks.slice(0, 4).map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              prefetch={false}
+              className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-white/15 bg-white/10 px-4 text-xs font-semibold text-white/95 backdrop-blur"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       </div>
       <VisualSearchModal
         open={visualSearchOpen}

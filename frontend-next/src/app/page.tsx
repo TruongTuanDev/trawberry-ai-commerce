@@ -131,8 +131,8 @@ export default async function HomePage() {
 
   return (
     <PublicShell tone="hero">
-      <main className="px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mx-auto max-w-7xl space-y-8">
+      <main className="px-4 py-5 sm:px-6 sm:py-8">
+        <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8">
           <PublicHomepageHeroSlider initialSlides={slides} />
 
           <section className="space-y-4">
@@ -155,7 +155,7 @@ export default async function HomePage() {
 
             {categories.length ? (
               <div
-                className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin"
+                className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin sm:gap-3"
                 data-testid="homepage-category-chips"
               >
                 <Link
@@ -219,7 +219,7 @@ export default async function HomePage() {
             </div>
 
             {items.length ? (
-              <section className="grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-4" data-testid="products-grid">
+              <section className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 xl:grid-cols-4" data-testid="products-grid">
                 {items.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

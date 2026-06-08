@@ -109,10 +109,7 @@ export function resolveRoleLocale(
     normalizeLocale(options.browserLocale),
   ];
 
-  for (const [index, candidate] of candidates.entries()) {
-    if (index === 2) {
-      continue;
-    }
+  for (const candidate of candidates) {
     if (candidate && isLocaleSupportedForRole(role, candidate)) {
       return candidate;
     }

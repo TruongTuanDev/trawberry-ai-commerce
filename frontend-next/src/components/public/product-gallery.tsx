@@ -23,17 +23,17 @@ export function ProductGallery({
 
   return (
     <div
-      className="grid gap-4 lg:grid-cols-[76px_minmax(0,1fr)]"
+      className="grid gap-3 lg:grid-cols-[76px_minmax(0,1fr)] lg:gap-4"
       data-testid="product-gallery"
     >
       {/* Thumbnail list: horizontal scroll on mobile, vertical column on desktop */}
-      <div className="order-2 flex gap-3 overflow-x-auto py-1 px-0.5 scrollbar-thin lg:order-1 lg:flex-col lg:overflow-y-auto lg:max-h-[550px]">
+      <div className="order-2 flex gap-2 overflow-x-auto px-0.5 py-1 scrollbar-thin lg:order-1 lg:max-h-[550px] lg:flex-col lg:overflow-y-auto">
         {normalizedImages.map((image, index) => (
           <button
             key={image.id}
             type="button"
             onClick={() => setSelectedIndex(index)}
-            className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border bg-white p-1 transition-all duration-200 ${
+            className={`h-18 w-18 flex-shrink-0 overflow-hidden rounded-xl border bg-white p-1 transition-all duration-200 sm:h-20 sm:w-20 lg:h-16 lg:w-16 ${
               index === selectedIndex
                 ? "border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/20 shadow-[0_4px_12px_rgba(203,17,171,0.15)]"
                 : "border-[var(--border)] hover:border-slate-300"
@@ -57,7 +57,7 @@ export function ProductGallery({
           <FallbackImage
             src={selectedImage.url}
             alt={name}
-            className="aspect-[4/5] w-full object-cover transition-transform duration-300 hover:scale-102"
+            className="aspect-[4/5] max-h-[72svh] min-h-[280px] w-full object-cover transition-transform duration-300 hover:scale-102 sm:min-h-[360px] lg:max-h-none"
             testId="product-gallery-main-image"
           />
         </div>

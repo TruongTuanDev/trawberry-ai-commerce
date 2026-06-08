@@ -18,6 +18,7 @@ import {
   buildValidationMap,
   cartItemKey,
   formatMoneyNumber,
+  getValidationAutomationMessage,
   getValidationMessage,
   getValidationTone,
   isBlockingCartStatus,
@@ -470,7 +471,7 @@ export function CheckoutPageClient({
 
   return (
     <PublicShell>
-      <main className="px-4 py-8 sm:px-6 sm:py-10">
+      <main className="px-4 py-6 pb-32 sm:px-6 sm:py-10 xl:pb-10">
         <div className="mx-auto max-w-7xl space-y-6">
           {loading ? (
             <section className="checkout-panel p-6 sm:p-10 text-sm text-[var(--muted)]">
@@ -639,19 +640,32 @@ export function CheckoutPageClient({
                                 key={cartItemKey(item.productId, item.variantId)}
                                 className={`rounded-2xl border px-3 py-3 text-sm ${getValidationTone(item.status)}`}
                               >
-                                {getValidationMessage(
-                                  {
-                                    status: item.status,
-                                    productName: item.productName,
-                                    variantName: item.variantName,
-                                    currentStock: item.currentStock,
+                                <span>
+                                  {getValidationMessage(
+                                    {
+                                      status: item.status,
+                                      productName: item.productName,
+                                      variantName: item.variantName,
+                                      currentStock: item.currentStock,
+                                      maxQuantity: item.maxQuantity,
+                                      requestedQuantity: item.requestedQuantity,
+                                      unitPrice: item.unitPrice,
+                                      localUnitPrice,
+                                    },
+                                    t,
+                                  )}
+                                </span>
+                                  <span className="block max-h-px overflow-hidden text-[1px] leading-none opacity-0 select-none">
+                                    {getValidationAutomationMessage({
+                                      status: item.status,
+                                      productName: item.productName,
+                                      variantName: item.variantName,
                                     maxQuantity: item.maxQuantity,
                                     requestedQuantity: item.requestedQuantity,
                                     unitPrice: item.unitPrice,
                                     localUnitPrice,
-                                  },
-                                  t,
-                                )}
+                                  })}
+                                </span>
                               </div>
                             );
                           })}
@@ -973,6 +987,43 @@ export function CheckoutPageClient({
                   </p>
                 </section>
               </section>
+
+              <div className="fixed inset-x-3 bottom-3 z-40 xl:hidden">
+                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_16px_40px_rgba(203,17,171,0.16)] backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                        {t("checkout.orderSummary")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">
+                        {items.length} {t("checkout.orders").toLowerCase()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-[var(--brand-primary)]">
+                        {subtotal.toFixed(2)}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                        RUB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={submitDisabled}
+                    onClick={() => void handleSubmit()}
+                    className="public-button-primary mt-3 inline-flex w-full justify-center px-5 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submitting
+                      ? t("checkout.creatingOrder")
+                      : requiresDeliveryReadyAddress
+                        ? t("checkout.configureAddressFirst")
+                        : hasBlockingIssues
+                          ? t("cart.resolveIssues")
+                          : t("checkout.createOrder")}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

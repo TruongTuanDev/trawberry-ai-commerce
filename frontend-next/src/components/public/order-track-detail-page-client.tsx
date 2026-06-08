@@ -230,6 +230,7 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       <div data-testid="tracked-order-status">
                         <OrderStatusBadge
                           status={fulfillmentStatus?.code ?? order.status}
+                          displayText={fulfillmentStatus?.code ?? order.status}
                         />
                       </div>
                       {fulfillmentStatus ? (
@@ -239,10 +240,16 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                       ) : null}
                     </Metric>
                     <Metric label={t("orderTrack.paymentStatus")}>
-                      <PaymentStatusBadge
-                        status={order.paymentStatus}
-                        testId="tracked-payment-status"
-                      />
+                      <>
+                        <PaymentStatusBadge
+                          status={order.paymentStatus}
+                          testId="tracked-payment-status"
+                          displayText={order.paymentStatus}
+                        />
+                        <p className="mt-2 text-xs text-[var(--muted)]">
+                          {formatPaymentStatusLabel(order.paymentStatus, t)}
+                        </p>
+                      </>
                     </Metric>
                     <Metric label={t("orderTrack.paymentConfirmed")}>
                       {isPaymentConfirmed(order.paymentStatus)
@@ -730,6 +737,30 @@ function isPaymentConfirmed(paymentStatus: string) {
     "SELLER_CONFIRMED_DELIVERY_PAYMENT",
     "YANDEX_PAYMENT_ON_DELIVERY_PAID",
   ].includes(paymentStatus);
+}
+
+function formatPaymentStatusLabel(
+  paymentStatus: string,
+  t: (key: string) => string,
+) {
+  switch (paymentStatus) {
+    case "PENDING":
+      return t("common.status.payment.PENDING");
+    case "UNPAID":
+      return t("common.status.payment.UNPAID");
+    case "PAID":
+      return t("common.status.payment.PAID");
+    case "APPROVED":
+      return t("common.status.payment.APPROVED");
+    case "REJECTED":
+      return t("common.status.payment.REJECTED");
+    case "FAILED":
+      return t("common.status.payment.FAILED");
+    case "CANCELLED":
+      return t("common.status.payment.CANCELLED");
+    default:
+      return paymentStatus;
+  }
 }
 
 function getBuyerFulfillmentStatus(order: PublicTrackedOrder, t: (key: string) => string) {

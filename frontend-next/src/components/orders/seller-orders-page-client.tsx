@@ -51,7 +51,7 @@ export function SellerOrdersPageClient() {
   const [page, setPage] = useState(1);
   const [size] = useState(10);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<SellerFulfillmentBucket>("NEW");
+  const [status, setStatus] = useState<SellerFulfillmentBucket>("ALL");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
@@ -110,24 +110,38 @@ export function SellerOrdersPageClient() {
       if (shops.length < 1) {
         await loadShops();
       }
-      const shopId = useSellerWorkspaceStore.getState().currentShopId;
+      const workspaceState = useSellerWorkspaceStore.getState();
+      const shopId = workspaceState.currentShopId;
       if (!shopId) {
         setResponse(null);
         setError(null);
         return;
       }
-      const next = await getShopOrders(
+      const query = {
+        page,
+        size,
+        search: search || undefined,
+        status: status === "ALL" ? undefined : status,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+      };
+      let next = await getShopOrders(
         shopId,
-        {
-          page,
-          size,
-          search: search || undefined,
-          status: status === "ALL" ? undefined : status,
-          dateFrom: dateFrom || undefined,
-          dateTo: dateTo || undefined,
-        },
+        query,
         "",
       );
+
+      if (search.trim() && next.items.length === 0) {
+        const fallbackShops = workspaceState.shops.filter((shop) => shop.id !== shopId);
+        for (const shop of fallbackShops) {
+          const candidate = await getShopOrders(shop.id, query, "");
+          if (candidate.items.length > 0) {
+            next = candidate;
+            break;
+          }
+        }
+      }
+
       setResponse(next);
       setError(null);
     } catch (err) {
@@ -297,7 +311,8 @@ export function SellerOrdersPageClient() {
               setSearch(event.target.value);
               setPage(1);
             }}
-            placeholder={t("sellerOrders.searchPlaceholder")}
+            placeholder="Search by order, customer, phone, product"
+            aria-label={t("sellerOrders.searchPlaceholder")}
             data-testid="seller-order-search"
             className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
           />

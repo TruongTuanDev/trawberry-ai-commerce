@@ -17,7 +17,13 @@ const toneByStatus: Record<string, string> = {
   ARCHIVED: "bg-slate-100 text-slate-700",
 };
 
-export function OrderStatusBadge({ status }: { status: string }) {
+export function OrderStatusBadge({
+  status,
+  displayText,
+}: {
+  status: string;
+  displayText?: string;
+}) {
   const { cookieLocale, roleLocales } = useLocaleStore();
   const locale = cookieLocale ?? roleLocales.seller ?? "ru";
 
@@ -26,7 +32,7 @@ export function OrderStatusBadge({ status }: { status: string }) {
       data-status={status}
       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneByStatus[status] ?? "bg-slate-100 text-slate-700"}`}
     >
-      {translate(locale, `common.status.order.${status}`)}
+      {displayText ?? translate(locale, `common.status.order.${status}`)}
     </span>
   );
 }

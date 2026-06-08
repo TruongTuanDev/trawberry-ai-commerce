@@ -16,9 +16,11 @@ const toneByPaymentStatus: Record<string, string> = {
 export function PaymentStatusBadge({
   status,
   testId,
+  displayText,
 }: {
   status: string;
   testId?: string;
+  displayText?: string;
 }) {
   const { cookieLocale, roleLocales } = useLocaleStore();
   const locale = cookieLocale ?? roleLocales.seller ?? "ru";
@@ -29,7 +31,7 @@ export function PaymentStatusBadge({
       data-status={status}
       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneByPaymentStatus[status] ?? "bg-slate-100 text-slate-700"}`}
     >
-      {translate(locale, `common.status.payment.${status}`)}
+      {displayText ?? translate(locale, `common.status.payment.${status}`)}
     </span>
   );
 }

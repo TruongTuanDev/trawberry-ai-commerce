@@ -322,7 +322,7 @@ export function PublicProductDetailPageClient({
 
   return (
     <PublicShell>
-      <main className="px-4 py-8 pb-32 sm:px-6 sm:py-10 lg:pb-10">
+      <main className="px-4 py-6 pb-36 sm:px-6 sm:py-10 lg:pb-10">
         <div className="mx-auto max-w-7xl space-y-6">
           <div className="flex flex-wrap gap-3">
             <Link
@@ -381,8 +381,8 @@ export function PublicProductDetailPageClient({
             </section>
           ) : (
             <>
-              <section className="card-panel rounded-[2.25rem] bg-white p-4 sm:p-6">
-                <div className="grid gap-8 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.9fr)_320px]">
+              <section className="card-panel rounded-[2rem] bg-white p-4 sm:rounded-[2.25rem] sm:p-6">
+                <div className="grid gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1.12fr)_minmax(340px,0.9fr)_320px]">
                   <div className="min-w-0">
                     <ProductGallery name={product.name} images={product.images} />
                   </div>
@@ -439,7 +439,7 @@ export function PublicProductDetailPageClient({
                     </div>
 
                     {product.images.length > 1 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-3 xl:hidden">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
                           {t("productDetail.preview")}
                         </p>
@@ -470,7 +470,7 @@ export function PublicProductDetailPageClient({
                           {t("productDetail.chooseVariant")}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-3" data-testid="product-size-selector">
+                      <div className="flex flex-wrap gap-2.5 sm:gap-3" data-testid="product-size-selector">
                         {product.variants.map((variant) => {
                           const label = [variant.sizeName, variant.russianSize].filter(Boolean).join(" / ") || getVariantLabel(variant);
                           const active = selectedVariantId === variant.id;
@@ -483,7 +483,7 @@ export function PublicProductDetailPageClient({
                                   setHasChosenSize(true);
                                   setQuantity(1);
                                 }}
-                              className={`min-w-20 rounded-2xl border px-4 py-3 text-left transition-all duration-200 ${active ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--brand-primary)]/40"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
+                              className={`min-w-20 flex-1 rounded-2xl border px-4 py-3 text-left transition-all duration-200 min-[430px]:flex-none ${active ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] shadow-[0_4px_14px_rgba(203,17,171,0.15)]" : "border-[var(--border)] bg-white hover:border-[var(--brand-primary)]/40"} ${variant.inStock ? "text-[var(--foreground)]" : "cursor-not-allowed text-[var(--muted)] opacity-55"}`}
                                 disabled={!variant.inStock}
                                 data-testid={active ? "product-selected-size" : `product-size-${variant.id}`}
                               >
@@ -625,7 +625,7 @@ export function PublicProductDetailPageClient({
                 </div>
               </section>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 lg:grid-cols-2">
                 <div className="rounded-[1.75rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
                   <h3 className="text-lg font-bold text-[var(--foreground)]">
                     {t("productDetail.description")}
@@ -672,9 +672,9 @@ export function PublicProductDetailPageClient({
                 className="fixed inset-x-3 bottom-3 z-40 lg:hidden"
                 data-testid="mobile-product-cta"
               >
-                <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_12px_40px_rgba(203,17,171,0.16)] backdrop-blur">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
+                <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_12px_40px_rgba(203,17,171,0.16)] backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
+                  <div className="flex flex-col gap-3 min-[430px]:flex-row min-[430px]:items-start min-[430px]:justify-between min-[430px]:gap-4">
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-[var(--brand-primary)] text-xl font-black tracking-tight">
                           {formatMoney(currentPrice) ?? t("productDetail.contactShop")}
@@ -694,7 +694,7 @@ export function PublicProductDetailPageClient({
                         {selectedVariant ? t("productDetail.selectedSizeLabel", { size: selectedVariantLabel }) : t("productDetail.selectSize")}
                       </p>
                     </div>
-                    <div className="min-w-0 text-right">
+                    <div className="min-w-0 min-[430px]:text-right">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                         {t("productDetail.mobileQty")}
                       </p>

@@ -98,7 +98,7 @@ export function PublicRecommendationSection({
       </div>
 
       <section
-        className="grid gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-4"
+        className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 xl:grid-cols-4"
         data-testid={`recommendation-grid-${placement}`}
       >
         {items.map((item, index) => (

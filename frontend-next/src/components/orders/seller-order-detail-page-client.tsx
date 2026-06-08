@@ -1064,6 +1064,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                 )
               }
               className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]"
+              data-testid="seller-order-status-select"
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
@@ -1076,6 +1077,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
               onClick={() => void handleUpdateStatus()}
               disabled={saving}
               className="w-full rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Update status"
             >
               {saving ? t("seller.orderDetail.actions.updating") : t("seller.orderDetail.actions.updateStatus")}
             </button>
@@ -1406,6 +1408,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                       type="button"
                       onClick={() => setActiveDropdown(activeDropdown === "status" ? null : "status")}
                       className="inline-flex justify-center items-center rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--panel)] transition"
+                      aria-label="Open status actions"
                     >
                       <span>{t("seller.orderDetail.updateStatusDropdown")}</span>
                       <svg className="ml-2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1545,6 +1548,19 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
 
               {/* 1. Main Action buttons */}
               <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleDeliveryAction("calculate")}
+                  disabled={deliveryLoading}
+                  className="rounded-full border border-[var(--border)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="delivery-calculate-offers-inline"
+                  aria-label="Calculate offers"
+                >
+                  {deliveryLoading
+                    ? t("seller.orderDetail.actions.calculating")
+                    : t("seller.orderDetail.actions.calculateOffers")}
+                </button>
+
                 {/* Create Shipment */}
                 <button
                   type="button"
@@ -1552,6 +1568,9 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   disabled={deliveryLoading || !canCreateDelivery}
                   className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
                   data-testid="delivery-create-shipment"
+                  aria-label={deliveryOffers.find((offer) => offer.id === selectedOfferId)?.provider === "YANDEX"
+                    ? "Create claim"
+                    : "Create shipment"}
                 >
                   {deliveryLoading ? t("seller.orderDetail.actions.saving") : (deliveryOffers.find((offer) => offer.id === selectedOfferId)
                     ?.provider === "YANDEX"
@@ -1566,6 +1585,7 @@ export function SellerOrderDetailPageClient({ orderId }: { orderId: string }) {
                   disabled={deliveryLoading || !activeShipment}
                   className="rounded-full border border-[var(--border)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel)] disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="delivery-refresh-shipment"
+                  aria-label="Refresh"
                 >
                   {t("seller.orderDetail.refreshShipment")}
                 </button>

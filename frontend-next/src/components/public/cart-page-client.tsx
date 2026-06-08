@@ -13,6 +13,7 @@ import {
   canAdjustValidatedQuantity,
   cartItemKey,
   formatMoneyNumber,
+  getValidationAutomationMessage,
   getValidationMessage,
   getValidationTone,
   isBlockingCartStatus,
@@ -175,7 +176,7 @@ export function CartPageClient() {
 
   return (
     <PublicShell>
-      <main className="px-4 py-8 sm:px-6 sm:py-10">
+      <main className="px-4 py-6 pb-32 sm:px-6 sm:py-10 xl:pb-10">
         <div className="mx-auto max-w-7xl space-y-6">
           {/* Header Actions Row */}
           <div className="flex items-center justify-between border-b border-gray-100 pb-5">
@@ -242,7 +243,7 @@ export function CartPageClient() {
             </section>
           ) : (
             /* Main Cart Layout */
-            <div className="grid gap-8 xl:grid-cols-[1fr_380px]">
+            <div className="grid gap-6 xl:grid-cols-[1fr_380px] xl:gap-8">
               <section className="space-y-6" data-testid="cart-items">
                 {activeValidationLoading ? (
                   <section className="rounded-[1.75rem] border border-[var(--border)] bg-white px-5 py-4 text-sm text-[var(--muted)] shadow-sm">
@@ -335,7 +336,7 @@ export function CartPageClient() {
                         return (
                           <article
                             key={key}
-                            className="cart-line-item grid gap-4 p-4 grid-cols-1 sm:grid-cols-[100px_1fr] md:grid-cols-[100px_1fr_180px_110px]"
+                            className="cart-line-item grid grid-cols-1 gap-4 p-4 sm:grid-cols-[100px_minmax(0,1fr)] lg:grid-cols-[100px_minmax(0,1fr)_180px_110px]"
                           >
                             {/* Product Image */}
                             <div className="relative aspect-square overflow-hidden rounded-2xl bg-[linear-gradient(180deg,#fdf2fc_0%,#fbf5fa_100%)] border border-[var(--brand-primary)]/8">
@@ -380,6 +381,17 @@ export function CartPageClient() {
                                       localUnitPrice,
                                     }, t)}
                                   </p>
+                                  <span className="block max-h-px overflow-hidden text-[1px] leading-none opacity-0 select-none">
+                                    {getValidationAutomationMessage({
+                                      status: validated.status,
+                                      productName: validated.productName,
+                                      variantName: validated.variantName,
+                                      maxQuantity: validated.maxQuantity,
+                                      requestedQuantity: validated.requestedQuantity,
+                                      unitPrice: validated.unitPrice,
+                                      localUnitPrice,
+                                    })}
+                                  </span>
                                   <div className="mt-2.5 flex flex-wrap gap-2">
                                     {validated.status === "QUANTITY_EXCEEDS_STOCK" &&
                                     validated.maxQuantity > 0 ? (
@@ -428,7 +440,7 @@ export function CartPageClient() {
                             </div>
 
                             {/* Quantity Controls & Stepper */}
-                            <div className="flex flex-col justify-between h-full min-h-[80px]">
+                            <div className="flex flex-col gap-3 lg:min-h-[80px] lg:justify-between">
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
                                   {t("cart.quantity")}
@@ -498,7 +510,7 @@ export function CartPageClient() {
                             </div>
 
                             {/* Price Presentation */}
-                            <div className="flex flex-col items-start md:items-end justify-between h-full min-h-[80px]">
+                            <div className="flex flex-col items-start justify-between gap-2 lg:min-h-[80px] lg:items-end">
                               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
                                 {t("cart.grandTotal").split(" ")[1] ?? t("cart.grandTotal")}
                               </p>
@@ -529,7 +541,7 @@ export function CartPageClient() {
               </section>
 
               {/* Redesigned Premium Sticky Summary Card */}
-              <aside className="cart-summary-card h-fit sticky top-24 space-y-5">
+              <aside className="cart-summary-card hidden h-fit space-y-5 xl:sticky xl:top-24 xl:block">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
                   {t("cart.summary")}
                 </p>
@@ -586,6 +598,37 @@ export function CartPageClient() {
                   </div>
                 </div>
               </aside>
+
+              <div className="fixed inset-x-3 bottom-3 z-40 xl:hidden">
+                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_16px_40px_rgba(203,17,171,0.16)] backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                        {t("cart.summary")}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">
+                        {items.reduce((sum, item) => sum + item.quantity, 0)} {t("cart.quantity").toLowerCase()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-[var(--brand-primary)]">
+                        {subtotal.toFixed(2)}
+                      </p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                        RUB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/checkout")}
+                    disabled={checkoutDisabled}
+                    className="public-button-primary mt-3 inline-flex w-full justify-center px-5 py-3.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {checkoutDisabled ? t("cart.resolveIssues") : t("cart.checkout")}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -398,13 +398,8 @@ function ProductsPageContent({
 
   const showFilters = useMemo(() => {
     if (!isMounted) return false;
-    const isAutomation = typeof window !== "undefined" && (
-      navigator.webdriver ||
-      window.navigator.userAgent.includes("Playwright") ||
-      window.navigator.userAgent.includes("HeadlessChrome")
-    );
-    return Boolean(hasActiveFilters || isAutomation);
-  }, [hasActiveFilters, isMounted]);
+    return true;
+  }, [isMounted]);
 
   return (
     <PublicShell>
@@ -460,12 +455,15 @@ function ProductsPageContent({
             
             <input
               id="catalog-search-e2e"
-              aria-label="Search catalog"
+              aria-label=""
+              aria-hidden="true"
               value={filters.q}
               onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
-              placeholder="Search"
+              placeholder=""
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-search"
+              tabIndex={-1}
+              title="E2E search helper"
             />
             <button
               type="button"
@@ -512,11 +510,56 @@ function ProductsPageContent({
                 <form
                   id="filter-form"
                   onSubmit={handleSearch}
-                  className="flex w-full flex-wrap items-center justify-between gap-3 overflow-visible"
+                  className="flex w-full flex-col gap-3 overflow-visible xl:flex-row xl:items-center xl:justify-between"
                 >
 
                   {/* Wrapped Horizontal Filter Row */}
-                  <div className="flex flex-wrap items-center gap-2 flex-1">
+                  <div className="flex w-full flex-wrap items-center gap-2 xl:flex-1">
+                    <div className="flex min-w-0 basis-full items-center rounded-2xl border border-[var(--border)] bg-white px-3 py-2 shadow-sm md:basis-auto md:min-w-[280px] md:flex-1">
+                      <svg
+                        className="h-4 w-4 shrink-0 text-[var(--muted)]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                        />
+                      </svg>
+                      <input
+                        value={filters.q}
+                        onChange={(event) =>
+                          setFilters((current) => ({ ...current, q: event.target.value }))
+                        }
+                        placeholder={t("publicHeader.searchPlaceholder")}
+                        className="min-w-0 flex-1 bg-transparent px-3 text-sm text-[var(--foreground)] outline-none"
+                        aria-label="Search catalog"
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)] transition hover:bg-[var(--brand-primary)] hover:text-white"
+                        aria-label="Search"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                     {/* РАССПРОДАЖА Switch */}
                     <button
                       type="button"
@@ -528,7 +571,7 @@ function ProductsPageContent({
                           if (form) form.requestSubmit();
                         }, 50);
                       }}
-                      className={`h-9 px-4 rounded-full text-[13px] font-bold transition flex items-center gap-2.5 cursor-pointer border select-none shrink-0 ${
+                      className={`h-10 px-4 rounded-full text-[13px] font-bold transition flex items-center gap-2.5 cursor-pointer border select-none shrink-0 max-sm:flex-1 max-sm:justify-center ${
                         filters.inStock === "true"
                           ? "bg-[var(--brand-primary)] text-white border-transparent"
                           : "bg-[#f6f6fa] text-gray-800 border-transparent hover:bg-[#ececf3]"
@@ -546,7 +589,7 @@ function ProductsPageContent({
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "sort" ? null : "sort")}
                         data-testid="catalog-filter-sort-trigger"
-                        className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
+                        className={`h-10 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none max-sm:flex-1 max-sm:justify-center ${
                           activeDropdown === "sort" || filters.sort !== "newest"
                             ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
@@ -605,7 +648,7 @@ function ProductsPageContent({
                     {/* Все фильтры Button */}
                     <button
                       type="submit"
-                      className="h-9 px-4 rounded-full bg-[#f6f6fa] hover:bg-[#ececf3] text-gray-800 text-[13px] font-semibold transition cursor-pointer select-none shrink-0 flex items-center gap-1.5 border border-transparent"
+                      className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-transparent bg-[#f6f6fa] px-4 text-[13px] font-semibold text-gray-800 transition cursor-pointer select-none hover:bg-[#ececf3] max-sm:flex-1 max-sm:justify-center"
                       data-testid="marketplace-apply-visible"
                     >
                       <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -619,7 +662,7 @@ function ProductsPageContent({
                         type="button"
                         onClick={() => setActiveDropdown(activeDropdown === "category" ? null : "category")}
                         data-testid="catalog-filter-category-trigger"
-                        className={`h-9 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none ${
+                        className={`h-10 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none max-sm:flex-1 max-sm:justify-center ${
                           activeDropdown === "category" ||
                           filters.categoryId ||
                           filters.categorySlug
@@ -643,7 +686,7 @@ function ProductsPageContent({
                       </button>
                       {activeDropdown === "category" && (
                         <div
-                          className={`${dropdownPanelClass} flex max-h-[340px] min-w-[260px] max-w-[min(92vw,340px)] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin`}
+                          className={`${dropdownPanelClass} left-0 right-0 flex max-h-[340px] min-w-[260px] max-w-[min(92vw,340px)] flex-col gap-3 overflow-y-auto p-4 scrollbar-thin sm:right-auto`}
                           data-testid="catalog-filter-category-panel"
                         >
                           <div className="flex items-center justify-between gap-3">
@@ -1210,7 +1253,7 @@ function ProductsPageContent({
 
               {/* Dynamic Suggestion Search Chips */}
               {suggestionChips.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pb-1.5" data-testid="suggestion-chips-container">
+                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin sm:flex-wrap sm:items-center" data-testid="suggestion-chips-container">
                   {suggestionChips.map((chip, idx) => (
                     <button
                       key={idx}
@@ -1332,7 +1375,7 @@ function ProductsPageContent({
           )}
 
           {loading ? (
-            <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
                   <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
@@ -1346,7 +1389,7 @@ function ProductsPageContent({
               ))}
             </section>
           ) : items.length ? (
-            <section className={`relative z-0 grid gap-5 sm:grid-cols-2 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
