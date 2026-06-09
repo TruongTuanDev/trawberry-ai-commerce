@@ -53,6 +53,7 @@ export function PublicProductDetailPageClient({
     useState<string | null>(null);
   const [aiTryOnConfig, setAiTryOnConfig] = useState<PublicAiTryOnConfig | null>(null);
   const [aiTryOnOpen, setAiTryOnOpen] = useState(false);
+  const [detailsDrawerOpen, setDetailsDrawerOpen] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
     initialProduct?.variants.find((variant) => variant.inStock)?.id ??
       initialProduct?.variants[0]?.id ??
@@ -113,6 +114,31 @@ export function PublicProductDetailPageClient({
       document.body.style.overflowX = previousBodyOverflowX;
     };
   }, []);
+
+  useEffect(() => {
+    if (!detailsDrawerOpen) {
+      return;
+    }
+
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDetailsDrawerOpen(false);
+      }
+    };
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [detailsDrawerOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -318,14 +344,37 @@ export function PublicProductDetailPageClient({
         product.sourceCategoryName !== product.categoryName
           ? product.sourceCategoryName
           : null,
-    },
+      },
   ].filter((row) => row.value);
 
-  const highlightRows = [
+  const basicInfoRows = [
+    {
+      label: t("productDetail.sku"),
+      value: selectedVariant?.sellerSku ?? product?.sellerSku ?? null,
+    },
     { label: t("productDetail.soldBy"), value: product?.shop.name ?? null },
     {
       label: t("productDetail.category"),
       value: product?.categoryName ?? product?.sourceCategoryName ?? null,
+    },
+    { label: t("productDetail.brand"), value: product?.brand ?? null },
+    { label: t("productDetail.color"), value: product?.color ?? null },
+    { label: t("productDetail.composition"), value: product?.composition ?? null },
+  ].filter((row) => row.value);
+
+  const additionalInfoRows = [
+    {
+      label: t("productDetail.selectedVariant"),
+      value: selectedVariant ? selectedVariantLabel : null,
+    },
+    { label: t("productDetail.gender"), value: product?.gender ?? null },
+    {
+      label: t("productDetail.source"),
+      value:
+        product?.sourceCategoryName &&
+        product.sourceCategoryName !== product.categoryName
+          ? product.sourceCategoryName
+          : null,
     },
   ].filter((row) => row.value);
 
@@ -350,7 +399,6 @@ export function PublicProductDetailPageClient({
   ];
 
   const descriptionText = product?.description?.trim() ?? "";
-  const shouldCollapseDescription = descriptionText.length > 280;
 
   const hasReadyVariant = Boolean(selectedVariant?.inStock && currentPrice);
   const hasSelectableInStockVariant = Boolean(
@@ -415,6 +463,10 @@ export function PublicProductDetailPageClient({
     setAiTryOnOpen(true);
   };
 
+  const openDetailsDrawer = () => {
+    setDetailsDrawerOpen(true);
+  };
+
   return (
     <PublicShell>
       <main className="px-4 py-6 pb-36 sm:px-6 sm:py-10 lg:pb-10">
@@ -424,7 +476,7 @@ export function PublicProductDetailPageClient({
               href="/products"
               className="public-button-secondary inline-flex px-4 py-2 text-sm"
             >
-              {t("productDetail.backToProducts")}
+              {t("productDetail.productBackToCatalog")}
             </Link>
             <Link
               href="/cart"
@@ -619,7 +671,7 @@ export function PublicProductDetailPageClient({
                       </div>
                     </div>
 
-                    <div className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] px-5 py-5">
+                    <div className="space-y-3 rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] px-5 py-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -639,6 +691,24 @@ export function PublicProductDetailPageClient({
                           {t("productDetail.allVariantsOutOfStock")}
                         </p>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={openDetailsDrawer}
+                        className="flex w-full items-center justify-between rounded-[1.4rem] border border-[var(--border)] bg-white px-4 py-3 text-left transition hover:border-[var(--brand-primary)]/25 hover:bg-[var(--brand-primary-soft)]/45"
+                        data-testid="product-open-details"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            {t("productDetail.productCharacteristicsAndDescription")}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                            {t("productDetail.productOpenDetails")}
+                          </p>
+                        </div>
+                        <span className="text-xl text-[var(--brand-primary)]" aria-hidden="true">
+                          +
+                        </span>
+                      </button>
                     </div>
                   </div>
 
@@ -736,7 +806,7 @@ export function PublicProductDetailPageClient({
                         className="mt-6 space-y-4 border-t border-slate-100 pt-5"
                         data-testid="product-trust-section"
                       >
-                        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-1">
+                        <div className="grid gap-2.5 sm:grid-cols-2">
                           {trustItems.map((item) => (
                             <div
                               key={item}
@@ -747,103 +817,26 @@ export function PublicProductDetailPageClient({
                           ))}
                         </div>
 
-                        <div className="space-y-3" data-testid="product-delivery-payment-info">
-                          {infoCards.map((card) => (
-                            <div
-                              key={card.title}
-                              className="rounded-[1.25rem] border border-[var(--border)] bg-slate-50/80 px-4 py-3"
-                            >
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                                {card.title}
-                              </p>
-                              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
-                                {card.body}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-
-                        <p className="text-xs leading-6 text-[var(--muted)]">
-                          {t("productDetail.trustedValidationNotice")}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={openDetailsDrawer}
+                          className="w-full rounded-[1.25rem] border border-[var(--border)] bg-slate-50/80 px-4 py-3 text-left transition hover:border-[var(--brand-primary)]/25 hover:bg-[var(--brand-primary-soft)]/40"
+                          data-testid="product-delivery-payment-info"
+                        >
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                            {t("productDetail.productDeliveryAndPayment")}
+                          </p>
+                          <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                            {selectedVariant?.inStock
+                              ? t("productDetail.productDeliveryInfoBody")
+                              : t("productDetail.pickupDeliveryByAgreement")}
+                          </p>
+                        </button>
                       </div>
                     </div>
                   </aside>
                 </div>
               </section>
-
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                <div className="space-y-6">
-                  <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
-                    <h3 className="text-lg font-bold text-[var(--foreground)]">
-                      {t("productDetail.productHighlightsTitle")}
-                    </h3>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {highlightRows.map((row) => (
-                        <div
-                          key={row.label}
-                          className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4"
-                        >
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                            {row.label}
-                          </p>
-                          <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">
-                            {row.value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
-                    <h3 className="text-lg font-bold text-[var(--foreground)]">
-                      {t("productDetail.productDescriptionTitle")}
-                    </h3>
-                    {shouldCollapseDescription ? (
-                      <details className="mt-4" open>
-                        <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--brand-primary-dark)]">
-                          {t("productDetail.description")}
-                        </summary>
-                        <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[var(--muted)]">
-                          {descriptionText}
-                        </p>
-                      </details>
-                    ) : (
-                      <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[var(--muted)]">
-                        {descriptionText || t("productDetail.noDescription")}
-                      </p>
-                    )}
-                  </section>
-
-                  <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
-                    <h3 className="text-lg font-bold text-[var(--foreground)]">
-                      {t("productDetail.productSupportInfoTitle")}
-                    </h3>
-                    <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-                      {t("productDetail.productSupportInfoBody")}
-                    </p>
-                  </section>
-                </div>
-
-                <section className="rounded-[1.9rem] border border-[var(--border)] bg-white px-6 py-6 shadow-[0_10px_30px_rgba(15,23,42,0.02)]">
-                  <h3 className="mb-4 text-lg font-bold text-[var(--foreground)]">
-                    {t("productDetail.productSpecsTitle")}
-                  </h3>
-                  <div className="space-y-1">
-                    {specRows.map((row) => (
-                      <div
-                        key={row.label}
-                        className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2.5 last:border-none sm:grid-cols-[160px_minmax(0,1fr)]"
-                      >
-                        <p className="text-sm text-[var(--muted)]">{row.label}</p>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          {row.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
 
               <PublicProductReviewsSection product={product} />
               <PublicRecommendationSection
@@ -858,12 +851,152 @@ export function PublicProductDetailPageClient({
                 trackingEnabled={recommendationTrackingEnabled}
               />
 
-              <div
-                className="fixed inset-x-3 bottom-3 z-40 lg:hidden"
-                data-testid="mobile-product-cta"
-              >
-                <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_12px_40px_rgba(203,17,171,0.16)] backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
-                  <div className="flex flex-col gap-3 min-[430px]:flex-row min-[430px]:items-start min-[430px]:justify-between min-[430px]:gap-4">
+              {detailsDrawerOpen ? (
+                <div
+                  className="fixed inset-0 z-[70]"
+                  data-testid="product-details-drawer"
+                >
+                  <button
+                    type="button"
+                    aria-label={t("productDetail.productCloseDetails")}
+                    className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+                    onClick={() => setDetailsDrawerOpen(false)}
+                  />
+                  <aside className="absolute inset-x-0 bottom-0 top-auto max-h-[85vh] overflow-hidden rounded-t-[2rem] bg-white shadow-[0_-20px_60px_rgba(15,23,42,0.2)] md:inset-y-0 md:right-0 md:left-auto md:max-h-none md:w-[min(36rem,92vw)] md:rounded-none md:rounded-l-[2rem]">
+                    <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4 sm:px-6">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          {t("productDetail.productCharacteristicsAndDescription")}
+                        </p>
+                        <h2 className="mt-2 text-2xl font-black text-[var(--foreground)]">
+                          {product.name}
+                        </h2>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDetailsDrawerOpen(false)}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-white text-xl text-[var(--foreground)] transition hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+                        aria-label={t("productDetail.productCloseDetails")}
+                        data-testid="product-close-details"
+                      >
+                        x
+                      </button>
+                    </div>
+
+                    <div className="h-full overflow-y-auto px-5 pb-8 pt-5 sm:px-6">
+                      <section className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          {t("productDetail.productBasicInformation")}
+                        </h3>
+                        <div className="mt-4 space-y-2">
+                          {basicInfoRows.map((row) => (
+                            <div
+                              key={row.label}
+                              className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2 last:border-none md:grid-cols-[180px_minmax(0,1fr)]"
+                            >
+                              <p className="text-sm text-[var(--muted)]">{row.label}</p>
+                              <p className="text-sm font-semibold text-[var(--foreground)]">
+                                {row.value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      {additionalInfoRows.length > 0 ? (
+                        <section className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                            {t("productDetail.productAdditionalInformation")}
+                          </h3>
+                          <div className="mt-4 space-y-2">
+                            {additionalInfoRows.map((row) => (
+                              <div
+                                key={row.label}
+                                className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2 last:border-none md:grid-cols-[180px_minmax(0,1fr)]"
+                              >
+                                <p className="text-sm text-[var(--muted)]">{row.label}</p>
+                                <p className="text-sm font-semibold text-[var(--foreground)]">
+                                  {row.value}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      ) : null}
+
+                      {specRows.length > 0 ? (
+                        <section className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                            {t("productDetail.productSpecsTitle")}
+                          </h3>
+                          <div className="mt-4 space-y-2">
+                            {specRows.map((row) => (
+                              <div
+                                key={row.label}
+                                className="grid gap-2 border-b border-dashed border-[var(--border)]/80 py-2 last:border-none md:grid-cols-[180px_minmax(0,1fr)]"
+                              >
+                                <p className="text-sm text-[var(--muted)]">{row.label}</p>
+                                <p className="text-sm font-semibold text-[var(--foreground)]">
+                                  {row.value}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      ) : null}
+
+                      <section className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          {t("productDetail.productDescriptionTitle")}
+                        </h3>
+                        <p className="mt-4 whitespace-pre-line text-sm leading-7 text-[var(--foreground)]">
+                          {descriptionText || t("productDetail.noDescription")}
+                        </p>
+                      </section>
+
+                      <section
+                        className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4"
+                        data-testid="product-delivery-payment-drawer"
+                      >
+                        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                          {t("productDetail.productDeliveryAndPayment")}
+                        </h3>
+                        <div className="mt-4 space-y-3">
+                          {infoCards.map((card) => (
+                            <div
+                              key={card.title}
+                              className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4"
+                            >
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                                {card.title}
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                                {card.body}
+                              </p>
+                            </div>
+                          ))}
+                          <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                              {t("productDetail.productSupportInfoTitle")}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                              {t("productDetail.productSupportInfoBody")}
+                            </p>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </aside>
+                </div>
+              ) : null}
+
+              {!detailsDrawerOpen ? (
+                <div
+                  className="fixed inset-x-3 bottom-3 z-40 lg:hidden"
+                  data-testid="mobile-product-cta"
+                >
+                  <div className="rounded-[1.8rem] border border-[var(--border)] bg-white/95 p-4 shadow-[0_12px_40px_rgba(203,17,171,0.16)] backdrop-blur supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
+                    <div className="flex flex-col gap-3 min-[430px]:flex-row min-[430px]:items-start min-[430px]:justify-between min-[430px]:gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-xl font-black tracking-tight text-[var(--brand-primary)]">
@@ -936,8 +1069,17 @@ export function PublicProductDetailPageClient({
                   >
                     {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={openDetailsDrawer}
+                    className="mt-2 w-full rounded-full border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+                    data-testid="mobile-product-open-details"
+                  >
+                    {t("productDetail.productCharacteristicsAndDescription")}
+                  </button>
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </>
           )}
         </div>

@@ -2,7 +2,6 @@
 
 import { create } from "zustand";
 import {
-  DEFAULT_LOCALE,
   LOCALE_COOKIE_KEY,
   LOCALE_STORAGE_KEY,
   type Locale,
@@ -14,6 +13,7 @@ import {
 type RoleLocaleState = Record<LocaleRole, Locale>;
 
 type LocaleState = {
+  hydrated: boolean;
   cookieLocale: Locale | null;
   roleLocales: RoleLocaleState;
   setCookieLocale: (locale: Locale | null) => void;
@@ -22,9 +22,9 @@ type LocaleState = {
 };
 
 const initialRoleLocales: RoleLocaleState = {
-  admin: "en",
-  seller: "ru",
-  customer: DEFAULT_LOCALE,
+  admin: getRoleDefaultLocale("admin"),
+  seller: getRoleDefaultLocale("seller"),
+  customer: getRoleDefaultLocale("customer"),
 };
 
 function writeCookie(locale: Locale) {
@@ -48,6 +48,7 @@ function readCookie() {
 }
 
 export const useLocaleStore = create<LocaleState>((set) => ({
+  hydrated: false,
   cookieLocale: null,
   roleLocales: initialRoleLocales,
   setCookieLocale: (locale) => {
@@ -80,23 +81,28 @@ export const useLocaleStore = create<LocaleState>((set) => ({
     }
 
     const cookieLocale = readCookie();
+    const rootLocale = normalizeLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
     const nextRoleLocales: RoleLocaleState = {
       admin:
         normalizeLocale(window.localStorage.getItem(`${LOCALE_STORAGE_KEY}:admin`)) ??
+        rootLocale ??
+        cookieLocale ??
         getRoleDefaultLocale("admin"),
       seller:
         normalizeLocale(window.localStorage.getItem(`${LOCALE_STORAGE_KEY}:seller`)) ??
+        rootLocale ??
+        cookieLocale ??
         getRoleDefaultLocale("seller"),
       customer:
         normalizeLocale(window.localStorage.getItem(`${LOCALE_STORAGE_KEY}:customer`)) ??
+        rootLocale ??
         cookieLocale ??
         getRoleDefaultLocale("customer"),
     };
 
     set({
-      cookieLocale:
-        cookieLocale ??
-        normalizeLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY)),
+      hydrated: true,
+      cookieLocale: cookieLocale ?? rootLocale,
       roleLocales: nextRoleLocales,
     });
   },

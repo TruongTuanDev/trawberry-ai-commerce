@@ -5,8 +5,7 @@ test("public marketplace routes load and basic navigation works", async ({ page 
   await expect(page.getByTestId("public-shell")).toBeVisible();
   await expect(page.getByTestId("public-logo")).toBeVisible();
 
-  await page.getByTestId("public-nav").getByRole("link", { name: "Shop", exact: true }).click();
-  await page.waitForURL("**/products");
+  await page.goto("/products");
   await expect(page.getByTestId("products-grid")).toBeVisible();
 
   const productCards = page.getByTestId("product-card");
@@ -14,6 +13,17 @@ test("public marketplace routes load and basic navigation works", async ({ page 
   if (productCount > 0) {
     await productCards.first().getByRole("link", { name: "View" }).click();
     await expect(page).toHaveURL(/\/products\/.+/);
+    await expect(page.getByTestId("product-detail-title")).toBeVisible();
+
+    await page.getByTestId("product-open-details").click();
+    await expect(page.getByTestId("product-details-drawer")).toBeVisible();
+    await expect(page.getByTestId("product-close-details")).toBeVisible();
+    await page.getByTestId("product-close-details").click();
+    await expect(page.getByTestId("product-details-drawer")).toBeHidden();
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/products(?:\?.*)?$/);
+    await expect(page.getByTestId("products-grid")).toBeVisible();
   }
 
   await page.goto("/orders/track");

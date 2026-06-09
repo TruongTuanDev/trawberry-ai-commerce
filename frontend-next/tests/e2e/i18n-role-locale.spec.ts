@@ -69,7 +69,9 @@ test("role-based locale defaults and switching persist by surface", async ({
   const publicNav = publicPage.getByRole("navigation", {
     name: "Public navigation",
   }).first();
-  const publicSwitcher = publicPage.locator('[data-testid="language-switcher-customer"]:visible').first();
+  const publicSwitcher = publicPage
+    .locator('[data-testid="language-switcher-customer"]:visible')
+    .first();
 
   await publicPage.goto("/products");
   await expect(publicSwitcher).toContainText("RU");
@@ -105,8 +107,12 @@ test("role-based locale defaults and switching persist by surface", async ({
   await adminPage.goto("/admin-login");
   await persistRoleLocale(adminPage, "admin", "ru");
   await adminPage.reload();
-  await expect(adminPage.getByText("Admin login")).toBeVisible();
-  await expect(adminPage.getByText("Log in to marketplace operations.")).toBeVisible();
+  await expect(
+    adminPage.getByRole("heading", { name: "Вход администратора" }),
+  ).toBeVisible();
+  await expect(
+    adminPage.getByText("Войдите в кабинет операций маркетплейса."),
+  ).toBeVisible();
   await expect(adminPage.getByTestId("language-switcher-admin")).toHaveCount(0);
   await adminPage.context().close();
 });

@@ -25,7 +25,7 @@ export const roleLocalePolicy: Record<
 > = {
   admin: {
     supported: ["en", "ru"],
-    defaultLocale: "en",
+    defaultLocale: "ru",
   },
   seller: {
     supported: ["ru", "en", "vi"],

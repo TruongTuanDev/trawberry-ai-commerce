@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/public/product-card";
 import { PublicHomepageHeroSlider } from "@/components/public/public-homepage-hero-slider";
 import { PublicShell } from "@/components/public/public-shell";
+import { getRoleDefaultLocale } from "@/i18n/config";
+import { translate } from "@/i18n/translate";
 import {
   getGuestSessionId,
   getPublicHomepageSlides,
@@ -32,6 +34,7 @@ type ProductsMeta = {
 const initialMeta: ProductsMeta = { page: 1, size: 12, total: 0, totalPages: 0 };
 const RECENT_SEARCHES_KEY = "public-catalog-recent-searches";
 const RECENT_SEARCH_LIMIT = 5;
+const PRODUCTS_FETCH_TIMEOUT_MS = 12000;
 
 function readFilters(searchParams: { get(name: string): string | null }) {
   return {
@@ -49,12 +52,16 @@ function readFilters(searchParams: { get(name: string): string | null }) {
 }
 
 export default function ProductsPage() {
+  const fallbackLocale = getRoleDefaultLocale("customer");
+
   return (
     <Suspense
       fallback={
         <PublicShell>
           <main className="px-4 py-8 sm:px-6 sm:py-10">
-            <div className="mx-auto max-w-7xl">Loading products...</div>
+            <div className="mx-auto max-w-7xl">
+              {translate(fallbackLocale, "catalog.loadingTitle")}
+            </div>
           </main>
         </PublicShell>
       }
@@ -84,7 +91,7 @@ function ProductsPageContent({
   searchParams: ReturnType<typeof useSearchParams>;
   router: ReturnType<typeof useRouter>;
 }) {
-  const { t } = useI18n("customer");
+  const { locale, t } = useI18n("customer");
   const recommendationFlags = readRecommendationFlagsFromDocument();
   const hydrateCart = useCartStore((state) => state.hydrate);
   const [items, setItems] = useState<PublicProduct[]>([]);
@@ -237,24 +244,41 @@ function ProductsPageContent({
 
   const suggestionChips = useMemo(() => {
     const keyword = filters.q.trim();
+    const baseSuggestions =
+      locale === "en"
+        ? ["denim vest", "women's vest", "classic jeans", "women's dresses"]
+        : locale === "vi"
+          ? ["ao gile denim", "ao gile nu", "quan jean co dien", "vay nu"]
+          : ["джинсовая жилетка", "женская жилетка", "классические джинсы", "женские платья"];
+
     if (!keyword) {
       return [
-        "джинсовая жилетка",
-        "жилетка женская",
-        "жилет джинсовый",
-        "джинсы классика",
-        "платья женские",
+        baseSuggestions[0],
+        baseSuggestions[1],
+        `${baseSuggestions[0]} ${t("catalog.allProducts").toLowerCase()}`,
+        baseSuggestions[2],
+        baseSuggestions[3],
       ];
     }
     return [
       keyword,
-      `${keyword} женская`,
-      `${keyword} мужской`,
-      `джинсовая ${keyword}`,
-      `${keyword} классический`,
-      `${keyword} с карманами`,
+      locale === "en" ? `${keyword} women` : locale === "vi" ? `${keyword} nu` : `${keyword} женская`,
+      locale === "en" ? `${keyword} men` : locale === "vi" ? `${keyword} nam` : `${keyword} мужской`,
+      locale === "en" ? `denim ${keyword}` : locale === "vi" ? `${keyword} denim` : `джинсовая ${keyword}`,
+      locale === "en" ? `${keyword} classic` : locale === "vi" ? `${keyword} co dien` : `${keyword} классический`,
+      locale === "en" ? `${keyword} with pockets` : locale === "vi" ? `${keyword} co tui` : `${keyword} с карманами`,
     ].slice(0, 5);
-  }, [filters.q]);
+  }, [filters.q, locale, t]);
+
+  const mockDeliveryOptions = useMemo(
+    () =>
+      locale === "en"
+        ? ["Tomorrow", "Up to 2 days", "Up to 3 days", "Up to 5 days"]
+        : locale === "vi"
+          ? ["Ngay mai", "Toi da 2 ngay", "Toi da 3 ngay", "Toi da 5 ngay"]
+          : ["Завтра", "До 2 дней", "До 3 дней", "До 5 дней"],
+    [locale],
+  );
 
   const popularSuggestions = useMemo(
     () =>
@@ -282,7 +306,27 @@ function ProductsPageContent({
   }, [filters.q, popularSuggestions, recentSearches, suggestionChips]);
 
   useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) {
+        return;
+      }
+
+      setError(null);
+      setLoading(true);
+      setRequestKey((current) => current + 1);
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), PRODUCTS_FETCH_TIMEOUT_MS);
 
     const run = async () => {
       setLoading(true);
@@ -300,6 +344,8 @@ function ProductsPageContent({
           minPrice: filters.minPrice || undefined,
           maxPrice: filters.maxPrice || undefined,
           sort: filters.sort || undefined,
+        }, {
+          signal: controller.signal,
         });
         if (!mounted) return;
         setItems(response.items);
@@ -308,10 +354,17 @@ function ProductsPageContent({
         setError(null);
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : "Unable to load products.");
+          setError(
+            err instanceof Error && err.name === "AbortError"
+              ? t("catalog.loadTimeout")
+              : err instanceof Error
+                ? err.message
+                : t("catalog.loadError"),
+          );
         }
       } finally {
         if (mounted) {
+          window.clearTimeout(timeout);
           setLoading(false);
         }
       }
@@ -321,8 +374,10 @@ function ProductsPageContent({
 
     return () => {
       mounted = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, [filters, meta.size, page, requestKey]);
+  }, [filters, meta.size, page, requestKey, t]);
 
   useEffect(() => {
     const query = filters.q.trim();
@@ -457,6 +512,12 @@ function ProductsPageContent({
     router.replace("/products");
   };
 
+  const retryProductsLoad = () => {
+    setError(null);
+    setLoading(true);
+    setRequestKey((current) => current + 1);
+  };
+
   const pageUrl = (nextPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(nextPage));
@@ -573,9 +634,9 @@ function ProductsPageContent({
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-stock"
             >
-              <option value="">Stock status</option>
-              <option value="true">In stock</option>
-              <option value="false">Out of stock</option>
+              <option value="">{t("catalog.availability")}</option>
+              <option value="true">{t("catalog.filterSummary.inStockOnly")}</option>
+              <option value="false">{t("catalog.filterSummary.outOfStockOnly")}</option>
             </select>
             <select
               value={filters.categoryId}
@@ -589,7 +650,7 @@ function ProductsPageContent({
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-category"
             >
-              <option value="">Все категории</option>
+              <option value="">{t("catalog.allCategories")}</option>
               {categoryOptions.map((category) => (
                 <option key={category.id || category.name} value={category.id}>
                   {category.name}
@@ -604,11 +665,11 @@ function ProductsPageContent({
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-sort"
             >
-              <option value="newest">По популярности</option>
-              <option value="price_asc">Цена: дешевле</option>
-              <option value="price_desc">Цена: дороже</option>
-              <option value="name_asc">По имени A-Z</option>
-              <option value="stock_desc">По наличию</option>
+              <option value="newest">{t("catalog.sortOptions.newest")}</option>
+              <option value="price_asc">{t("catalog.sortOptions.price_asc")}</option>
+              <option value="price_desc">{t("catalog.sortOptions.price_desc")}</option>
+              <option value="name_asc">{t("catalog.sortOptions.name_asc")}</option>
+              <option value="stock_desc">{t("catalog.sortOptions.stock_desc")}</option>
             </select>
             
             <input
@@ -1114,7 +1175,7 @@ function ProductsPageContent({
                       {activeDropdown === "delivery" && (
                         <div className="absolute left-0 mt-2 z-50 bg-white border border-gray-100 rounded-[1.25rem] shadow-xl p-4 min-w-[200px] flex flex-col gap-2">
                           <div className="text-xs font-bold text-gray-400 select-none uppercase tracking-wide">{t("catalog.deliveryTime")}</div>
-                          {["Завтра", "До 2 дней", "До 3 дней", "До 5 дней"].map((d) => (
+                          {mockDeliveryOptions.map((d) => (
                             <label key={d} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
                               <input type="radio" name="mock-delivery" className="accent-[var(--brand-primary)]" />
                               <span>{d}</span>
@@ -1266,7 +1327,7 @@ function ProductsPageContent({
                           {["92-98", "104-110", "116-122", "128-134"].map((h) => (
                             <label key={h} className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 py-1.5 px-2 rounded-lg cursor-pointer">
                               <input type="checkbox" className="rounded text-[var(--brand-primary)]" />
-                              <span>{h} {t("catalog.cm", { defaultValue: "см" })}</span>
+                              <span>{h} {t("catalog.cm")}</span>
                             </label>
                           ))}
                         </div>
@@ -1564,7 +1625,7 @@ function ProductsPageContent({
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => setRequestKey((current) => current + 1)}
+                  onClick={retryProductsLoad}
                   className="public-button-primary px-5 py-3 text-sm"
                   data-testid="products-error-retry"
                 >
@@ -1575,7 +1636,7 @@ function ProductsPageContent({
                   onClick={clearFilters}
                   className="public-button-secondary px-5 py-3 text-sm"
                 >
-                  {t("catalog.clearFilters")}
+                  {hasActiveFilters ? t("catalog.clearFilters") : t("catalog.showAllProducts")}
                 </button>
               </div>
             </div>

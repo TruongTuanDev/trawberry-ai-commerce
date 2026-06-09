@@ -877,7 +877,7 @@ export async function getPublicProducts(query?: {
   sort?: string;
   page?: number;
   size?: number;
-}) {
+}, options?: { signal?: AbortSignal }) {
   const params = new URLSearchParams();
   if (query?.search) params.set("search", query.search);
   if (query?.q) params.set("q", query.q);
@@ -900,6 +900,7 @@ export async function getPublicProducts(query?: {
     `/api/public/products${qs ? `?${qs}` : ""}`,
     {
       method: "GET",
+      signal: options?.signal,
     },
   );
 }
