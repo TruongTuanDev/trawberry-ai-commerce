@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <style>
+      .bg { fill: #fbfbfd; }
+      .grid { stroke: #eceff4; stroke-width: 1; }
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #20344a; }
+      .subtitle { font: 14px 'Segoe UI', Arial, sans-serif; fill: #5d6b7c; }
+      .usecase { fill: #ffffff; stroke: #4f6278; stroke-width: 2; }
+      .uctext { font: 18px 'Segoe UI', Arial, sans-serif; fill: #22313f; text-anchor: middle; dominant-baseline: middle; }
+      .actor { stroke: #2d3b4a; stroke-width: 3; fill: none; stroke-linecap: round; }
+      .actorlabel { font: 18px 'Segoe UI', Arial, sans-serif; fill: #22313f; text-anchor: middle; }
+      .line { stroke: #56697e; stroke-width: 2.2; fill: none; }
+      .dash { stroke: #7d8fa3; stroke-width: 2; stroke-dasharray: 7 6; fill: none; }
+      .rel { font: italic 16px 'Segoe UI', Arial, sans-serif; fill: #5d6b7c; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7d8fa3"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="1000"/>
+
+  <!-- subtle grid -->
+  <g opacity="0.85">
+    <path class="grid" d="M0 50 H1600 M0 100 H1600 M0 150 H1600 M0 200 H1600 M0 250 H1600 M0 300 H1600 M0 350 H1600 M0 400 H1600 M0 450 H1600 M0 500 H1600 M0 550 H1600 M0 600 H1600 M0 650 H1600 M0 700 H1600 M0 750 H1600 M0 800 H1600 M0 850 H1600 M0 900 H1600 M0 950 H1600"/>
+    <path class="grid" d="M50 0 V1000 M100 0 V1000 M150 0 V1000 M200 0 V1000 M250 0 V1000 M300 0 V1000 M350 0 V1000 M400 0 V1000 M450 0 V1000 M500 0 V1000 M550 0 V1000 M600 0 V1000 M650 0 V1000 M700 0 V1000 M750 0 V1000 M800 0 V1000 M850 0 V1000 M900 0 V1000 M950 0 V1000 M1000 0 V1000 M1050 0 V1000 M1100 0 V1000 M1150 0 V1000 M1200 0 V1000 M1250 0 V1000 M1300 0 V1000 M1350 0 V1000 M1400 0 V1000 M1450 0 V1000 M1500 0 V1000 M1550 0 V1000"/>
+  </g>
+
+  <text x="48" y="42" class="title">Customer Use Case Diagram</text>
+  <text x="48" y="70" class="subtitle">Multi-vendor E-Commerce Platform Integrated with AI Virtual Try-On System</text>
+
+  <!-- Actor -->
+  <g transform="translate(470,500)">
+    <circle class="actor" cx="0" cy="-105" r="28"/>
+    <line class="actor" x1="0" y1="-77" x2="0" y2="10"/>
+    <line class="actor" x1="-48" y1="-40" x2="48" y2="-40"/>
+    <line class="actor" x1="0" y1="10" x2="-42" y2="82"/>
+    <line class="actor" x1="0" y1="10" x2="42" y2="82"/>
+    <text x="0" y="118" class="actorlabel">Customer</text>
+  </g>
+
+  <!-- Use cases left -->
+  <ellipse class="usecase" cx="180" cy="240" rx="115" ry="34"/>
+  <text class="uctext" x="180" y="240">Register</text>
+
+  <ellipse class="usecase" cx="180" cy="330" rx="135" ry="36"/>
+  <text class="uctext" x="180" y="330">Search Products</text>
+
+  <ellipse class="usecase" cx="200" cy="430" rx="155" ry="38"/>
+  <text class="uctext" x="200" y="430">Filter Products</text>
+
+  <ellipse class="usecase" cx="200" cy="545" rx="165" ry="40"/>
+  <text class="uctext" x="200" y="545">AI Virtual Try-On</text>
+
+  <ellipse class="usecase" cx="190" cy="665" rx="145" ry="36"/>
+  <text class="uctext" x="190" y="665">View Order Status</text>
+
+  <ellipse class="usecase" cx="210" cy="770" rx="165" ry="38"/>
+  <text class="uctext" x="210" y="770">Submit Product Review</text>
+
+  <!-- Center / upper -->
+  <ellipse class="usecase" cx="730" cy="170" rx="100" ry="34"/>
+  <text class="uctext" x="730" y="170">Login</text>
+
+  <ellipse class="usecase" cx="720" cy="290" rx="150" ry="38"/>
+  <text class="uctext" x="720" y="290">Browse Products</text>
+
+  <ellipse class="usecase" cx="720" cy="420" rx="170" ry="40"/>
+  <text class="uctext" x="720" y="420">View Product Details</text>
+
+  <ellipse class="usecase" cx="730" cy="560" rx="120" ry="36"/>
+  <text class="uctext" x="730" y="560">Add to Cart</text>
+
+  <ellipse class="usecase" cx="725" cy="690" rx="145" ry="38"/>
+  <text class="uctext" x="725" y="690">Checkout</text>
+
+  <ellipse class="usecase" cx="730" cy="820" rx="130" ry="36"/>
+  <text class="uctext" x="730" y="820">Message Seller</text>
+
+  <!-- Right -->
+  <ellipse class="usecase" cx="1240" cy="140" rx="120" ry="34"/>
+  <text class="uctext" x="1240" y="140">Logout</text>
+
+  <ellipse class="usecase" cx="1240" cy="230" rx="145" ry="36"/>
+  <text class="uctext" x="1240" y="230">Update Profile</text>
+
+  <ellipse class="usecase" cx="1230" cy="330" rx="175" ry="38"/>
+  <text class="uctext" x="1230" y="330">View Purchase History</text>
+
+  <ellipse class="usecase" cx="1245" cy="500" rx="150" ry="38"/>
+  <text class="uctext" x="1245" y="500">Select Size</text>
+
+  <ellipse class="usecase" cx="1245" cy="585" rx="175" ry="40"/>
+  <text class="uctext" x="1245" y="585">Upload Customer Image</text>
+
+  <ellipse class="usecase" cx="1225" cy="705" rx="175" ry="38"/>
+  <text class="uctext" x="1225" y="705">Upload Payment Proof</text>
+
+  <ellipse class="usecase" cx="1255" cy="795" rx="165" ry="36"/>
+  <text class="uctext" x="1255" y="795">View Notifications</text>
+
+  <!-- Actor associations -->
+  <path class="line" d="M470 410 L288 250"/>
+  <path class="line" d="M470 430 L312 338"/>
+  <path class="line" d="M470 456 L355 431"/>
+  <path class="line" d="M470 470 L366 531"/>
+  <path class="line" d="M470 515 L585 304"/>
+  <path class="line" d="M470 500 L550 420"/>
+  <path class="line" d="M470 535 L610 555"/>
+  <path class="line" d="M470 565 L587 682"/>
+  <path class="line" d="M470 600 L334 667"/>
+  <path class="line" d="M470 620 L364 764"/>
+  <path class="line" d="M470 590 L608 812"/>
+
+  <!-- include relations -->
+  <path class="dash" d="M630 275 L730 195" marker-end="url(#arrow)"/>
+  <text x="666" y="224" class="rel">«include»</text>
+
+  <path class="dash" d="M635 404 L730 195" marker-end="url(#arrow)"/>
+  <text x="646" y="305" class="rel">«include»</text>
+
+  <path class="dash" d="M625 678 L730 195" marker-end="url(#arrow)"/>
+  <text x="639" y="445" class="rel">«include»</text>
+
+  <path class="dash" d="M1128 140 L830 170" marker-end="url(#arrow)"/>
+  <text x="967" y="131" class="rel">«include»</text>
+
+  <path class="dash" d="M1095 230 L815 182" marker-end="url(#arrow)"/>
+  <text x="958" y="195" class="rel">«include»</text>
+
+  <path class="dash" d="M1055 330 L815 188" marker-end="url(#arrow)"/>
+  <text x="925" y="255" class="rel">«include»</text>
+
+  <path class="dash" d="M1098 705 L830 690" marker-end="url(#arrow)"/>
+  <text x="952" y="684" class="rel">«include»</text>
+
+  <path class="dash" d="M1090 500 L365 540" marker-end="url(#arrow)"/>
+  <text x="650" y="500" class="rel">«include»</text>
+
+  <path class="dash" d="M1070 585 L365 550" marker-end="url(#arrow)"/>
+  <text x="640" y="560" class="rel">«include»</text>
+
+  <!-- flow relations -->
+  <path class="dash" d="M720 458 L720 524" marker-end="url(#arrow)"/>
+  <text x="736" y="495" class="rel">«include»</text>
+
+  <path class="dash" d="M730 596 L726 651" marker-end="url(#arrow)"/>
+  <text x="744" y="630" class="rel">«include»</text>
+
+  <path class="dash" d="M356 328 L568 290" marker-end="url(#arrow)"/>
+  <text x="450" y="292" class="rel">«extend»</text>
+
+  <path class="dash" d="M362 430 L548 420" marker-end="url(#arrow)"/>
+  <text x="442" y="408" class="rel">«extend»</text>
+
+  <path class="dash" d="M359 540 L548 430" marker-end="url(#arrow)"/>
+  <text x="430" y="476" class="rel">«extend»</text>
+
+  <path class="dash" d="M1120 785 L850 822" marker-end="url(#arrow)"/>
+  <text x="982" y="792" class="rel">«extend»</text>
+</svg>

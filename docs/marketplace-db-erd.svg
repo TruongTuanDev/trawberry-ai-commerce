@@ -1,0 +1,448 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1500" viewBox="0 0 1900 1500">
+  <defs>
+    <style>
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #183153; }
+      .subtitle { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #56657a; }
+      .box { fill: #ffffff; stroke: #8ea3b8; stroke-width: 1.2; rx: 6; }
+      .head { fill: #245b8f; rx: 6 6 0 0; }
+      .headtext { font: 700 15px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .field { font: 12px 'Consolas', 'Courier New', monospace; fill: #213547; }
+      .small { font: 11px 'Segoe UI', Arial, sans-serif; fill: #6b7c8f; }
+      .line { stroke: #7e8fa3; stroke-width: 1.5; fill: none; }
+      .label { font: 11px 'Segoe UI', Arial, sans-serif; fill: #4a5b6c; }
+      .legend { font: 12px 'Segoe UI', Arial, sans-serif; fill: #3b4b5c; }
+    </style>
+    <marker id="dot" markerWidth="6" markerHeight="6" refX="3" refY="3">
+      <circle cx="3" cy="3" r="3" fill="#7e8fa3"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1900" height="1500" fill="#f4f7fb"/>
+  <text x="40" y="42" class="title">Marketplace DB Structure ERD</text>
+  <text x="40" y="68" class="subtitle">Generated from the active Prisma schema in backend-nest/prisma/schema.prisma</text>
+
+  <text x="40" y="108" class="legend">Core domains shown: Users, seller onboarding, catalog, Wildberries sync, campaigns, wallet/billing, checkout/orders, AI, reviews, notifications.</text>
+
+  <!-- User -->
+  <g transform="translate(40,140)">
+    <rect class="box" width="230" height="150"/>
+    <rect class="head" width="230" height="30"/>
+    <text x="12" y="20" class="headtext">users</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">email unique</text>
+    <text x="12" y="86" class="field">password_hash</text>
+    <text x="12" y="104" class="field">full_name</text>
+    <text x="12" y="122" class="field">phone</text>
+    <text x="12" y="140" class="field">role, status, created_at</text>
+  </g>
+
+  <!-- CustomerAddress -->
+  <g transform="translate(40,340)">
+    <rect class="box" width="230" height="170"/>
+    <rect class="head" width="230" height="30"/>
+    <text x="12" y="20" class="headtext">customer_addresses</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">customer_id FK</text>
+    <text x="12" y="86" class="field">full_name, phone</text>
+    <text x="12" y="104" class="field">country, city, region</text>
+    <text x="12" y="122" class="field">street, building</text>
+    <text x="12" y="140" class="field">latitude, longitude</text>
+    <text x="12" y="158" class="field">is_default, created_at</text>
+  </g>
+
+  <!-- SellerProfile -->
+  <g transform="translate(320,140)">
+    <rect class="box" width="260" height="190"/>
+    <rect class="head" width="260" height="30"/>
+    <text x="12" y="20" class="headtext">seller_profiles</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">user_id FK unique</text>
+    <text x="12" y="86" class="field">approval_status</text>
+    <text x="12" y="104" class="field">legal_type, legal_name</text>
+    <text x="12" y="122" class="field">inn, ogrn, kpp</text>
+    <text x="12" y="140" class="field">contact_name, contact_phone</text>
+    <text x="12" y="158" class="field">bank_name, bank_account</text>
+    <text x="12" y="176" class="field">current_shop_id</text>
+  </g>
+
+  <!-- Shop -->
+  <g transform="translate(640,140)">
+    <rect class="box" width="280" height="210"/>
+    <rect class="head" width="280" height="30"/>
+    <text x="12" y="20" class="headtext">shops</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">seller_profile_id FK</text>
+    <text x="12" y="86" class="field">name, slug unique</text>
+    <text x="12" y="104" class="field">payment_mode</text>
+    <text x="12" y="122" class="field">payment_config_status</text>
+    <text x="12" y="140" class="field">allow_prepaid_qr</text>
+    <text x="12" y="158" class="field">allow_deposit_payment</text>
+    <text x="12" y="176" class="field">status</text>
+    <text x="12" y="194" class="field">created/updated fields</text>
+  </g>
+
+  <!-- Category -->
+  <g transform="translate(980,140)">
+    <rect class="box" width="220" height="150"/>
+    <rect class="head" width="220" height="30"/>
+    <text x="12" y="20" class="headtext">categories</text>
+    <text x="12" y="50" class="field">id PK bigint</text>
+    <text x="12" y="68" class="field">name, slug</text>
+    <text x="12" y="86" class="field">parent_id FK</text>
+    <text x="12" y="104" class="field">sort_order</text>
+    <text x="12" y="122" class="field">is_active</text>
+    <text x="12" y="140" class="field">created_at, updated_at</text>
+  </g>
+
+  <!-- Product -->
+  <g transform="translate(640,420)">
+    <rect class="box" width="330" height="230"/>
+    <rect class="head" width="330" height="30"/>
+    <text x="12" y="20" class="headtext">products</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">shop_id FK</text>
+    <text x="12" y="86" class="field">wb_nm_id, wb_imt_id</text>
+    <text x="12" y="104" class="field">wb_title, wb_description</text>
+    <text x="12" y="122" class="field">seller_sku, wb_vendor_code</text>
+    <text x="12" y="140" class="field">brand, color, gender</text>
+    <text x="12" y="158" class="field">category_id FK</text>
+    <text x="12" y="176" class="field">is_published, status</text>
+    <text x="12" y="194" class="field">price fields / metadata</text>
+    <text x="12" y="212" class="field">unique(shop_id, wb_nm_id)</text>
+  </g>
+
+  <!-- ProductImage -->
+  <g transform="translate(1030,420)">
+    <rect class="box" width="250" height="170"/>
+    <rect class="head" width="250" height="30"/>
+    <text x="12" y="20" class="headtext">product_images</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">product_id FK</text>
+    <text x="12" y="86" class="field">wb_url, local_url</text>
+    <text x="12" y="104" class="field">storage_key</text>
+    <text x="12" y="122" class="field">image_type, is_main</text>
+    <text x="12" y="140" class="field">sort_order</text>
+    <text x="12" y="158" class="field">created_at, updated_at</text>
+  </g>
+
+  <!-- ProductVariant -->
+  <g transform="translate(1030,620)">
+    <rect class="box" width="250" height="190"/>
+    <rect class="head" width="250" height="30"/>
+    <text x="12" y="20" class="headtext">product_variants</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">product_id FK</text>
+    <text x="12" y="86" class="field">chrt_id</text>
+    <text x="12" y="104" class="field">seller_sku, wb_barcode</text>
+    <text x="12" y="122" class="field">size_name, russian_size</text>
+    <text x="12" y="140" class="field">base_price, discount_price</text>
+    <text x="12" y="158" class="field">stock_quantity, reserved_stock</text>
+    <text x="12" y="176" class="field">track_inventory</text>
+  </g>
+
+  <!-- ShopWbCredential -->
+  <g transform="translate(320,390)">
+    <rect class="box" width="260" height="140"/>
+    <rect class="head" width="260" height="30"/>
+    <text x="12" y="20" class="headtext">shop_wb_credentials</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">shop_id FK unique</text>
+    <text x="12" y="86" class="field">encrypted_api_key</text>
+    <text x="12" y="104" class="field">last_verified_at</text>
+    <text x="12" y="122" class="field">verification_status</text>
+  </g>
+
+  <!-- WbSyncRun -->
+  <g transform="translate(320,560)">
+    <rect class="box" width="260" height="200"/>
+    <rect class="head" width="260" height="30"/>
+    <text x="12" y="20" class="headtext">wb_sync_runs</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">shop_id FK</text>
+    <text x="12" y="86" class="field">seller_id FK</text>
+    <text x="12" y="104" class="field">source, mode, status</text>
+    <text x="12" y="122" class="field">sync_type</text>
+    <text x="12" y="140" class="field">total_fetched</text>
+    <text x="12" y="158" class="field">created/updated counts</text>
+    <text x="12" y="176" class="field">already_published</text>
+    <text x="12" y="194" class="field">created_at</text>
+  </g>
+
+  <!-- SponsoredCampaign -->
+  <g transform="translate(640,700)">
+    <rect class="box" width="250" height="170"/>
+    <rect class="head" width="250" height="30"/>
+    <text x="12" y="20" class="headtext">sponsored_campaigns</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">shop_id FK</text>
+    <text x="12" y="86" class="field">name, status</text>
+    <text x="12" y="104" class="field">start_at, end_at</text>
+    <text x="12" y="122" class="field">budget_limit</text>
+    <text x="12" y="140" class="field">billing_mode, max_boost</text>
+    <text x="12" y="158" class="field">created_at, updated_at</text>
+  </g>
+
+  <!-- SponsoredCampaignProduct -->
+  <g transform="translate(930,700)">
+    <rect class="box" width="250" height="150"/>
+    <rect class="head" width="250" height="30"/>
+    <text x="12" y="20" class="headtext">sponsored_campaign_products</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">campaign_id FK</text>
+    <text x="12" y="86" class="field">product_id FK</text>
+    <text x="12" y="104" class="field">boost</text>
+    <text x="12" y="122" class="field">status</text>
+    <text x="12" y="140" class="field">unique(campaign_id, product_id)</text>
+  </g>
+
+  <!-- SellerWallet -->
+  <g transform="translate(1220,700)">
+    <rect class="box" width="240" height="150"/>
+    <rect class="head" width="240" height="30"/>
+    <text x="12" y="20" class="headtext">seller_wallets</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">shop_id FK unique</text>
+    <text x="12" y="86" class="field">balance</text>
+    <text x="12" y="104" class="field">reserved_balance</text>
+    <text x="12" y="122" class="field">currency, status</text>
+    <text x="12" y="140" class="field">created_at, updated_at</text>
+  </g>
+
+  <!-- BillingLedgerEntry -->
+  <g transform="translate(1220,900)">
+    <rect class="box" width="280" height="210"/>
+    <rect class="head" width="280" height="30"/>
+    <text x="12" y="20" class="headtext">billing_ledger_entries</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">wallet_id FK</text>
+    <text x="12" y="86" class="field">shop_id FK</text>
+    <text x="12" y="104" class="field">campaign_id FK nullable</text>
+    <text x="12" y="122" class="field">type, amount, currency</text>
+    <text x="12" y="140" class="field">balance_before/after</text>
+    <text x="12" y="158" class="field">reserved_before/after</text>
+    <text x="12" y="176" class="field">reference_type, reference_id</text>
+    <text x="12" y="194" class="field">created_at</text>
+  </g>
+
+  <!-- MarketplaceCheckout -->
+  <g transform="translate(40,830)">
+    <rect class="box" width="250" height="170"/>
+    <rect class="head" width="250" height="30"/>
+    <text x="12" y="20" class="headtext">marketplace_checkouts</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">checkout_code unique</text>
+    <text x="12" y="86" class="field">customer_user_id FK</text>
+    <text x="12" y="104" class="field">customer_name, phone</text>
+    <text x="12" y="122" class="field">customer_email</text>
+    <text x="12" y="140" class="field">grand_total, status</text>
+    <text x="12" y="158" class="field">created_at, updated_at</text>
+  </g>
+
+  <!-- Order -->
+  <g transform="translate(340,830)">
+    <rect class="box" width="300" height="240"/>
+    <rect class="head" width="300" height="30"/>
+    <text x="12" y="20" class="headtext">orders</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">marketplace_checkout_id FK</text>
+    <text x="12" y="86" class="field">customer_id FK</text>
+    <text x="12" y="104" class="field">shop_id FK</text>
+    <text x="12" y="122" class="field">order_number unique</text>
+    <text x="12" y="140" class="field">status, payment_status</text>
+    <text x="12" y="158" class="field">total_amount, shipping_cost</text>
+    <text x="12" y="176" class="field">customer_name, phone</text>
+    <text x="12" y="194" class="field">shipping_address</text>
+    <text x="12" y="212" class="field">shipping geo / timestamps</text>
+    <text x="12" y="230" class="field">payment proof fields</text>
+  </g>
+
+  <!-- OrderItem -->
+  <g transform="translate(680,930)">
+    <rect class="box" width="260" height="170"/>
+    <rect class="head" width="260" height="30"/>
+    <text x="12" y="20" class="headtext">order_items</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">order_id FK</text>
+    <text x="12" y="86" class="field">product_id FK nullable</text>
+    <text x="12" y="104" class="field">variant_id FK nullable</text>
+    <text x="12" y="122" class="field">quantity</text>
+    <text x="12" y="140" class="field">price_at_purchase</text>
+    <text x="12" y="158" class="field">snapshot fields...</text>
+  </g>
+
+  <!-- ProductReview -->
+  <g transform="translate(980,930)">
+    <rect class="box" width="240" height="180"/>
+    <rect class="head" width="240" height="30"/>
+    <text x="12" y="20" class="headtext">product_reviews</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">product_id, shop_id</text>
+    <text x="12" y="86" class="field">seller_id, customer_id</text>
+    <text x="12" y="104" class="field">order_id, order_item_id</text>
+    <text x="12" y="122" class="field">rating, comment</text>
+    <text x="12" y="140" class="field">fit_feedback, status</text>
+    <text x="12" y="158" class="field">seller_reply</text>
+    <text x="12" y="176" class="field">created_at, updated_at</text>
+  </g>
+
+  <!-- AI Generation Task -->
+  <g transform="translate(1530,420)">
+    <rect class="box" width="300" height="210"/>
+    <rect class="head" width="300" height="30"/>
+    <text x="12" y="20" class="headtext">ai_generation_tasks</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">shop_id FK</text>
+    <text x="12" y="86" class="field">product_id FK</text>
+    <text x="12" y="104" class="field">requested_by FK</text>
+    <text x="12" y="122" class="field">status, mode, task_type</text>
+    <text x="12" y="140" class="field">quantity, prompt</text>
+    <text x="12" y="158" class="field">source/input image ids</text>
+    <text x="12" y="176" class="field">credit_cost, refunded_at</text>
+    <text x="12" y="194" class="field">attempt_count</text>
+  </g>
+
+  <!-- AI Generated Image -->
+  <g transform="translate(1530,680)">
+    <rect class="box" width="300" height="170"/>
+    <rect class="head" width="300" height="30"/>
+    <text x="12" y="20" class="headtext">ai_generated_images</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">task_id FK</text>
+    <text x="12" y="86" class="field">shop_id FK</text>
+    <text x="12" y="104" class="field">product_id FK</text>
+    <text x="12" y="122" class="field">image_url, storage_key</text>
+    <text x="12" y="140" class="field">is_selected, attached_image_id</text>
+    <text x="12" y="158" class="field">created_at</text>
+  </g>
+
+  <!-- AI TryOn Task -->
+  <g transform="translate(1530,900)">
+    <rect class="box" width="300" height="210"/>
+    <rect class="head" width="300" height="30"/>
+    <text x="12" y="20" class="headtext">ai_try_on_tasks</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">customer_id FK nullable</text>
+    <text x="12" y="86" class="field">guest_session_id</text>
+    <text x="12" y="104" class="field">shop_id FK, product_id FK</text>
+    <text x="12" y="122" class="field">selected_size</text>
+    <text x="12" y="140" class="field">customer_image_url</text>
+    <text x="12" y="158" class="field">body_type, body_traits</text>
+    <text x="12" y="176" class="field">provider_mode, status</text>
+    <text x="12" y="194" class="field">timestamps...</text>
+  </g>
+
+  <!-- Notification -->
+  <g transform="translate(40,1070)">
+    <rect class="box" width="300" height="190"/>
+    <rect class="head" width="300" height="30"/>
+    <text x="12" y="20" class="headtext">notifications</text>
+    <text x="12" y="50" class="field">id PK uuid</text>
+    <text x="12" y="68" class="field">recipient_user_id FK</text>
+    <text x="12" y="86" class="field">recipient_role</text>
+    <text x="12" y="104" class="field">shop_id, order_id, checkout_id</text>
+    <text x="12" y="122" class="field">type, title, message</text>
+    <text x="12" y="140" class="field">severity, status</text>
+    <text x="12" y="158" class="field">dedupe_key unique</text>
+    <text x="12" y="176" class="field">created_at, read_at</text>
+  </g>
+
+  <!-- Lines -->
+  <path class="line" d="M270 215 L320 215"/>
+  <text x="286" y="206" class="label">1</text><text x="302" y="206" class="label">1</text>
+
+  <path class="line" d="M155 290 L155 340"/>
+  <text x="162" y="324" class="label">1:N</text>
+
+  <path class="line" d="M580 235 L640 235"/>
+  <text x="600" y="226" class="label">1:N</text>
+
+  <path class="line" d="M780 350 L780 420"/>
+  <text x="788" y="392" class="label">1:N</text>
+
+  <path class="line" d="M1090 290 L1090 420 L970 420"/>
+  <text x="1098" y="356" class="label">1:N</text>
+
+  <path class="line" d="M970 500 L1030 500"/>
+  <text x="990" y="490" class="label">1:N</text>
+
+  <path class="line" d="M970 540 L1030 715"/>
+  <text x="992" y="610" class="label">1:N</text>
+
+  <path class="line" d="M970 560 L1030 690"/>
+  <text x="983" y="640" class="label">1:N</text>
+
+  <path class="line" d="M920 235 L980 235"/>
+  <text x="936" y="226" class="label">N:1</text>
+
+  <path class="line" d="M580 460 L640 460"/>
+  <text x="595" y="450" class="label">1:N</text>
+
+  <path class="line" d="M580 630 L640 630"/>
+  <text x="595" y="620" class="label">1:N</text>
+
+  <path class="line" d="M890 775 L930 775"/>
+  <text x="900" y="766" class="label">1:N</text>
+
+  <path class="line" d="M1180 775 L1220 775"/>
+  <text x="1192" y="766" class="label">1:1</text>
+
+  <path class="line" d="M1340 850 L1340 900"/>
+  <text x="1348" y="885" class="label">1:N</text>
+
+  <path class="line" d="M760 650 L760 700"/>
+  <text x="768" y="684" class="label">1:N</text>
+
+  <path class="line" d="M290 910 L340 910"/>
+  <text x="302" y="900" class="label">1:N</text>
+
+  <path class="line" d="M640 960 L680 960"/>
+  <text x="649" y="950" class="label">1:N</text>
+
+  <path class="line" d="M970 960 L980 960"/>
+  <text x="972" y="950" class="label">1:N</text>
+
+  <path class="line" d="M970 990 L980 990"/>
+  <text x="972" y="980" class="label">1:N</text>
+
+  <path class="line" d="M155 1000 L155 1070"/>
+  <text x="164" y="1045" class="label">1:N</text>
+
+  <path class="line" d="M920 510 L1530 510"/>
+  <text x="1210" y="500" class="label">shop/product driven AI tasks</text>
+
+  <path class="line" d="M1680 630 L1680 680"/>
+  <text x="1688" y="664" class="label">1:N</text>
+
+  <path class="line" d="M1680 850 L1680 900"/>
+  <text x="1688" y="884" class="label">shop/product try-on</text>
+
+  <path class="line" d="M780 650 L1580 900"/>
+  <text x="1220" y="780" class="label">product -&gt; try-on</text>
+
+  <path class="line" d="M780 650 L1580 680"/>
+  <text x="1160" y="658" class="label">product -&gt; generated images</text>
+
+  <path class="line" d="M1280 590 L1530 730"/>
+  <text x="1385" y="660" class="label">image attach</text>
+
+  <path class="line" d="M1550 510 L780 510"/>
+  <text x="1120" y="530" class="label">requested_by user / shop / product</text>
+
+  <path class="line" d="M155 215 L155 830"/>
+  <text x="164" y="540" class="label">customer</text>
+
+  <path class="line" d="M155 215 L1680 900" stroke-dasharray="5 4"/>
+  <text x="930" y="610" class="label">user can trigger AI try-on</text>
+
+  <path class="line" d="M155 215 L1680 510" stroke-dasharray="5 4"/>
+  <text x="900" y="340" class="label">seller/admin can trigger AI image tasks</text>
+
+  <rect x="1560" y="1180" width="290" height="160" fill="#ffffff" stroke="#8ea3b8" stroke-width="1.2" rx="6"/>
+  <rect x="1560" y="1180" width="290" height="30" class="head"/>
+  <text x="1572" y="1200" class="headtext">Legend</text>
+  <text x="1572" y="1230" class="legend">Solid line: direct FK relation</text>
+  <text x="1572" y="1252" class="legend">Dashed line: important workflow relation</text>
+  <text x="1572" y="1274" class="legend">This ERD focuses on the core commerce flow.</text>
+  <text x="1572" y="1296" class="legend">Auxiliary tables not shown: delivery, support, returns,</text>
+  <text x="1572" y="1318" class="legend">admin queues, search/view logs, AI usage logs, etc.</text>
+</svg>

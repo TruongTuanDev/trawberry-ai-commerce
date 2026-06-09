@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <style>
+      .bg { fill: #fbfbfd; }
+      .grid { stroke: #eceff4; stroke-width: 1; }
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #20344a; }
+      .subtitle { font: 14px 'Segoe UI', Arial, sans-serif; fill: #5d6b7c; }
+      .usecase { fill: #ffffff; stroke: #4f6278; stroke-width: 2; }
+      .uctext { font: 18px 'Segoe UI', Arial, sans-serif; fill: #22313f; text-anchor: middle; dominant-baseline: middle; }
+      .actor { stroke: #2d3b4a; stroke-width: 3; fill: none; stroke-linecap: round; }
+      .actorlabel { font: 18px 'Segoe UI', Arial, sans-serif; fill: #22313f; text-anchor: middle; }
+      .line { stroke: #56697e; stroke-width: 2.2; fill: none; }
+      .dash { stroke: #7d8fa3; stroke-width: 2; stroke-dasharray: 7 6; fill: none; }
+      .rel { font: italic 16px 'Segoe UI', Arial, sans-serif; fill: #5d6b7c; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7d8fa3"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="1000"/>
+
+  <g opacity="0.85">
+    <path class="grid" d="M0 50 H1600 M0 100 H1600 M0 150 H1600 M0 200 H1600 M0 250 H1600 M0 300 H1600 M0 350 H1600 M0 400 H1600 M0 450 H1600 M0 500 H1600 M0 550 H1600 M0 600 H1600 M0 650 H1600 M0 700 H1600 M0 750 H1600 M0 800 H1600 M0 850 H1600 M0 900 H1600 M0 950 H1600"/>
+    <path class="grid" d="M50 0 V1000 M100 0 V1000 M150 0 V1000 M200 0 V1000 M250 0 V1000 M300 0 V1000 M350 0 V1000 M400 0 V1000 M450 0 V1000 M500 0 V1000 M550 0 V1000 M600 0 V1000 M650 0 V1000 M700 0 V1000 M750 0 V1000 M800 0 V1000 M850 0 V1000 M900 0 V1000 M950 0 V1000 M1000 0 V1000 M1050 0 V1000 M1100 0 V1000 M1150 0 V1000 M1200 0 V1000 M1250 0 V1000 M1300 0 V1000 M1350 0 V1000 M1400 0 V1000 M1450 0 V1000 M1500 0 V1000 M1550 0 V1000"/>
+  </g>
+
+  <text x="48" y="42" class="title">Admin Use Case Diagram</text>
+  <text x="48" y="70" class="subtitle">Multi-vendor E-Commerce Platform Integrated with AI Virtual Try-On System</text>
+
+  <!-- Actor -->
+  <g transform="translate(290,505)">
+    <circle class="actor" cx="0" cy="-110" r="28"/>
+    <line class="actor" x1="0" y1="-82" x2="0" y2="10"/>
+    <line class="actor" x1="-48" y1="-42" x2="48" y2="-42"/>
+    <line class="actor" x1="0" y1="10" x2="-42" y2="82"/>
+    <line class="actor" x1="0" y1="10" x2="42" y2="82"/>
+    <text x="0" y="118" class="actorlabel">Admin</text>
+  </g>
+
+  <!-- Left / center use cases -->
+  <ellipse class="usecase" cx="610" cy="170" rx="160" ry="36"/>
+  <text class="uctext" x="610" y="170">View Dashboard</text>
+
+  <ellipse class="usecase" cx="620" cy="275" rx="190" ry="40"/>
+  <text class="uctext" x="620" y="275">Approve Seller Onboarding</text>
+
+  <ellipse class="usecase" cx="620" cy="395" rx="185" ry="40"/>
+  <text class="uctext" x="620" y="395">Manage Sellers and Shops</text>
+
+  <ellipse class="usecase" cx="620" cy="515" rx="195" ry="40"/>
+  <text class="uctext" x="620" y="515">Review Payment Proofs</text>
+
+  <ellipse class="usecase" cx="620" cy="635" rx="200" ry="40"/>
+  <text class="uctext" x="620" y="635">Monitor Orders and Deliveries</text>
+
+  <ellipse class="usecase" cx="620" cy="760" rx="210" ry="42"/>
+  <text class="uctext" x="620" y="760">Manage AI and Platform Settings</text>
+
+  <ellipse class="usecase" cx="620" cy="885" rx="210" ry="40"/>
+  <text class="uctext" x="620" y="885">Inspect Billing and Audit Records</text>
+
+  <!-- Right side -->
+  <ellipse class="usecase" cx="1110" cy="180" rx="110" ry="34"/>
+  <text class="uctext" x="1110" y="180">Login</text>
+
+  <ellipse class="usecase" cx="1360" cy="120" rx="110" ry="32"/>
+  <text class="uctext" x="1360" y="120">Logout</text>
+
+  <ellipse class="usecase" cx="1360" cy="250" rx="145" ry="36"/>
+  <text class="uctext" x="1360" y="250">Update Profile</text>
+
+  <ellipse class="usecase" cx="1110" cy="390" rx="160" ry="38"/>
+  <text class="uctext" x="1110" y="390">Assign Admin Queue Tasks</text>
+
+  <ellipse class="usecase" cx="1110" cy="540" rx="170" ry="38"/>
+  <text class="uctext" x="1110" y="540">Review Support Cases</text>
+
+  <ellipse class="usecase" cx="1110" cy="700" rx="180" ry="38"/>
+  <text class="uctext" x="1110" y="700">Configure Commission Settings</text>
+
+  <ellipse class="usecase" cx="1110" cy="860" rx="170" ry="38"/>
+  <text class="uctext" x="1110" y="860">View Reports and Statistics</text>
+
+  <!-- Actor associations -->
+  <path class="line" d="M290 395 L450 175"/>
+  <path class="line" d="M290 420 L435 275"/>
+  <path class="line" d="M290 450 L438 395"/>
+  <path class="line" d="M290 490 L425 515"/>
+  <path class="line" d="M290 530 L420 635"/>
+  <path class="line" d="M290 565 L430 760"/>
+  <path class="line" d="M290 595 L420 885"/>
+
+  <!-- include to login -->
+  <path class="dash" d="M760 168 L1000 180" marker-end="url(#arrow)"/>
+  <text x="870" y="160" class="rel">«include»</text>
+
+  <path class="dash" d="M810 275 L1010 190" marker-end="url(#arrow)"/>
+  <text x="896" y="228" class="rel">«include»</text>
+
+  <path class="dash" d="M805 395 L1010 215" marker-end="url(#arrow)"/>
+  <text x="895" y="308" class="rel">«include»</text>
+
+  <path class="dash" d="M815 515 L1020 220" marker-end="url(#arrow)"/>
+  <text x="915" y="375" class="rel">«include»</text>
+
+  <path class="dash" d="M820 635 L1040 225" marker-end="url(#arrow)"/>
+  <text x="942" y="430" class="rel">«include»</text>
+
+  <path class="dash" d="M810 760 L1045 228" marker-end="url(#arrow)"/>
+  <text x="950" y="500" class="rel">«include»</text>
+
+  <path class="dash" d="M825 885 L1060 230" marker-end="url(#arrow)"/>
+  <text x="965" y="565" class="rel">«include»</text>
+
+  <!-- right includes -->
+  <path class="dash" d="M1250 125 L1190 165" marker-end="url(#arrow)"/>
+  <text x="1210" y="122" class="rel">«include»</text>
+
+  <path class="dash" d="M1215 250 L1180 210" marker-end="url(#arrow)"/>
+  <text x="1196" y="230" class="rel">«include»</text>
+
+  <!-- extend / support relations -->
+  <path class="dash" d="M950 390 L810 395" marker-end="url(#arrow)"/>
+  <text x="862" y="378" class="rel">«extend»</text>
+
+  <path class="dash" d="M940 540 L815 518" marker-end="url(#arrow)"/>
+  <text x="858" y="520" class="rel">«extend»</text>
+
+  <path class="dash" d="M930 700 L815 760" marker-end="url(#arrow)"/>
+  <text x="856" y="714" class="rel">«extend»</text>
+
+  <path class="dash" d="M935 860 L820 885" marker-end="url(#arrow)"/>
+  <text x="860" y="852" class="rel">«extend»</text>
+</svg>

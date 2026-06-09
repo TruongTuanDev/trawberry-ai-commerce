@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <defs>
+    <style>
+      .bg { fill: #fbfbfd; }
+      .grid { stroke: #eceff4; stroke-width: 1; }
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #20344a; }
+      .subtitle { font: 14px 'Segoe UI', Arial, sans-serif; fill: #5d6b7c; }
+      .usecase { fill: #ffffff; stroke: #4f6278; stroke-width: 2; }
+      .uctext { font: 18px 'Segoe UI', Arial, sans-serif; fill: #22313f; text-anchor: middle; dominant-baseline: middle; }
+      .actor { stroke: #2d3b4a; stroke-width: 3; fill: none; stroke-linecap: round; }
+      .actorlabel { font: 18px 'Segoe UI', Arial, sans-serif; fill: #22313f; text-anchor: middle; }
+      .line { stroke: #56697e; stroke-width: 2.2; fill: none; }
+      .dash { stroke: #7d8fa3; stroke-width: 2; stroke-dasharray: 7 6; fill: none; }
+      .rel { font: italic 16px 'Segoe UI', Arial, sans-serif; fill: #5d6b7c; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7d8fa3"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="1100"/>
+  <g opacity="0.85">
+    <path class="grid" d="M0 50 H1600 M0 100 H1600 M0 150 H1600 M0 200 H1600 M0 250 H1600 M0 300 H1600 M0 350 H1600 M0 400 H1600 M0 450 H1600 M0 500 H1600 M0 550 H1600 M0 600 H1600 M0 650 H1600 M0 700 H1600 M0 750 H1600 M0 800 H1600 M0 850 H1600 M0 900 H1600 M0 950 H1600 M0 1000 H1600 M0 1050 H1600"/>
+    <path class="grid" d="M50 0 V1100 M100 0 V1100 M150 0 V1100 M200 0 V1100 M250 0 V1100 M300 0 V1100 M350 0 V1100 M400 0 V1100 M450 0 V1100 M500 0 V1100 M550 0 V1100 M600 0 V1100 M650 0 V1100 M700 0 V1100 M750 0 V1100 M800 0 V1100 M850 0 V1100 M900 0 V1100 M950 0 V1100 M1000 0 V1100 M1050 0 V1100 M1100 0 V1100 M1150 0 V1100 M1200 0 V1100 M1250 0 V1100 M1300 0 V1100 M1350 0 V1100 M1400 0 V1100 M1450 0 V1100 M1500 0 V1100 M1550 0 V1100"/>
+  </g>
+
+  <text x="48" y="42" class="title">Seller Use Case Diagram</text>
+  <text x="48" y="70" class="subtitle">Multi-vendor E-Commerce Platform Integrated with AI Virtual Try-On System</text>
+
+  <g transform="translate(270,560)">
+    <circle class="actor" cx="0" cy="-115" r="28"/>
+    <line class="actor" x1="0" y1="-87" x2="0" y2="10"/>
+    <line class="actor" x1="-48" y1="-45" x2="48" y2="-45"/>
+    <line class="actor" x1="0" y1="10" x2="-42" y2="82"/>
+    <line class="actor" x1="0" y1="10" x2="42" y2="82"/>
+    <text x="0" y="118" class="actorlabel">Seller</text>
+  </g>
+
+  <!-- Left/center -->
+  <ellipse class="usecase" cx="620" cy="160" rx="110" ry="34"/>
+  <text class="uctext" x="620" y="160">Login</text>
+
+  <ellipse class="usecase" cx="600" cy="270" rx="145" ry="38"/>
+  <text class="uctext" x="600" y="270">Manage Shop Profile</text>
+
+  <ellipse class="usecase" cx="610" cy="380" rx="165" ry="40"/>
+  <text class="uctext" x="610" y="380">Sync Products from WB</text>
+
+  <ellipse class="usecase" cx="615" cy="500" rx="180" ry="40"/>
+  <text class="uctext" x="615" y="500">Manage Products and Variants</text>
+
+  <ellipse class="usecase" cx="620" cy="625" rx="170" ry="40"/>
+  <text class="uctext" x="620" y="625">Publish / Unpublish Products</text>
+
+  <ellipse class="usecase" cx="620" cy="755" rx="165" ry="40"/>
+  <text class="uctext" x="620" y="755">Run Sponsored Campaigns</text>
+
+  <ellipse class="usecase" cx="620" cy="885" rx="180" ry="40"/>
+  <text class="uctext" x="620" y="885">Review Orders and Payments</text>
+
+  <ellipse class="usecase" cx="620" cy="1010" rx="165" ry="40"/>
+  <text class="uctext" x="620" y="1010">Manage Deliveries</text>
+
+  <!-- Right -->
+  <ellipse class="usecase" cx="1140" cy="150" rx="120" ry="34"/>
+  <text class="uctext" x="1140" y="150">Logout</text>
+
+  <ellipse class="usecase" cx="1140" cy="245" rx="145" ry="36"/>
+  <text class="uctext" x="1140" y="245">Update Profile</text>
+
+  <ellipse class="usecase" cx="1140" cy="360" rx="165" ry="38"/>
+  <text class="uctext" x="1140" y="360">Upload Product Images</text>
+
+  <ellipse class="usecase" cx="1140" cy="490" rx="180" ry="38"/>
+  <text class="uctext" x="1140" y="490">Generate AI Product Images</text>
+
+  <ellipse class="usecase" cx="1140" cy="620" rx="165" ry="38"/>
+  <text class="uctext" x="1140" y="620">Monitor Wallet Balance</text>
+
+  <ellipse class="usecase" cx="1140" cy="760" rx="180" ry="38"/>
+  <text class="uctext" x="1140" y="760">Set Campaign Budget</text>
+
+  <ellipse class="usecase" cx="1140" cy="890" rx="195" ry="40"/>
+  <text class="uctext" x="1140" y="890">View Billing and Campaign Records</text>
+
+  <ellipse class="usecase" cx="1140" cy="1010" rx="170" ry="38"/>
+  <text class="uctext" x="1140" y="1010">Update Delivery Status</text>
+
+  <!-- actor associations -->
+  <path class="line" d="M270 445 L510 165"/>
+  <path class="line" d="M270 470 L470 272"/>
+  <path class="line" d="M270 505 L455 380"/>
+  <path class="line" d="M270 540 L435 500"/>
+  <path class="line" d="M270 575 L450 625"/>
+  <path class="line" d="M270 620 L458 755"/>
+  <path class="line" d="M270 665 L445 885"/>
+  <path class="line" d="M270 705 L455 1010"/>
+
+  <!-- includes to login -->
+  <path class="dash" d="M730 160 L1020 150" marker-end="url(#arrow)"/>
+  <text x="858" y="145" class="rel">«include»</text>
+  <path class="dash" d="M742 270 L1030 165" marker-end="url(#arrow)"/>
+  <text x="866" y="208" class="rel">«include»</text>
+  <path class="dash" d="M775 380 L1040 172" marker-end="url(#arrow)"/>
+  <text x="900" y="278" class="rel">«include»</text>
+  <path class="dash" d="M795 500 L1050 180" marker-end="url(#arrow)"/>
+  <text x="915" y="340" class="rel">«include»</text>
+  <path class="dash" d="M790 625 L1070 185" marker-end="url(#arrow)"/>
+  <text x="930" y="404" class="rel">«include»</text>
+  <path class="dash" d="M785 755 L1080 190" marker-end="url(#arrow)"/>
+  <text x="960" y="472" class="rel">«include»</text>
+  <path class="dash" d="M790 885 L1090 196" marker-end="url(#arrow)"/>
+  <text x="986" y="540" class="rel">«include»</text>
+  <path class="dash" d="M785 1010 L1100 202" marker-end="url(#arrow)"/>
+  <text x="992" y="612" class="rel">«include»</text>
+
+  <!-- right-side includes -->
+  <path class="dash" d="M1025 150 L1020 150" marker-end="url(#arrow)"/>
+  <path class="dash" d="M1010 245 L1015 180" marker-end="url(#arrow)"/>
+  <text x="1010" y="215" class="rel">«include»</text>
+
+  <!-- extend/include detailed relations -->
+  <path class="dash" d="M975 360 L790 500" marker-end="url(#arrow)"/>
+  <text x="870" y="408" class="rel">«extend»</text>
+
+  <path class="dash" d="M960 490 L780 505" marker-end="url(#arrow)"/>
+  <text x="858" y="482" class="rel">«extend»</text>
+
+  <path class="dash" d="M975 620 L780 755" marker-end="url(#arrow)"/>
+  <text x="868" y="690" class="rel">«include»</text>
+
+  <path class="dash" d="M960 760 L790 760" marker-end="url(#arrow)"/>
+  <text x="860" y="748" class="rel">«include»</text>
+
+  <path class="dash" d="M945 890 L798 885" marker-end="url(#arrow)"/>
+  <text x="860" y="874" class="rel">«extend»</text>
+
+  <path class="dash" d="M970 1010 L790 1010" marker-end="url(#arrow)"/>
+  <text x="875" y="995" class="rel">«include»</text>
+</svg>

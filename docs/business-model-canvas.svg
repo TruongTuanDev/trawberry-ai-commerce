@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100">
+  <defs>
+    <style>
+      .bg { fill: #f5f7fb; }
+      .frame { fill: #ffffff; stroke: #243b6b; stroke-width: 2.2; rx: 14; }
+      .header { fill: #243b6b; rx: 14 14 0 0; }
+      .title { font: 700 32px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .sectionTitle { font: 700 22px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .bodyText { font: 16px 'Segoe UI', Arial, sans-serif; fill: #1f2d3d; }
+      .footerText { font: 700 22px 'Segoe UI', Arial, sans-serif; fill: #ffffff; letter-spacing: 3px; }
+      .small { font: 13px 'Segoe UI', Arial, sans-serif; fill: #526173; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1800" height="1100"/>
+
+  <rect x="35" y="30" width="1730" height="980" class="frame"/>
+  <rect x="35" y="30" width="1730" height="55" class="header"/>
+  <text x="70" y="67" class="title">Business Model Canvas - Multi-vendor E-commerce Platform with AI Virtual Try-On</text>
+
+  <!-- Top row -->
+  <g transform="translate(35,85)">
+    <rect width="250" height="470" class="frame"/>
+    <rect width="250" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">KEY PARTNERS</text>
+    <text x="18" y="78" class="bodyText">1. AI and compute providers</text>
+    <text x="18" y="110" class="bodyText">2. Cloud, storage, CDN providers</text>
+    <text x="18" y="142" class="bodyText">3. Fashion sellers and shops</text>
+    <text x="18" y="174" class="bodyText">4. Logistics or seller delivery partners</text>
+    <text x="18" y="206" class="bodyText">5. Email, OTP, notification services</text>
+    <text x="18" y="238" class="bodyText">6. Future payment integration partners</text>
+    <text x="18" y="288" class="small">Supports product sync, AI media, delivery,</text>
+    <text x="18" y="310" class="small">and reliable marketplace operations.</text>
+  </g>
+
+  <g transform="translate(285,85)">
+    <rect width="305" height="470" class="frame"/>
+    <rect width="305" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">KEY ACTIVITIES</text>
+    <text x="18" y="78" class="bodyText">1. Build and operate the marketplace</text>
+    <text x="18" y="110" class="bodyText">2. Sync seller catalogs from Wildberries</text>
+    <text x="18" y="142" class="bodyText">3. Manage publishing and readiness checks</text>
+    <text x="18" y="174" class="bodyText">4. Run AI virtual try-on services</text>
+    <text x="18" y="206" class="bodyText">5. Support campaigns, orders, billing</text>
+    <text x="18" y="238" class="bodyText">6. Seller onboarding and admin governance</text>
+    <text x="18" y="288" class="small">Core activity focus: lower seller dependency</text>
+    <text x="18" y="310" class="small">on high-fee marketplaces while improving</text>
+    <text x="18" y="332" class="small">fashion-shopping interaction.</text>
+  </g>
+
+  <g transform="translate(590,85)">
+    <rect width="305" height="470" class="frame"/>
+    <rect width="305" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">VALUE PROPOSITIONS</text>
+    <text x="18" y="78" class="bodyText">1. Reduce dependence on Wildberries fees</text>
+    <text x="18" y="110" class="bodyText">2. Give sellers more control over catalog,</text>
+    <text x="36" y="136" class="bodyText">price, stock, and promotions</text>
+    <text x="18" y="168" class="bodyText">3. AI virtual try-on improves customer</text>
+    <text x="36" y="194" class="bodyText">confidence in fashion purchases</text>
+    <text x="18" y="226" class="bodyText">4. Catalog sync reduces manual work</text>
+    <text x="18" y="258" class="bodyText">5. More transparent billing and campaigns</text>
+    <text x="18" y="308" class="small">The platform combines commerce control,</text>
+    <text x="18" y="330" class="small">AI-enhanced product interaction, and a</text>
+    <text x="18" y="352" class="small">more sustainable seller operating model.</text>
+  </g>
+
+  <g transform="translate(895,85)">
+    <rect width="270" height="470" class="frame"/>
+    <rect width="270" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">CUSTOMER RELATIONSHIPS</text>
+    <text x="18" y="78" class="bodyText">1. Self-service marketplace experience</text>
+    <text x="18" y="110" class="bodyText">2. Seller onboarding support</text>
+    <text x="18" y="142" class="bodyText">3. Dashboard-based shop management</text>
+    <text x="18" y="174" class="bodyText">4. Order and payment notifications</text>
+    <text x="18" y="206" class="bodyText">5. Ongoing support for sellers and buyers</text>
+    <text x="18" y="256" class="small">Designed for long-term platform trust</text>
+    <text x="18" y="278" class="small">and repeat marketplace usage.</text>
+  </g>
+
+  <g transform="translate(1165,85)">
+    <rect width="600" height="470" class="frame"/>
+    <rect width="600" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">CUSTOMER SEGMENTS</text>
+    <text x="18" y="78" class="bodyText">1. Vietnamese fashion sellers using or leaving Wildberries</text>
+    <text x="18" y="110" class="bodyText">2. Small and medium merchants seeking better margins</text>
+    <text x="18" y="142" class="bodyText">3. Online fashion customers who want richer visual shopping support</text>
+    <text x="18" y="174" class="bodyText">4. Platform admins and operators managing marketplace activity</text>
+    <text x="18" y="206" class="bodyText">5. Future cross-border sellers entering the Russian market</text>
+    <text x="18" y="256" class="small">Primary focus: fashion-commerce sellers and customers</text>
+    <text x="18" y="278" class="small">who need a more efficient and controllable platform.</text>
+  </g>
+
+  <!-- Bottom row -->
+  <g transform="translate(35,555)">
+    <rect width="555" height="365" class="frame"/>
+    <rect width="555" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">KEY RESOURCES</text>
+    <text x="18" y="78" class="bodyText">1. Development team and system architecture</text>
+    <text x="18" y="110" class="bodyText">2. Next.js frontend, NestJS backend, FastAPI AI service</text>
+    <text x="18" y="142" class="bodyText">3. PostgreSQL, Redis, queues, object storage</text>
+    <text x="18" y="174" class="bodyText">4. Seller, product, order, and campaign data</text>
+    <text x="18" y="206" class="bodyText">5. AI processing infrastructure for try-on and media</text>
+    <text x="18" y="238" class="bodyText">6. Marketplace brand, trust, and seller network</text>
+  </g>
+
+  <g transform="translate(590,555)">
+    <rect width="575" height="365" class="frame"/>
+    <rect width="575" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">CHANNELS</text>
+    <text x="18" y="78" class="bodyText">1. Public marketplace website</text>
+    <text x="18" y="110" class="bodyText">2. Seller and admin dashboards</text>
+    <text x="18" y="142" class="bodyText">3. Social media and digital marketing channels</text>
+    <text x="18" y="174" class="bodyText">4. Seller communities and direct onboarding outreach</text>
+    <text x="18" y="206" class="bodyText">5. SEO, content marketing, and AI demo campaigns</text>
+    <text x="18" y="256" class="small">Acquisition is expected to rely on targeted seller outreach</text>
+    <text x="18" y="278" class="small">and visible differentiation through AI try-on features.</text>
+  </g>
+
+  <g transform="translate(1165,555)">
+    <rect width="600" height="365" class="frame"/>
+    <rect width="600" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">COST STRUCTURE</text>
+    <text x="18" y="78" class="bodyText">1. Software development and maintenance costs</text>
+    <text x="18" y="110" class="bodyText">2. Hosting, database, storage, and CDN costs</text>
+    <text x="18" y="142" class="bodyText">3. AI processing and image-generation costs</text>
+    <text x="18" y="174" class="bodyText">4. Monitoring, security, and operational support</text>
+    <text x="18" y="206" class="bodyText">5. Marketing, seller acquisition, and customer support</text>
+    <text x="18" y="238" class="bodyText">6. Future integration and expansion costs</text>
+  </g>
+
+  <!-- Revenue -->
+  <g transform="translate(35,920)">
+    <rect width="1730" height="90" class="frame"/>
+    <rect width="1730" height="46" class="header"/>
+    <text x="20" y="30" class="sectionTitle">REVENUE STREAMS</text>
+    <text x="18" y="74" class="bodyText">1. Commission fees on orders   2. Sponsored campaign fees   3. Premium seller plans   4. Paid AI services   5. Future analytics and automation subscriptions</text>
+  </g>
+
+  <rect x="35" y="1010" width="1730" height="55" class="header"/>
+  <text x="625" y="1046" class="footerText">BUSINESS MODEL CANVAS</text>
+</svg>
