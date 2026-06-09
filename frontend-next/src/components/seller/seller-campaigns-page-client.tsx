@@ -19,6 +19,7 @@ import {
   upsertSellerCampaignTarget,
   updateSellerCampaign,
 } from "@/lib/seller-api";
+import { useI18n } from "@/i18n/use-i18n";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const SCENARIO_OPTIONS: SellerCampaignScenarioType[] = ["home", "similar", "search"];
@@ -154,6 +155,7 @@ function buildCampaignForm(campaign?: SellerCampaign | null): CampaignFormState 
 }
 
 export function SellerCampaignsPageClient() {
+  const { locale } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -173,7 +175,100 @@ export function SellerCampaignsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const copy = CAMPAIGN_COPY;
+  const copy = useMemo(() => {
+    if (locale !== "vi") {
+      return CAMPAIGN_COPY;
+    }
+
+    return {
+      ...CAMPAIGN_COPY,
+      eyebrow: "Chiến dịch",
+      title: "Trình quản lý chiến dịch tài trợ",
+      description:
+        "Tạo, nhắm mục tiêu, kích hoạt và theo dõi chiến dịch tài trợ với mức tăng gợi ý có kiểm soát, theo dõi chi tiêu CPC và lộ trình demo V1 rõ ràng qua phần tài chính seller.",
+      currentShop: "Shop hiện tại",
+      pickShop: "Chọn shop seller để quản lý chiến dịch.",
+      totalCampaigns: "Số lượng chiến dịch",
+      placeholderBilling: "Tài chính chiến dịch",
+      placeholderBillingDescription:
+        "Thu phí click gợi ý CPC, theo dõi chi tiêu và kiểm soát ngân sách hiện đã sẵn sàng cho luồng demo V1. Chỉ dùng nguồn quỹ demo ở /seller/billing khi cờ dev nội bộ được bật.",
+      loading: "Đang tải chiến dịch...",
+      loadFailed: "Không thể tải chiến dịch seller.",
+      submitting: "Đang lưu...",
+      createEyebrow: "Tạo mới",
+      createTitle: "Tạo bản nháp chiến dịch",
+      createDescription:
+        "Bắt đầu với bản nháp, gắn mục tiêu sản phẩm, đặt ngân sách và chế độ tính phí, sau đó chuyển sang hoạt động cho luồng demo.",
+      createAction: "Tạo chiến dịch",
+      listEyebrow: "Quản lý",
+      listTitle: "Danh sách chiến dịch",
+      listDescription:
+        "Xem trạng thái chiến dịch, ngân sách, chi tiêu, phần ngân sách còn lại, mục tiêu và hành vi tính phí an toàn mà không hiển thị ra trang công khai.",
+      empty: "Chưa có chiến dịch nào cho shop này.",
+      saveCampaign: "Lưu chiến dịch",
+      archiveCampaign: "Lưu trữ chiến dịch",
+      targetTitle: "Mục tiêu sản phẩm",
+      targetDescription:
+        "Gắn các sản phẩm đã publish của shop hiện tại. Chiến dịch đang hoạt động sẽ từ chối sản phẩm không hợp lệ hoặc chưa công khai.",
+      eligibleProducts: "Sản phẩm công khai được gợi ý",
+      saveTarget: "Lưu mục tiêu",
+      removeTarget: "Gỡ mục tiêu",
+      noTargets: "Chưa có mục tiêu sản phẩm nào.",
+      billingPanelTitle: "Tài chính và hiệu suất",
+      billingPanelDescription:
+        "Bảng này hiển thị trạng thái chi tiêu hiện tại của chiến dịch cùng các sự kiện tài trợ gần đây được ghi nhận cho chiến dịch.",
+      performanceTitle: "Tổng quan hiệu suất",
+      performanceAction: "Tải hiệu suất",
+      performanceLoading: "Đang tải hiệu suất...",
+      noEvents: "Chưa có sự kiện tài trợ nào.",
+      fields: {
+        ...CAMPAIGN_COPY.fields,
+        name: "Tên chiến dịch",
+        namePlaceholder: "Đẩy mạnh độ hiển thị mùa hè",
+        description: "Mô tả",
+        descriptionPlaceholder: "Mô tả mục tiêu chiến dịch và điều QA cần theo dõi.",
+        scenarioTypes: "Loại ngữ cảnh",
+        billingMode: "Chế độ tính phí",
+        budgetLimit: "Giới hạn ngân sách",
+        maxBoost: "Mức tăng tối đa",
+        status: "Trạng thái",
+        startAt: "Bắt đầu lúc",
+        endAt: "Kết thúc lúc",
+        productId: "Mã sản phẩm",
+        targetBoost: "Mức tăng mục tiêu",
+        targetStatus: "Trạng thái mục tiêu",
+      },
+      summary: {
+        ...CAMPAIGN_COPY.summary,
+        totalTargets: "Tổng mục tiêu",
+        activeTargets: "Đang hoạt động",
+        removedTargets: "Đã gỡ",
+        spentAmount: "Đã chi",
+        remainingBudget: "Ngân sách còn lại",
+        billableClicks: "Click tính phí",
+      },
+      table: {
+        ...CAMPAIGN_COPY.table,
+        product: "Sản phẩm",
+        status: "Trạng thái",
+        boost: "Mức tăng",
+        actions: "Hành động",
+      },
+      messages: {
+        ...CAMPAIGN_COPY.messages,
+        createSuccess: "Đã tạo chiến dịch.",
+        createFailed: "Không thể tạo chiến dịch.",
+        updateSuccess: "Đã cập nhật chiến dịch.",
+        updateFailed: "Không thể cập nhật chiến dịch.",
+        archiveSuccess: "Đã lưu trữ chiến dịch.",
+        archiveFailed: "Không thể lưu trữ chiến dịch.",
+        targetSaved: "Đã lưu mục tiêu.",
+        targetSaveFailed: "Không thể lưu mục tiêu.",
+        targetRemoved: "Đã gỡ mục tiêu.",
+        targetRemoveFailed: "Không thể gỡ mục tiêu.",
+      },
+    };
+  }, [locale]);
 
   useEffect(() => {
     hydrate();

@@ -5,6 +5,7 @@ import {
   getSellerRecommendationAnalyticsOverview,
   type SellerRecommendationAnalyticsOverview,
 } from "@/lib/seller-api";
+import { useI18n } from "@/i18n/use-i18n";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
 const RANGE_OPTIONS = [
@@ -22,6 +23,7 @@ function formatCurrency(value: string) {
 }
 
 export function SellerRecommendationsAnalyticsPageClient() {
+  const { locale } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -32,6 +34,8 @@ export function SellerRecommendationsAnalyticsPageClient() {
   const [overview, setOverview] = useState<SellerRecommendationAnalyticsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const isVietnamese = locale === "vi";
 
   useEffect(() => {
     hydrate();
@@ -65,9 +69,13 @@ export function SellerRecommendationsAnalyticsPageClient() {
         setError(null);
       } catch (issue) {
         if (!active) return;
-        setError(
-          issue instanceof Error ? issue.message : "Unable to load seller recommendation analytics.",
-        );
+          setError(
+            issue instanceof Error
+              ? issue.message
+              : isVietnamese
+                ? "Không thể tải phân tích gợi ý của seller."
+                : "Unable to load seller recommendation analytics.",
+          );
       } finally {
         if (active) {
           setLoading(false);
@@ -79,7 +87,7 @@ export function SellerRecommendationsAnalyticsPageClient() {
     return () => {
       active = false;
     };
-  }, [currentShopId, hydrated, loadShops, range, shops.length]);
+  }, [currentShopId, hydrated, isVietnamese, loadShops, range, shops.length]);
 
   return (
     <div className="space-y-6">
@@ -87,48 +95,53 @@ export function SellerRecommendationsAnalyticsPageClient() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-              Seller recommendations
+              {isVietnamese ? "Gợi ý seller" : "Seller recommendations"}
             </p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-[var(--foreground)]">
-              Recommendation analytics
+              {isVietnamese ? "Phân tích gợi ý" : "Recommendation analytics"}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-              Review how your products perform inside recommendation placements,
-              including CTR, sponsored clicks, charged amount, and tracked personalization impact.
+              {isVietnamese
+                ? "Xem cách sản phẩm của bạn hoạt động trong các vị trí gợi ý, bao gồm CTR, click tài trợ, số tiền bị tính phí và tác động cá nhân hóa được theo dõi."
+                : "Review how your products perform inside recommendation placements, including CTR, sponsored clicks, charged amount, and tracked personalization impact."}
             </p>
           </div>
           <div className="rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-              Current shop
+              {isVietnamese ? "Shop hiện tại" : "Current shop"}
             </p>
             <p className="mt-1 text-lg font-bold text-[var(--foreground)]">
-              {overview?.shopName ?? "Pick a shop"}
+              {overview?.shopName ?? (isVietnamese ? "Chọn một shop" : "Pick a shop")}
             </p>
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-              What to watch
+              {isVietnamese ? "Cần theo dõi" : "What to watch"}
             </p>
             <p className="mt-1 font-semibold text-[var(--foreground)]">
-              CTR, sponsored clicks, and personalization lift
+              {isVietnamese
+                ? "CTR, click tài trợ và mức tăng cá nhân hóa"
+                : "CTR, sponsored clicks, and personalization lift"}
             </p>
           </div>
           <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-              Growth loop
+              {isVietnamese ? "Vòng lặp tăng trưởng" : "Growth loop"}
             </p>
             <p className="mt-1 font-semibold text-[var(--foreground)]">
-              Use this with campaigns and billing to tune spend safely
+              {isVietnamese
+                ? "Kết hợp với chiến dịch và tài chính để tối ưu chi tiêu an toàn"
+                : "Use this with campaigns and billing to tune spend safely"}
             </p>
           </div>
           <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3 text-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-              Data source
+              {isVietnamese ? "Nguồn dữ liệu" : "Data source"}
             </p>
             <p className="mt-1 font-semibold text-[var(--foreground)]">
-              Existing recommendation analytics only
+              {isVietnamese ? "Chỉ dùng dữ liệu phân tích gợi ý hiện có" : "Existing recommendation analytics only"}
             </p>
           </div>
         </div>
@@ -144,7 +157,13 @@ export function SellerRecommendationsAnalyticsPageClient() {
                   : "border border-[var(--border)] bg-white text-[var(--foreground)]"
               }`}
             >
-              {option.label}
+              {isVietnamese
+                ? option.value === "today"
+                  ? "Hôm nay"
+                  : option.value === "last7d"
+                    ? "7 ngày qua"
+                    : "30 ngày qua"
+                : option.label}
             </button>
           ))}
         </div>
@@ -152,7 +171,9 @@ export function SellerRecommendationsAnalyticsPageClient() {
 
       {loading ? (
         <section className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-8">
-          <p className="text-sm text-[var(--muted)]">Loading recommendation analytics...</p>
+          <p className="text-sm text-[var(--muted)]">
+            {isVietnamese ? "Đang tải phân tích gợi ý..." : "Loading recommendation analytics..."}
+          </p>
         </section>
       ) : null}
 
@@ -166,36 +187,46 @@ export function SellerRecommendationsAnalyticsPageClient() {
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              title="Impressions"
+              title={isVietnamese ? "Lượt hiển thị" : "Impressions"}
               value={overview.summary.overall.impressions}
-              detail={`Clicks ${overview.summary.overall.clicks} | CTR ${formatPercent(
+              detail={`${isVietnamese ? "Click" : "Clicks"} ${overview.summary.overall.clicks} | CTR ${formatPercent(
                 overview.summary.overall.ctr,
               )}`}
             />
             <MetricCard
-              title="Sponsored"
+              title={isVietnamese ? "Tài trợ" : "Sponsored"}
               value={overview.summary.sponsored.clicks}
-              detail={`Impressions ${overview.summary.sponsored.impressions} | CTR ${formatPercent(
+              detail={`${isVietnamese ? "Lượt hiển thị" : "Impressions"} ${overview.summary.sponsored.impressions} | CTR ${formatPercent(
                 overview.summary.sponsored.ctr,
               )}`}
             />
             <MetricCard
-              title="Charged amount"
+              title={isVietnamese ? "Số tiền bị tính phí" : "Charged amount"}
               value={formatCurrency(overview.summary.sponsored.chargedAmount)}
-              detail="Successful sponsored CPC charges for this shop's recommendation events"
+              detail={
+                isVietnamese
+                  ? "Các khoản CPC tài trợ thành công cho sự kiện gợi ý của shop này"
+                  : "Successful sponsored CPC charges for this shop's recommendation events"
+              }
             />
             <MetricCard
-              title="Tracked personalization"
+              title={isVietnamese ? "Cá nhân hóa được theo dõi" : "Tracked personalization"}
               value={formatPercent(overview.summary.personalization.personalizedCtr)}
-              detail={`Non-personalized ${formatPercent(
+              detail={`${isVietnamese ? "Không cá nhân hóa" : "Non-personalized"} ${formatPercent(
                 overview.summary.personalization.nonPersonalizedCtr,
               )}`}
             />
           </section>
 
           <AnalyticsTable
-            title="Top clicked products"
-            columns={["Product", "Clicks", "Impressions", "CTR", "Charged"]}
+            title={isVietnamese ? "Sản phẩm được click nhiều nhất" : "Top clicked products"}
+            columns={[
+              isVietnamese ? "Sản phẩm" : "Product",
+              isVietnamese ? "Click" : "Clicks",
+              isVietnamese ? "Lượt hiển thị" : "Impressions",
+              "CTR",
+              isVietnamese ? "Đã tính phí" : "Charged",
+            ]}
             rows={overview.topClickedProducts.map((item) => [
               item.productName,
               String(item.clicks),
@@ -207,8 +238,14 @@ export function SellerRecommendationsAnalyticsPageClient() {
 
           <div className="grid gap-6 xl:grid-cols-2">
             <AnalyticsTable
-              title="Algorithms"
-              columns={["Algorithm", "Impressions", "Clicks", "CTR", "Sponsored CTR"]}
+              title={isVietnamese ? "Thuật toán" : "Algorithms"}
+              columns={[
+                "Algorithm",
+                isVietnamese ? "Lượt hiển thị" : "Impressions",
+                isVietnamese ? "Click" : "Clicks",
+                "CTR",
+                isVietnamese ? "CTR tài trợ" : "Sponsored CTR",
+              ]}
               rows={overview.algorithms.map((item) => [
                 item.algorithm,
                 String(item.impressions),
@@ -218,8 +255,14 @@ export function SellerRecommendationsAnalyticsPageClient() {
               ])}
             />
             <AnalyticsTable
-              title="Scenarios"
-              columns={["Scenario", "Impressions", "Clicks", "CTR", "Charged"]}
+              title={isVietnamese ? "Ngữ cảnh" : "Scenarios"}
+              columns={[
+                isVietnamese ? "Ngữ cảnh" : "Scenario",
+                isVietnamese ? "Lượt hiển thị" : "Impressions",
+                isVietnamese ? "Click" : "Clicks",
+                "CTR",
+                isVietnamese ? "Đã tính phí" : "Charged",
+              ]}
               rows={overview.scenarios.map((item) => [
                 item.scenarioType,
                 String(item.impressions),

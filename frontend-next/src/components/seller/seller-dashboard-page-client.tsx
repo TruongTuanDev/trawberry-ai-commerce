@@ -18,31 +18,85 @@ function formatRub(value: string) {
   }).format(Number(value || 0));
 }
 
-const WORKSPACE_LINKS = [
-  {
-    href: "/seller/payments-to-confirm",
-    title: "Review payments",
-    description: "Confirm buyer proofs before orders move into fulfillment.",
-  },
-  {
-    href: "/seller/orders",
-    title: "Manage orders",
-    description: "Pick up new orders, hand off deliveries, and close completed work.",
-  },
-  {
-    href: "/seller/products",
-    title: "Update products",
-    description: "Tighten pricing, stock, and publishing readiness from one queue.",
-  },
-  {
-    href: "/seller/campaigns",
-    title: "Plan growth",
-    description: "Tune campaigns and recommendation visibility without touching storefront logic.",
-  },
-];
+function getDashboardCopy(locale: string) {
+  if (locale === "vi") {
+    return {
+      workspaceLinks: [
+        {
+          href: "/seller/payments-to-confirm",
+          title: "Duyệt thanh toán",
+          description: "Xác nhận minh chứng của người mua trước khi đơn hàng chuyển sang khâu xử lý.",
+        },
+        {
+          href: "/seller/orders",
+          title: "Quản lý đơn hàng",
+          description: "Nhận đơn mới, bàn giao giao hàng và hoàn tất các công việc đã xử lý xong.",
+        },
+        {
+          href: "/seller/products",
+          title: "Cập nhật sản phẩm",
+          description: "Điều chỉnh giá, tồn kho và trạng thái sẵn sàng publish từ một nơi.",
+        },
+        {
+          href: "/seller/campaigns",
+          title: "Lập kế hoạch tăng trưởng",
+          description: "Tinh chỉnh chiến dịch và độ hiển thị gợi ý mà không chạm vào logic storefront.",
+        },
+      ],
+      priorityPayments: "Thanh toán chờ duyệt",
+      priorityDelivery: "Đơn đang giao",
+      priorityRevenueToday: "Doanh thu xác nhận hôm nay",
+      workflowEyebrow: "Quy trình seller",
+      workflowTitle: "Bắt đầu từ các hàng chờ giúp mở khóa doanh thu",
+      openOrders: "Mở đơn hàng",
+      quickAccess: "Truy cập nhanh",
+      monthlySnapshot: "Tổng quan tháng",
+      confirmedRevenue: "Doanh thu đã xác nhận",
+      estimatedPlatformFee: "Phí nền tảng ước tính",
+      daysLeftInCycle: "Số ngày còn lại trong kỳ",
+    };
+  }
+
+  return {
+    workspaceLinks: [
+      {
+        href: "/seller/payments-to-confirm",
+        title: "Review payments",
+        description: "Confirm buyer proofs before orders move into fulfillment.",
+      },
+      {
+        href: "/seller/orders",
+        title: "Manage orders",
+        description: "Pick up new orders, hand off deliveries, and close completed work.",
+      },
+      {
+        href: "/seller/products",
+        title: "Update products",
+        description: "Tighten pricing, stock, and publishing readiness from one queue.",
+      },
+      {
+        href: "/seller/campaigns",
+        title: "Plan growth",
+        description: "Tune campaigns and recommendation visibility without touching storefront logic.",
+      },
+    ],
+    priorityPayments: "Payments waiting for review",
+    priorityDelivery: "Orders in delivery",
+    priorityRevenueToday: "Confirmed revenue today",
+    workflowEyebrow: "Seller workflow",
+    workflowTitle: "Start with the queues that unblock revenue",
+    openOrders: "Open orders",
+    quickAccess: "Quick access",
+    monthlySnapshot: "Monthly snapshot",
+    confirmedRevenue: "Confirmed revenue",
+    estimatedPlatformFee: "Estimated platform fee",
+    daysLeftInCycle: "Days left in cycle",
+  };
+}
 
 export function SellerDashboardPageClient() {
-  const { t } = useI18n("seller");
+  const { locale, t } = useI18n("seller");
+  const copy = getDashboardCopy(locale);
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -144,7 +198,7 @@ export function SellerDashboardPageClient() {
 
     return [
       {
-        label: "Payments waiting for review",
+        label: copy.priorityPayments,
         value: metrics.pendingPaymentOrders,
         href: "/seller/payments-to-confirm",
         tone:
@@ -153,7 +207,7 @@ export function SellerDashboardPageClient() {
             : "border-[var(--border)] bg-white text-[var(--foreground)]",
       },
       {
-        label: "Orders in delivery",
+        label: copy.priorityDelivery,
         value: metrics.deliveryInProgressOrders,
         href: "/seller/orders?status=IN_TRANSIT",
         tone:
@@ -162,13 +216,13 @@ export function SellerDashboardPageClient() {
             : "border-[var(--border)] bg-white text-[var(--foreground)]",
       },
       {
-        label: "Confirmed revenue today",
+        label: copy.priorityRevenueToday,
         value: formatRub(metrics.confirmedRevenueToday),
         href: "/seller/finance",
         tone: "border-emerald-200 bg-emerald-50 text-emerald-900",
       },
     ];
-  }, [metrics]);
+  }, [copy.priorityDelivery, copy.priorityPayments, copy.priorityRevenueToday, metrics]);
 
   return (
     <div className="space-y-6" data-testid="seller-dashboard-page">
@@ -227,17 +281,17 @@ export function SellerDashboardPageClient() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                      Seller workflow
+                      {copy.workflowEyebrow}
                     </p>
                     <h3 className="mt-2 text-xl font-bold text-[var(--foreground)]">
-                      Start with the queues that unblock revenue
+                      {copy.workflowTitle}
                     </h3>
                   </div>
                   <Link
                     href="/seller/orders"
                     className="rounded-full border border-[var(--border)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--foreground)]"
                   >
-                    Open orders
+                    {copy.openOrders}
                   </Link>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -258,10 +312,10 @@ export function SellerDashboardPageClient() {
 
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                  Quick access
+                  {copy.quickAccess}
                 </p>
                 <div className="mt-4 space-y-3">
-                  {WORKSPACE_LINKS.map((link) => (
+                  {copy.workspaceLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
@@ -342,23 +396,23 @@ export function SellerDashboardPageClient() {
           </div>
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-              Monthly snapshot
+               {copy.monthlySnapshot}
             </p>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--muted)]">Confirmed revenue</span>
+                <span className="text-[var(--muted)]">{copy.confirmedRevenue}</span>
                 <span className="font-semibold text-[var(--foreground)]">
                   {formatRub(metrics?.confirmedRevenueThisMonth ?? "0")}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--muted)]">Estimated platform fee</span>
+                <span className="text-[var(--muted)]">{copy.estimatedPlatformFee}</span>
                 <span className="font-semibold text-[var(--foreground)]">
                   {formatRub(metrics?.estimatedPlatformFeeThisMonth ?? "0")}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[var(--muted)]">Days left in cycle</span>
+                <span className="text-[var(--muted)]">{copy.daysLeftInCycle}</span>
                 <span className="font-semibold text-[var(--foreground)]">
                   {metrics?.daysLeftInMonth ?? 0}
                 </span>
