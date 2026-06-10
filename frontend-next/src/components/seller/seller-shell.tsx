@@ -184,7 +184,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
           <header className="relative z-20 border-b border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.9))] px-4 py-4 backdrop-blur sm:px-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
                   {t("sellerShell.operations")}
@@ -206,7 +206,10 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                   Move through review, fulfillment, catalog, and growth work from a single workspace.
                 </p>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div
+                className="grid min-w-0 gap-3 sm:grid-cols-2 xl:flex xl:flex-row xl:items-center"
+                data-testid="seller-header-controls"
+              >
                 <LanguageSwitcher role="seller" />
                 <NotificationBell role="seller" />
                 <ShopSwitcher />
@@ -219,7 +222,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                 >
                   {loggingOut ? t("common.signingOut") : t("common.logout")}
                 </button>
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
+                <div className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">
                     {user?.role ?? "SELLER"}
                   </p>

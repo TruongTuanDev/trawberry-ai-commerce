@@ -1521,6 +1521,10 @@
       "uploadQrCode": "Upload QR code",
       "qrCodeRemoved": "QR code removed.",
       "confirmRemoveQr": "Are you sure you want to remove the QR code?",
+      "newPreview": "New preview",
+      "selectedFile": "Selected: {{value}}",
+      "cancel": "Cancel",
+      "qrAlt": "Seller payment QR",
       "profilePrefillHelper": "Payment recipient details were filled from your seller profile. Review and edit them for this shop before saving."
     },
     "shippingLabel": {

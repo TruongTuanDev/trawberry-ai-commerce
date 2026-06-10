@@ -1654,12 +1654,16 @@
       "qrUploaded": "Статический QR-код загружен.",
       "saveFailed": "Не удалось сохранить настройки оплаты.",
       "uploadFailed": "Не удалось загрузить QR-код оплаты.",
-      "confirmRemoveQr": "Are you sure you want to remove the QR code?",
+      "confirmRemoveQr": "Вы уверены, что хотите удалить QR-код?",
       "profilePrefillHelper": "Данные получателя платежа заполнены из профиля продавца. Проверьте и измените их для этого магазина перед сохранением.",
-      "qrCodeRemoved": "QR code removed.",
-      "updateQrCode": "Update QR code",
-      "uploadQrCode": "Upload QR code",
-      "removeQrCode": "Remove QR code"
+      "qrCodeRemoved": "QR-код удален.",
+      "updateQrCode": "Обновить QR-код",
+      "uploadQrCode": "Загрузить QR-код",
+      "removeQrCode": "Удалить QR-код",
+      "newPreview": "Новый предпросмотр",
+      "selectedFile": "Выбрано: {{value}}",
+      "cancel": "Отмена",
+      "qrAlt": "QR-код оплаты продавца"
     },
     "finance": {
       "eyebrow": "Финансы",

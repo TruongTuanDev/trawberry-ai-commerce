@@ -77,7 +77,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
-          <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
+          <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -90,7 +90,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <div>
+              <div className="hidden sm:block">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                   {t("adminShell.title")}
                 </p>
@@ -99,7 +99,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </h2>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3" data-testid="admin-header-controls">
               <LanguageSwitcher role="admin" compact />
               <NotificationBell role="admin" />
               <button

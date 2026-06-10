@@ -308,7 +308,7 @@ function AnalyticsTable({
   rows: string[][];
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm">
+    <section className="min-w-0 rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm">
       <h2 className="text-xl font-bold tracking-tight text-[var(--foreground)]">{title}</h2>
       <div className="table-shell mt-4 overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0 text-sm">

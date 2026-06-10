@@ -292,7 +292,7 @@ function AnalyticsTable({
   rows: string[][];
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm">
+    <section className="min-w-0 rounded-[1.5rem] border border-[var(--border)] bg-white p-6 shadow-sm">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
           Recommendation analytics

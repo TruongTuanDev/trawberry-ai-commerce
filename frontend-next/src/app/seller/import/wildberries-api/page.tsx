@@ -223,9 +223,10 @@ export default function WildberriesApiSyncPage() {
         eyebrow={t("seller.wbSync.eyebrow")}
         title={t("seller.wbSync.title")}
         description={t("seller.wbSync.description")}
+        className="min-w-0"
       >
-        <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-4">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="min-w-0 space-y-4">
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -243,15 +244,15 @@ export default function WildberriesApiSyncPage() {
               <p className="mt-3 text-sm text-[var(--muted)]" data-testid="wb-api-mode-message">{modeMessage}</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
+              <label className="min-w-0">
                 <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbSync.publishMode")}</span>
                 <select value={publishMode} onChange={(event) => setPublishMode(event.target.value as "DRAFT" | "ACTIVE_IF_VALID")} data-testid="wb-api-publish-mode" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
                   <option value="DRAFT">{t("seller.wbSync.draft")}</option>
                   <option value="ACTIVE_IF_VALID">{t("seller.wbSync.activeIfValid")}</option>
                 </select>
               </label>
-              <label className="block">
+              <label className="min-w-0">
                 <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbSync.imageMode")}</span>
                 <select value="REMOTE_URL" disabled className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm">
                   <option value="REMOTE_URL">{t("seller.wbSync.remoteUrl")}</option>
@@ -260,8 +261,8 @@ export default function WildberriesApiSyncPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("PREVIEW")} data-testid="wb-api-preview-all" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewAll")}</button>
-              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("IMPORT")} data-testid="wb-api-import-all" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncAll")}</button>
+              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("PREVIEW")} data-testid="wb-api-preview-all" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] px-5 py-3 text-center text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewAll")}</button>
+              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("IMPORT")} data-testid="wb-api-import-all" className="max-w-full whitespace-normal rounded-full bg-[var(--accent)] px-5 py-3 text-center text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncAll")}</button>
             </div>
 
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
@@ -278,17 +279,17 @@ export default function WildberriesApiSyncPage() {
               </label>
               <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.wbSync.codesHelper")}</p>
               <div className="mt-4 flex flex-wrap gap-3">
-                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("PREVIEW")} data-testid="wb-api-preview-selected" className="rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold disabled:opacity-50">
+                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("PREVIEW")} data-testid="wb-api-preview-selected" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] bg-white px-5 py-3 text-center text-sm font-semibold disabled:opacity-50">
                   {selectedSyncing ? t("seller.wbSync.syncingSelected") : t("seller.wbSync.previewSelected")}
                 </button>
-                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("IMPORT")} data-testid="wb-api-import-selected" className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("IMPORT")} data-testid="wb-api-import-selected" className="max-w-full whitespace-normal rounded-full bg-[var(--foreground)] px-5 py-3 text-center text-sm font-semibold text-white disabled:opacity-50">
                   {selectedSyncing ? t("seller.wbSync.syncingSelected") : t("seller.wbSync.syncSelected")}
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4">
+          <div className="min-w-0 rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbSync.connection")}</p>
             <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? t("seller.wbSync.noShopSelected")}</p>
             <div className="mt-4 space-y-2 text-sm" data-testid="wb-api-credentials-status">
@@ -300,9 +301,9 @@ export default function WildberriesApiSyncPage() {
               {visibleCredentials?.missingConfig?.length ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">{t("seller.wbSync.missingConfig")}:</span> {visibleCredentials.missingConfig.join(", ")}</p> : null}
               {visibleCredentials?.lastVerificationError ? <p className="text-[var(--accent-strong)]"><span className="font-semibold">{t("seller.wbSync.lastError")}:</span> {visibleCredentials.lastVerificationError}</p> : null}
             </div>
-            <div className="mt-4 flex gap-2">
-              <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={t("seller.wbSync.apiKeyPlaceholder")} type="password" data-testid="wb-api-key" className="min-w-0 flex-1 rounded-full border border-[var(--border)] px-4 py-2 text-sm" />
-              <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">
+            <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row">
+              <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={t("seller.wbSync.apiKeyPlaceholder")} type="password" data-testid="wb-api-key" className="w-full min-w-0 flex-1 rounded-full border border-[var(--border)] px-4 py-2 text-sm" />
+              <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold disabled:opacity-50">
                 {visibleCredentials?.connected ? t("seller.wbSync.updateApiKey") : t("seller.wbSync.saveApiKey")}
               </button>
             </div>

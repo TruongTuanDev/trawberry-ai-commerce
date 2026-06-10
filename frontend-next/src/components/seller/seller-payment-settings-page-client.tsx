@@ -69,7 +69,7 @@ export function SellerPaymentSettingsPageClient() {
 
   const handleRemoveQr = async () => {
     if (!currentShopId) return;
-    const confirmQuestion = t("seller.paymentSettings.confirmRemoveQr") || "Are you sure you want to remove the QR code?";
+    const confirmQuestion = t("seller.paymentSettings.confirmRemoveQr");
     if (!window.confirm(confirmQuestion)) return;
     setError(null);
     setMessage(null);
@@ -83,10 +83,10 @@ export function SellerPaymentSettingsPageClient() {
           isReady: saved.isReady,
         }));
         handleFileChange(null);
-        setMessage(t("seller.paymentSettings.qrCodeRemoved") || "QR code removed.");
+        setMessage(t("seller.paymentSettings.qrCodeRemoved"));
         return saved;
       },
-      successMessage: t("seller.paymentSettings.qrCodeRemoved") || "QR code removed.",
+      successMessage: t("seller.paymentSettings.qrCodeRemoved"),
       errorMessage: t("seller.paymentSettings.saveFailed"),
     }).catch((err) => {
       setError(err.message);
@@ -375,10 +375,10 @@ export function SellerPaymentSettingsPageClient() {
             {previewToRender ? (
               <div className="mt-4 relative inline-block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewToRender} alt="Seller payment QR" className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
+                <img src={previewToRender} alt={t("seller.paymentSettings.qrAlt")} className="mt-4 h-56 w-56 rounded-[1.25rem] border border-[var(--border)] object-contain" data-testid="payment-settings-qr-preview" />
                 {previewUrl && (
                   <span className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                    New Preview
+                    {t("seller.paymentSettings.newPreview")}
                   </span>
                 )}
               </div>
@@ -402,12 +402,14 @@ export function SellerPaymentSettingsPageClient() {
 
               {file && (
                 <div className="flex items-center gap-3 bg-[var(--panel)] p-3 rounded-xl border border-[var(--border)]">
-                  <p className="text-xs text-[var(--muted)] truncate max-w-[200px]">Selected: {file.name}</p>
+                  <p className="text-xs text-[var(--muted)] truncate max-w-[200px]">
+                    {t("seller.paymentSettings.selectedFile", { value: file.name })}
+                  </p>
                   <button type="button" onClick={() => void handleUpload()} disabled={uploading} className="public-button-primary px-4 py-2 text-xs" data-testid="payment-settings-qr-upload">
                     {uploading ? t("seller.productDetail.uploading") : t("seller.paymentSettings.uploadQr")}
                   </button>
                   <button type="button" onClick={() => handleFileChange(null)} className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] underline">
-                    Cancel
+                    {t("seller.paymentSettings.cancel")}
                   </button>
                 </div>
               )}

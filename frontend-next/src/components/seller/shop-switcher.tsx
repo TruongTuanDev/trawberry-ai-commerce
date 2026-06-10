@@ -20,17 +20,20 @@ export function ShopSwitcher() {
   );
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3">
+    <div
+      className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--panel-strong)] px-4 py-3"
+      data-testid="seller-shop-switcher"
+    >
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
         {t("sellerShell.shopSwitcher")}
       </p>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
         <select
           value={currentShopId ?? ""}
           onChange={(event) => selectShop(event.target.value)}
           disabled={!user || loading || shops.length === 0}
           className={clsx(
-            "min-w-[220px] rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] outline-none",
+            "w-full min-w-0 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--foreground)] outline-none sm:min-w-[220px]",
             "disabled:cursor-not-allowed disabled:bg-[var(--panel)] disabled:text-[var(--muted)]",
           )}
         >
@@ -45,7 +48,7 @@ export function ShopSwitcher() {
             </option>
           ))}
         </select>
-        <div className="text-sm text-[var(--muted)]">
+        <div className="min-w-0 text-sm text-[var(--muted)]">
           {currentShop
             ? t("sellerShell.productsCount", { count: currentShop.productCount })
             : t("sellerShell.chooseActiveShop")}
