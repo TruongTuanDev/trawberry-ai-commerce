@@ -69,6 +69,7 @@ $product = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/p
   wbTitle = 'Smoke Delivery Product'
   localTitle = 'Smoke Delivery Product'
   localDescription = 'Delivery-enabled product'
+  categoryName = 'Smoke Delivery'
   visibility = 'ACTIVE'
 } | ConvertTo-Json)
 
@@ -109,6 +110,8 @@ const prisma = new PrismaClient();
 '@ | node -
 Remove-Item Env:TARGET_PRODUCT_ID
 
+$published = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/shops/$($shop.id)/products/$($product.id)/publish" -Headers $headers -ContentType 'application/json' -Body (@{} | ConvertTo-Json)
+
 $checkout = Invoke-RestMethod -Method Post -Uri "$baseUrl/api/checkout/orders" -ContentType 'application/json' -Body (@{
   shopId = $shop.id
   items = @(
@@ -148,6 +151,7 @@ $tracked = Invoke-RestMethod -Method Get -Uri "$baseUrl/api/public/orders/$($che
   baseUrl = $baseUrl
   shopId = $shop.id
   productId = $product.id
+  productVisibility = $published.visibility
   orderId = $checkout.orderId
   paidStatus = $paid.paymentStatus
   settingsCarrierCount = @($settings.enabledCarriers).Count

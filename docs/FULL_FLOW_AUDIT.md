@@ -1020,3 +1020,14 @@ Future audit item: design an optional marketplace parent order for combined rece
 - the production backend container failure was caused by an entrypoint mismatch, not by Prisma or database readiness
 - NestJS compiles this repository to `dist/src/main.js`, while the production container had been starting `node dist/main`
 - the production bootstrap path is now aligned in both `backend-nest/package.json` and `backend-nest/Dockerfile`, while preserving the existing `prisma db push` pre-start behavior
+
+# Customer And Seller Information Reuse Audit Addendum
+
+- `User` remains the account identity source for name, email, and phone.
+- `CustomerAddress` remains the customer delivery-default source; new address forms now use account name/phone only as editable defaults.
+- Authenticated checkout continues to select a delivery-ready saved address, while guest checkout continues to accept explicit contact/address input.
+- Checkout and split orders continue to store purchase-time contact, address, price, and item snapshots; profile edits do not rewrite historical orders.
+- `SellerProfile` remains the seller legal/contact/bank onboarding source, with `User` identity used only when onboarding contact fields are missing or blank.
+- Existing `ShopPaymentSetting` and `ShopDeliverySetting` records remain authoritative. Seller onboarding data is used only for first-use form prefill.
+- Seller delivery/payment APIs remain shop-owner guarded, customer profile/address APIs remain customer scoped, and public tracking remains phone-gated.
+- No new full-address, payment, or contact data is stored in local storage, and no public API response was expanded with private profile data.

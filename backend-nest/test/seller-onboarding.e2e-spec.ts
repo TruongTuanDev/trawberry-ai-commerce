@@ -171,10 +171,21 @@ describe('Seller onboarding and KYC workflow (e2e)', () => {
     );
 
     prismaMock.sellerProfile.findUnique.mockImplementation(
-      ({ where }: { where: { userId: string } }) =>
-        Promise.resolve(
-          users.find((user) => user.id === where.userId)?.sellerProfile ?? null,
-        ),
+      ({
+        where,
+        include,
+      }: {
+        where: { userId: string };
+        include?: { user?: unknown };
+      }) => {
+        const user = users.find((entry) => entry.id === where.userId);
+        if (!user?.sellerProfile) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve(
+          include?.user ? { ...user.sellerProfile, user } : user.sellerProfile,
+        );
+      },
     );
 
     prismaMock.sellerProfile.update.mockImplementation(
@@ -448,6 +459,34 @@ describe('Seller onboarding and KYC workflow (e2e)', () => {
       .set('Authorization', `Bearer ${sellerLogin.accessToken}`)
       .expect(200);
     expect(readBody<Array<{ id: string }>>(listResponse)).toHaveLength(1);
+  });
+
+  it('prefills missing seller contact details from account identity', async () => {
+    const seller = await registerSeller('seller@example.com');
+    const storedSeller = users.find((entry) => entry.id === seller.userId);
+    expect(storedSeller?.sellerProfile).toBeDefined();
+    storedSeller!.sellerProfile!.contactName = '  ';
+    storedSeller!.sellerProfile!.contactEmail = '';
+    const sellerLogin = await login('seller@example.com');
+
+    const profileResponse = await request(app.getHttpServer())
+      .get('/api/seller/onboarding/profile')
+      .set('Authorization', `Bearer ${sellerLogin.accessToken}`)
+      .expect(200);
+
+    expect(
+      readBody<{
+        contactName: string;
+        contactPhone: string | null;
+        contactEmail: string;
+      }>(profileResponse),
+    ).toEqual(
+      expect.objectContaining({
+        contactName: 'Onboarding Seller',
+        contactPhone: null,
+        contactEmail: 'seller@example.com',
+      }),
+    );
   });
 
   it('prevents sellers from deleting another seller document', async () => {

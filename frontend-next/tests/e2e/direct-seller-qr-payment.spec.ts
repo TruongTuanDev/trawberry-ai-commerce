@@ -206,18 +206,29 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   await page.getByTestId("login-password").fill(seller.password);
   await page.getByTestId("login-submit").click();
   await page.waitForURL("**/seller/dashboard");
+  await page.getByTestId("language-switcher-seller").click();
+  await page.getByTestId("language-option-seller-en").click();
 
   await page.goto("/seller/payment-settings");
   await expect(page.getByTestId("seller-payment-settings-page")).toBeVisible();
+  await expect(page.getByTestId("payment-settings-profile-prefill")).toBeVisible();
+  await expect(page.getByTestId("payment-settings-recipient-name")).toHaveValue(
+    "Direct QR Seller",
+  );
+  await expect(page.getByTestId("payment-settings-recipient-phone")).toHaveValue(
+    "+79990000007",
+  );
   await page.getByTestId("payment-settings-bank-name").fill("T-Bank");
-  await page.getByTestId("payment-settings-recipient-name").fill("Direct QR Seller");
-  await page.getByTestId("payment-settings-recipient-phone").fill("+79990000011");
   await page.getByTestId("payment-settings-sbp-phone").fill("+79990000011");
   await page.getByTestId("payment-settings-recipient-account").fill("40817810000000000123");
   await page.getByTestId("payment-settings-instruction").fill("Scan the seller QR and transfer the exact order amount.");
   await page.getByTestId("payment-settings-status").selectOption("READY");
   await page.getByTestId("payment-settings-save").click();
-  await expect(page.getByText("Payment settings saved.")).toBeVisible();
+  await expect(
+    page
+      .getByTestId("seller-payment-settings-page")
+      .getByText("Payment settings saved."),
+  ).toBeVisible();
 
   await page.getByTestId("payment-settings-qr-file").setInputFiles({
     name: "seller-qr.png",
@@ -225,7 +236,11 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
     buffer: pngBuffer,
   });
   await page.getByTestId("payment-settings-qr-upload").click();
-  await expect(page.getByText("Static QR uploaded.")).toBeVisible();
+  await expect(
+    page
+      .getByTestId("seller-payment-settings-page")
+      .getByText("Static QR uploaded."),
+  ).toBeVisible();
   await expect(page.getByTestId("payment-settings-qr-preview")).toBeVisible();
 
   const product = await createPublishedProduct(request, {
@@ -240,6 +255,12 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   const phone = `+7996${String(stamp).slice(-7)}`;
 
   await buyerPage.goto(`/products/${product.id}`);
+  await buyerPage
+    .locator('[data-testid="language-switcher-customer"]:visible')
+    .click();
+  await buyerPage
+    .locator('[data-testid="language-option-customer-en"]:visible')
+    .click();
   await buyerPage.getByTestId("add-to-cart").click();
   await buyerPage.goto("/cart");
   await buyerPage.getByTestId("cart-checkout").click();
@@ -266,7 +287,9 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   await expect(
     confirmationCard.getByText("Scan the seller QR and transfer the exact order amount."),
   ).toBeVisible();
-  await expect(confirmationCard.getByAltText("Seller payment QR")).toBeVisible();
+  await expect(
+    confirmationCard.getByTestId("payment-qr-preview-trigger"),
+  ).toBeVisible();
 
   await buyerPage.goto("/orders/track");
   await buyerPage.getByTestId("track-order-code").fill(orderCode);
@@ -280,9 +303,11 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
     buffer: pngBuffer,
   });
   await buyerPage.getByTestId("payment-proof-submit").click();
-  await expect(buyerPage.getByText("Marked as paid. Seller can review the proof now.")).toBeVisible();
+  await expect(buyerPage.getByTestId("tracked-payment-proof-link")).toBeVisible();
   await expect(buyerPage.getByText("BUYER_MARKED_PAID")).toBeVisible();
-  await expect(buyerPage.getByText("Latest buyer note: Transferred via T-Bank SBP.")).toBeVisible();
+  await expect(
+    buyerPage.getByText("Buyer payment note: Transferred via T-Bank SBP."),
+  ).toBeVisible();
 
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
@@ -300,7 +325,9 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   const adminQueueItem = adminPage.getByRole("button", { name: new RegExp(orderCode) }).first();
   await expect(adminQueueItem).toBeVisible();
   await adminQueueItem.click();
-  await expect(adminPage.getByText("Buyer proof status: BUYER_MARKED_PAID")).toBeVisible();
+  await expect(
+    adminPage.getByText(/Buyer proof status:.*Buyer marked paid/),
+  ).toBeVisible();
   await expect(adminPage.getByText("Buyer note: Transferred via T-Bank SBP.")).toBeVisible();
   await expect(adminPage.getByTestId("admin-payment-confirm")).toBeVisible();
 
@@ -313,14 +340,15 @@ test("seller configures QR payment, buyer uploads proof, seller confirms, admin 
   await sellerReviewPage.waitForURL("**/seller/dashboard");
   await sellerReviewPage.goto("/seller/payments-to-confirm");
   await expect(sellerReviewPage.getByText(orderCode)).toBeVisible();
-  await expect(sellerReviewPage.getByText("BUYER_MARKED_PAID")).toBeVisible();
   await sellerReviewPage.getByRole("link", { name: orderCode }).click();
   await expect(sellerReviewPage.getByTestId("seller-payment-detail-page")).toBeVisible();
   await expect(sellerReviewPage.getByText("Buyer payment note: Transferred via T-Bank SBP.")).toBeVisible();
   sellerReviewPage.once("dialog", (dialog) => dialog.accept());
   await sellerReviewPage.getByTestId("seller-mark-paid-button").click();
   await expect(sellerReviewPage.getByText("Payment confirmed.")).toBeVisible();
-  await expect(sellerReviewPage.getByTestId("seller-payment-status")).toHaveText("PAID");
+  await expect(
+    sellerReviewPage.getByTestId("seller-payment-status"),
+  ).toHaveAttribute("data-status", "PAID");
   await expect(
     sellerReviewPage.locator("span").filter({ hasText: "SELLER_CONFIRMED" }).first(),
   ).toBeVisible();

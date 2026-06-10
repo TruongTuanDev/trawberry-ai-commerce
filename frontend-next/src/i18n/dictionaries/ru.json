@@ -955,6 +955,7 @@
       "sectionStreetBuilding": "2. Улица / дом",
       "sectionDeliveryDetails": "3. Детали доставки",
       "sectionRecipient": "4. Получатель",
+      "recipientPrefilled": "Имя и телефон получателя заполнены из вашего аккаунта. Их можно изменить для этого адреса.",
       "sectionCoordinates": "5. Координаты",
       "country": "Страна",
       "countryCode": "Код страны",
@@ -1614,8 +1615,10 @@
       "enableYandex": "Включить экспресс-предложения Yandex в режиме макета",
       "save": "Сохранить настройки доставки",
       "saved": "Настройки доставки сохранены.",
+      "loadFailed": "Не удалось загрузить настройки доставки.",
       "saveFailed": "Не удалось сохранить настройки доставки.",
-      "carrierRequired": "Включите хотя бы одного перевозчика."
+      "carrierRequired": "Включите хотя бы одного перевозчика.",
+      "profilePrefillHelper": "Контактные данные для самовывоза заполнены из профиля продавца. Проверьте и измените их для этого магазина перед сохранением."
     },
     "paymentSettings": {
       "title": "Настройки оплаты",
@@ -1652,6 +1655,7 @@
       "saveFailed": "Не удалось сохранить настройки оплаты.",
       "uploadFailed": "Не удалось загрузить QR-код оплаты.",
       "confirmRemoveQr": "Are you sure you want to remove the QR code?",
+      "profilePrefillHelper": "Данные получателя платежа заполнены из профиля продавца. Проверьте и измените их для этого магазина перед сохранением.",
       "qrCodeRemoved": "QR code removed.",
       "updateQrCode": "Update QR code",
       "uploadQrCode": "Upload QR code",
@@ -2198,6 +2202,7 @@
       "loadFailed": "?? ??????? ????????? ??????? ??????????.",
       "profileSaved": "??????? ????????.",
       "profileSaveFailed": "?? ??????? ????????? ???????.",
+      "accountDefaultsHelper": "Отсутствующие контактные данные заполнены из аккаунта продавца. Их можно изменить перед сохранением профиля.",
       "chooseFileFirst": "??????? ???????? ????.",
       "documentUploaded": "???????? ????????.",
       "documentUploadFailed": "?? ??????? ????????? ????????.",

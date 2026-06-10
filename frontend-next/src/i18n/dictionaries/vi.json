@@ -1221,6 +1221,8 @@
       "noLog": "No payment review logs recorded yet."
     },
     "delivery": {
+      "profilePrefillHelper": "Thông tin liên hệ lấy hàng đã được điền từ hồ sơ người bán. Hãy kiểm tra và chỉnh sửa cho cửa hàng này trước khi lưu.",
+      "loadFailed": "Không thể tải cài đặt giao hàng.",
       "eyebrow": "Giao hàng",
       "title": "Cài đặt giao hàng seller",
       "subtitle": "Cấu hình điểm lấy hàng, kích thước kiện mặc định và các carrier hiển thị trong mock offer.",
@@ -1775,6 +1777,7 @@
       "registerAsCustomer": "Đăng ký với tư cách khách hàng"
     },
     "onboarding": {
+      "accountDefaultsHelper": "Thông tin liên hệ còn thiếu được điền từ tài khoản người bán. Bạn có thể chỉnh sửa trước khi lưu hồ sơ.",
       "loadFailed": "Không thể tải hồ sơ onboarding.",
       "profileSaved": "Đã lưu hồ sơ.",
       "profileSaveFailed": "Không thể lưu hồ sơ.",
@@ -1928,6 +1931,7 @@
       "empty": "No conversations found for the current filters."
     },
     "paymentSettings": {
+      "profilePrefillHelper": "Thông tin người nhận thanh toán đã được điền từ hồ sơ người bán. Hãy kiểm tra và chỉnh sửa cho cửa hàng này trước khi lưu.",
       "confirmRemoveQr": "Bạn có chắc chắn muốn xóa mã QR này?",
       "qrCodeRemoved": "QR code removed.",
       "saveFailed": "Unable to save payment settings.",
@@ -2197,6 +2201,7 @@
   },
   "customer": {
     "addresses": {
+      "recipientPrefilled": "Tên và số điện thoại người nhận đã được điền từ tài khoản. Bạn có thể chỉnh sửa cho địa chỉ này.",
       "loadFailed": "Không thể tải địa chỉ đã lưu.",
       "manualPin": "Ghim thủ công",
       "verifiedPrecision": "Đã xác minh ({{precision}})",

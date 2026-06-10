@@ -5357,3 +5357,64 @@ Verification:
 Remaining gaps:
 
 - Real WB selected-code sync remains an opt-in production/runtime verification because default tests must not call the real Wildberries API.
+
+# Phase Report: Profile UX/Data QA.1 - Customer and Seller Information Deduplication Audit
+
+Implemented:
+
+- Customer saved-address creation now prefills recipient name and phone from the authenticated customer profile while keeping each saved address independently editable.
+- Seller onboarding now returns missing or blank contact name, phone, and email from the seller account identity without changing stored onboarding values until the seller explicitly saves.
+- First-use seller delivery settings now prefill pickup address and contact details from seller onboarding data only when shop delivery settings do not yet exist.
+- Empty first-use seller payment settings now prefill matching bank and recipient fields from seller onboarding data without overwriting existing shop payment settings.
+- Added EN/RU/VI helper copy explaining when profile defaults were reused.
+- Repaired `smoke:delivery` so its fixture supplies a category and publishes through the seller API before checkout.
+
+Source-of-truth map:
+
+- Account identity: `User` name, email, and phone.
+- Customer delivery defaults: seller-independent `CustomerAddress` records; checkout selects a saved address for authenticated customers.
+- Checkout/order delivery data: immutable checkout and split-order contact/address snapshots created at purchase time.
+- Seller legal/contact/bank onboarding: `SellerProfile`, with account identity used only as a missing-value fallback.
+- Shop operational/payment data: `Shop`, `ShopPaymentSetting`, and `ShopDeliverySetting`; existing shop settings remain authoritative.
+- Seller finance: wallet, ledger, fee, and invoice records remain unchanged.
+- WB integration: encrypted per-shop WB credentials remain unchanged.
+
+Confirmed duplication issues fixed:
+
+- New customer address forms forced re-entry of account name and phone.
+- New seller onboarding profiles repeated account identity fields.
+- First-time delivery settings repeated seller legal address/contact details.
+- First-time payment settings repeated seller bank/recipient details.
+
+Production safety:
+
+- No schema migration, localhost source-code dependency, secret, or production-data operation was added.
+- Checkout totals, stock validation, public visibility, guest checkout, payment semantics, and order snapshot behavior were not changed.
+- Profile defaults never silently overwrite customer profile, seller profile, or saved shop settings.
+- Seller profile, delivery, and payment endpoints remain protected by seller authentication and shop ownership guards.
+- Customer account/address endpoints remain customer-auth scoped; public order tracking still requires the matching order phone.
+- No address, payment, or new PII payload was added to browser local storage.
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass, 38 suites and 375 tests
+- `backend-nest npm run build`: pass
+- focused seller-onboarding backend E2E: pass, 5 tests
+- `backend-nest npm run smoke:seller-onboarding`: pass
+- `backend-nest npm run smoke:delivery`: pass after fixing its stale unpublished fixture
+- `backend-nest npm run smoke:direct-seller-qr-payment`: pass
+- `frontend-next npm run check:i18n`: pass, 0 missing English keys and 0 locale gaps
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- focused profile-reuse browser E2E: pass, 4 tests
+- required i18n regression E2E: pass, 4 tests
+- required recommendations/cart/checkout/full-commerce E2E: pass, 5 tests
+- required public smoke E2E: pass, 1 test
+- local Docker runtime health, `/api/health`, `/api/public/products`, and frontend root: pass
+
+Remaining gaps:
+
+- No new automatic profile synchronization was added between account identity and already-saved address/shop records; those records intentionally remain explicit snapshots/settings.
+- Manual visual review at every requested viewport was not performed separately; focused and regression Playwright flows passed against the rebuilt production runtime.

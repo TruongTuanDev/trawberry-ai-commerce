@@ -962,6 +962,7 @@
       "sectionStreetBuilding": "2. Street / building",
       "sectionDeliveryDetails": "3. Delivery details",
       "sectionRecipient": "4. Recipient",
+      "recipientPrefilled": "Recipient name and phone were filled from your account. You can edit them for this address.",
       "sectionCoordinates": "5. Coordinates",
       "country": "Country",
       "countryCode": "Country code",
@@ -1476,8 +1477,10 @@
       "enableYandex": "Enable Yandex express mock offers",
       "save": "Save delivery settings",
       "saved": "Delivery settings saved.",
+      "loadFailed": "Unable to load delivery settings.",
       "saveFailed": "Unable to save delivery settings.",
-      "carrierRequired": "Enable at least one carrier."
+      "carrierRequired": "Enable at least one carrier.",
+      "profilePrefillHelper": "Pickup contact details were filled from your seller profile. Review and edit them for this shop before saving."
     },
     "paymentSettings": {
       "title": "Payment settings",
@@ -1517,7 +1520,8 @@
       "removeQrCode": "Remove QR code",
       "uploadQrCode": "Upload QR code",
       "qrCodeRemoved": "QR code removed.",
-      "confirmRemoveQr": "Are you sure you want to remove the QR code?"
+      "confirmRemoveQr": "Are you sure you want to remove the QR code?",
+      "profilePrefillHelper": "Payment recipient details were filled from your seller profile. Review and edit them for this shop before saving."
     },
     "shippingLabel": {
       "kicker": "Packing station",
@@ -2249,6 +2253,7 @@
       "ogrn": "Ogrn",
       "profileSaved": "Profile saved.",
       "profileSaveFailed": "Unable to save the profile.",
+      "accountDefaultsHelper": "Missing contact details are filled from your seller account. You can edit them before saving the onboarding profile.",
       "reviewed": "Reviewed {{date}}",
       "saveProfile": "Save profile",
       "saving": "Saving...",

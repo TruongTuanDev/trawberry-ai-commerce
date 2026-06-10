@@ -162,9 +162,21 @@ test("seller configures delivery settings and creates same-city Yandex shipment 
   await page.getByTestId("login-password").fill(sellerPassword);
   await page.getByTestId("login-submit").click();
   await page.waitForURL("**/seller/dashboard");
+  await page.getByTestId("language-switcher-seller").click();
+  await page.getByTestId("language-option-seller-en").click();
 
   await page.goto("/seller/settings");
   await expect(page.getByTestId("seller-delivery-settings-page")).toBeVisible();
+  await expect(page.getByTestId("delivery-profile-prefill")).toBeVisible();
+  await expect(page.getByTestId("delivery-pickup-address")).toHaveValue(
+    "Moscow, Delivery Settings Street 1",
+  );
+  await expect(page.getByTestId("delivery-pickup-contact-name")).toHaveValue(
+    "Seller Delivery Settings",
+  );
+  await expect(page.getByTestId("delivery-pickup-contact-phone")).toHaveValue(
+    "+79990000008",
+  );
   await page.getByTestId("delivery-pickup-address").fill(pickupAddress);
   await page.getByTestId("delivery-pickup-city").fill("Moscow");
   await page.getByTestId("delivery-pickup-postal-code").fill("125009");
@@ -243,7 +255,7 @@ test("seller configures delivery settings and creates same-city Yandex shipment 
   await expect(page.getByTestId("delivery-order-pickup-address")).toHaveValue(pickupAddress);
   await expect(page.getByTestId("delivery-order-weight-gram")).toHaveValue("750");
 
-  await page.getByTestId("delivery-calculate-offers").click();
+  await page.getByTestId("delivery-calculate-offers-inline").click();
   await expect(page.getByTestId("delivery-action-message")).toContainText("Loaded");
   const recommendedYandexOffer = page.getByTestId("delivery-offer-row").filter({
     hasText: /Provider: YANDEX[\s\S]*Recommended|Recommended[\s\S]*Provider: YANDEX/,
@@ -252,13 +264,22 @@ test("seller configures delivery settings and creates same-city Yandex shipment 
   await expect(page.getByTestId("delivery-offer-select")).toHaveValue(/.+/);
 
   await page.getByTestId("delivery-create-shipment").click();
-  await expect(page.getByTestId("delivery-action-message")).toHaveText("Delivery shipment created.");
+  await expect(page.getByTestId("delivery-action-message")).toHaveAttribute(
+    "data-status",
+    "created",
+  );
   await expect(page.getByTestId("seller-delivery-provider")).toHaveText("YANDEX");
   await expect(page.getByTestId("seller-delivery-tracking-link")).toBeVisible();
 
   await page.getByTestId("delivery-refresh-shipment").click();
-  await expect(page.getByTestId("delivery-action-message")).toHaveText("Delivery shipment refreshed.");
-  await expect(page.getByTestId("seller-delivery-status")).toHaveText("IN_TRANSIT");
+  await expect(page.getByTestId("delivery-action-message")).toHaveAttribute(
+    "data-status",
+    "refreshed",
+  );
+  await expect(page.getByTestId("seller-delivery-status")).toHaveAttribute(
+    "data-raw-status",
+    "IN_TRANSIT",
+  );
 
   const customerContext = await browser.newContext();
   const customerPage = await customerContext.newPage();

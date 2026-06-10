@@ -8,6 +8,7 @@ import {
   uploadShopPaymentQr,
   deleteShopPaymentQr,
 } from "@/lib/seller-api";
+import { getSellerOnboardingProfile } from "@/lib/seller-onboarding-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
@@ -22,6 +23,7 @@ export function SellerPaymentSettingsPageClient() {
   const { run: runUpload, isRunning: uploading } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [prefilledFromProfile, setPrefilledFromProfile] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     bankName: "",
@@ -101,13 +103,37 @@ export function SellerPaymentSettingsPageClient() {
       }
 
       try {
-        const settings = await getShopPaymentSettings(currentShopId, "");
+        const [settingsResult, profileResult] = await Promise.allSettled([
+          getShopPaymentSettings(currentShopId, ""),
+          getSellerOnboardingProfile(),
+        ]);
         if (!mounted) return;
+        if (settingsResult.status === "rejected") {
+          throw settingsResult.reason;
+        }
+        const settings = settingsResult.value;
+        const profile =
+          profileResult.status === "fulfilled" ? profileResult.value : null;
+        const shouldPrefillProfile =
+          Boolean(profile) &&
+          !settings.bankName &&
+          !settings.recipientName &&
+          !settings.recipientPhone &&
+          !settings.recipientAccount;
         setForm({
-          bankName: settings.bankName ?? "",
-          recipientName: settings.recipientName ?? "",
-          recipientPhone: settings.recipientPhone ?? "",
-          recipientAccount: settings.recipientAccount ?? "",
+          bankName: settings.bankName ?? (shouldPrefillProfile ? profile?.bankName : "") ?? "",
+          recipientName:
+            settings.recipientName ??
+            (shouldPrefillProfile ? profile?.contactName ?? profile?.legalName : "") ??
+            "",
+          recipientPhone:
+            settings.recipientPhone ??
+            (shouldPrefillProfile ? profile?.contactPhone : "") ??
+            "",
+          recipientAccount:
+            settings.recipientAccount ??
+            (shouldPrefillProfile ? profile?.bankAccount : "") ??
+            "",
           sbpPhone: settings.sbpPhone ?? "",
           paymentInstruction: settings.paymentInstruction ?? "",
           status: settings.status as "READY" | "DISABLED" | "PENDING_REVIEW",
@@ -126,6 +152,16 @@ export function SellerPaymentSettingsPageClient() {
             settings.cashCourierCollectionStatus ?? "NOT_AVAILABLE",
           availableMethods: settings.availableMethods ?? [],
         });
+        setPrefilledFromProfile(
+          shouldPrefillProfile &&
+            Boolean(
+              profile?.bankName ||
+                profile?.contactName ||
+                profile?.legalName ||
+                profile?.contactPhone ||
+                profile?.bankAccount,
+            ),
+        );
       } catch (err) {
         if (mounted) {
           setError(err instanceof Error ? err.message : t("seller.paymentSettings.saveFailed"));
@@ -239,6 +275,11 @@ export function SellerPaymentSettingsPageClient() {
         <p className="text-sm text-[var(--muted)]">{t("common.loading")}</p>
       ) : (
         <div className="space-y-6" data-testid="seller-payment-settings-page">
+          {prefilledFromProfile ? (
+            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]" data-testid="payment-settings-profile-prefill">
+              {t("seller.paymentSettings.profilePrefillHelper")}
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t("seller.paymentSettings.bankName")}>
               <input value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} className="public-input" data-testid="payment-settings-bank-name" />

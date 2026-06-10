@@ -453,3 +453,8 @@ Tỷ lệ ảnh cho Mobile (Nếu upload ở trường Mobile Image URL):
 
 - The GitHub Actions deploy workflow uploads the repository `infra/` directory to the VPS over SSH before running production `docker compose`.
 - The VPS no longer needs `git fetch` access to the GitHub repository for routine deployments.
+
+## Delivery smoke fixture note
+
+- `backend-nest npm run smoke:delivery` creates a category-ready product and publishes it through the seller API before checkout.
+- This keeps the smoke aligned with the public marketplace rule that checkout accepts only published, readiness-complete products.

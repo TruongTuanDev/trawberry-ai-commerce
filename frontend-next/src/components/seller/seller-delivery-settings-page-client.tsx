@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/seller/section-card";
+import { ApiError } from "@/lib/api";
 import { getDeliverySettings, updateDeliverySettings } from "@/lib/seller-api";
+import { getSellerOnboardingProfile } from "@/lib/seller-onboarding-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useActionFeedback } from "@/hooks/use-action-feedback";
@@ -16,6 +18,7 @@ export function SellerDeliverySettingsPageClient() {
   const { run: runSave, isRunning: saving } = useActionFeedback();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [prefilledFromProfile, setPrefilledFromProfile] = useState(false);
   const [form, setForm] = useState({
     pickupAddress: "",
     pickupCity: "",
@@ -46,29 +49,66 @@ export function SellerDeliverySettingsPageClient() {
       }
 
       try {
-        const settings = await getDeliverySettings(currentShopId, "");
+        const [settingsResult, profileResult] = await Promise.allSettled([
+          getDeliverySettings(currentShopId, ""),
+          getSellerOnboardingProfile(),
+        ]);
         if (!mounted) return;
-        setForm({
-          pickupAddress: settings.pickupAddress,
-          pickupCity: settings.pickupCity,
-          pickupPostalCode: settings.pickupPostalCode ?? "",
-          pickupContactPhone: settings.pickupContactPhone,
-          pickupContactName: settings.pickupContactName,
-          pickupLatitude: settings.pickupLatitude ?? "",
-          pickupLongitude: settings.pickupLongitude ?? "",
-          enabledCdek: settings.enabledCarriers.includes("CDEK"),
-          enabledYandex: settings.enabledCarriers.includes("YANDEX"),
-          defaultCarrier: settings.defaultCarrier as "CDEK" | "YANDEX",
-          sameCityPreferredCarrier: settings.sameCityPreferredCarrier as "CDEK" | "YANDEX",
-          interCityPreferredCarrier: settings.interCityPreferredCarrier as "CDEK" | "YANDEX",
-          fallbackCarrier: settings.fallbackCarrier as "CDEK" | "YANDEX",
-          defaultWeightGram: String(settings.defaultWeightGram),
-          defaultLengthCm: String(settings.defaultLengthCm),
-          defaultWidthCm: String(settings.defaultWidthCm),
-          defaultHeightCm: String(settings.defaultHeightCm),
-        });
-      } catch {
-        if (!mounted) return;
+        if (settingsResult.status === "fulfilled") {
+          const settings = settingsResult.value;
+          setForm({
+            pickupAddress: settings.pickupAddress,
+            pickupCity: settings.pickupCity,
+            pickupPostalCode: settings.pickupPostalCode ?? "",
+            pickupContactPhone: settings.pickupContactPhone,
+            pickupContactName: settings.pickupContactName,
+            pickupLatitude: settings.pickupLatitude ?? "",
+            pickupLongitude: settings.pickupLongitude ?? "",
+            enabledCdek: settings.enabledCarriers.includes("CDEK"),
+            enabledYandex: settings.enabledCarriers.includes("YANDEX"),
+            defaultCarrier: settings.defaultCarrier as "CDEK" | "YANDEX",
+            sameCityPreferredCarrier: settings.sameCityPreferredCarrier as "CDEK" | "YANDEX",
+            interCityPreferredCarrier: settings.interCityPreferredCarrier as "CDEK" | "YANDEX",
+            fallbackCarrier: settings.fallbackCarrier as "CDEK" | "YANDEX",
+            defaultWeightGram: String(settings.defaultWeightGram),
+            defaultLengthCm: String(settings.defaultLengthCm),
+            defaultWidthCm: String(settings.defaultWidthCm),
+            defaultHeightCm: String(settings.defaultHeightCm),
+          });
+          setPrefilledFromProfile(false);
+        } else if (
+          settingsResult.reason instanceof ApiError &&
+          settingsResult.reason.status === 404 &&
+          profileResult.status === "fulfilled"
+        ) {
+          const profile = profileResult.value;
+          setForm((current) => ({
+            ...current,
+            pickupAddress: profile.legalAddress ?? "",
+            pickupContactPhone: profile.contactPhone ?? "",
+            pickupContactName: profile.contactName ?? "",
+          }));
+          setPrefilledFromProfile(
+            Boolean(
+              profile.legalAddress ||
+                profile.contactPhone ||
+                profile.contactName,
+            ),
+          );
+        } else if (
+          !(settingsResult.reason instanceof ApiError) ||
+          settingsResult.reason.status !== 404
+        ) {
+          throw settingsResult.reason;
+        }
+      } catch (issue) {
+        if (mounted) {
+          setError(
+            issue instanceof Error
+              ? issue.message
+              : t("seller.delivery.loadFailed"),
+          );
+        }
       } finally {
         if (mounted) {
           setLoading(false);
@@ -80,7 +120,7 @@ export function SellerDeliverySettingsPageClient() {
     return () => {
       mounted = false;
     };
-  }, [currentShopId, user]);
+  }, [currentShopId, t, user]);
 
   const handleSave = async () => {
     if (!currentShopId) return;
@@ -150,6 +190,11 @@ export function SellerDeliverySettingsPageClient() {
         <p className="text-sm text-[var(--muted)]">{t("common.loading")}</p>
       ) : (
         <div className="space-y-6" data-testid="seller-delivery-settings-page">
+          {prefilledFromProfile ? (
+            <div className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]" data-testid="delivery-profile-prefill">
+              {t("seller.delivery.profilePrefillHelper")}
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2">
             <Field label={t("seller.delivery.pickupAddress")}>
               <input value={form.pickupAddress} onChange={(event) => setForm((current) => ({ ...current, pickupAddress: event.target.value }))} className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm outline-none focus:border-[var(--accent)]" data-testid="delivery-pickup-address" />

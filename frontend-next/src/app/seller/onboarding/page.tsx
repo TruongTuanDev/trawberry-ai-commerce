@@ -191,6 +191,9 @@ export default function SellerOnboardingPage() {
       {error ? <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
 
       <form onSubmit={(event) => void saveProfile(event)} className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-5">
+        <p className="mb-5 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm text-[var(--muted)]">
+          {t("seller.onboarding.accountDefaultsHelper")}
+        </p>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
             <span>{t("seller.onboarding.legalType")}</span>

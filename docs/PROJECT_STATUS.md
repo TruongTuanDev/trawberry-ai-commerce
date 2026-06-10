@@ -2356,3 +2356,18 @@ Current status:
 - Backend validates and parses selected codes server-side, enforces shop scope, exact-matches complete codes, and reports not-found codes without exposing WB credentials.
 - Backend full verification passes with 38 suites and 374 tests; frontend i18n, lint, build, selected-sync E2E, locale regression, commerce regression, and public smoke all pass.
 - Real WB API verification remains opt-in; automated tests stay in mock mode.
+
+# Profile Information Reuse Status
+
+Current status:
+
+- New customer addresses reuse account name and phone as editable recipient defaults.
+- Seller onboarding reuses missing account identity fields, including legacy blank-string values.
+- First-use seller delivery and payment settings reuse compatible seller onboarding data while preserving saved shop settings as authoritative.
+- Checkout/order snapshots, seller finance, WB credentials, and role/shop ownership boundaries are unchanged.
+- Full backend verification, rebuilt Docker runtime, focused profile-reuse E2E, required regression E2E, and relevant smoke checks pass.
+
+Notes:
+
+- Reuse is intentionally prefill-only. Saving one operational form does not silently overwrite another profile or snapshot.
+- `smoke:delivery` now creates a category-ready product and publishes it through the seller API before checkout.

@@ -15,11 +15,13 @@ import {
   geocodeCustomerAddress,
   getCustomerAddressSuggestions,
   getCustomerAddresses,
+  getCustomerProfile,
   setDefaultCustomerAddress,
   updateCustomerAddress,
   type CustomerAddress,
   type CustomerAddressInput,
   type CustomerAddressSuggestion,
+  type CustomerProfile,
 } from "@/lib/customer-api";
 import { maybeNormalizePhone } from "@/lib/phone";
 
@@ -50,10 +52,24 @@ const emptyForm: CustomerAddressInput = {
   geoProviderUri: "",
 };
 
+function buildNewAddressForm(
+  profile?: Pick<CustomerProfile, "name" | "phone"> | null,
+): CustomerAddressInput {
+  return {
+    ...emptyForm,
+    fullName: profile?.name ?? "",
+    phone: profile?.phone ?? "",
+  };
+}
+
 export function CustomerAccountAddressesPageClient() {
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [form, setForm] = useState<CustomerAddressInput>(emptyForm);
+  const [recipientDefaults, setRecipientDefaults] = useState<Pick<
+    CustomerProfile,
+    "name" | "phone"
+  > | null>(null);
   const [loading, setLoading] = useState(true);
   const { run, isRunning } = useActionFeedback();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -74,9 +90,24 @@ export function CustomerAccountAddressesPageClient() {
     let mounted = true;
     void (async () => {
       try {
-        const response = await getCustomerAddresses();
+        const [addressesResult, profileResult] = await Promise.allSettled([
+          getCustomerAddresses(),
+          getCustomerProfile(),
+        ]);
         if (!mounted) return;
-        setAddresses(response.items);
+        if (addressesResult.status === "rejected") {
+          throw addressesResult.reason;
+        }
+        setAddresses(addressesResult.value.items);
+        if (profileResult.status === "fulfilled") {
+          const profile = profileResult.value;
+          setRecipientDefaults({ name: profile.name, phone: profile.phone });
+          setForm((current) => ({
+            ...current,
+            fullName: current.fullName || profile.name || "",
+            phone: current.phone || profile.phone || "",
+          }));
+        }
         setError(null);
       } catch (issue) {
         if (mounted) {
@@ -153,7 +184,7 @@ export function CustomerAccountAddressesPageClient() {
 
   const resetForm = () => {
     setEditingAddressId(null);
-    setForm(emptyForm);
+    setForm(buildNewAddressForm(recipientDefaults));
     setSuggestions([]);
   };
 
@@ -532,6 +563,11 @@ export function CustomerAccountAddressesPageClient() {
 
             <section className="rounded-[1.5rem] border border-[var(--border)] bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{t("customer.addresses.sectionRecipient")}</p>
+              {!editingAddressId && (recipientDefaults?.name || recipientDefaults?.phone) ? (
+                <p className="mt-2 text-sm text-[var(--muted)]" data-testid="customer-address-profile-prefill">
+                  {t("customer.addresses.recipientPrefilled")}
+                </p>
+              ) : null}
               <div className="mt-4 grid gap-4">
                 <AddressField label={t("customer.addresses.fullName")}><input value={form.fullName} onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))} className="public-input" data-testid="customer-address-fullName" disabled={isRunning} /></AddressField>
                 <AddressField label={t("customer.addresses.recipientPhone")}><input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="public-input" placeholder="+7XXXXXXXXXX" data-testid="customer-address-phone" disabled={isRunning} /></AddressField>

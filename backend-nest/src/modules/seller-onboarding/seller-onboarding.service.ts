@@ -25,6 +25,12 @@ const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'image/webp',
 ]);
 
+function firstNonBlank(
+  ...values: Array<string | null | undefined>
+): string | null {
+  return values.find((value) => value?.trim())?.trim() ?? null;
+}
+
 @Injectable()
 export class SellerOnboardingService {
   constructor(
@@ -65,6 +71,13 @@ export class SellerOnboardingService {
       include: {
         documents: {
           select: { id: true },
+        },
+        user: {
+          select: {
+            fullName: true,
+            phone: true,
+            email: true,
+          },
         },
       },
     });
@@ -148,6 +161,13 @@ export class SellerOnboardingService {
         documents: {
           select: { id: true },
         },
+        user: {
+          select: {
+            fullName: true,
+            phone: true,
+            email: true,
+          },
+        },
       },
     });
     if (!profile) {
@@ -197,7 +217,24 @@ export class SellerOnboardingService {
     bik: string | null;
     updatedAt: Date;
     documents?: Array<{ id: string }>;
+    user?: {
+      fullName: string | null;
+      phone: string | null;
+      email: string;
+    };
   }) {
+    const contactName = firstNonBlank(
+      profile.contactName,
+      profile.user?.fullName,
+    );
+    const contactPhone = firstNonBlank(
+      profile.contactPhone,
+      profile.user?.phone,
+    );
+    const contactEmail = firstNonBlank(
+      profile.contactEmail,
+      profile.user?.email,
+    );
     const sellerOnboardingComplete = isSellerOnboardingComplete({
       approvalStatus: profile.approvalStatus,
       rejectionReason: profile.rejectionReason,
@@ -205,9 +242,9 @@ export class SellerOnboardingService {
       legalName: profile.legalName,
       inn: profile.inn,
       legalAddress: profile.legalAddress,
-      contactName: profile.contactName,
-      contactPhone: profile.contactPhone,
-      contactEmail: profile.contactEmail,
+      contactName,
+      contactPhone,
+      contactEmail,
       bankName: profile.bankName,
       bankAccount: profile.bankAccount,
       bik: profile.bik,
@@ -225,9 +262,9 @@ export class SellerOnboardingService {
         legalName: profile.legalName,
         inn: profile.inn,
         legalAddress: profile.legalAddress,
-        contactName: profile.contactName,
-        contactPhone: profile.contactPhone,
-        contactEmail: profile.contactEmail,
+        contactName,
+        contactPhone,
+        contactEmail,
         bankName: profile.bankName,
         bankAccount: profile.bankAccount,
         bik: profile.bik,
@@ -240,9 +277,9 @@ export class SellerOnboardingService {
       ogrn: profile.ogrn,
       kpp: profile.kpp,
       legalAddress: profile.legalAddress,
-      contactName: profile.contactName,
-      contactPhone: profile.contactPhone,
-      contactEmail: profile.contactEmail,
+      contactName,
+      contactPhone,
+      contactEmail,
       bankName: profile.bankName,
       bankAccount: profile.bankAccount,
       bik: profile.bik,

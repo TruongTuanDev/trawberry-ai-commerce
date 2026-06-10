@@ -50,8 +50,9 @@ test("customer manages account profile, addresses, password, and guarded access"
   });
 
   await page.goto("/customer/account/addresses");
-  await page.getByTestId("customer-address-fullName").fill("Customer Account Prime");
-  await page.getByTestId("customer-address-phone").fill(phone);
+  await expect(page.getByTestId("customer-address-profile-prefill")).toBeVisible();
+  await expect(page.getByTestId("customer-address-fullName")).toHaveValue("Customer Account Prime");
+  await expect(page.getByTestId("customer-address-phone")).toHaveValue(phone);
   await page.getByTestId("customer-address-city").fill("Moscow");
   await page.getByTestId("customer-address-region").fill("Moscow");
   await page.getByTestId("customer-address-street").fill("Tverskaya 12");
@@ -67,8 +68,8 @@ test("customer manages account profile, addresses, password, and guarded access"
   await expect(page.getByTestId("customer-address-card")).toHaveCount(1);
   await expect(page.getByTestId("customer-address-default-badge")).toHaveCount(1);
 
-  await page.getByTestId("customer-address-fullName").fill("Customer Account Prime");
-  await page.getByTestId("customer-address-phone").fill(phone);
+  await expect(page.getByTestId("customer-address-fullName")).toHaveValue("Customer Account Prime");
+  await expect(page.getByTestId("customer-address-phone")).toHaveValue(phone);
   await page.getByTestId("customer-address-city").fill("Saint Petersburg");
   await page.getByTestId("customer-address-region").fill("Leningrad");
   await page.getByTestId("customer-address-street").fill("Nevsky");
