@@ -1,5 +1,19 @@
 # Phase Report
 
+## 2026-06-10 Admin Seller Approval Error Visibility Fix
+
+- Status: Implemented on current branch
+- Scope:
+  - admin seller approval actions now surface backend business-rule errors instead of collapsing them into the generic "Something went wrong. Please try again."
+  - seller list and seller detail admin screens now persist failed approve/reject/document-review messages inline after toast display
+  - preserved auth/session-specific fallback mapping for unauthorized, forbidden, conflict, rate-limit, and server-error cases
+- User-facing impact:
+  - when an admin tries to approve a seller without any approved KYC document, the UI now shows the actual backend reason so the next action is clear
+- Verification:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - runtime smoke / E2E: not run because local frontend/backend were not listening on `127.0.0.1:3000` and `127.0.0.1:3001`
+
 ## 2026-06-07 Storefront Homepage and Product Listing Polish Phase UI.3
 
 - Status: Implemented and pushed to main

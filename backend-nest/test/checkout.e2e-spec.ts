@@ -1201,6 +1201,39 @@ describe('CheckoutController (e2e)', () => {
       .expect(404);
   });
 
+  it('counts confirmed delivery-payment states as paid in customer receipts', async () => {
+    const customerToken = await loginAndGetToken(app, 'customer@example.com');
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/checkout/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        shopId: 'shop-1',
+        items: [
+          { productId: 'product-1', variantId: 'variant-1', quantity: 1 },
+        ],
+        customer: {
+          fullName: '',
+          phone: '',
+          email: 'customer@example.com',
+          address: '',
+        },
+        addressId: 'address-1',
+        paymentMethod: 'PREPAID_SELLER_QR',
+      })
+      .expect(201);
+
+    const createBody = readBody<CheckoutOrderResponseDto>(createResponse);
+    orders[0].paymentStatus = 'SELLER_CONFIRMED_DELIVERY_PAYMENT';
+    orders[0].status = 'SHIPPING';
+
+    const detailResponse = await request(app.getHttpServer())
+      .get(`/api/customer/orders/${createBody.checkoutCode}`)
+      .set('Authorization', `Bearer ${customerToken}`)
+      .expect(200);
+
+    expect(readBody<{ status: string }>(detailResponse).status).toBe('PAID');
+  });
+
   it('uses a saved customer address snapshot when addressId is provided', async () => {
     const customerToken = await loginAndGetToken(app, 'customer@example.com');
 

@@ -1,5 +1,17 @@
 # Project Status
 
+## Admin Seller Approval Error Visibility Fix - 2026-06-10
+
+- Status: implemented in `frontend-next` and `docs`
+- Admin seller approvals now:
+  - preserve backend business-rule messages for non-auth action failures in the shared action feedback hook
+  - show failed seller approval, seller rejection, and seller-document review errors inline on both `/admin/sellers` and `/admin/sellers/[id]`
+  - keep the safer generic remapping for 401, 403, 409, 429, and 5xx responses
+- Verification status:
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - runtime smoke / E2E: not run because local frontend/backend were not listening on `127.0.0.1:3000` and `127.0.0.1:3001`
+
 ## Storefront Homepage and Product Listing Polish Phase UI.3 - 2026-06-07
 
 - Status: implemented in `frontend-next` and `docs`

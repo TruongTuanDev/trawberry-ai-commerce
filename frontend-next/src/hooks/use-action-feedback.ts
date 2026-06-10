@@ -59,7 +59,10 @@ export function useActionFeedback() {
               error,
               fallbackKey: fallbackKey ?? "errors.default",
             })
-          : errorMessage ?? "Something went wrong. Please try again.";
+          : errorMessage ??
+            (error instanceof Error && error.message.trim()
+              ? error.message.trim()
+              : "Something went wrong. Please try again.");
 
       if (!authMode && !role) {
         const lowerMessage = message.toLowerCase();

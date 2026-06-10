@@ -477,6 +477,42 @@ describe('OrderTrackingController (e2e)', () => {
       .expect(404);
   });
 
+  it('blocks pay-on-delivery payment confirmation before delivery completes', async () => {
+    orders[0].shippingMethodName = 'PAY_ON_DELIVERY_SELLER_QR';
+    orders[0].paymentStatus = 'SELLER_ACCEPTED_PAY_ON_DELIVERY';
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/orders/order-1/payment-proof')
+      .field('phone', '123456')
+      .field('buyerNote', 'Trying to mark paid too early.')
+      .expect(400);
+
+    expect(response.text).toContain(
+      'Delivery payment can only be confirmed after the order is delivered.',
+    );
+    expect(orders[0].paymentStatus).toBe('SELLER_ACCEPTED_PAY_ON_DELIVERY');
+    expect(orders[0].paymentReviewLogs).toHaveLength(0);
+  });
+
+  it('blocks payment proof upload after payment is already confirmed', async () => {
+    orders[0].paymentStatus = 'PAID';
+    orders[0].paymentProofStatus = 'SELLER_CONFIRMED';
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/orders/order-1/payment-proof')
+      .field('phone', '123456')
+      .attach('file', Buffer.from([137, 80, 78, 71]), {
+        filename: 'proof.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+
+    expect(response.text).toContain(
+      'Payment is already confirmed for this order.',
+    );
+    expect(orders[0].paymentReviewLogs).toHaveLength(0);
+  });
+
   it('fails payment proof upload when file type is invalid', async () => {
     await request(app.getHttpServer())
       .post('/api/public/orders/order-1/payment-proof')
@@ -583,6 +619,22 @@ describe('OrderTrackingController (e2e)', () => {
       readBody<PublicOrderTrackingResponseDto>(trackedResponse);
     expect(trackedBody.paymentStatus).toBe('PAID');
     expect(trackedBody.paymentProofStatus).toBe('SELLER_CONFIRMED');
+  });
+
+  it('includes pay-on-delivery buyer payment logs in tracking response', async () => {
+    orders[0].shippingMethodName = 'PAY_ON_DELIVERY_SELLER_QR';
+    orders[0].paymentStatus = 'SELLER_ACCEPTED_PAY_ON_DELIVERY';
+    orders[0].status = 'DELIVERED';
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/orders/order-1/payment-proof')
+      .field('phone', '123456')
+      .field('buyerNote', 'Paid after receiving the parcel.')
+      .expect(200);
+
+    const body = readBody<PublicOrderTrackingResponseDto>(response);
+    expect(body.paymentStatus).toBe('BUYER_MARKED_DELIVERY_PAID');
+    expect(body.paymentLogs[0].action).toBe('buyer_marked_delivery_paid');
   });
 });
 

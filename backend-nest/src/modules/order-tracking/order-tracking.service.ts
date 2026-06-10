@@ -23,6 +23,12 @@ const PAYMENT_PROOF_ALLOWED_MIME_TYPES = [
   'image/webp',
   'application/pdf',
 ] as const;
+const FINAL_PAYMENT_STATUSES = new Set([
+  'PAID',
+  'APPROVED',
+  'SELLER_CONFIRMED_DELIVERY_PAYMENT',
+  'YANDEX_PAYMENT_ON_DELIVERY_PAID',
+]);
 
 type TrackableOrderRecord = {
   id: string;
@@ -223,13 +229,14 @@ export class OrderTrackingService {
       include: this.orderInclude,
     });
     const trackableOrder = this.assertMatchingOrder(order, normalizedPhone);
+    const isDeliveryPayment = isPayOnDeliverySellerQrMethod(
+      trackableOrder.paymentMethod ?? trackableOrder.shippingMethodName,
+    );
+
+    this.assertPaymentProofUploadAllowed(trackableOrder, isDeliveryPayment);
 
     if (!file) {
-      if (
-        !isPayOnDeliverySellerQrMethod(
-          trackableOrder.paymentMethod ?? trackableOrder.shippingMethodName,
-        )
-      ) {
+      if (!isDeliveryPayment) {
         throw new BadRequestException('payment proof file is required.');
       }
     }
@@ -255,9 +262,6 @@ export class OrderTrackingService {
       });
     }
 
-    const isDeliveryPayment = isPayOnDeliverySellerQrMethod(
-      trackableOrder.paymentMethod ?? trackableOrder.shippingMethodName,
-    );
     await this.prisma.order.update({
       where: { id: trackableOrder.id },
       data: {
@@ -350,6 +354,37 @@ export class OrderTrackingService {
     phone: string,
   ) {
     return this.toTrackingResponse(this.assertMatchingOrder(order, phone));
+  }
+
+  private assertPaymentProofUploadAllowed(
+    order: TrackableOrderRecord,
+    isDeliveryPayment: boolean,
+  ) {
+    if (order.status === 'CANCELLED') {
+      throw new BadRequestException(
+        'Cannot submit payment proof for a cancelled order.',
+      );
+    }
+
+    if (FINAL_PAYMENT_STATUSES.has(order.paymentStatus)) {
+      throw new BadRequestException(
+        'Payment is already confirmed for this order.',
+      );
+    }
+
+    if (!isDeliveryPayment) {
+      return;
+    }
+
+    const latestDeliveryStatus = order.deliveryShipments?.[0]?.internalStatus;
+    const delivered =
+      order.status === 'DELIVERED' || latestDeliveryStatus === 'DELIVERED';
+
+    if (!delivered) {
+      throw new BadRequestException(
+        'Delivery payment can only be confirmed after the order is delivered.',
+      );
+    }
   }
 
   private assertMatchingOrder(
@@ -695,13 +730,17 @@ export class OrderTrackingService {
             in: [
               'UPLOAD_PROOF',
               'BUYER_MARKED_PAID',
+              'buyer_marked_delivery_paid',
               'MARK_PAID',
               'SELLER_CONFIRMED',
+              'seller_confirmed_delivery_payment',
               'REJECT_PAYMENT',
               'SELLER_REJECTED',
+              'seller_rejected_delivery_payment',
               'ADD_NOTE',
               'ADMIN_CONFIRMED',
               'ADMIN_REJECTED',
+              'pay_on_delivery_selected',
             ],
           },
         },

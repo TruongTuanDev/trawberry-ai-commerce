@@ -143,6 +143,9 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       onSuccess: async () => {
         await load(false);
       },
+      onError: (_issue, message) => {
+        setError(message);
+      },
       onFinally: () => {
         setSaving(null);
       }
@@ -164,6 +167,9 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
       onSuccess: async () => {
         await load(false);
       },
+      onError: (_issue, message) => {
+        setError(message);
+      },
       onFinally: () => {
         setSaving(null);
       }
@@ -183,6 +189,9 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
         const updated = await getAdminSeller(userId);
         setSeller(updated);
         await load(false);
+      },
+      onError: (_issue, message) => {
+        setError(message);
       },
       onFinally: () => {
         setSaving(null);
@@ -206,6 +215,9 @@ export function AdminSellerDetailClient({ userId }: { userId: string }) {
         const updated = await getAdminSeller(userId);
         setSeller(updated);
         await load(false);
+      },
+      onError: (_issue, message) => {
+        setError(message);
       },
       onFinally: () => {
         setSaving(null);

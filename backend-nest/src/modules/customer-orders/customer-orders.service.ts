@@ -165,7 +165,12 @@ export class CustomerOrdersService {
     if (orders.every((order) => order.status === 'DELIVERED')) {
       return 'COMPLETED';
     }
-    const paidStatuses = new Set(['PAID', 'APPROVED']);
+    const paidStatuses = new Set([
+      'PAID',
+      'APPROVED',
+      'SELLER_CONFIRMED_DELIVERY_PAYMENT',
+      'YANDEX_PAYMENT_ON_DELIVERY_PAID',
+    ]);
     const paidCount = orders.filter((order) =>
       paidStatuses.has(order.paymentStatus),
     ).length;

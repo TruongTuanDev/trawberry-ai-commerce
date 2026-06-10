@@ -93,6 +93,9 @@ export default function AdminSellersPage() {
       onSuccess: async () => {
         await refresh();
       },
+      onError: (_issue, message) => {
+        setError(message);
+      },
       onFinally: () => {
         setSavingUserId(null);
       }
@@ -116,6 +119,9 @@ export default function AdminSellersPage() {
         setSelectedSeller(null);
         setReason("");
         await refresh();
+      },
+      onError: (_issue, message) => {
+        setError(message);
       },
       onFinally: () => {
         setSavingUserId(null);
