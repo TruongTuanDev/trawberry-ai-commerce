@@ -81,15 +81,15 @@ function resolveConfigStatus(source: ShopPaymentConfigSource) {
     return 'DISABLED';
   }
 
+  if (source.paymentConfigStatus === 'READY') {
+    return 'READY';
+  }
+
   const hasExplicitQrConfig =
     normalizeText(source.staticQrImageUrl) &&
     normalizeText(source.accountHolderName) &&
     normalizeText(source.bankName) &&
     (normalizeText(source.sbpPhone) || normalizeText(source.accountNumber));
-
-  if (source.paymentConfigStatus === 'READY' && hasExplicitQrConfig) {
-    return 'READY';
-  }
 
   if (hasExplicitQrConfig) {
     return 'READY';

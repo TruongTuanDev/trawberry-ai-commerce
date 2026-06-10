@@ -28,6 +28,7 @@ Backend:
 - `DELETE /api/shops/:shopId/wb-sync/credentials`
 - `POST /api/shops/:shopId/wb-sync/products`
 - `POST /api/shops/:shopId/wb-sync/products/by-article`
+- `POST /api/shops/:shopId/wb-sync/products/by-codes`
 - `GET /api/shops/:shopId/wb-sync/runs/:syncRunId`
 
 ## Real Mode Setup
@@ -79,6 +80,7 @@ Notes:
 
 - `POST /api/shops/:shopId/wb-sync/products`
 - `POST /api/shops/:shopId/wb-sync/products/by-article`
+- `POST /api/shops/:shopId/wb-sync/products/by-codes`
 
 Both endpoints now:
 
@@ -222,6 +224,34 @@ Behavior:
 - no import-all fallback when article is missing
 - missing article produces warning `ARTICLE_NOT_FOUND`
 
+## Sync Selected Products By Codes
+
+`POST /api/shops/:shopId/wb-sync/products/by-codes`
+
+Example body:
+
+```json
+{
+  "codes": "234-xanh,356-đỏ\n789-чёрный",
+  "mode": "IMPORT",
+  "publishMode": "DRAFT",
+  "imageMode": "REMOTE_URL"
+}
+```
+
+Parsing and matching:
+
+- separators: comma, semicolon, carriage return, or new line
+- surrounding whitespace is trimmed; internal whitespace is preserved
+- duplicates are removed case-insensitively while the first original token is preserved for reporting
+- maximum input length is `5000` characters and maximum unique code count is `100`
+- each parsed token matches the complete WB `vendorCode` case-insensitively
+- dashes, underscores, Cyrillic, Vietnamese characters, and numbers remain meaningful
+- codes are never reduced to a base code before `-`
+- empty or invalid selected-code input returns validation failure and never calls sync-all
+
+Selected-code responses include `requestedCodes`, `requestedCount`, `syncedCount`, `syncedCodes`, `notFound`, `invalid`, `skipped`, `errors`, and the persisted WB sync `run`.
+
 ## Mapping Rules
 
 Product:
@@ -339,6 +369,7 @@ docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build b
    - run Preview all
    - run Sync all
    - run Preview/Sync by article
+   - run Preview/Sync selected products by codes
 10. If verification fails, inspect the safe error:
    - `401` / `403`: token or token scope
    - `400`: request body rejected by WB

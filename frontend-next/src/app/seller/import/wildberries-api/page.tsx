@@ -8,14 +8,33 @@ import {
   deleteWbSyncCredentials,
   getWbSyncCredentialsStatus,
   saveWbSyncCredentials,
-  syncWbProductByArticle,
+  syncWbProductsByCodes,
   syncWbProducts,
   verifyWbSyncCredentials,
   type WbConnectionVerifyResult,
   type WbCredentialsStatus,
+  type WbSelectedCodesSyncResult,
   type WbSyncRun,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+
+const MAX_MANUAL_CODES_LENGTH = 5000;
+const MAX_MANUAL_CODES_COUNT = 100;
+
+function parseManualCodes(input: string) {
+  const codes: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of input.split(/[,;\r\n]+/)) {
+    const code = token.trim();
+    const normalized = code.toLowerCase();
+    if (!code || seen.has(normalized)) continue;
+    seen.add(normalized);
+    codes.push(code);
+  }
+
+  return codes;
+}
 
 export default function WildberriesApiSyncPage() {
   const { t } = useI18n("seller");
@@ -23,11 +42,13 @@ export default function WildberriesApiSyncPage() {
   const shops = useSellerWorkspaceStore((state) => state.shops);
   const [credentials, setCredentials] = useState<WbCredentialsStatus | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [article, setArticle] = useState("APT-MOCK-HOODIE");
+  const [manualCodes, setManualCodes] = useState("APT-MOCK-HOODIE,APT-MOCK-SHIRT");
   const [publishMode, setPublishMode] = useState<"DRAFT" | "ACTIVE_IF_VALID">("DRAFT");
   const [result, setResult] = useState<WbSyncRun | null>(null);
+  const [selectedResult, setSelectedResult] = useState<WbSelectedCodesSyncResult | null>(null);
   const [verifyResult, setVerifyResult] = useState<WbConnectionVerifyResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedSyncing, setSelectedSyncing] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +159,7 @@ export default function WildberriesApiSyncPage() {
     if (!shopId) return;
     setLoading(true);
     setError(null);
+    setSelectedResult(null);
     try {
       setResult(await syncWbProducts(shopId, { mode, limit: 100, publishMode, imageMode: "REMOTE_URL" }));
     } catch (err) {
@@ -148,19 +170,40 @@ export default function WildberriesApiSyncPage() {
     }
   };
 
-  const runArticle = async (mode: "PREVIEW" | "IMPORT") => {
-    if (!article.trim() || requireRealCredential()) return;
+  const runSelected = async (mode: "PREVIEW" | "IMPORT") => {
+    if (manualCodes.length > MAX_MANUAL_CODES_LENGTH) {
+      setError(t("seller.wbSync.codesInputTooLong", { max: MAX_MANUAL_CODES_LENGTH }));
+      return;
+    }
+    const codes = parseManualCodes(manualCodes);
+    if (codes.length === 0) {
+      setError(t("seller.wbSync.noCodesEntered"));
+      return;
+    }
+    if (codes.length > MAX_MANUAL_CODES_COUNT) {
+      setError(t("seller.wbSync.tooManyCodes", { max: MAX_MANUAL_CODES_COUNT }));
+      return;
+    }
+    if (requireRealCredential()) return;
     const shopId = currentShopId;
     if (!shopId) return;
-    setLoading(true);
+    setSelectedSyncing(true);
     setError(null);
     try {
-      setResult(await syncWbProductByArticle(shopId, { article: article.trim(), mode, publishMode, imageMode: "REMOTE_URL" }));
+      const response = await syncWbProductsByCodes(shopId, {
+        codes: manualCodes,
+        mode,
+        publishMode,
+        imageMode: "REMOTE_URL",
+      });
+      setSelectedResult(response);
+      setResult(response.run);
     } catch (err) {
       setResult(null);
+      setSelectedResult(null);
       setError(err instanceof Error ? err.message : t("errors.default"));
     } finally {
-      setLoading(false);
+      setSelectedSyncing(false);
     }
   };
 
@@ -200,7 +243,7 @@ export default function WildberriesApiSyncPage() {
               <p className="mt-3 text-sm text-[var(--muted)]" data-testid="wb-api-mode-message">{modeMessage}</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbSync.publishMode")}</span>
                 <select value={publishMode} onChange={(event) => setPublishMode(event.target.value as "DRAFT" | "ACTIVE_IF_VALID")} data-testid="wb-api-publish-mode" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
@@ -214,17 +257,34 @@ export default function WildberriesApiSyncPage() {
                   <option value="REMOTE_URL">{t("seller.wbSync.remoteUrl")}</option>
                 </select>
               </label>
-              <label className="block">
-                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbSync.articleLabel")}</span>
-                <input value={article} onChange={(event) => setArticle(event.target.value)} data-testid="wb-api-article" className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm" />
-              </label>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button type="button" disabled={!currentShopId || loading} onClick={() => void runAll("PREVIEW")} data-testid="wb-api-preview-all" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewAll")}</button>
-              <button type="button" disabled={!currentShopId || loading} onClick={() => void runAll("IMPORT")} data-testid="wb-api-import-all" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncAll")}</button>
-              <button type="button" disabled={!currentShopId || loading || !article.trim()} onClick={() => void runArticle("PREVIEW")} data-testid="wb-api-preview-article" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewByArticle")}</button>
-              <button type="button" disabled={!currentShopId || loading || !article.trim()} onClick={() => void runArticle("IMPORT")} data-testid="wb-api-import-article" className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncByArticle")}</button>
+              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("PREVIEW")} data-testid="wb-api-preview-all" className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewAll")}</button>
+              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("IMPORT")} data-testid="wb-api-import-all" className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncAll")}</button>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
+              <label className="block">
+                <span className="text-sm font-semibold text-[var(--foreground)]">{t("seller.wbSync.codesLabel")}</span>
+                <textarea
+                  value={manualCodes}
+                  onChange={(event) => setManualCodes(event.target.value)}
+                  placeholder={t("seller.wbSync.codesPlaceholder")}
+                  rows={5}
+                  data-testid="wb-api-codes"
+                  className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                />
+              </label>
+              <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.wbSync.codesHelper")}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("PREVIEW")} data-testid="wb-api-preview-selected" className="rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold disabled:opacity-50">
+                  {selectedSyncing ? t("seller.wbSync.syncingSelected") : t("seller.wbSync.previewSelected")}
+                </button>
+                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("IMPORT")} data-testid="wb-api-import-selected" className="rounded-full bg-[var(--foreground)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                  {selectedSyncing ? t("seller.wbSync.syncingSelected") : t("seller.wbSync.syncSelected")}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -265,7 +325,7 @@ export default function WildberriesApiSyncPage() {
           </div>
         </div>
 
-        {error ? <div className="mt-5 rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">{error}</div> : null}
+        {error ? <div className="mt-5 rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]" data-testid="wb-api-error">{error}</div> : null}
       </SectionCard>
 
       {result ? (
@@ -288,6 +348,20 @@ export default function WildberriesApiSyncPage() {
             <p><span className="font-semibold text-[var(--foreground)]">{t("seller.wbSync.syncRun")}:</span> {result.syncRunId}</p>
             <p><span className="font-semibold text-[var(--foreground)]">{t("seller.wbSync.status")}:</span> {result.status}</p>
           </div>
+          {selectedResult ? (
+            <div className="mt-5 rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel)] p-5" data-testid="wb-api-selected-summary">
+              <p className="font-semibold text-[var(--foreground)]">{t("seller.wbSync.selectedSummary")}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Metric label={t("seller.wbSync.requestedCodes")} value={String(selectedResult.requestedCount)} />
+                <Metric label={t("seller.wbSync.syncedProducts")} value={String(selectedResult.syncedCount)} />
+                <Metric label={t("seller.wbSync.notFound")} value={String(selectedResult.notFound.length)} />
+                <Metric label={t("seller.wbSync.errorsLabel")} value={String(selectedResult.errors.length)} />
+              </div>
+              <SummaryCodes label={t("seller.wbSync.notFound")} codes={selectedResult.notFound} emptyLabel={t("seller.wbSync.none")} testId="wb-api-selected-not-found" />
+              <SummaryCodes label={t("seller.wbSync.invalidCodes")} codes={selectedResult.invalid} emptyLabel={t("seller.wbSync.none")} />
+              <SummaryCodes label={t("seller.wbSync.skippedCodes")} codes={selectedResult.skipped} emptyLabel={t("seller.wbSync.none")} />
+            </div>
+          ) : null}
           {result.errors.length ? (
             <div className="mt-5 rounded-2xl border border-[var(--accent-soft)] bg-[var(--accent-soft)]/50 px-4 py-3 text-sm text-[var(--accent-strong)]" data-testid="wb-api-errors">
               {result.errors.map((entry, index) => (
@@ -337,5 +411,14 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{label}</p>
       <p className="mt-2 text-2xl font-bold text-[var(--foreground)]">{value}</p>
     </div>
+  );
+}
+
+function SummaryCodes({ label, codes, emptyLabel, testId }: { label: string; codes: string[]; emptyLabel: string; testId?: string }) {
+  return (
+    <p className="mt-3 text-sm text-[var(--muted)]" data-testid={testId}>
+      <span className="font-semibold text-[var(--foreground)]">{label}:</span>{" "}
+      {codes.length ? codes.join(", ") : emptyLabel}
+    </p>
   );
 }

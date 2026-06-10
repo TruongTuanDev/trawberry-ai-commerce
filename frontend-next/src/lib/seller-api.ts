@@ -1194,6 +1194,18 @@ export type WbSyncRun = {
   completedAt: string | null;
 };
 
+export type WbSelectedCodesSyncResult = {
+  requestedCodes: string[];
+  requestedCount: number;
+  syncedCount: number;
+  syncedCodes: string[];
+  notFound: string[];
+  invalid: string[];
+  skipped: string[];
+  errors: WbImportIssue[];
+  run: WbSyncRun;
+};
+
 export type WbCredentialsStatus = {
   shopId: string;
   connected: boolean;
@@ -2221,6 +2233,26 @@ export async function syncWbProductByArticle(
 ) {
   return apiRequest<WbSyncRun>(
     `/api/shops/${shopId}/wb-sync/products/by-article`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function syncWbProductsByCodes(
+  shopId: string,
+  payload: {
+    codes: string;
+    mode: "PREVIEW" | "IMPORT";
+    publishMode?: "DRAFT" | "ACTIVE_IF_VALID";
+    imageMode?: "REMOTE_URL";
+  },
+  token?: string,
+) {
+  return apiRequest<WbSelectedCodesSyncResult>(
+    `/api/shops/${shopId}/wb-sync/products/by-codes`,
     {
       method: "POST",
       token,

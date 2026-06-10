@@ -222,6 +222,7 @@ Next.js frontend runs in parallel with the legacy Angular app in `strawberry-fro
   - early real-mode guard when the selected shop has no saved WB key
   - preview/import all products
   - preview/import by article/APT/vendorCode
+  - preview/import selected products by comma, semicolon, or newline-separated vendor codes
   - sync result summary
 - Login flow against NestJS auth
 - Shop-scoped product list and detail pages

@@ -919,6 +919,14 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Seller UI at `/seller/import/wildberries-api` now shows mode, connection state, `keyLast4`, verify status, and last sanitized error.
 - Optional runtime verification is `backend-nest npm run smoke:wb-api-sync-real` with local env `WB_REAL_API_KEY`.
 
+# Wildberries Selected-Code Sync Audit Addendum
+
+- Seller UI at `/seller/import/wildberries-api` keeps sync-all separate and adds manual selected-code preview/import.
+- `POST /api/shops/:shopId/wb-sync/products/by-codes` parses selected codes server-side, exact-matches WB `vendorCode`, and returns a structured requested/synced/not-found summary.
+- Input is capped at 5000 characters and 100 unique codes; empty or over-limit input cannot fall back to sync-all.
+- Existing seller authentication, approved-seller check, `ShopAccessGuard`, per-shop encrypted WB credential, and product upsert behavior are reused.
+- Automated tests stay in WB mock mode and do not call the real Wildberries API.
+
 # Public Marketplace Contract Hardening Audit Addendum
 
 - public visibility remains gated by `PUBLISHED` plus readiness

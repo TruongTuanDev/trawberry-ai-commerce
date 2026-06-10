@@ -439,6 +439,21 @@ describe('ShopsController (e2e)', () => {
       .expect(403);
   });
 
+  it('keeps seller-selected READY status without requiring QR details', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/shops/${shopOneId}/payment-settings`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'READY' })
+      .expect(200);
+
+    const body = readBody<ShopPaymentSettingsResponseDto>(response);
+    expect(body.status).toBe('READY');
+    expect(body.isReady).toBe(true);
+    expect(shops[0].paymentConfigStatus).toBe('READY');
+  });
+
   it('allows seller to delete static QR code and clears fields', async () => {
     shops[0].staticQrImageUrl = 'https://s3.local/qr.png';
     shops[0].staticQrStorageKey = 'qr-storage-key-1';

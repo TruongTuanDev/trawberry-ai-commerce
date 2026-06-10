@@ -261,7 +261,7 @@ npm run start:dev
 ## Wildberries API sync
 - Legacy reference audit: `docs/WB_LEGACY_SUCCESSFUL_FLOW_AUDIT.md`.
 - Seller endpoints under `POST /api/shops/:shopId/wb-sync/*`.
-- Supports sync all products and sync by article/vendorCode.
+- Supports sync all products, sync by one article/vendorCode, and selective sync by up to 100 manually entered exact vendor codes.
 - Default `WB_SYNC_MODE=mock` does not call WB.
 - Real mode requires:
   - `WB_SYNC_MODE=real`

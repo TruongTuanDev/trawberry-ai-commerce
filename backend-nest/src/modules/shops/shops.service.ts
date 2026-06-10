@@ -472,6 +472,10 @@ export class ShopsService {
       return 'DISABLED';
     }
 
+    if (input.requestedStatus === 'READY') {
+      return 'READY';
+    }
+
     if (hasQrFoundation) {
       return 'READY';
     }

@@ -103,6 +103,7 @@ export class WbApiClientService {
       const cards = this.filterCards(
         MOCK_RESPONSE.cards,
         options.article,
+        options.articles,
       ).slice(0, options.limit);
       return {
         cards,
@@ -136,7 +137,11 @@ export class WbApiClientService {
       lastTotal = page.cursor?.total;
       cursor = page.cursor;
 
-      const filtered = this.filterCards(page.cards, options.article);
+      const filtered = this.filterCards(
+        page.cards,
+        options.article,
+        options.articles,
+      );
       cards.push(...filtered);
 
       if (options.article && filtered.length > 0) {
@@ -266,14 +271,22 @@ export class WbApiClientService {
     }
   }
 
-  private filterCards(cards: WbCardsResponse['cards'], article?: string) {
-    if (!article) {
+  private filterCards(
+    cards: WbCardsResponse['cards'],
+    article?: string,
+    articles?: string[],
+  ) {
+    if (!article && !articles?.length) {
       return cards;
     }
-    const normalized = this.normalizeArticle(article);
+    const normalizedArticles = new Set(
+      (articles?.length ? articles : [article]).map((value) =>
+        this.normalizeArticle(value),
+      ),
+    );
     return cards.filter((card) => {
       const vendorCode = this.normalizeArticle(card.vendorCode);
-      return vendorCode === normalized;
+      return normalizedArticles.has(vendorCode);
     });
   }
 

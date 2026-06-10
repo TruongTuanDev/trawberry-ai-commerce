@@ -13,6 +13,7 @@ import { ShopAccessGuard } from '../../common/guards/shop-access.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { SyncAllProductsDto } from './dto/sync-all-products.dto';
 import { SyncProductByArticleDto } from './dto/sync-product-by-article.dto';
+import { SyncProductsByCodesDto } from './dto/sync-products-by-codes.dto';
 import { UpdateWbCredentialsDto } from './dto/wb-credentials.dto';
 import { WbProductSyncService } from './wb-product-sync.service';
 
@@ -78,6 +79,15 @@ export class WbSyncController {
     @Body() dto: SyncProductByArticleDto,
   ) {
     return this.syncService.syncByArticle(shopId, user, dto);
+  }
+
+  @Post('products/by-codes')
+  syncByCodes(
+    @Param('shopId') shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SyncProductsByCodesDto,
+  ) {
+    return this.syncService.syncByCodes(shopId, user, dto);
   }
 
   @Get('runs/:syncRunId')

@@ -1,5 +1,5 @@
 export type WbSyncMode = 'PREVIEW' | 'IMPORT';
-export type WbSyncType = 'ALL_PRODUCTS' | 'BY_ARTICLE';
+export type WbSyncType = 'ALL_PRODUCTS' | 'BY_ARTICLE' | 'BY_CODES';
 export type WbPublishMode = 'DRAFT' | 'ACTIVE_IF_VALID';
 export type WbImageMode = 'REMOTE_URL';
 export type WbApiSourceMode = 'mock' | 'real';
@@ -82,6 +82,7 @@ export type WbFetchCardsOptions = {
   apiKey: string | null;
   limit: number;
   article?: string;
+  articles?: string[];
 };
 
 export type WbFetchCardsResult = {

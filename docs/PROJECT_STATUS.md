@@ -2327,3 +2327,20 @@ Current status:
 Notes:
 
 - This phase fixes both the navigation usability problem and the recurring seller raw-key issue by keeping route structure config-driven and by backfilling missing seller navigation/dashboard i18n keys.
+
+# Seller Payment Ready Status
+
+Current status:
+
+- Saving seller payment settings with status `READY` now makes the shop checkout-ready even when QR or bank details are incomplete.
+- Backend regression tests, full test suite, build, and direct seller QR payment smoke verification pass.
+
+# WB Selected Product Code Sync
+
+Current status:
+
+- Sellers can preview or import only manually selected WB `vendorCode` values from `/seller/import/wildberries-api`.
+- Sync-all remains a separate unchanged action.
+- Backend validates and parses selected codes server-side, enforces shop scope, exact-matches complete codes, and reports not-found codes without exposing WB credentials.
+- Backend full verification passes with 38 suites and 374 tests; frontend i18n, lint, build, selected-sync E2E, locale regression, commerce regression, and public smoke all pass.
+- Real WB API verification remains opt-in; automated tests stay in mock mode.

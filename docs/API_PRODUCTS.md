@@ -39,9 +39,11 @@ Visibility rules remain unchanged:
 Wildberries product ingestion has two paths:
 
 - Excel import: `POST /api/shops/:shopId/imports/wildberries/*`
-- API sync: `POST /api/shops/:shopId/wb-sync/products` and `/by-article`
+- API sync: `POST /api/shops/:shopId/wb-sync/products`, `/by-article`, and `/by-codes`
 
 Both paths upsert into the same product, variant, and image schema. WB API sync uses Content API card data; price/stock may require separate WB APIs in a later phase.
+
+Selected-code sync parses up to 100 manually entered codes and exact-matches each complete token against the WB `vendorCode` field. It is shop-scoped, never falls back to sync-all, and reports requested, synced, and not-found codes.
 
 All WB-imported products now enter the seller catalog first. Public marketplace visibility is controlled by `catalogStatus`, not by import alone.
 

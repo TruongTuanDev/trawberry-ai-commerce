@@ -34,6 +34,22 @@ describe('WB API sync foundation', () => {
     expect(response.mode).toBe('mock');
   });
 
+  it('mock client filters multiple exact vendor codes without using base codes', async () => {
+    const client = new WbApiClientService({
+      get: (key: string) => (key === 'WB_SYNC_MODE' ? 'mock' : undefined),
+    } as ConfigService);
+
+    const response = await client.fetchCards({
+      apiKey: null,
+      limit: 100,
+      articles: ['apt-mock-shirt', 'APT-MOCK'],
+    });
+
+    expect(response.cards.map((card) => card.vendorCode)).toEqual([
+      'APT-MOCK-SHIRT',
+    ]);
+  });
+
   it('real mode does not fall back to mock when token is missing', async () => {
     const client = new WbApiClientService({
       get: (key: string) => {

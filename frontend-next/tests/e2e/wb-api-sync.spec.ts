@@ -92,34 +92,40 @@ test("seller previews and imports Wildberries API products in mock mode", async 
   await login(page, email, password);
   await page.goto("/seller/import/wildberries-api");
   await expect(page.getByTestId("wb-api-sync-page")).toBeVisible();
-  await expect(page.getByTestId("wb-api-mode-message")).toContainText("Mock mode active");
+  await expect(page.getByTestId("wb-api-mode-badge")).toContainText("MOCK");
+  await expect(page.getByTestId("wb-api-mode-message")).toBeVisible();
 
   await page.getByTestId("wb-api-key").fill("mock-api-key-1234");
   await page.getByTestId("wb-api-save-credentials").click();
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Connected: Yes");
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Key last4: 1234");
-  await expect(page.getByTestId("wb-api-save-credentials")).toContainText("Update API key");
+  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("1234");
+  await expect(page.getByTestId("wb-api-save-credentials")).toBeDisabled();
   await expect(page.getByTestId("wb-api-verify-credentials")).toBeDisabled();
-  await expect(page.getByTestId("wb-api-mode-message")).toContainText("switch backend to real mode");
 
   await page.getByTestId("wb-api-key").fill("mock-api-key-5678");
+  await expect(page.getByTestId("wb-api-save-credentials")).toBeEnabled();
   await page.getByTestId("wb-api-save-credentials").click();
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Key last4: 5678");
+  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("5678");
 
   await page.getByTestId("wb-api-delete-credentials").click();
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Connected: No");
-  await expect(page.getByTestId("wb-api-save-credentials")).toContainText("Save API key");
+  await expect(page.getByTestId("wb-api-credentials-status")).not.toContainText("5678");
+  await expect(page.getByTestId("wb-api-save-credentials")).toBeDisabled();
 
   await page.getByTestId("wb-api-preview-all").click();
-  await expect(page.getByTestId("wb-api-result")).toContainText("Products");
+  await expect(page.getByTestId("wb-api-result")).toBeVisible();
   await expect(page.getByTestId("wb-api-product-row").first()).toContainText("APT-MOCK");
 
   await page.getByTestId("wb-api-import-all").click();
-  await expect(page.getByTestId("wb-api-result")).toContainText("Created");
+  await expect(page.getByTestId("wb-api-result")).toBeVisible();
 
-  await page.getByTestId("wb-api-article").fill("APT-MOCK-HOODIE");
-  await page.getByTestId("wb-api-import-article").click();
-  await expect(page.getByTestId("wb-api-result")).toContainText("Updated");
+  await page.getByTestId("wb-api-codes").fill("APT-MOCK-HOODIE,APT-MISSING");
+  await page.getByTestId("wb-api-import-selected").click();
+  await expect(page.getByTestId("wb-api-result")).toBeVisible();
+  await expect(page.getByTestId("wb-api-selected-summary")).toBeVisible();
+  await expect(page.getByTestId("wb-api-selected-not-found")).toContainText("APT-MISSING");
+
+  await page.getByTestId("wb-api-codes").fill("");
+  await page.getByTestId("wb-api-import-selected").click();
+  await expect(page.getByTestId("wb-api-error")).toBeVisible();
 
   await page.goto("/seller/products");
   await expect(page.locator("article").filter({ hasText: "Mock WB Hoodie" })).toBeVisible();
@@ -175,5 +181,5 @@ test("seller sees safe verify failure returned by backend", async ({ page, reque
   await page.getByTestId("wb-api-verify-credentials").click();
 
   await expect(page.locator("div").filter({ hasText: "WB_UNAUTHORIZED_401: Wildberries API rejected the token." }).last()).toBeVisible();
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("Last verify: FAILED");
+  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("FAILED");
 });

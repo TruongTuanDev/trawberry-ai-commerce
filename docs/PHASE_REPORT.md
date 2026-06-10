@@ -5292,3 +5292,54 @@ Root cause summary:
 
 - The seller shell had drifted into a hardcoded flat navigation tree, so active states and mobile behavior were brittle and hard to extend.
 - Seller-facing dictionary coverage had also drifted from the code, causing raw keys and corrupted localized labels to appear in seller routes even when the i18n runtime itself was working.
+
+# Phase Report: Seller Payment Ready Status Fix
+
+Implemented:
+
+- Seller-selected `READY` payment status is now authoritative and remains checkout-ready without requiring a QR image or complete bank details.
+- Added a shops API regression test covering `READY` with otherwise empty payment settings.
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass, 37 suites and 362 tests
+- `backend-nest npm run build`: pass
+- `backend-nest powershell -ExecutionPolicy Bypass -File scripts/smoke-direct-seller-qr-payment.ps1`: pass
+
+# Phase Report: Sync Selected Products by Manual Codes
+
+Implemented:
+
+- Added seller-scoped `POST /api/shops/:shopId/wb-sync/products/by-codes` while preserving existing sync-all and by-article endpoints.
+- Added server-side parsing for comma, semicolon, and newline-separated exact WB `vendorCode` tokens with 5000-character and 100-code limits.
+- Added selected-code result reporting for requested, synced, not-found, invalid, skipped, and error outcomes.
+- Updated seller WB sync UI with a multi-code textarea, separate selected preview/import actions, loading state, client validation, localized copy, and result summary.
+- Added parser, WB client, service scope, selected matching, not-found, and frontend E2E coverage.
+
+Production safety:
+
+- Selected sync reuses seller authentication, shop access, approved-seller checks, encrypted per-shop WB credentials, and existing idempotent product upsert behavior.
+- Empty or invalid selected-code input never falls back to sync-all.
+- Automated tests use WB mock mode and do not call the real WB API.
+
+Verification:
+
+- `backend-nest npm run prisma:generate`: pass
+- `backend-nest npm run lint`: pass
+- `backend-nest npm test -- --runInBand`: pass, 38 suites and 374 tests
+- `backend-nest npm run build`: pass
+- focused WB parser/client/service tests: pass, 3 suites and 35 tests
+- `frontend-next npm run check:i18n`: pass, 0 missing English keys and 0 locale gaps
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- `frontend-next npx playwright test tests/e2e/wb-api-sync.spec.ts --workers=1`: pass, 2 tests
+- locale regression E2E: pass, 4 tests
+- checkout/recommendation/full-commerce regression E2E: pass, 5 tests
+- public smoke E2E: pass, 1 test
+- The first local credential-save E2E attempt correctly failed because the runtime had no `WB_CREDENTIAL_ENCRYPTION_KEY`; the final E2E run used a non-secret runtime-only test key without modifying `.env`.
+
+Remaining gaps:
+
+- Real WB selected-code sync remains an opt-in production/runtime verification because default tests must not call the real Wildberries API.

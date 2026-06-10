@@ -263,54 +263,56 @@ describe('WbProductSyncService credentials', () => {
       prisma as never,
       apiClient as never,
       {
-        mapCard: jest.fn().mockImplementation(() => ({
-          source: 'WILDBERRIES_API',
-          externalProductId: '123',
-          sellerSku: 'WB-ARTICLE-1',
-          wbNmId: BigInt(123),
-          wbImtId: BigInt(456),
-          wbNmUuid: 'nm-uuid-1',
-          name: 'Imported product',
-          description: 'Imported from Wildberries',
-          brand: 'WB Brand',
-          categoryName: 'T-Shirts',
-          categoryId: null,
-          mappedCategoryName: null,
-          sourceCategoryName: null,
-          subjectId: BigInt(789),
-          videoUrl: null,
-          needKiz: null,
-          dimensions: {
-            width: 10,
-            height: 20,
-            length: 30,
-            weightBrutto: 400,
-            isValid: true,
-          },
-          characteristics: {
-            gender: null,
-            composition: null,
-            color: null,
-          },
-          variants: [
-            {
-              chrtId: BigInt(987),
-              sellerSku: 'WB-ARTICLE-1',
-              wbBarcode: 'barcode-1',
-              sizeName: 'M',
-              russianSize: '46',
+        mapCard: jest
+          .fn()
+          .mockImplementation((card: { vendorCode?: string }) => ({
+            source: 'WILDBERRIES_API',
+            externalProductId: '123',
+            sellerSku: card.vendorCode ?? 'WB-ARTICLE-1',
+            wbNmId: BigInt(123),
+            wbImtId: BigInt(456),
+            wbNmUuid: 'nm-uuid-1',
+            name: 'Imported product',
+            description: 'Imported from Wildberries',
+            brand: 'WB Brand',
+            categoryName: 'T-Shirts',
+            categoryId: null,
+            mappedCategoryName: null,
+            sourceCategoryName: null,
+            subjectId: BigInt(789),
+            videoUrl: null,
+            needKiz: null,
+            dimensions: {
+              width: 10,
+              height: 20,
+              length: 30,
+              weightBrutto: 400,
+              isValid: true,
             },
-          ],
-          images: [
-            {
-              url: 'https://images.example.com/1.jpg',
-              isMain: true,
-              sortOrder: 0,
+            characteristics: {
+              gender: null,
+              composition: null,
+              color: null,
             },
-          ],
-          warnings: [],
-          errors: [],
-        })),
+            variants: [
+              {
+                chrtId: BigInt(987),
+                sellerSku: card.vendorCode ?? 'WB-ARTICLE-1',
+                wbBarcode: 'barcode-1',
+                sizeName: 'M',
+                russianSize: '46',
+              },
+            ],
+            images: [
+              {
+                url: 'https://images.example.com/1.jpg',
+                isMain: true,
+                sortOrder: 0,
+              },
+            ],
+            warnings: [],
+            errors: [],
+          })),
       } as never,
       {
         resolveCategoryAssignment: jest.fn().mockResolvedValue({
@@ -487,6 +489,57 @@ describe('WbProductSyncService credentials', () => {
     expect(result.sourceMode).toBe('real');
     expect(result.rawSummary?.credentialKeyLast4).toBe('1234');
     expect(JSON.stringify(result)).not.toContain('secret-api-key-1234');
+  });
+
+  it('syncs only selected exact product codes and reports not found codes', async () => {
+    const { service, apiClient } = createService({ mode: 'mock' });
+    apiClient.fetchCards.mockResolvedValue({
+      cards: [
+        {
+          nmID: 123,
+          vendorCode: '234-Xanh',
+          title: 'Selected product',
+        },
+      ],
+      mode: 'mock',
+      pagesFetched: 1,
+      fetchedCount: 1,
+      cursor: { total: 1 },
+    });
+
+    const result = await service.syncByCodes('shop-1', user, {
+      codes: '234-xanh,356-đỏ,234-XANH',
+      mode: 'PREVIEW',
+    });
+
+    expect(apiClient.fetchCards).toHaveBeenCalledTimes(1);
+    expect(apiClient.fetchCards).toHaveBeenCalledWith({
+      apiKey: null,
+      limit: 100,
+      article: undefined,
+      articles: ['234-xanh', '356-đỏ'],
+    });
+    expect(result.requestedCodes).toEqual(['234-xanh', '356-đỏ']);
+    expect(result.syncedCount).toBe(1);
+    expect(result.syncedCodes).toEqual(['234-xanh']);
+    expect(result.notFound).toEqual(['356-đỏ']);
+    expect(result.invalid).toEqual([]);
+    expect(result.skipped).toEqual([]);
+  });
+
+  it('enforces shop ownership before selected-code sync', async () => {
+    const { service, apiClient } = createService({
+      mode: 'mock',
+      shopOwnerUserId: 'seller-user-2',
+    });
+
+    await expect(
+      service.syncByCodes('shop-1', user, {
+        codes: '234-xanh',
+        mode: 'IMPORT',
+      }),
+    ).rejects.toThrow('You do not have access to this shop.');
+    expect(apiClient.fetchCards).not.toHaveBeenCalled();
   });
 
   it('runs import sync inside a longer-lived Prisma transaction', async () => {

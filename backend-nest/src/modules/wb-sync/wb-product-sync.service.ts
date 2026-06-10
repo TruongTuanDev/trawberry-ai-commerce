@@ -21,6 +21,11 @@ import type { AuthenticatedUser } from '../../common/types/authenticated-user.ty
 import { CategoryMappingService } from '../categories/category-mapping.service';
 import { SyncAllProductsDto } from './dto/sync-all-products.dto';
 import { SyncProductByArticleDto } from './dto/sync-product-by-article.dto';
+import { SyncProductsByCodesDto } from './dto/sync-products-by-codes.dto';
+import {
+  normalizeManualProductCode,
+  parseManualProductCodes,
+} from './manual-product-code-parser';
 import { WbApiClientService } from './wb-api-client.service';
 import { WbProductMapperService } from './wb-product-mapper.service';
 import {
@@ -300,6 +305,44 @@ export class WbProductSyncService {
     });
   }
 
+  async syncByCodes(
+    shopId: string,
+    user: AuthenticatedUser,
+    dto: SyncProductsByCodesDto,
+  ) {
+    const requestedCodes = parseManualProductCodes(dto.codes);
+    const run = await this.sync(shopId, user, 'BY_CODES', {
+      mode: dto.mode ?? 'PREVIEW',
+      limit: this.defaultLimit(),
+      articles: requestedCodes,
+      publishMode: dto.publishMode ?? 'DRAFT',
+      imageMode: dto.imageMode ?? 'REMOTE_URL',
+    });
+    const matchedCodes = new Set(
+      (run.rawSummary?.products ?? [])
+        .map((product) => product.sellerSku)
+        .filter((code): code is string => Boolean(code))
+        .map(normalizeManualProductCode),
+    );
+    const syncedCodes = requestedCodes.filter((code) =>
+      matchedCodes.has(normalizeManualProductCode(code)),
+    );
+
+    return {
+      requestedCodes,
+      requestedCount: requestedCodes.length,
+      syncedCount: run.totalProducts,
+      syncedCodes,
+      notFound: requestedCodes.filter(
+        (code) => !matchedCodes.has(normalizeManualProductCode(code)),
+      ),
+      invalid: [],
+      skipped: [],
+      errors: Array.isArray(run.errors) ? run.errors : [],
+      run,
+    };
+  }
+
   async getRun(shopId: string, user: AuthenticatedUser, syncRunId: string) {
     await this.assertApprovedSellerForShop(shopId, user);
     const run = await this.prisma.wbSyncRun.findFirst({
@@ -319,6 +362,7 @@ export class WbProductSyncService {
       mode: 'PREVIEW' | 'IMPORT';
       limit: number;
       article?: string;
+      articles?: string[];
       publishMode: 'DRAFT' | 'ACTIVE_IF_VALID';
       imageMode: 'REMOTE_URL';
     },
@@ -343,6 +387,7 @@ export class WbProductSyncService {
           credentialKeyLast4: credential?.keyLast4 ?? null,
           imageMode: options.imageMode,
           publishMode: options.publishMode,
+          ...(options.articles ? { requestedCodes: options.articles } : {}),
         },
         startedAt,
       },
@@ -353,6 +398,7 @@ export class WbProductSyncService {
         apiKey: credential?.apiKey ?? null,
         limit: options.limit,
         article: options.article,
+        ...(options.articles ? { articles: options.articles } : {}),
       });
 
       const mapped = await Promise.all(
@@ -429,6 +475,7 @@ export class WbProductSyncService {
             cursor: cardsResponse.cursor ?? null,
             imageMode: options.imageMode,
             publishMode: options.publishMode,
+            ...(options.articles ? { requestedCodes: options.articles } : {}),
             products: mapped.map((product) => ({
               sellerSku: product.sellerSku,
               externalProductId: product.externalProductId,
@@ -466,6 +513,7 @@ export class WbProductSyncService {
             credentialKeyLast4: credential?.keyLast4 ?? null,
             imageMode: options.imageMode,
             publishMode: options.publishMode,
+            ...(options.articles ? { requestedCodes: options.articles } : {}),
           },
           completedAt: new Date(),
         },
@@ -874,6 +922,7 @@ export class WbProductSyncService {
       imageMode?: string;
       publishMode?: string;
       credentialKeyLast4?: string | null;
+      requestedCodes?: string[];
       products?: Array<{
         sellerSku: string | null;
         externalProductId: string | null;
