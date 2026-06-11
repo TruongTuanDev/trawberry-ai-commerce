@@ -78,6 +78,7 @@ describe('Billing (e2e)', () => {
     sellerWallet: {
       findUnique: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
       update: jest.fn(),
     },
     billingLedgerEntry: {
@@ -92,6 +93,7 @@ describe('Billing (e2e)', () => {
 
   beforeEach(async () => {
     process.env.BILLING_DEV_TOOLS_ENABLED = 'false';
+    process.env.ADS_DEMO_FUNDING_ENABLED = 'false';
     process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '50000';
     const now = new Date('2026-06-07T10:00:00Z');
 
@@ -192,6 +194,22 @@ describe('Billing (e2e)', () => {
         reservedBalance: cloneDecimal(data.reservedBalance ?? 0),
         currency: data.currency,
         status: data.status,
+        createdAt: now,
+        updatedAt: now,
+      };
+      wallets.push(wallet);
+      return Promise.resolve(wallet);
+    });
+    prismaMock.sellerWallet.upsert.mockImplementation(({ where, create }) => {
+      const existing = wallets.find((wallet) => wallet.shopId === where.shopId);
+      if (existing) return Promise.resolve(existing);
+      const wallet: StoredWallet = {
+        id: `wallet-${wallets.length + 1}`,
+        shopId: create.shopId,
+        balance: cloneDecimal(create.balance ?? 0),
+        reservedBalance: cloneDecimal(create.reservedBalance ?? 0),
+        currency: create.currency,
+        status: create.status,
         createdAt: now,
         updatedAt: now,
       };
@@ -367,6 +385,7 @@ describe('Billing (e2e)', () => {
 
   it('credits the owning seller wallet in dev mode and keeps the ledger response safe', async () => {
     process.env.BILLING_DEV_TOOLS_ENABLED = 'true';
+    process.env.ADS_DEMO_FUNDING_ENABLED = 'true';
     process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '250';
     await app.close();
     app = await buildTestApp(prismaMock);
@@ -404,6 +423,7 @@ describe('Billing (e2e)', () => {
 
   it('rejects invalid or oversized dev credit amounts and cannot fund another seller shop', async () => {
     process.env.BILLING_DEV_TOOLS_ENABLED = 'true';
+    process.env.ADS_DEMO_FUNDING_ENABLED = 'true';
     process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '100';
     await app.close();
     app = await buildTestApp(prismaMock);

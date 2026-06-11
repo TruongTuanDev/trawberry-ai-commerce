@@ -109,6 +109,7 @@ describe('RecommendationsController (e2e)', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
       update: jest.fn(),
     },
     productViewLog: {
@@ -374,6 +375,19 @@ describe('RecommendationsController (e2e)', () => {
       );
       walletState.currency = data.currency;
       walletState.status = data.status;
+      return Promise.resolve({ ...walletState });
+    });
+    prismaMock.sellerWallet.upsert.mockImplementation(({ where, create }) => {
+      if (where.shopId === walletState.shopId) {
+        return Promise.resolve({ ...walletState });
+      }
+      walletState.shopId = create.shopId;
+      walletState.balance = new Prisma.Decimal(create.balance ?? 0);
+      walletState.reservedBalance = new Prisma.Decimal(
+        create.reservedBalance ?? 0,
+      );
+      walletState.currency = create.currency;
+      walletState.status = create.status;
       return Promise.resolve({ ...walletState });
     });
     prismaMock.sellerWallet.update.mockImplementation(({ data }) => {
@@ -3338,6 +3352,7 @@ describe('RecommendationsController (e2e)', () => {
 
   it('still charges sponsored CPC clicks after dev funding credits the wallet', async () => {
     process.env.BILLING_DEV_TOOLS_ENABLED = 'true';
+    process.env.ADS_DEMO_FUNDING_ENABLED = 'true';
     process.env.BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT = '1000';
     process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
     process.env.RECOMMENDATION_SPONSORED_PRESET_ID = 'balanced';

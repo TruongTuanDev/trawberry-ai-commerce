@@ -109,6 +109,9 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 
 - `ADS_INVALID_CLICK_PROTECTION_ENABLED=true` enables rapid session and network repeat guards.
 - `ADS_SELF_CLICK_BLOCK_ENABLED=true` blocks a seller from charging clicks on their own shop campaigns.
+- `ADS_MANUAL_TOP_UP_ENABLED=true` enables seller manual ads-wallet top-up requests and admin review.
+- `ADS_DEMO_FUNDING_ENABLED=false` keeps the existing dev/demo wallet credit endpoint disabled unless both this flag and `BILLING_DEV_TOOLS_ENABLED=true` are explicitly enabled.
+- `ADS_TOP_UP_TRANSFER_RECIPIENT`, `ADS_TOP_UP_TRANSFER_BANK`, `ADS_TOP_UP_TRANSFER_ACCOUNT`, and `ADS_TOP_UP_TRANSFER_INSTRUCTIONS` provide seller-visible manual transfer instructions. Leave them blank until safe non-secret instructions are configured.
 - `ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS=30` controls the same customer/guest session repeat window.
 - `ADS_IP_REPEAT_CLICK_WINDOW_SECONDS=10` controls the same IP hash and user-agent hash repeat window.
 - `ADS_CLICK_HASH_SALT` must be set to a dedicated secret in production. Do not reuse a public value or commit the real salt.

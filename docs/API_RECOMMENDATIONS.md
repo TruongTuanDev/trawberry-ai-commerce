@@ -1539,3 +1539,7 @@ Recommended Phase 4 roadmap:
 - Phase 4.3: Sponsored Impression/Click Attribution
 - Phase 4.4: Budget Enforcement
 - Phase 4.5: Campaign Analytics Dashboard
+
+## Ads wallet top-up integration note
+
+Ads Phase 6.4 adds manual seller wallet top-up outside the recommendation ranking path. Only admin-confirmed requests increase the existing spendable wallet balance. Pending, rejected, and cancelled requests do not affect sponsored eligibility. Recommendation core ranking, sponsored boost calculation, CPC pricing, and invalid-click protection are unchanged.

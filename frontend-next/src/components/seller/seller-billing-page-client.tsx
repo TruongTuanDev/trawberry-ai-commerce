@@ -3,10 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/seller/section-card";
 import {
+  cancelSellerAdsWalletTopUp,
+  createSellerAdsWalletTopUp,
   getSellerBillingLedger,
   getSellerBillingWallet,
+  listSellerAdsWalletTopUps,
+  type AdsWalletTopUp,
   type SellerBillingLedgerEntry,
   type SellerBillingWallet,
+  type SellerAdsWalletTopUpsResponse,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 import { useI18n } from "@/i18n/use-i18n";
@@ -36,6 +41,28 @@ function getBillingCopy(t: (key: string) => string) {
     ledgerTitle: t("seller.billing.ledgerTitle"),
     ledgerDescription: t("seller.billing.ledgerDescription"),
     noLedger: t("seller.billing.noLedger"),
+    topUpEyebrow: t("seller.billing.topUpEyebrow"),
+    topUpTitle: t("seller.billing.topUpTitle"),
+    topUpDescription: t("seller.billing.topUpDescription"),
+    topUpAmount: t("seller.billing.topUpAmount"),
+    transferReference: t("seller.billing.transferReference"),
+    proofUrl: t("seller.billing.proofUrl"),
+    sellerNote: t("seller.billing.sellerNote"),
+    submitTopUp: t("seller.billing.submitTopUp"),
+    submittingTopUp: t("seller.billing.submittingTopUp"),
+    pendingTotal: t("seller.billing.pendingTotal"),
+    transferDetails: t("seller.billing.transferDetails"),
+    transferNotConfigured: t("seller.billing.transferNotConfigured"),
+    recipient: t("seller.billing.recipient"),
+    bank: t("seller.billing.bank"),
+    account: t("seller.billing.account"),
+    instructions: t("seller.billing.instructions"),
+    topUpHistory: t("seller.billing.topUpHistory"),
+    noTopUps: t("seller.billing.noTopUps"),
+    cancelTopUp: t("seller.billing.cancelTopUp"),
+    rejectionReason: t("seller.billing.rejectionReason"),
+    topUpCreated: t("seller.billing.topUpCreated"),
+    topUpSuccess: t("seller.billing.topUpSuccess"),
     workflow: t("seller.billing.workflow"),
     workflowDescription: t("seller.billing.workflowDescription"),
     availableNow: t("seller.billing.availableNow"),
@@ -77,6 +104,14 @@ export function SellerBillingPageClient() {
 
   const [wallet, setWallet] = useState<SellerBillingWallet | null>(null);
   const [ledger, setLedger] = useState<SellerBillingLedgerEntry[]>([]);
+  const [topUps, setTopUps] = useState<AdsWalletTopUp[]>([]);
+  const [topUpSummary, setTopUpSummary] = useState<SellerAdsWalletTopUpsResponse | null>(null);
+  const [amount, setAmount] = useState("");
+  const [transferReference, setTransferReference] = useState("");
+  const [proofUrl, setProofUrl] = useState("");
+  const [sellerNote, setSellerNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,18 +123,23 @@ export function SellerBillingPageClient() {
     if (!shopId) {
       setWallet(null);
       setLedger([]);
+      setTopUps([]);
+      setTopUpSummary(null);
       setError(null);
       setLoading(false);
       return;
     }
 
-    const [nextWallet, nextLedger] = await Promise.all([
+    const [nextWallet, nextLedger, nextTopUps] = await Promise.all([
       getSellerBillingWallet(shopId),
       getSellerBillingLedger(shopId),
+      listSellerAdsWalletTopUps(shopId),
     ]);
 
     setWallet(nextWallet);
     setLedger(nextLedger);
+    setTopUps(nextTopUps.items);
+    setTopUpSummary(nextTopUps);
     setError(null);
   };
 
@@ -148,6 +188,45 @@ export function SellerBillingPageClient() {
   );
 
   const currency = wallet?.currency ?? "RUB";
+
+  const submitTopUp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!currentShopId || Number(amount) <= 0) return;
+    setSubmitting(true);
+    setSuccess(null);
+    try {
+      await createSellerAdsWalletTopUp(currentShopId, {
+        amount: Number(amount),
+        currency,
+        transferReference: transferReference.trim() || undefined,
+        proofUrl: proofUrl.trim() || undefined,
+        sellerNote: sellerNote.trim() || undefined,
+      });
+      setAmount("");
+      setTransferReference("");
+      setProofUrl("");
+      setSellerNote("");
+      setSuccess(BILLING_COPY.topUpSuccess);
+      await loadBilling(currentShopId);
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : BILLING_COPY.loadFailed);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const cancelTopUp = async (id: string) => {
+    if (!currentShopId) return;
+    setSubmitting(true);
+    try {
+      await cancelSellerAdsWalletTopUp(currentShopId, id);
+      await loadBilling(currentShopId);
+    } catch (issue) {
+      setError(issue instanceof Error ? issue.message : BILLING_COPY.loadFailed);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6" data-testid="seller-billing-page">
@@ -222,6 +301,88 @@ export function SellerBillingPageClient() {
             </article>
           </div>
         )}
+      </SectionCard>
+
+      <SectionCard
+        eyebrow={BILLING_COPY.topUpEyebrow}
+        title={BILLING_COPY.topUpTitle}
+        description={BILLING_COPY.topUpDescription}
+      >
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <form onSubmit={submitTopUp} className="space-y-4 rounded-[1.5rem] border border-[var(--border)] bg-white p-5" data-testid="seller-top-up-form">
+            <div className="rounded-2xl bg-indigo-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">{BILLING_COPY.pendingTotal}</p>
+              <p className="mt-2 text-2xl font-black text-indigo-950">
+                {formatMoney(topUpSummary?.pendingTotal ?? "0", currency)}
+              </p>
+            </div>
+            <label className="block text-sm font-semibold text-[var(--foreground)]">
+              {BILLING_COPY.topUpAmount}
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[var(--border)] px-4 py-3"
+                data-testid="seller-top-up-amount"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-[var(--foreground)]">
+              {BILLING_COPY.transferReference}
+              <input value={transferReference} maxLength={255} onChange={(event) => setTransferReference(event.target.value)} className="mt-2 w-full rounded-2xl border border-[var(--border)] px-4 py-3" data-testid="seller-top-up-reference" />
+            </label>
+            <label className="block text-sm font-semibold text-[var(--foreground)]">
+              {BILLING_COPY.proofUrl}
+              <input type="url" value={proofUrl} maxLength={1000} onChange={(event) => setProofUrl(event.target.value)} className="mt-2 w-full rounded-2xl border border-[var(--border)] px-4 py-3" data-testid="seller-top-up-proof-url" />
+            </label>
+            <label className="block text-sm font-semibold text-[var(--foreground)]">
+              {BILLING_COPY.sellerNote}
+              <textarea value={sellerNote} maxLength={1000} onChange={(event) => setSellerNote(event.target.value)} className="mt-2 min-h-24 w-full rounded-2xl border border-[var(--border)] px-4 py-3" data-testid="seller-top-up-note" />
+            </label>
+            {success ? <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{success}</p> : null}
+            <button type="submit" disabled={submitting || !currentShopId || Number(amount) <= 0} className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" data-testid="seller-top-up-submit">
+              {submitting ? BILLING_COPY.submittingTopUp : BILLING_COPY.submitTopUp}
+            </button>
+          </form>
+
+          <div className="space-y-4">
+            <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5" data-testid="seller-top-up-transfer-details">
+              <h3 className="text-lg font-bold text-[var(--foreground)]">{BILLING_COPY.transferDetails}</h3>
+              {!topUpSummary?.transferInstructions.configured ? (
+                <p className="mt-3 text-sm text-[var(--muted)]">{BILLING_COPY.transferNotConfigured}</p>
+              ) : (
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  {topUpSummary.transferInstructions.recipient ? <div><dt className="text-[var(--muted)]">{BILLING_COPY.recipient}</dt><dd className="font-semibold">{topUpSummary.transferInstructions.recipient}</dd></div> : null}
+                  {topUpSummary.transferInstructions.bank ? <div><dt className="text-[var(--muted)]">{BILLING_COPY.bank}</dt><dd className="font-semibold">{topUpSummary.transferInstructions.bank}</dd></div> : null}
+                  {topUpSummary.transferInstructions.account ? <div><dt className="text-[var(--muted)]">{BILLING_COPY.account}</dt><dd className="font-semibold">{topUpSummary.transferInstructions.account}</dd></div> : null}
+                  {topUpSummary.transferInstructions.instructions ? <div className="sm:col-span-2"><dt className="text-[var(--muted)]">{BILLING_COPY.instructions}</dt><dd className="font-semibold">{topUpSummary.transferInstructions.instructions}</dd></div> : null}
+                </dl>
+              )}
+            </article>
+            <article className="rounded-[1.5rem] border border-[var(--border)] bg-white p-5" data-testid="seller-top-up-history">
+              <h3 className="text-lg font-bold text-[var(--foreground)]">{BILLING_COPY.topUpHistory}</h3>
+              <div className="mt-4 space-y-3">
+                {topUps.map((topUp) => (
+                  <div key={topUp.id} className="rounded-2xl border border-[var(--border)] p-4" data-testid="seller-top-up-row">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-[var(--foreground)]">{formatMoney(topUp.amount, topUp.currency)}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{BILLING_COPY.topUpCreated}: {formatDate(topUp.createdAt)}</p>
+                      </div>
+                      <span className={`premium-badge ${topUp.status === "confirmed" ? "premium-badge-success" : topUp.status === "rejected" ? "premium-badge-danger" : "premium-badge-warning"}`}>{topUp.status.replaceAll("_", " ")}</span>
+                    </div>
+                    {topUp.transferReference ? <p className="mt-3 text-sm text-[var(--muted)]">{topUp.transferReference}</p> : null}
+                    {topUp.rejectionReason ? <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700"><strong>{BILLING_COPY.rejectionReason}:</strong> {topUp.rejectionReason}</p> : null}
+                    {topUp.status === "pending" ? <button type="button" disabled={submitting} onClick={() => void cancelTopUp(topUp.id)} className="mt-3 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700" data-testid="seller-top-up-cancel">{BILLING_COPY.cancelTopUp}</button> : null}
+                  </div>
+                ))}
+                {topUps.length < 1 ? <p className="text-sm text-[var(--muted)]">{BILLING_COPY.noTopUps}</p> : null}
+              </div>
+            </article>
+          </div>
+        </div>
       </SectionCard>
 
       <SectionCard

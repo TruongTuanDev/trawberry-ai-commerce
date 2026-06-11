@@ -370,6 +370,47 @@ export type SellerBillingDevCreditResult = {
   entry: SellerBillingLedgerEntry;
 };
 
+export type AdsWalletTopUpStatus =
+  | "pending"
+  | "confirmed"
+  | "rejected"
+  | "cancelled";
+
+export type AdsWalletTopUp = {
+  id: string;
+  sellerId: string;
+  shopId: string;
+  amount: string;
+  currency: string;
+  status: AdsWalletTopUpStatus | string;
+  transferReference: string | null;
+  proofUrl: string | null;
+  sellerNote: string | null;
+  adminNote: string | null;
+  rejectionReason: string | null;
+  reviewedByAdminId: string | null;
+  confirmedLedgerId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  confirmedAt: string | null;
+  rejectedAt: string | null;
+  cancelledAt: string | null;
+};
+
+export type SellerAdsWalletTopUpsResponse = {
+  flags: { manualTopUpEnabled: boolean };
+  transferInstructions: {
+    configured: boolean;
+    recipient: string | null;
+    bank: string | null;
+    account: string | null;
+    instructions: string | null;
+  };
+  pendingTotal: string;
+  items: AdsWalletTopUp[];
+};
+
 export type SellerCampaignScenarioType = "home" | "similar" | "search";
 export type SellerCampaignStatus =
   | "draft"
@@ -1585,6 +1626,60 @@ export async function devCreditSellerBillingWallet(
       token,
       body: JSON.stringify(payload),
     },
+  );
+}
+
+export async function listSellerAdsWalletTopUps(
+  shopId: string,
+  token?: string,
+) {
+  return apiRequest<SellerAdsWalletTopUpsResponse>(
+    `/api/seller/shops/${shopId}/billing/top-ups`,
+    { method: "GET", token },
+  );
+}
+
+export async function createSellerAdsWalletTopUp(
+  shopId: string,
+  payload: {
+    amount: number;
+    currency?: string;
+    transferReference?: string;
+    proofUrl?: string;
+    sellerNote?: string;
+  },
+  token?: string,
+) {
+  return apiRequest<AdsWalletTopUp>(
+    `/api/seller/shops/${shopId}/billing/top-ups`,
+    { method: "POST", token, body: JSON.stringify(payload) },
+  );
+}
+
+export async function updateSellerAdsWalletTopUp(
+  shopId: string,
+  id: string,
+  payload: {
+    transferReference?: string;
+    proofUrl?: string;
+    sellerNote?: string;
+  },
+  token?: string,
+) {
+  return apiRequest<AdsWalletTopUp>(
+    `/api/seller/shops/${shopId}/billing/top-ups/${encodeURIComponent(id)}`,
+    { method: "PATCH", token, body: JSON.stringify(payload) },
+  );
+}
+
+export async function cancelSellerAdsWalletTopUp(
+  shopId: string,
+  id: string,
+  token?: string,
+) {
+  return apiRequest<AdsWalletTopUp>(
+    `/api/seller/shops/${shopId}/billing/top-ups/${encodeURIComponent(id)}/cancel`,
+    { method: "POST", token, body: JSON.stringify({}) },
   );
 }
 

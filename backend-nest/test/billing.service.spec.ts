@@ -49,6 +49,7 @@ describe('BillingService', () => {
     sellerWallet: {
       findUnique: jest.fn(),
       create: jest.fn(),
+      upsert: jest.fn(),
       update: jest.fn(),
     },
     billingLedgerEntry: {
@@ -95,6 +96,25 @@ describe('BillingService', () => {
         status: data.status,
         createdAt: now,
         updatedAt: now,
+      };
+      wallets.push(wallet);
+      return Promise.resolve(wallet);
+    });
+    prismaMock.sellerWallet.upsert.mockImplementation(({ where, create }) => {
+      const existing = wallets.find((wallet) => wallet.shopId === where.shopId);
+      if (existing) return Promise.resolve(existing);
+      const createdAt = makeDate(nowIndex++);
+      const wallet: WalletState = {
+        id: `wallet-${wallets.length + 1}`,
+        shopId: create.shopId,
+        balance: cloneDecimal(create.balance ?? new Prisma.Decimal(0)),
+        reservedBalance: cloneDecimal(
+          create.reservedBalance ?? new Prisma.Decimal(0),
+        ),
+        currency: create.currency,
+        status: create.status,
+        createdAt,
+        updatedAt: createdAt,
       };
       wallets.push(wallet);
       return Promise.resolve(wallet);
@@ -170,6 +190,7 @@ describe('BillingService', () => {
         (
           ({
             BILLING_DEV_TOOLS_ENABLED: 'false',
+            ADS_DEMO_FUNDING_ENABLED: 'false',
             BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT: '50000',
           }) as Record<string, string | undefined>
         )[name],
@@ -200,6 +221,18 @@ describe('BillingService', () => {
       }),
     );
     expect(wallets).toHaveLength(1);
+  });
+
+  it('uses an idempotent wallet upsert when billing reads start together', async () => {
+    const [wallet, entries] = await Promise.all([
+      service.getOrCreateWalletForShop('shop-1'),
+      service.listLedgerForShop('shop-1'),
+    ]);
+
+    expect(wallet.shopId).toBe('shop-1');
+    expect(entries).toEqual([]);
+    expect(wallets).toHaveLength(1);
+    expect(prismaMock.sellerWallet.upsert).toHaveBeenCalledTimes(2);
   });
 
   it('credits a wallet and creates a ledger entry with correct balances', async () => {
@@ -311,6 +344,7 @@ describe('BillingService', () => {
         (
           ({
             BILLING_DEV_TOOLS_ENABLED: 'true',
+            ADS_DEMO_FUNDING_ENABLED: 'true',
             BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT: '250',
           }) as Record<string, string | undefined>
         )[name],
@@ -378,6 +412,7 @@ describe('BillingService', () => {
         (
           ({
             BILLING_DEV_TOOLS_ENABLED: 'true',
+            ADS_DEMO_FUNDING_ENABLED: 'true',
             BILLING_DEV_TOOLS_MAX_CREDIT_AMOUNT: '50000',
           }) as Record<string, string | undefined>
         )[name],

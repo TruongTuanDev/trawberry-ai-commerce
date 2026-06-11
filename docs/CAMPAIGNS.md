@@ -444,3 +444,15 @@ Recommended Phase 4.3 work:
   - billing ledger
 
 Phase 4.3 should still keep public recommendation APIs backward compatible and avoid leaking private billing data.
+
+## Ads Phase 6.4 manual wallet top-up
+
+The existing shop-scoped seller wallet is now fundable through a production-safe manual request workflow:
+
+- sellers submit a pending request from Ads Billing and transfer funds outside the system
+- pending, rejected, and cancelled requests do not affect campaign eligibility or spendable balance
+- an admin confirmation transaction creates exactly one `credit` ledger entry with `referenceType=manual_top_up`
+- the confirmed ledger entry increases the same wallet used by campaign budget checks and CPC debit
+- repeated admin confirmation does not duplicate the wallet credit
+
+This phase does not change campaign moderation, sponsored serving rules, CPC price calculation, or invalid-click protection.

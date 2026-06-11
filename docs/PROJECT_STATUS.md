@@ -2492,3 +2492,18 @@ Current status:
 - Public product detail now shows one selected-variant summary on desktop instead of repeating it in both the content and purchase columns.
 - Product labels preserve clothing size and Russian size as separate concepts, while equal values render once and WB alias fields no longer create third or fourth duplicates.
 - Product buying, cart, buy-now, mobile CTA, lint, build, and production-container checks pass.
+
+# Ads Platform Phase 6.4 Status
+
+Current status:
+
+- Seller Ads Billing supports manual shop-scoped top-up requests with optional transfer reference, seller note, and proof URL.
+- Admin Ads Wallet review supports pending request filtering, detail review, transactional confirmation, and rejection with a reason.
+- Confirmed requests credit the existing seller wallet and create one linked billing ledger entry; repeated confirmation cannot duplicate the credit.
+- Pending, rejected, and cancelled requests remain non-spendable.
+- Manual top-up is enabled by `ADS_MANUAL_TOP_UP_ENABLED`; demo funding remains explicitly dev/demo-only and requires both `BILLING_DEV_TOOLS_ENABLED` and `ADS_DEMO_FUNDING_ENABLED`.
+
+Notes:
+
+- No automatic payment gateway, invoice reconciliation, refund, or chargeback workflow is included.
+- Buyer commerce flows, recommendation ranking, CPC formula, invalid-click protection, and campaign moderation remain unchanged.

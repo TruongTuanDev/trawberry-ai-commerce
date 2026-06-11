@@ -25,6 +25,9 @@ model User {
   recommendationTuningAuditActions RecommendationTuningAuditLog[] @relation("RecommendationTuningAuditActor")
   reviewedSponsoredCampaigns SponsoredCampaign[] @relation("SponsoredCampaignReviewer")
   campaignModerationAuditActions SponsoredCampaignModerationAuditLog[] @relation("SponsoredCampaignModerationAuditAdmin")
+  adsWalletTopUps             AdsWalletTopUpRequest[] @relation("AdsWalletTopUpSeller")
+  requestedAdsWalletTopUps    AdsWalletTopUpRequest[] @relation("AdsWalletTopUpRequester")
+  reviewedAdsWalletTopUps     AdsWalletTopUpRequest[] @relation("AdsWalletTopUpReviewer")
   assignedAdminQueueTasks  AdminQueueTask[]       @relation("AdminQueueTaskAssignee")
   adminQueueTaskEvents     AdminQueueTaskEvent[]  @relation("AdminQueueTaskEventActor")
   aiGenerationTasks       AiGenerationTask[]
@@ -279,6 +282,7 @@ model Shop {
   sponsoredCampaigns    SponsoredCampaign[]
   sellerWallet          SellerWallet?
   billingLedgerEntries  BillingLedgerEntry[]
+  adsWalletTopUps       AdsWalletTopUpRequest[]
   sellerFeeLedgerEntries SellerFeeLedgerEntry[]
   sellerMonthlyInvoices SellerMonthlyInvoice[]
   returnRefundCases     ReturnRefundCase[]
@@ -495,12 +499,46 @@ model BillingLedgerEntry {
   shop           Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
   campaign       SponsoredCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   recommendationEvents RecommendationEvent[]
+  confirmedAdsWalletTopUp AdsWalletTopUpRequest?
 
   @@index([walletId, createdAt])
   @@index([shopId, createdAt])
   @@index([campaignId, createdAt])
   @@index([type, createdAt])
   @@map("billing_ledger_entries")
+}
+
+model AdsWalletTopUpRequest {
+  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sellerId              String              @map("seller_id") @db.Uuid
+  requestedBySellerId   String              @map("requested_by_seller_id") @db.Uuid
+  shopId                String              @map("shop_id") @db.Uuid
+  amount                Decimal             @db.Decimal(14, 2)
+  currency              String              @default("RUB") @db.VarChar(10)
+  status                String              @default("pending") @db.VarChar(50)
+  transferReference     String?             @map("transfer_reference") @db.VarChar(255)
+  proofUrl              String?             @map("proof_url") @db.VarChar(1000)
+  sellerNote            String?             @map("seller_note") @db.VarChar(1000)
+  adminNote             String?             @map("admin_note") @db.VarChar(1000)
+  rejectionReason       String?             @map("rejection_reason") @db.VarChar(1000)
+  reviewedByAdminId     String?             @map("reviewed_by_admin_id") @db.Uuid
+  confirmedLedgerId     String?             @unique @map("confirmed_ledger_id") @db.Uuid
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  reviewedAt            DateTime?           @map("reviewed_at") @db.Timestamptz(6)
+  confirmedAt           DateTime?           @map("confirmed_at") @db.Timestamptz(6)
+  rejectedAt            DateTime?           @map("rejected_at") @db.Timestamptz(6)
+  cancelledAt           DateTime?           @map("cancelled_at") @db.Timestamptz(6)
+  seller                User                @relation("AdsWalletTopUpSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  requestedBySeller     User                @relation("AdsWalletTopUpRequester", fields: [requestedBySellerId], references: [id], onDelete: Restrict)
+  shop                  Shop                @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  reviewedByAdmin       User?               @relation("AdsWalletTopUpReviewer", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  confirmedLedger       BillingLedgerEntry? @relation(fields: [confirmedLedgerId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([sellerId, createdAt])
+  @@index([shopId, createdAt])
+  @@map("ads_wallet_top_up_requests")
 }
 
 model ProductViewLog {

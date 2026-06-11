@@ -369,6 +369,40 @@ export type AdminCampaignModeration = SellerCampaign & {
   moderationAuditLogs?: AdminCampaignModerationAuditLog[];
 };
 
+export type AdminAdsWalletTopUp = {
+  id: string;
+  sellerId: string;
+  shopId: string;
+  amount: string;
+  currency: string;
+  status: "pending" | "confirmed" | "rejected" | "cancelled" | string;
+  transferReference: string | null;
+  proofUrl: string | null;
+  sellerNote: string | null;
+  adminNote: string | null;
+  rejectionReason: string | null;
+  confirmedLedgerId: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  seller: { id: string; email: string; fullName: string | null };
+  shop: { id: string; name: string; slug: string };
+  reviewedByAdmin: {
+    id: string;
+    email: string;
+    fullName: string | null;
+  } | null;
+  confirmedLedger: {
+    id: string;
+    type: string;
+    amount: string;
+    currency: string;
+    balanceBefore: string;
+    balanceAfter: string;
+    description: string | null;
+    createdAt: string;
+  } | null;
+};
+
 export type RecommendationAnalyticsRangePreset =
   | "today"
   | "last7d"
@@ -2037,6 +2071,54 @@ export async function moderateAdminCampaign(
     {
       method: "POST",
       body: JSON.stringify(reason ? { reason } : {}),
+    },
+  );
+}
+
+export async function listAdminAdsWalletTopUps(query?: {
+  status?: string;
+  search?: string;
+}) {
+  const params = new URLSearchParams();
+  if (query?.status) params.set("status", query.status);
+  if (query?.search) params.set("search", query.search);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<{
+    flags: { manualTopUpEnabled: boolean };
+    items: AdminAdsWalletTopUp[];
+  }>(`/api/admin/ads-wallet/top-ups${suffix}`, { method: "GET" });
+}
+
+export async function getAdminAdsWalletTopUp(id: string) {
+  return apiRequest<AdminAdsWalletTopUp>(
+    `/api/admin/ads-wallet/top-ups/${encodeURIComponent(id)}`,
+    { method: "GET" },
+  );
+}
+
+export async function confirmAdminAdsWalletTopUp(
+  id: string,
+  adminNote?: string,
+) {
+  return apiRequest<AdminAdsWalletTopUp>(
+    `/api/admin/ads-wallet/top-ups/${encodeURIComponent(id)}/confirm`,
+    {
+      method: "POST",
+      body: JSON.stringify(adminNote ? { adminNote } : {}),
+    },
+  );
+}
+
+export async function rejectAdminAdsWalletTopUp(
+  id: string,
+  reason: string,
+  adminNote?: string,
+) {
+  return apiRequest<AdminAdsWalletTopUp>(
+    `/api/admin/ads-wallet/top-ups/${encodeURIComponent(id)}/reject`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason, ...(adminNote ? { adminNote } : {}) }),
     },
   );
 }

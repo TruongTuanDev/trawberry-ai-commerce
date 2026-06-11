@@ -19,6 +19,7 @@ const navLinks = [
   { href: "/admin/messages", key: "adminShell.nav.messages", match: "/admin/messages" },
   { href: "/admin/reviews", key: "adminShell.nav.reviews", match: "/admin/reviews" },
   { href: "/admin/campaigns/moderation", key: "adminShell.nav.reviews", label: "Campaign moderation", match: "/admin/campaigns" },
+  { href: "/admin/ads-wallet/top-ups", key: "adminShell.nav.finance", label: "Ads wallet top-ups", match: "/admin/ads-wallet" },
   { href: "/admin/finance/seller-fees", key: "adminShell.nav.finance", match: "/admin/finance" },
   { href: "/admin/queues", key: "adminShell.nav.queues", match: "/admin/queues" },
   { href: "/admin/support-cases", key: "adminShell.nav.supportCases", match: "/admin/support-cases" },

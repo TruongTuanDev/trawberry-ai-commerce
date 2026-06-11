@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
+import { ADS_DEMO_FUNDING_ENABLED_FLAG } from './ads-wallet-top-ups.constants';
 
 type PrismaExecutor = PrismaService | Prisma.TransactionClient;
 type BillingPrismaExecutor = PrismaExecutor & {
@@ -162,7 +163,10 @@ export class BillingService {
     amount: number | string | Prisma.Decimal,
     user: AuthenticatedUser,
   ) {
-    if (!this.readFlag(BILLING_DEV_TOOLS_FLAG, false)) {
+    if (
+      !this.readFlag(BILLING_DEV_TOOLS_FLAG, false) ||
+      !this.readFlag(ADS_DEMO_FUNDING_ENABLED_FLAG, false)
+    ) {
       throw new NotFoundException(
         'Seller billing dev funding is not enabled for this environment.',
       );
@@ -397,8 +401,10 @@ export class BillingService {
       throw new NotFoundException(`Shop ${shopId} was not found.`);
     }
 
-    return billingPrisma.sellerWallet.create({
-      data: {
+    return billingPrisma.sellerWallet.upsert({
+      where: { shopId },
+      update: {},
+      create: {
         shopId,
         balance: new Prisma.Decimal(0),
         reservedBalance: new Prisma.Decimal(0),

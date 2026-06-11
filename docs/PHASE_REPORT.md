@@ -5675,3 +5675,31 @@ Verification:
 - `frontend-next npm run build`: pass
 - rebuilt production frontend container: pass
 - product buying UX, public marketplace contract, mobile CTA, and public smoke E2E: pass, 4 tests
+
+# Phase Report: Ads Platform Phase 6.4 - Manual Seller Ads Wallet Top-up
+
+Implemented:
+
+- Added shop-scoped manual ads wallet top-up requests with `pending`, `confirmed`, `rejected`, and `cancelled` lifecycle states.
+- Sellers can create requests, add transfer references/notes/proof URLs, review their own request history, and cancel pending requests from `/seller/billing`.
+- Admins can review requests at `/admin/ads-wallet/top-ups`, confirm matched transfers, or reject pending requests with a required reason.
+- Admin confirmation atomically claims the pending request, credits the existing seller wallet through `BillingService`, links the resulting ledger credit, and writes an admin audit log.
+- Repeated confirmation is idempotency-safe and returns the already confirmed request without a second wallet credit.
+- Wallet foundation creation now uses an idempotent upsert so parallel first-time billing reads cannot create duplicate shop wallets.
+- Added `ADS_MANUAL_TOP_UP_ENABLED=true`; existing demo funding now also requires `ADS_DEMO_FUNDING_ENABLED=true`, which defaults to false.
+
+Production safety:
+
+- Pending, rejected, and cancelled requests never change spendable wallet balance.
+- No real payment gateway or automatic transfer verification was added.
+- Buyer checkout, orders, cart, payment, shipping, seller order payment confirmation, CPC price formula, invalid-click protection, campaign moderation, and recommendation ranking were not changed.
+
+Verification:
+
+- Backend Prisma generate, Linux-container DB push, lint, full `40 suites / 400 tests`, focused billing/recommendations/top-up `64 tests`, and build: pass.
+- Frontend i18n parity, lint, build, top-up E2E, campaign moderation, recommendations, public smoke, cart/checkout/full-commerce, seller i18n, role locale, and responsive checks: pass (`16/16` required regression tests).
+- Runtime manual QA: pending balance unchanged; confirm credited once and linked one ledger entry; repeated confirm reused the same ledger; reject/cancel did not credit; admin audit created; seller/customer admin API access returned `403`.
+
+Remaining gaps:
+
+- Real payment gateway, invoice/reconciliation, refunds/chargebacks, fraud appeals, and production monitoring remain future work.
