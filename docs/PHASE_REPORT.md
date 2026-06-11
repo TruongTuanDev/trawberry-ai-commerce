@@ -5546,7 +5546,7 @@ Remaining gaps:
 Implemented:
 
 - Removed the duplicate selected-variant summary from the product information column; the purchase panel remains the single desktop source for the selected size.
-- Normalized public variant labels so repeated WB size fields such as `52 / 52 / 52 / 52` render once as `52`.
+- Normalized public variant labels into two meaningful dimensions: clothing size (`sizeName`, falling back to `techSize`) and Russian size (`russianSize`, falling back to `wbSize`). Equal values such as `25/40` render once; different values such as `M / 46` remain visible.
 - Kept size selection, stock status, quantity, cart, buy-now, mobile CTA, and AI Try-On selected-size inputs unchanged.
 
 Verification:

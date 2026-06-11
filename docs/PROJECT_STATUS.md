@@ -2440,5 +2440,5 @@ Notes:
 Current status:
 
 - Public product detail now shows one selected-variant summary on desktop instead of repeating it in both the content and purchase columns.
-- Duplicate WB size aliases are collapsed before display, preventing labels such as `52 / 52 / 52 / 52`.
+- Product labels preserve clothing size and Russian size as separate concepts, while equal values render once and WB alias fields no longer create third or fourth duplicates.
 - Product buying, cart, buy-now, mobile CTA, lint, build, and production-container checks pass.

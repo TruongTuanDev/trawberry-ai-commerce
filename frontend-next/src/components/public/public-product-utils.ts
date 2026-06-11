@@ -19,23 +19,19 @@ export function formatCount(value: number) {
 }
 
 export function getVariantLabel(variant: PublicProduct["variants"][number]) {
-  const labels = [
-    variant.sizeName,
-    variant.russianSize,
-    variant.techSize,
-    variant.wbSize,
-  ].flatMap((value) => {
-    const label = value?.trim();
-    return label ? [label] : [];
-  });
-  const uniqueLabels = labels.filter(
-    (label, index) =>
-      labels.findIndex(
-        (candidate) => candidate.toLocaleLowerCase() === label.toLocaleLowerCase(),
-      ) === index,
-  );
+  const clothingSize = variant.sizeName?.trim() || variant.techSize?.trim() || null;
+  const russianSize =
+    variant.russianSize?.trim() || variant.wbSize?.trim() || null;
 
-  return uniqueLabels.join(" / ") || "Default variant";
+  if (
+    clothingSize &&
+    russianSize &&
+    clothingSize.toLocaleLowerCase() === russianSize.toLocaleLowerCase()
+  ) {
+    return clothingSize;
+  }
+
+  return [clothingSize, russianSize].filter(Boolean).join(" / ") || "Default variant";
 }
 
 export function getProductPrimaryVariant(product: PublicProduct) {

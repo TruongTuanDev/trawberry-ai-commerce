@@ -1071,6 +1071,6 @@ Future audit item: design an optional marketplace parent order for combined rece
 
 # Product Detail Size UX FIX.1 Audit Addendum
 
-- Product detail variant labels now deduplicate equivalent `sizeName`, `russianSize`, `techSize`, and `wbSize` values before rendering.
+- Product detail variant labels render one clothing size and one Russian size. `techSize` and `wbSize` are fallback aliases only, and equal clothing/Russian values render once.
 - Desktop product detail keeps one selected-variant summary in the purchase panel; size buttons remain the interactive selector.
 - Stock, quantity, cart, checkout, mobile CTA, and AI Try-On behavior remain unchanged.
