@@ -33,6 +33,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { HomepageSlidesModule } from './modules/homepage-slides/homepage-slides.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 import { VisualSearchModule } from './modules/visual-search/visual-search.module';
+import { AdsMonitoringModule } from './modules/ads-monitoring/ads-monitoring.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { QueueModule } from './common/queue/queue.module';
@@ -72,6 +73,7 @@ import { HealthController } from './health.controller';
     HomepageSlidesModule,
     RecommendationsModule,
     VisualSearchModule,
+    AdsMonitoringModule,
     PublicProductsModule,
     PublicShopsModule,
     ReviewsModule,

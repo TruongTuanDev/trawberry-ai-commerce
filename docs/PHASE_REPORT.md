@@ -5747,3 +5747,51 @@ Verification:
 Remaining gaps:
 
 - Real payment gateway, invoice/reconciliation, refunds/chargebacks, fraud appeals, and production monitoring remain future work.
+
+# Phase Report: Ads Platform Phase 6.3 - Production Monitoring, Health Checks, and Alerts
+
+Implemented:
+
+- Added an independent `ads-monitoring` backend module that reads existing wallet, ledger, manual top-up, campaign, and sponsored recommendation event data without schema changes or mutations.
+- Added admin-only endpoints:
+  - `GET /api/admin/ads/monitoring/summary?window=1h|24h|7d`
+  - `GET /api/admin/ads/monitoring/anomalies?window=1h|24h|7d`
+  - `GET /api/admin/ads/monitoring/runtime-config`
+- Added summary metrics for wallet balance/reserved/available totals, negative wallets, wallet/ledger mismatches, credits/debits, failed charge attempts, duplicate references, top-up states, campaign states/spend signals, sponsored clicks, charge outcomes, and invalid-reason breakdown.
+- Added critical/high/medium anomaly rules for wallet and ledger invariants, invalid/charged click inconsistencies, duplicate ledger references, top-up inconsistencies, high invalid-click rate, invalid-token volume, campaign spend spikes, moderation misconfiguration, and demo funding outside development/test.
+- Added a short per-window snapshot cache so parallel summary/anomaly page requests share one read-only aggregation pass instead of duplicating database work.
+- Added safe structured warning logs containing only anomaly severity counts when critical/high signals exist.
+- Added `/admin/ads/monitoring` with runtime config cards, health summary, invalid-click breakdown, wallet/ledger checks, anomaly guidance, window selection, and refresh.
+- Added safe defaults and Compose wiring for:
+  - `ADS_MONITORING_ENABLED=true`
+  - `ADS_INVALID_CLICK_RATE_ALERT_THRESHOLD=0.30`
+  - `ADS_SPEND_SPIKE_ALERT_THRESHOLD_MINOR=5000`
+  - `ADS_SPEND_SPIKE_ALERT_THRESHOLD_MAJOR=20000`
+
+Observability gaps closed:
+
+- platform-wide Ads metrics were previously fragmented across seller campaign/billing and admin top-up surfaces
+- no unified wallet/ledger invariant check, anomaly severity surface, or safe runtime config view existed
+- invalid-click outcomes and CPC failures were stored but had no admin operations summary
+
+Production safety:
+
+- Monitoring is detection/report only and never auto-corrects wallets, ledgers, top-ups, campaigns, or recommendation events.
+- API responses are aggregate/admin-only and do not expose secrets, raw tracking tokens, raw IP/user-agent values, or fraud hashes.
+- No schema change, external alert provider, payment gateway, automated reconciliation, auction, ML, fraud reputation provider, refund, or chargeback workflow was added.
+- Recommendation core ranking, sponsored boost/CPC formula, campaign moderation lifecycle, invalid-click protection rules, checkout, order, cart, payment, shipping, seller payment confirmation, shop readiness, WB sync, and AI Try-On are unchanged.
+
+Verification:
+
+- Backend Prisma generate, lint, build, focused monitoring/campaign/recommendation/billing/top-up regression (`5` suites / `79` tests), and full regression (`41` suites / `407` tests): pass.
+- Frontend i18n parity, lint, production build, monitoring Playwright, role locale, recommendations, public smoke, cart/checkout/full-commerce, seller operations, responsive, campaign moderation, and Ads wallet top-up regression: pass (`18` Playwright tests).
+- Rebuilt backend/frontend Docker runtime; frontend, backend, and AI health endpoints: pass.
+- Runtime API QA: admin summary/anomalies/runtime-config returned `200`; seller/customer monitoring requests returned `403`; privacy scan found no forbidden secret or raw fraud fields.
+- Runtime UI/manual QA: monitoring config/health/anomaly sections rendered; seller campaigns/billing and buyer homepage/product/cart/checkout/order tracking returned `200`; no monitoring leak to seller; no horizontal overflow at `390px`, `768px`, or `1440px`.
+
+Remaining gaps:
+
+- No external alert delivery or persistent acknowledgement/escalation workflow.
+- No automated financial reconciliation or corrective action.
+- No real-time streaming dashboard, ML fraud detection, refunds/chargebacks, or fraud appeals.
+- Current aggregation reads existing operational tables directly; production-scale rollups or scheduled snapshots remain future work.

@@ -125,6 +125,16 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 - `ADS_CLICK_HASH_SALT` must be set to a dedicated secret in production. Do not reuse a public value or commit the real salt.
 - Local development falls back to the recommendation tracking secret, then JWT secret, then a local-only constant. This fallback is for safe local startup only.
 
+## Ads Production Monitoring Flags
+
+- `ADS_MONITORING_ENABLED=true` enables the admin-only read-only monitoring APIs and page. When disabled, monitoring endpoints return not found.
+- `ADS_INVALID_CLICK_RATE_ALERT_THRESHOLD=0.30` raises a high-severity signal when the selected window has at least five sponsored clicks and the invalid rate reaches 30%.
+- `ADS_SPEND_SPIKE_ALERT_THRESHOLD_MINOR=5000` raises a high-severity campaign spend signal for the selected window.
+- `ADS_SPEND_SPIKE_ALERT_THRESHOLD_MAJOR=20000` raises a critical campaign spend signal for the selected window.
+- Docker Compose passes all four flags into `backend-nest`.
+- Monitoring reports anomalies only. It does not auto-correct wallet/ledger records or call an external alert provider.
+- Keep the major spend threshold greater than the minor threshold when overriding defaults.
+
 - Mock mode does not call CDEK or Yandex
 - `DELIVERY_DEFAULT_PROVIDER=yandex` keeps same-city express as the default recommendation path
 - `DELIVERY_SAME_CITY_PREFERRED_PROVIDER=yandex`

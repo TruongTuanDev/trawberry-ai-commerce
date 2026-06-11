@@ -1,5 +1,16 @@
 # Project Status
 
+## Ads Platform Phase 6.3 Production Monitoring - 2026-06-12
+
+- Status: implemented and verified.
+- Added admin-only, read-only Ads monitoring APIs and `/admin/ads/monitoring` for runtime config, wallet/ledger/top-up/campaign/click summaries, and anomaly review across `1h`, `24h`, and `7d` windows.
+- Added critical/high/medium detection for financial invariants, invalid-click behavior, spend spikes, and unsafe runtime flag combinations.
+- Monitoring returns aggregated operational data only. It does not expose raw tracking tokens, IP addresses, user agents, hashes, or secrets, and it never auto-corrects financial records.
+- Added safe monitoring flags and thresholds with Docker Compose wiring. Sponsored ranking remains disabled by default, moderation remains required by default, and demo funding remains disabled by default.
+- Recommendation core ranking, CPC formula, campaign moderation lifecycle, invalid-click rules, checkout, orders, cart, payment, shipping, WB sync, and AI Try-On are unchanged.
+- Verification passed: Prisma generate, backend lint/build, focused Ads regression (`5` suites / `79` tests), full backend regression (`41` suites / `407` tests), frontend i18n/lint/build, required and adjacent Ads Playwright (`18` tests), rebuilt runtime health checks, admin/seller/customer API access checks, and runtime UI/manual commerce smoke.
+- Remaining production gaps: no external alert provider, persistent alert acknowledgement, real-time streaming dashboard, automated reconciliation, refunds/chargebacks, or ML fraud detection.
+
 ## Ads Production QA.1 - 2026-06-11
 
 - Status: audited, one production runtime configuration issue fixed, and verified.

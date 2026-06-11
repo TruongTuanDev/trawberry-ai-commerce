@@ -1,5 +1,15 @@
 # Full Commerce Flow Audit
 
+## Ads Production Monitoring Phase 6.3 Addendum
+
+- verified monitoring is an independent read-only Ads operations surface and does not mutate wallets, ledgers, top-ups, campaigns, recommendation events, or financial records
+- verified admin-only APIs expose aggregate Ads health for `1h`, `24h`, and `7d`; seller and customer roles are rejected
+- verified runtime visibility includes only safe feature states, rollout labels, CPC amount, and monitoring thresholds; secrets and raw token/IP/user-agent/fraud hashes are not selected or returned
+- verified wallet/ledger mismatch, negative wallet, invalid-click ledger, missing/duplicate ledger, top-up, spend-spike, invalid-click-rate, invalid-token-volume, and unsafe runtime flag anomalies are detected and reported
+- verified `/admin/ads/monitoring` renders runtime flags, health metrics, invalid-reason breakdown, wallet/ledger checks, and anomaly guidance without mutation actions
+- verified existing seller campaign/billing pages remain unchanged and no platform-wide monitoring data is exposed to sellers
+- verified recommendation core ranking, sponsored boost/CPC formulas, campaign moderation lifecycle, invalid-click protection rules, checkout, order, cart, payment, shipping, seller payment confirmation, shop checkout readiness, WB sync, AI Try-On, and legacy applications were not modified
+
 ## Ads Production QA.1 Addendum
 
 - verified a seller manual top-up remains non-spendable while pending

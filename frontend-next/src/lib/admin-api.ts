@@ -403,6 +403,111 @@ export type AdminAdsWalletTopUp = {
   } | null;
 };
 
+export type AdsMonitoringWindow = "1h" | "24h" | "7d";
+
+export type AdminAdsMonitoringRuntimeConfig = {
+  monitoringEnabled: boolean;
+  sponsoredRankingEnabled: boolean;
+  sponsoredPreset: string;
+  sponsoredRollout: string;
+  campaignModerationEnabled: boolean;
+  moderationRequiredForServing: boolean;
+  invalidClickProtectionEnabled: boolean;
+  selfClickBlockEnabled: boolean;
+  manualTopUpEnabled: boolean;
+  demoFundingEnabled: boolean;
+  environment: string;
+  cpcAmount: number;
+  thresholds: {
+    invalidClickRate: number;
+    spendSpikeMinor: number;
+    spendSpikeMajor: number;
+  };
+  privacy: {
+    aggregatedOnly: boolean;
+    rawTokensExposed: boolean;
+    rawIpExposed: boolean;
+    rawUserAgentExposed: boolean;
+    secretsExposed: boolean;
+  };
+};
+
+export type AdminAdsMonitoringSummary = {
+  window: AdsMonitoringWindow;
+  since: string;
+  generatedAt: string;
+  health: {
+    status: "healthy" | "attention" | "critical";
+    anomalyCount: number;
+    criticalCount: number;
+    highCount: number;
+    mediumCount: number;
+  };
+  wallet: {
+    walletCount: number;
+    totalBalance: string;
+    totalReserved: string;
+    totalAvailable: string;
+    negativeWalletCount: number;
+    ledgerMismatchCount: number;
+  };
+  ledger: {
+    creditsCount: number;
+    creditsAmount: string;
+    debitsCount: number;
+    debitsAmount: string;
+    failedChargeAttempts: number;
+    debitWithoutCampaignCount: number;
+    orphanManualTopUpCreditCount: number;
+    duplicateReferenceCount: number;
+  };
+  topUps: {
+    pendingCount: number;
+    pendingAmount: string;
+    confirmedCount: number;
+    confirmedAmount: string;
+    rejectedCount: number;
+    confirmedWithoutLedgerCount: number;
+  };
+  campaigns: {
+    activeCount: number;
+    approvedCount: number;
+    pendingReviewCount: number;
+    suspendedCount: number;
+    budgetExhaustedCount: number;
+    walletInsufficientCount: number;
+    spendingAboveMinorThresholdCount: number;
+    spendAmount: string;
+  };
+  clicks: {
+    totalSponsoredClicks: number;
+    chargedClicks: number;
+    invalidClicks: number;
+    invalidClickRate: number;
+    invalidReasons: Record<string, number>;
+    chargeSuccessCount: number;
+    chargeFailureCount: number;
+    chargeFailureStatuses: Record<string, number>;
+  };
+};
+
+export type AdminAdsMonitoringAnomaly = {
+  id: string;
+  severity: "critical" | "high" | "medium";
+  type: string;
+  description: string;
+  suggestedAction: string;
+  detectedAt: string;
+  related: {
+    walletId?: string;
+    shopId?: string;
+    campaignId?: string;
+    campaignName?: string;
+    topUpId?: string;
+    referenceId?: string;
+  } | null;
+};
+
 export type RecommendationAnalyticsRangePreset =
   | "today"
   | "last7d"
@@ -2120,5 +2225,36 @@ export async function rejectAdminAdsWalletTopUp(
       method: "POST",
       body: JSON.stringify({ reason, ...(adminNote ? { adminNote } : {}) }),
     },
+  );
+}
+
+export async function getAdminAdsMonitoringSummary(
+  window: AdsMonitoringWindow = "24h",
+) {
+  return apiRequest<AdminAdsMonitoringSummary>(
+    `/api/admin/ads/monitoring/summary?window=${encodeURIComponent(window)}`,
+    { method: "GET" },
+  );
+}
+
+export async function getAdminAdsMonitoringAnomalies(
+  window: AdsMonitoringWindow = "24h",
+) {
+  return apiRequest<{
+    window: AdsMonitoringWindow;
+    since: string;
+    generatedAt: string;
+    thresholds: AdminAdsMonitoringRuntimeConfig["thresholds"];
+    items: AdminAdsMonitoringAnomaly[];
+  }>(
+    `/api/admin/ads/monitoring/anomalies?window=${encodeURIComponent(window)}`,
+    { method: "GET" },
+  );
+}
+
+export async function getAdminAdsMonitoringRuntimeConfig() {
+  return apiRequest<AdminAdsMonitoringRuntimeConfig>(
+    "/api/admin/ads/monitoring/runtime-config",
+    { method: "GET" },
   );
 }

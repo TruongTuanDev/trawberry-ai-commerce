@@ -1,5 +1,21 @@
 # API Recommendations
 
+## Phase 6.3 Ads production monitoring integration
+
+Ads monitoring reads the existing sponsored recommendation event and billing data without changing public recommendation contracts or event charging behavior.
+
+Admin-only endpoints:
+
+- `GET /api/admin/ads/monitoring/summary?window=1h|24h|7d`
+- `GET /api/admin/ads/monitoring/anomalies?window=1h|24h|7d`
+- `GET /api/admin/ads/monitoring/runtime-config`
+
+Sponsored click metrics include aggregate total, charged, invalid, invalid-reason, and charge-failure counts. Monitoring queries do not select or return raw tracking tokens, IP addresses, user agents, `tokenHash`, `ipHash`, or `userAgentHash`.
+
+The monitoring layer can report invalid-click ledger links, charged clicks without ledger links, insufficient-wallet charge inconsistencies, invalid-click-rate thresholds, and invalid-token volume. It never changes recommendation events, click validity, CPC charges, ranking, or financial records.
+
+The recommendation core ranking formula and CPC amount/formula remain unchanged.
+
 ## Phase 6.2 sponsored click validity
 
 `POST /api/public/recommendations/events` keeps its safe `204` response and now validates sponsored CPC clicks before charging.

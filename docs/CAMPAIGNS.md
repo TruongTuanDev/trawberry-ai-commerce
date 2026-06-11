@@ -1,5 +1,34 @@
 # Campaigns
 
+## Ads Phase 6.3 production monitoring
+
+Ads operations now have an admin-only, read-only monitoring surface:
+
+- `GET /api/admin/ads/monitoring/summary?window=1h|24h|7d`
+- `GET /api/admin/ads/monitoring/anomalies?window=1h|24h|7d`
+- `GET /api/admin/ads/monitoring/runtime-config`
+- `/admin/ads/monitoring`
+
+The summary aggregates wallet, ledger, manual top-up, campaign, sponsored-click, charge-failure, invalid-click, and health-severity metrics. Runtime config returns only safe flag states, preset/rollout labels, CPC amount, thresholds, and explicit privacy indicators.
+
+Anomaly detection reports:
+
+- negative or over-reserved wallets and wallet/ledger mismatches
+- invalid clicks with ledger rows, charged clicks without ledger rows, and insufficient-wallet clicks marked charged
+- duplicate click/top-up ledger references, confirmed top-ups without ledger, Ads debit without campaign, and manual top-up credit without a confirmed request
+- high invalid-click rate, invalid-token volume, campaign spend spikes, sponsored serving without required moderation, and demo funding outside development/test
+
+Monitoring is detection-only. It never changes wallet balances, creates corrective ledger rows, pauses campaigns, confirms top-ups, or modifies click validity. No external alert provider, automated reconciliation, refund/chargeback workflow, real-time stream, or ML fraud model is included.
+
+Flags and defaults:
+
+- `ADS_MONITORING_ENABLED=true`
+- `ADS_INVALID_CLICK_RATE_ALERT_THRESHOLD=0.30`
+- `ADS_SPEND_SPIKE_ALERT_THRESHOLD_MINOR=5000`
+- `ADS_SPEND_SPIKE_ALERT_THRESHOLD_MAJOR=20000`
+
+The recommendation core ranking formula, CPC amount/formula, campaign moderation lifecycle, and invalid-click protection rules are unchanged.
+
 ## Phase 6.2 invalid click and fraud protection
 
 Sponsored CPC charging now classifies each click as `valid`, `invalid`, or `ineligible` before any wallet debit.
