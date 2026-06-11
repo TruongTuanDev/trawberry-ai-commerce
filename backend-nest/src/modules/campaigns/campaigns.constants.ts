@@ -12,6 +12,28 @@ export const SPONSORED_CAMPAIGN_TARGET_STATUSES = [
   'removed',
 ] as const;
 
+export const SPONSORED_CAMPAIGN_MODERATION_STATUSES = [
+  'pending_review',
+  'approved',
+  'rejected',
+  'changes_requested',
+  'suspended',
+] as const;
+
+export const SPONSORED_CAMPAIGN_MODERATION_ACTIONS = [
+  'submitted',
+  'approved',
+  'rejected',
+  'changes_requested',
+  'suspended',
+  'resubmitted',
+] as const;
+
+export const ADS_CAMPAIGN_MODERATION_ENABLED_FLAG =
+  'ADS_CAMPAIGN_MODERATION_ENABLED';
+export const ADS_MODERATION_REQUIRED_FOR_SERVING_FLAG =
+  'ADS_MODERATION_REQUIRED_FOR_SERVING';
+
 export const SPONSORED_CAMPAIGN_SCENARIO_TYPES = [
   'home',
   'similar',
@@ -36,6 +58,10 @@ export type SponsoredCampaignStatus =
   (typeof SPONSORED_CAMPAIGN_STATUSES)[number];
 export type SponsoredCampaignTargetStatus =
   (typeof SPONSORED_CAMPAIGN_TARGET_STATUSES)[number];
+export type SponsoredCampaignModerationStatus =
+  (typeof SPONSORED_CAMPAIGN_MODERATION_STATUSES)[number];
+export type SponsoredCampaignModerationAction =
+  (typeof SPONSORED_CAMPAIGN_MODERATION_ACTIONS)[number];
 export type SponsoredCampaignScenarioType =
   (typeof SPONSORED_CAMPAIGN_SCENARIO_TYPES)[number];
 export type SponsoredCampaignBillingMode =

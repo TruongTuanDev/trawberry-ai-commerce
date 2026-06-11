@@ -1027,6 +1027,7 @@ export class RecommendationsService {
             id: true,
             shopId: true,
             status: true,
+            moderationStatus: true,
             startAt: true,
             endAt: true,
             budgetLimit: true,
@@ -1044,6 +1045,21 @@ export class RecommendationsService {
             where: { id: created.id },
             data: {
               chargeStatus: 'campaign_inactive',
+              cost: cpcAmount,
+            },
+          });
+          return;
+        }
+
+        if (
+          !this.campaignsService.isModerationApprovedForServing(
+            campaign.moderationStatus,
+          )
+        ) {
+          await tx.recommendationEvent.update({
+            where: { id: created.id },
+            data: {
+              chargeStatus: 'campaign_not_approved',
               cost: cpcAmount,
             },
           });

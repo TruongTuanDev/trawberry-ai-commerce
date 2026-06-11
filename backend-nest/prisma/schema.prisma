@@ -23,6 +23,8 @@ model User {
   adminAuditTargets       AdminAuditLog[]        @relation("AdminAuditTarget")
   createdRecommendationTuningPresets RecommendationTuningPreset[] @relation("RecommendationTuningPresetCreator")
   recommendationTuningAuditActions RecommendationTuningAuditLog[] @relation("RecommendationTuningAuditActor")
+  reviewedSponsoredCampaigns SponsoredCampaign[] @relation("SponsoredCampaignReviewer")
+  campaignModerationAuditActions SponsoredCampaignModerationAuditLog[] @relation("SponsoredCampaignModerationAuditAdmin")
   assignedAdminQueueTasks  AdminQueueTask[]       @relation("AdminQueueTaskAssignee")
   adminQueueTaskEvents     AdminQueueTaskEvent[]  @relation("AdminQueueTaskEventActor")
   aiGenerationTasks       AiGenerationTask[]
@@ -389,27 +391,54 @@ model Product {
 }
 
 model SponsoredCampaign {
-  id            String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  shopId        String                     @map("shop_id") @db.Uuid
-  name          String                     @db.VarChar(255)
-  description   String?                    @db.VarChar(1000)
-  status        String                     @default("draft") @db.VarChar(50)
-  scenarioTypes String[]                   @default([]) @map("scenario_types")
-  startAt       DateTime?                  @map("start_at") @db.Timestamptz(6)
-  endAt         DateTime?                  @map("end_at") @db.Timestamptz(6)
-  budgetLimit   Decimal?                   @map("budget_limit") @db.Decimal(12, 2)
-  billingMode   String                     @default("none") @map("billing_mode") @db.VarChar(50)
-  maxBoost      Decimal                    @default(0) @map("max_boost") @db.Decimal(6, 2)
-  createdAt     DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  shop          Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  targets       SponsoredCampaignProduct[]
-  billingLedgerEntries BillingLedgerEntry[]
-  recommendationEvents RecommendationEvent[]
+  id                    String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shopId                String                     @map("shop_id") @db.Uuid
+  name                  String                     @db.VarChar(255)
+  description           String?                    @db.VarChar(1000)
+  status                String                     @default("draft") @db.VarChar(50)
+  moderationStatus      String                     @default("pending_review") @map("moderation_status") @db.VarChar(50)
+  moderationReason      String?                    @map("moderation_reason") @db.VarChar(1000)
+  reviewedByAdminId     String?                    @map("reviewed_by_admin_id") @db.Uuid
+  reviewedAt            DateTime?                  @map("reviewed_at") @db.Timestamptz(6)
+  submittedAt           DateTime                   @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  scenarioTypes         String[]                   @default([]) @map("scenario_types")
+  startAt               DateTime?                  @map("start_at") @db.Timestamptz(6)
+  endAt                 DateTime?                  @map("end_at") @db.Timestamptz(6)
+  budgetLimit           Decimal?                   @map("budget_limit") @db.Decimal(12, 2)
+  billingMode           String                     @default("none") @map("billing_mode") @db.VarChar(50)
+  maxBoost              Decimal                    @default(0) @map("max_boost") @db.Decimal(6, 2)
+  createdAt             DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  shop                  Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reviewedByAdmin       User?                      @relation("SponsoredCampaignReviewer", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+  targets               SponsoredCampaignProduct[]
+  billingLedgerEntries  BillingLedgerEntry[]
+  recommendationEvents  RecommendationEvent[]
+  moderationAuditLogs   SponsoredCampaignModerationAuditLog[]
 
   @@index([shopId, status, updatedAt])
+  @@index([moderationStatus, submittedAt])
+  @@index([reviewedByAdminId, reviewedAt])
   @@index([shopId, createdAt])
   @@map("sponsored_campaigns")
+}
+
+model SponsoredCampaignModerationAuditLog {
+  id             String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  campaignId     String              @map("campaign_id") @db.Uuid
+  action         String              @db.VarChar(50)
+  previousStatus String?             @map("previous_status") @db.VarChar(50)
+  nextStatus     String              @map("next_status") @db.VarChar(50)
+  reason         String?             @db.VarChar(1000)
+  adminId        String?             @map("admin_id") @db.Uuid
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  campaign       SponsoredCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  admin          User?               @relation("SponsoredCampaignModerationAuditAdmin", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, createdAt])
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
+  @@map("sponsored_campaign_moderation_audit_logs")
 }
 
 model SponsoredCampaignProduct {

@@ -1762,6 +1762,14 @@
       }
     },
     "campaigns": {
+      "moderation": {
+        "title": "Admin review",
+        "reason": "Review reason",
+        "approved": "Approved for sponsored serving.",
+        "blocked": "Sponsored serving is blocked until an admin approves this campaign.",
+        "editNotice": "Editing campaign content or targets after review submits it for review again.",
+        "approvalRequired": "Activation does not bypass admin approval. This campaign will remain excluded from sponsored serving."
+      },
       "eyebrow": "Campaigns",
       "title": "Sponsored campaign manager",
       "description": "Create, target, activate, and review sponsored campaigns for the active shop.",

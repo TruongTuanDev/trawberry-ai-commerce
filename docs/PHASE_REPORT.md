@@ -1,5 +1,36 @@
 # Phase Report
 
+## 2026-06-11 Ads Platform Phase 6.1 Campaign Moderation
+
+- Status: implemented and verified
+- Added a parallel campaign moderation lifecycle with `pending_review`, `approved`, `rejected`, `changes_requested`, and `suspended`.
+- Campaign creation writes a submitted audit; seller edits to reviewed campaign content or targets reset approval and write a resubmitted audit.
+- Added admin-only moderation APIs and `/admin/campaigns/moderation` with filtering, detail, reasoned actions, and audit history.
+- Seller `/seller/campaigns` now shows moderation status, reason, serving eligibility, and the approval prerequisite for activation.
+- Sponsored serving requires approval by default, and the CPC charge path rechecks approval before wallet or ledger mutation.
+- Production-safe defaults:
+  - `ADS_CAMPAIGN_MODERATION_ENABLED=true`
+  - `ADS_MODERATION_REQUIRED_FOR_SERVING=true`
+- Explicit demo/development bypass: `ADS_MODERATION_REQUIRED_FOR_SERVING=false`.
+- Safety:
+  - core recommendation ranking formula unchanged
+  - CPC amount and calculation unchanged
+  - wallet, budget, attribution, and ledger behavior unchanged except the new no-charge moderation guard
+  - checkout, order, cart, payment, shipping, seller payment confirmation, shop readiness, WB sync, AI Try-On, and legacy apps untouched
+- Focused verification completed:
+  - campaign moderation/access/transition/audit/serving tests: pass
+  - recommendation approved-CPC and post-suspension no-charge test: pass
+  - campaign/recommendation/billing focused regression: pass
+  - frontend i18n, lint, and build: pass
+- Final verification:
+  - Prisma generate: pass
+  - Prisma db push: Windows host schema engine failed before applying; the same no-data-loss command passed in the backend Linux container and a second run confirmed the database is already in sync
+  - backend lint, full test, and build: pass (`39` suites / `396` tests)
+  - frontend i18n, lint, and build: pass
+  - required Playwright moderation, recommendations, locale, public smoke, cart checkout, cart validation, full commerce, seller operations, and responsive suites: pass (`17` tests)
+  - rebuilt runtime: all `6/6` services healthy
+  - database schema inspection: moderation fields present with safe non-null defaults for status and submitted time
+
 ## 2026-06-11 WB Selected nmID Real Lookup Fix
 
 - Status: Implemented and real-read verified

@@ -4,6 +4,7 @@ import type {
   DeliveryCommentVisibility,
   DeliveryExceptionReasonCode,
   PaymentDetails,
+  SellerCampaign,
   SellerPaymentItem,
 } from "@/lib/seller-api";
 
@@ -345,6 +346,27 @@ export type AdminDashboardSummary = {
       createdAt: string;
     }>;
   };
+};
+
+export type AdminCampaignModerationAuditLog = {
+  id: string;
+  campaignId: string;
+  action: string;
+  previousStatus: string | null;
+  nextStatus: string;
+  reason: string | null;
+  adminId: string | null;
+  createdAt: string;
+};
+
+export type AdminCampaignModeration = SellerCampaign & {
+  shop: { id: string; name: string; slug: string };
+  reviewedByAdmin?: {
+    id: string;
+    email: string;
+    fullName: string | null;
+  } | null;
+  moderationAuditLogs?: AdminCampaignModerationAuditLog[];
 };
 
 export type RecommendationAnalyticsRangePreset =
@@ -1979,4 +2001,42 @@ export async function deleteAdminUser(id: string) {
   return apiRequest<void>(`/api/admin/users/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+}
+
+export async function listAdminCampaignModeration(query?: {
+  moderationStatus?: string;
+  search?: string;
+}) {
+  const params = new URLSearchParams();
+  if (query?.moderationStatus) params.set("moderationStatus", query.moderationStatus);
+  if (query?.search) params.set("search", query.search);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<{
+    flags: {
+      moderationEnabled: boolean;
+      moderationRequiredForServing: boolean;
+    };
+    items: AdminCampaignModeration[];
+  }>(`/api/admin/campaigns/moderation${suffix}`, { method: "GET" });
+}
+
+export async function getAdminCampaignModeration(id: string) {
+  return apiRequest<AdminCampaignModeration>(
+    `/api/admin/campaigns/${encodeURIComponent(id)}`,
+    { method: "GET" },
+  );
+}
+
+export async function moderateAdminCampaign(
+  id: string,
+  action: "approve" | "reject" | "request-changes" | "suspend",
+  reason?: string,
+) {
+  return apiRequest<AdminCampaignModeration>(
+    `/api/admin/campaigns/${encodeURIComponent(id)}/${action}`,
+    {
+      method: "POST",
+      body: JSON.stringify(reason ? { reason } : {}),
+    },
+  );
 }

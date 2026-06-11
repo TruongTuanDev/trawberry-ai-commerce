@@ -8,6 +8,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { AuthResponseDto } from '../src/modules/auth/dto/auth-response.dto';
+import { CampaignsService } from '../src/modules/campaigns/campaigns.service';
 import { readBody } from './test-helpers';
 
 type StoredUser = {
@@ -102,6 +103,11 @@ type StoredCampaign = {
   name: string;
   description: string | null;
   status: string;
+  moderationStatus: string;
+  moderationReason: string | null;
+  reviewedByAdminId: string | null;
+  reviewedAt: Date | null;
+  submittedAt: Date;
   scenarioTypes: string[];
   startAt: Date | null;
   endAt: Date | null;
@@ -139,6 +145,17 @@ type StoredRecommendationEvent = {
   createdAt: Date;
 };
 
+type StoredCampaignModerationAudit = {
+  id: string;
+  campaignId: string;
+  action: string;
+  previousStatus: string | null;
+  nextStatus: string;
+  reason: string | null;
+  adminId: string | null;
+  createdAt: Date;
+};
+
 describe('Campaigns (e2e)', () => {
   let app: INestApplication<App>;
   let users: StoredUser[];
@@ -147,6 +164,7 @@ describe('Campaigns (e2e)', () => {
   let campaigns: StoredCampaign[];
   let targets: StoredCampaignTarget[];
   let recommendationEvents: StoredRecommendationEvent[];
+  let moderationAuditLogs: StoredCampaignModerationAudit[];
 
   const prismaMock = {
     user: { findUnique: jest.fn() },
@@ -164,12 +182,24 @@ describe('Campaigns (e2e)', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
+    sponsoredCampaignModerationAuditLog: {
+      create: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
     const now = new Date('2026-06-07T10:00:00Z');
     users = [
+      {
+        id: '00000000-0000-0000-0000-000000000099',
+        email: 'admin@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        fullName: 'Admin Reviewer',
+        createdAt: now,
+      },
       {
         id: 'seller-user-1',
         email: 'seller1@example.com',
@@ -251,6 +281,7 @@ describe('Campaigns (e2e)', () => {
     campaigns = [];
     targets = [];
     recommendationEvents = [];
+    moderationAuditLogs = [];
 
     prismaMock.user.findUnique.mockImplementation(({ where, include }) => {
       const user = users.find((entry) =>
@@ -346,9 +377,16 @@ describe('Campaigns (e2e)', () => {
     prismaMock.sponsoredCampaign.findMany.mockImplementation(({ where }) => {
       return Promise.resolve(
         campaigns
-          .filter((campaign) => campaign.shopId === where.shopId)
+          .filter(
+            (campaign) => !where.shopId || campaign.shopId === where.shopId,
+          )
           .filter(
             (campaign) => !where.status || campaign.status === where.status,
+          )
+          .filter(
+            (campaign) =>
+              !where.moderationStatus ||
+              campaign.moderationStatus === where.moderationStatus,
           )
           .filter((campaign) =>
             !where.scenarioTypes?.has
@@ -363,28 +401,59 @@ describe('Campaigns (e2e)', () => {
       );
     });
 
-    prismaMock.sponsoredCampaign.findFirst.mockImplementation(({ where }) => {
-      const campaign =
-        campaigns.find(
-          (entry) =>
-            (!where.id || entry.id === where.id) &&
-            (!where.shopId || entry.shopId === where.shopId) &&
-            (!where.status || entry.status === where.status),
-        ) ?? null;
+    prismaMock.sponsoredCampaign.findFirst.mockImplementation(
+      ({ where, include }) => {
+        const campaign =
+          campaigns.find(
+            (entry) =>
+              (!where.id || entry.id === where.id) &&
+              (!where.shopId || entry.shopId === where.shopId) &&
+              (!where.status || entry.status === where.status),
+          ) ?? null;
 
-      if (!campaign) {
-        return Promise.resolve(null);
-      }
-      return Promise.resolve(mapCampaignRecord(campaign, products, targets));
-    });
+        if (!campaign) {
+          return Promise.resolve(null);
+        }
+        const mapped = mapCampaignRecord(campaign, products, targets);
+        return Promise.resolve({
+          ...mapped,
+          ...(include?.shop
+            ? { shop: shops.find((shop) => shop.id === campaign.shopId) }
+            : {}),
+          ...(include?.reviewedByAdmin
+            ? {
+                reviewedByAdmin:
+                  users.find(
+                    (user) => user.id === campaign.reviewedByAdminId,
+                  ) ?? null,
+              }
+            : {}),
+          ...(include?.moderationAuditLogs
+            ? {
+                moderationAuditLogs: moderationAuditLogs
+                  .filter((log) => log.campaignId === campaign.id)
+                  .sort(
+                    (left, right) =>
+                      right.createdAt.getTime() - left.createdAt.getTime(),
+                  ),
+              }
+            : {}),
+        });
+      },
+    );
 
     prismaMock.sponsoredCampaign.create.mockImplementation(({ data }) => {
       const campaign: StoredCampaign = {
-        id: `campaign-${campaigns.length + 1}`,
+        id: `00000000-0000-0000-0001-${String(campaigns.length + 1).padStart(12, '0')}`,
         shopId: data.shopId,
         name: data.name,
         description: data.description ?? null,
         status: data.status,
+        moderationStatus: data.moderationStatus ?? 'pending_review',
+        moderationReason: null,
+        reviewedByAdminId: null,
+        reviewedAt: null,
+        submittedAt: data.submittedAt ?? now,
         scenarioTypes: [...data.scenarioTypes],
         startAt: data.startAt ?? null,
         endAt: data.endAt ?? null,
@@ -414,6 +483,16 @@ describe('Campaigns (e2e)', () => {
         if (data.description !== undefined)
           campaign.description = data.description;
         if (data.status !== undefined) campaign.status = data.status;
+        if (data.moderationStatus !== undefined)
+          campaign.moderationStatus = data.moderationStatus;
+        if (data.moderationReason !== undefined)
+          campaign.moderationReason = data.moderationReason;
+        if (data.reviewedByAdminId !== undefined)
+          campaign.reviewedByAdminId = data.reviewedByAdminId;
+        if (data.reviewedAt !== undefined)
+          campaign.reviewedAt = data.reviewedAt;
+        if (data.submittedAt !== undefined)
+          campaign.submittedAt = data.submittedAt;
         if (data.scenarioTypes !== undefined)
           campaign.scenarioTypes = [...data.scenarioTypes];
         if (data.startAt !== undefined) campaign.startAt = data.startAt;
@@ -474,14 +553,38 @@ describe('Campaigns (e2e)', () => {
       },
     );
 
+    prismaMock.sponsoredCampaignModerationAuditLog.create.mockImplementation(
+      ({ data }) => {
+        const log: StoredCampaignModerationAudit = {
+          id: `moderation-audit-${moderationAuditLogs.length + 1}`,
+          campaignId: data.campaignId,
+          action: data.action,
+          previousStatus: data.previousStatus ?? null,
+          nextStatus: data.nextStatus,
+          reason: data.reason ?? null,
+          adminId: data.adminId ?? null,
+          createdAt: new Date(
+            now.getTime() + 4000 + moderationAuditLogs.length,
+          ),
+        };
+        moderationAuditLogs.push(log);
+        return Promise.resolve(log);
+      },
+    );
+
     prismaMock.$transaction.mockImplementation(async (callback) => {
       const campaignsSnapshot = campaigns.map(cloneCampaign);
       const targetsSnapshot = targets.map(cloneTarget);
+      const moderationAuditSnapshot = moderationAuditLogs.map((log) => ({
+        ...log,
+        createdAt: new Date(log.createdAt),
+      }));
       try {
         return await callback(prismaMock);
       } catch (error) {
         campaigns = campaignsSnapshot;
         targets = targetsSnapshot;
+        moderationAuditLogs = moderationAuditSnapshot;
         throw error;
       }
     });
@@ -502,6 +605,8 @@ describe('Campaigns (e2e)', () => {
       }),
     );
     await app.init();
+    process.env.ADS_CAMPAIGN_MODERATION_ENABLED = 'true';
+    process.env.ADS_MODERATION_REQUIRED_FOR_SERVING = 'true';
   });
 
   afterEach(async () => {
@@ -607,6 +712,101 @@ describe('Campaigns (e2e)', () => {
     expect(activated.billing.notes.join(' ')).toContain('CPC');
     expect(JSON.stringify(activated)).not.toContain('sellerProfile');
     expect(JSON.stringify(activated)).not.toContain('seller-user-1');
+  });
+
+  it('requires admin approval for serving, audits transitions, and supports explicit demo bypass', async () => {
+    const sellerToken = await loginAndGetToken(app, 'seller1@example.com');
+    const adminToken = await loginAndGetToken(app, 'admin@example.com');
+    const campaignsService = app.get(CampaignsService);
+
+    const createResponse = await request(app.getHttpServer())
+      .post('/api/seller/shops/shop-1/campaigns')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        name: 'Moderated launch',
+        scenarioTypes: ['home'],
+        maxBoost: 3,
+        billingMode: 'none',
+      })
+      .expect(201);
+    const created = readBody<{
+      id: string;
+      moderationStatus: string;
+      moderationServingEligible: boolean;
+    }>(createResponse);
+    expect(created.moderationStatus).toBe('pending_review');
+    expect(created.moderationServingEligible).toBe(false);
+
+    await request(app.getHttpServer())
+      .post(`/api/seller/shops/shop-1/campaigns/${created.id}/targets`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ productId: 'product-1', boost: 2 })
+      .expect(200);
+    await request(app.getHttpServer())
+      .patch(`/api/seller/shops/shop-1/campaigns/${created.id}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'active' })
+      .expect(200);
+
+    expect(
+      await campaignsService.getActiveRecommendationTargets('home'),
+    ).toEqual([]);
+
+    const sellerApprovalAttempt = await request(app.getHttpServer())
+      .post(`/api/admin/campaigns/${created.id}/approve`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect([401, 403]).toContain(sellerApprovalAttempt.status);
+
+    const approvedResponse = await request(app.getHttpServer())
+      .post(`/api/admin/campaigns/${created.id}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+    const approved = readBody<{
+      moderationStatus: string;
+      moderationAuditLogs: Array<{ action: string }>;
+    }>(approvedResponse);
+    expect(approved.moderationStatus).toBe('approved');
+    expect(approved.moderationAuditLogs.map((log) => log.action)).toEqual(
+      expect.arrayContaining(['submitted', 'approved']),
+    );
+    expect(
+      await campaignsService.getActiveRecommendationTargets('home'),
+    ).toHaveLength(1);
+
+    const resubmittedResponse = await request(app.getHttpServer())
+      .patch(`/api/seller/shops/shop-1/campaigns/${created.id}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ description: 'Updated seller copy' })
+      .expect(200);
+    expect(
+      readBody<{ moderationStatus: string }>(resubmittedResponse)
+        .moderationStatus,
+    ).toBe('pending_review');
+    expect(
+      await campaignsService.getActiveRecommendationTargets('home'),
+    ).toEqual([]);
+
+    await request(app.getHttpServer())
+      .post(`/api/admin/campaigns/${created.id}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({})
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/admin/campaigns/${created.id}/suspend`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Policy investigation' })
+      .expect(201);
+    expect(
+      await campaignsService.getActiveRecommendationTargets('home'),
+    ).toEqual([]);
+
+    process.env.ADS_MODERATION_REQUIRED_FOR_SERVING = 'false';
+    expect(
+      await campaignsService.getActiveRecommendationTargets('home'),
+    ).toHaveLength(1);
+    process.env.ADS_MODERATION_REQUIRED_FOR_SERVING = 'true';
   });
 
   it('rejects activation without targets and keeps campaign in draft', async () => {

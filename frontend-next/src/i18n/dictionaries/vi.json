@@ -1321,6 +1321,14 @@
       }
     },
     "campaigns": {
+      "moderation": {
+        "title": "Kiem duyet cua admin",
+        "reason": "Ly do kiem duyet",
+        "approved": "Da duoc phe duyet de phuc vu quang cao.",
+        "blocked": "Chua duoc phuc vu quang cao cho den khi admin phe duyet.",
+        "editNotice": "Sua noi dung hoac san pham muc tieu sau khi duyet se gui lai de kiem duyet.",
+        "approvalRequired": "Kich hoat khong bo qua phe duyet cua admin. Chien dich van bi loai khoi phuc vu quang cao."
+      },
       "eyebrow": "Chiến dịch",
       "title": "Quản lý chiến dịch quảng bá",
       "description": "Tạo, thiết lập sản phẩm mục tiêu, kích hoạt và theo dõi chiến dịch quảng bá cho cửa hàng.",

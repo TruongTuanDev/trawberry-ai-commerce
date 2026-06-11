@@ -222,6 +222,7 @@ describe('RecommendationsController (e2e)', () => {
     process.env.RECOMMENDATION_TUNING_WORKFLOW_ENABLED = 'false';
     process.env.RECOMMENDATION_TUNING_PRESETS_ENABLED = 'false';
     process.env.RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED = 'false';
+    process.env.ADS_MODERATION_REQUIRED_FOR_SERVING = 'false';
 
     products = [
       buildProduct({
@@ -2887,6 +2888,7 @@ describe('RecommendationsController (e2e)', () => {
   it('charges a sponsored CPC click once when a valid tracking token is returned', async () => {
     process.env.RECOMMENDATION_SPONSORED_RANKING_ENABLED = 'true';
     process.env.RECOMMENDATION_SPONSORED_PRESET_ID = 'balanced';
+    process.env.ADS_MODERATION_REQUIRED_FOR_SERVING = 'true';
     await app.close();
     app = await buildApp();
 
@@ -2897,6 +2899,11 @@ describe('RecommendationsController (e2e)', () => {
       name: 'Sponsored Campaign',
       description: null,
       status: 'active',
+      moderationStatus: 'approved',
+      moderationReason: null,
+      reviewedByAdminId: 'admin-user-1',
+      reviewedAt: new Date('2026-06-06T00:00:00Z'),
+      submittedAt: new Date('2026-06-05T00:00:00Z'),
       scenarioTypes: ['home'],
       startAt: new Date('2026-06-01T00:00:00Z'),
       endAt: new Date('2026-06-30T00:00:00Z'),
@@ -2947,6 +2954,7 @@ describe('RecommendationsController (e2e)', () => {
       id: 'campaign-1',
       shopId: sponsoredProduct.shopId,
       status: 'active',
+      moderationStatus: 'approved',
       startAt: new Date('2026-06-01T00:00:00Z'),
       endAt: new Date('2026-06-30T00:00:00Z'),
       budgetLimit: new Prisma.Decimal('20'),
@@ -3019,6 +3027,44 @@ describe('RecommendationsController (e2e)', () => {
       expect.objectContaining({
         charged: true,
         chargeStatus: 'charged',
+      }),
+    );
+
+    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
+      id: 'campaign-1',
+      shopId: sponsoredProduct.shopId,
+      status: 'active',
+      moderationStatus: 'suspended',
+      startAt: new Date('2026-06-01T00:00:00Z'),
+      endAt: new Date('2026-06-30T00:00:00Z'),
+      budgetLimit: new Prisma.Decimal('20'),
+      billingMode: 'cpc',
+    });
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        rank: 1,
+        idempotencyKey: 'click-charge-after-suspend',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(1);
+    expect(
+      prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
+    ).toEqual(
+      expect.objectContaining({
+        chargeStatus: 'campaign_not_approved',
       }),
     );
   });

@@ -18,6 +18,7 @@ const navLinks = [
   { href: "/admin/returns", key: "adminShell.nav.returns", match: "/admin/returns" },
   { href: "/admin/messages", key: "adminShell.nav.messages", match: "/admin/messages" },
   { href: "/admin/reviews", key: "adminShell.nav.reviews", match: "/admin/reviews" },
+  { href: "/admin/campaigns/moderation", key: "adminShell.nav.reviews", label: "Campaign moderation", match: "/admin/campaigns" },
   { href: "/admin/finance/seller-fees", key: "adminShell.nav.finance", match: "/admin/finance" },
   { href: "/admin/queues", key: "adminShell.nav.queues", match: "/admin/queues" },
   { href: "/admin/support-cases", key: "adminShell.nav.supportCases", match: "/admin/support-cases" },
@@ -88,7 +89,7 @@ export function AdminShell({
                     pathname.startsWith(link.match) ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
-                  {t(link.key)}
+                  {"label" in link ? link.label : t(link.key)}
                 </Link>
               ))}
             </nav>
@@ -170,7 +171,7 @@ export function AdminShell({
                     pathname.startsWith(link.match) ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
-                  {t(link.key)}
+                  {"label" in link ? link.label : t(link.key)}
                 </Link>
               ))}
             </nav>

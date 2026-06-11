@@ -1,5 +1,15 @@
 # API Recommendations
 
+## Phase 6.1 campaign moderation eligibility
+
+Live sponsored campaign targets are eligible for recommendation serving only when `moderationStatus=approved` while `ADS_MODERATION_REQUIRED_FOR_SERVING=true`.
+
+This is an additional guard only. The core recommendation scoring formula, bounded sponsored boost calculation, organic relevance limits, target checks, schedule checks, wallet checks, and budget checks are unchanged.
+
+The CPC click path repeats the moderation check immediately before billing. If a previously served campaign is no longer approved, tracking remains safe but the event receives `chargeStatus=campaign_not_approved`; no wallet debit or billing ledger row is created.
+
+`ADS_MODERATION_REQUIRED_FOR_SERVING=false` is an explicit demo/development bypass. Its production-safe default is `true`.
+
 ## Phase 5.4 controlled tuning preset workflow
 
 Phase 5.4 adds an admin-only, feature-flagged workflow for previewing and explicitly activating bounded ranking multipliers on top of `rule_based_v2`.

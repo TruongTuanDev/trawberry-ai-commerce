@@ -1,5 +1,17 @@
 # Project Status
 
+## Ads Platform Phase 6.1 Campaign Moderation - 2026-06-11
+
+- Status: implemented and verified.
+- Sponsored campaign moderation is now persisted and admin-controlled.
+- Only approved campaigns can serve sponsored recommendations or create new CPC charges by default.
+- Admin campaign review is available at `/admin/campaigns/moderation`; seller moderation status and reasons are visible at `/seller/campaigns`.
+- Seller edits to reviewed campaign content or targets safely resubmit the campaign and immediately remove sponsored-serving eligibility until re-approved.
+- Moderation actions and seller submit/resubmit events are auditable.
+- Existing rank formula, CPC price, wallet, budget, ledger, checkout, order, cart, payment, shipping, WB sync, and AI Try-On behavior remain unchanged.
+- Verification passed: backend `39` suites / `396` tests, frontend i18n/lint/build, required Playwright `17` tests, rebuilt runtime `6/6` healthy, and container Prisma schema sync.
+- Remaining production gaps include fraud detection, finance reconciliation, production monitoring/alerting, and richer ads analytics.
+
 ## WB Selected nmID Real Lookup Fix - 2026-06-11
 
 - Real WB QA confirmed nmIDs `955686992` and `982708059` are visible to the supplied token/shop.

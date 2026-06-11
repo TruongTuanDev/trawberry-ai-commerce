@@ -40,6 +40,27 @@ export class SponsoredCampaignTargetResponseDto {
   status!: string;
 
   @ApiProperty()
+  moderationStatus!: string;
+
+  @ApiProperty({ nullable: true })
+  moderationReason!: string | null;
+
+  @ApiProperty({ nullable: true })
+  reviewedByAdminId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  reviewedAt!: string | null;
+
+  @ApiProperty()
+  submittedAt!: string;
+
+  @ApiProperty()
+  moderationRequiredForServing!: boolean;
+
+  @ApiProperty()
+  moderationServingEligible!: boolean;
+
+  @ApiProperty()
   createdAt!: string;
 
   @ApiProperty()

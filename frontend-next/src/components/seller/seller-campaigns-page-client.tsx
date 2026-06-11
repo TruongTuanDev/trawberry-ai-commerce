@@ -63,6 +63,12 @@ function getCampaignCopy(t: (key: string) => string) {
     performanceLoading: value("performanceLoading"),
     noEvents: value("noEvents"),
     performanceLoadFailed: value("performanceLoadFailed"),
+    moderationTitle: value("moderation.title"),
+    moderationReason: value("moderation.reason"),
+    moderationApproved: value("moderation.approved"),
+    moderationBlocked: value("moderation.blocked"),
+    moderationEditNotice: value("moderation.editNotice"),
+    approvalRequired: value("moderation.approvalRequired"),
     mode: value("performance.mode"),
     budget: value("performance.budget"),
     unlimited: value("performance.unlimited"),
@@ -675,6 +681,35 @@ export function SellerCampaignsPageClient() {
                     </div>
                   </div>
 
+                  <div
+                    className="mt-5 rounded-[1.5rem] border border-[var(--border)] bg-[var(--background)] p-4"
+                    data-testid="seller-campaign-moderation"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">{copy.moderationTitle}</p>
+                      <span className={`premium-badge ${
+                        campaign.moderationStatus === "approved"
+                          ? "premium-badge-success"
+                          : campaign.moderationStatus === "pending_review"
+                            ? "premium-badge-info"
+                            : "premium-badge-warning"
+                      }`} data-testid="seller-campaign-moderation-status">
+                        {campaign.moderationStatus.replaceAll("_", " ")}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {campaign.moderationServingEligible
+                        ? copy.moderationApproved
+                        : copy.moderationBlocked}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">{copy.moderationEditNotice}</p>
+                    {campaign.moderationReason ? (
+                      <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                        <strong>{copy.moderationReason}:</strong> {campaign.moderationReason}
+                      </p>
+                    ) : null}
+                  </div>
+
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
                     <label className="space-y-2">
                       <span className="text-sm font-medium text-[var(--foreground)]">{copy.fields.name}</span>
@@ -710,6 +745,9 @@ export function SellerCampaignsPageClient() {
                           </option>
                         ))}
                       </select>
+                      {draft.status === "active" && !campaign.moderationServingEligible ? (
+                        <p className="text-xs text-amber-700">{copy.approvalRequired}</p>
+                      ) : null}
                     </label>
                     <label className="space-y-2 md:col-span-2">
                       <span className="text-sm font-medium text-[var(--foreground)]">{copy.fields.description}</span>

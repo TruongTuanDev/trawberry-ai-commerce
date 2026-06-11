@@ -377,6 +377,12 @@ export type SellerCampaignStatus =
   | "paused"
   | "ended"
   | "archived";
+export type SellerCampaignModerationStatus =
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "changes_requested"
+  | "suspended";
 export type SellerCampaignBillingMode = "none" | "cpc" | "cpm" | "fixed";
 export type SellerCampaignTargetStatus = "active" | "paused" | "removed";
 
@@ -407,6 +413,13 @@ export type SellerCampaign = {
   name: string;
   description: string | null;
   status: SellerCampaignStatus | string;
+  moderationStatus: SellerCampaignModerationStatus | string;
+  moderationReason: string | null;
+  reviewedByAdminId: string | null;
+  reviewedAt: string | null;
+  submittedAt: string;
+  moderationRequiredForServing: boolean;
+  moderationServingEligible: boolean;
   scenarioTypes: SellerCampaignScenarioType[];
   startAt: string | null;
   endAt: string | null;

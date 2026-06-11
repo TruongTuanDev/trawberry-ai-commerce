@@ -98,6 +98,12 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 
 ## Delivery Provider Notes
 - Verified default is `DELIVERY_PROVIDER_MODE=mock`
+
+## Ads Campaign Moderation Flags
+
+- `ADS_CAMPAIGN_MODERATION_ENABLED=true` enables admin campaign review APIs and workflow by default.
+- `ADS_MODERATION_REQUIRED_FOR_SERVING=true` requires approval for sponsored serving and CPC charging by default.
+- `ADS_MODERATION_REQUIRED_FOR_SERVING=false` is an explicit demo/development bypass and should not be used in production.
 - Mock mode does not call CDEK or Yandex
 - `DELIVERY_DEFAULT_PROVIDER=yandex` keeps same-city express as the default recommendation path
 - `DELIVERY_SAME_CITY_PREFERRED_PROVIDER=yandex`

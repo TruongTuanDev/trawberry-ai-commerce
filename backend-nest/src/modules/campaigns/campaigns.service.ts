@@ -3,15 +3,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
+  ADS_CAMPAIGN_MODERATION_ENABLED_FLAG,
+  ADS_MODERATION_REQUIRED_FOR_SERVING_FLAG,
   SPONSORED_CAMPAIGN_BILLING_MODES,
   SPONSORED_CAMPAIGN_STATUSES,
+  type SponsoredCampaignModerationAction,
+  type SponsoredCampaignModerationStatus,
   type SponsoredCampaignScenarioType,
   type SponsoredCampaignStatus,
   type SponsoredCampaignTargetStatus,
 } from './campaigns.constants';
+import { ListCampaignModerationQueryDto } from './dto/campaign-moderation.dto';
 import { CreateSponsoredCampaignDto } from './dto/create-sponsored-campaign.dto';
 import {
   type SponsoredCampaignEventResponseDto,
@@ -33,6 +39,11 @@ type CampaignWithTargets = {
   name: string;
   description: string | null;
   status: string;
+  moderationStatus: string;
+  moderationReason: string | null;
+  reviewedByAdminId: string | null;
+  reviewedAt: Date | null;
+  submittedAt: Date;
   scenarioTypes: string[];
   startAt: Date | null;
   endAt: Date | null;
@@ -97,7 +108,30 @@ type CampaignRecommendationEvent = {
 
 @Injectable()
 export class CampaignsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  getModerationFlags() {
+    return {
+      moderationEnabled: this.readFlag(
+        ADS_CAMPAIGN_MODERATION_ENABLED_FLAG,
+        true,
+      ),
+      moderationRequiredForServing: this.readFlag(
+        ADS_MODERATION_REQUIRED_FOR_SERVING_FLAG,
+        true,
+      ),
+    };
+  }
+
+  isModerationApprovedForServing(status: string | null | undefined) {
+    return (
+      !this.getModerationFlags().moderationRequiredForServing ||
+      status === 'approved'
+    );
+  }
 
   async listByShop(shopId: string, query: ListSponsoredCampaignsQueryDto) {
     const campaigns = await this.prisma.sponsoredCampaign.findMany({
@@ -115,6 +149,129 @@ export class CampaignsService {
     return this.mapCampaignCollection(campaigns);
   }
 
+  async listForModeration(query: ListCampaignModerationQueryDto) {
+    this.assertModerationWorkflowEnabled();
+    const search = query.search?.trim();
+    const campaigns = await this.prisma.sponsoredCampaign.findMany({
+      where: {
+        ...(query.moderationStatus
+          ? { moderationStatus: query.moderationStatus }
+          : {}),
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                {
+                  shop: {
+                    is: {
+                      name: {
+                        contains: search,
+                        mode: 'insensitive' as const,
+                      },
+                    },
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+      include: {
+        ...this.getCampaignInclude(),
+        shop: { select: { id: true, name: true, slug: true } },
+      },
+      orderBy: [{ submittedAt: 'desc' }, { updatedAt: 'desc' }],
+    });
+
+    const items = await Promise.all(
+      campaigns.map(async (campaign) => ({
+        ...(await this.mapCampaignWithPerformance(
+          campaign as unknown as CampaignWithTargets,
+        )),
+        shop: campaign.shop,
+      })),
+    );
+    return { flags: this.getModerationFlags(), items };
+  }
+
+  async findOneForAdmin(campaignId: string) {
+    this.assertModerationWorkflowEnabled();
+    const campaign = await this.prisma.sponsoredCampaign.findFirst({
+      where: { id: campaignId },
+      include: {
+        ...this.getCampaignInclude(),
+        shop: { select: { id: true, name: true, slug: true } },
+        reviewedByAdmin: {
+          select: { id: true, email: true, fullName: true },
+        },
+        moderationAuditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
+      },
+    });
+    if (!campaign) {
+      throw new NotFoundException(`Campaign ${campaignId} was not found.`);
+    }
+    return {
+      ...(await this.mapCampaignWithPerformance(campaign)),
+      shop: campaign.shop,
+      reviewedByAdmin: campaign.reviewedByAdmin,
+      moderationAuditLogs: campaign.moderationAuditLogs.map((log) => ({
+        ...log,
+        createdAt: log.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async moderateCampaign(
+    campaignId: string,
+    nextStatus: Exclude<SponsoredCampaignModerationStatus, 'pending_review'>,
+    reason: string | undefined,
+    adminId: string,
+  ) {
+    this.assertModerationWorkflowEnabled();
+    const existing = await this.prisma.sponsoredCampaign.findFirst({
+      where: { id: campaignId },
+      include: this.getCampaignInclude(),
+    });
+    if (!existing) {
+      throw new NotFoundException(`Campaign ${campaignId} was not found.`);
+    }
+    this.assertValidModerationTransition(existing.moderationStatus, nextStatus);
+    const normalizedReason = reason?.trim() || null;
+    if (
+      ['rejected', 'changes_requested', 'suspended'].includes(nextStatus) &&
+      !normalizedReason
+    ) {
+      throw new BadRequestException(
+        `A moderation reason is required for ${nextStatus}.`,
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.sponsoredCampaign.update({
+        where: { id: campaignId },
+        data: {
+          moderationStatus: nextStatus,
+          moderationReason: normalizedReason,
+          reviewedByAdminId: adminId,
+          reviewedAt: new Date(),
+        },
+      });
+      await this.writeModerationAudit(
+        campaignId,
+        nextStatus,
+        existing.moderationStatus,
+        nextStatus,
+        normalizedReason,
+        adminId,
+        tx,
+      );
+    });
+
+    return this.findOneForAdmin(campaignId);
+  }
+
   async create(shopId: string, dto: CreateSponsoredCampaignDto) {
     this.validateDateWindow(dto.startAt, dto.endAt);
     const status = dto.status ?? 'draft';
@@ -124,23 +281,37 @@ export class CampaignsService {
       );
     }
 
-    const campaign = await this.prisma.sponsoredCampaign.create({
-      data: {
-        shopId,
-        name: dto.name.trim(),
-        description: dto.description?.trim() || null,
-        status,
-        scenarioTypes: this.normalizeScenarioTypes(dto.scenarioTypes),
-        startAt: dto.startAt ? new Date(dto.startAt) : null,
-        endAt: dto.endAt ? new Date(dto.endAt) : null,
-        budgetLimit:
-          dto.budgetLimit === undefined || dto.budgetLimit === null
-            ? null
-            : new Prisma.Decimal(dto.budgetLimit),
-        billingMode: dto.billingMode ?? 'none',
-        maxBoost: new Prisma.Decimal(dto.maxBoost),
-      },
-      include: this.getCampaignInclude(),
+    const campaign = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.sponsoredCampaign.create({
+        data: {
+          shopId,
+          name: dto.name.trim(),
+          description: dto.description?.trim() || null,
+          status,
+          moderationStatus: 'pending_review',
+          submittedAt: new Date(),
+          scenarioTypes: this.normalizeScenarioTypes(dto.scenarioTypes),
+          startAt: dto.startAt ? new Date(dto.startAt) : null,
+          endAt: dto.endAt ? new Date(dto.endAt) : null,
+          budgetLimit:
+            dto.budgetLimit === undefined || dto.budgetLimit === null
+              ? null
+              : new Prisma.Decimal(dto.budgetLimit),
+          billingMode: dto.billingMode ?? 'none',
+          maxBoost: new Prisma.Decimal(dto.maxBoost),
+        },
+        include: this.getCampaignInclude(),
+      });
+      await this.writeModerationAudit(
+        created.id,
+        'submitted',
+        null,
+        'pending_review',
+        null,
+        null,
+        tx,
+      );
+      return created;
     });
 
     return this.mapCampaignWithPerformance(campaign);
@@ -167,6 +338,8 @@ export class CampaignsService {
     const nextStatus = (dto.status ??
       existing.status) as SponsoredCampaignStatus;
     this.assertValidStatusTransition(existing.status, nextStatus);
+    const shouldResubmit = this.shouldResubmitAfterUpdate(existing, dto);
+    const submittedAt = new Date();
 
     const startAt =
       dto.startAt === undefined
@@ -213,9 +386,30 @@ export class CampaignsService {
             ? { maxBoost: new Prisma.Decimal(dto.maxBoost) }
             : {}),
           ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(shouldResubmit
+            ? {
+                moderationStatus: 'pending_review',
+                moderationReason: null,
+                reviewedByAdminId: null,
+                reviewedAt: null,
+                submittedAt,
+              }
+            : {}),
         },
         include: this.getCampaignInclude(),
       });
+
+      if (shouldResubmit) {
+        await this.writeModerationAudit(
+          campaignId,
+          'resubmitted',
+          existing.moderationStatus,
+          'pending_review',
+          null,
+          null,
+          tx,
+        );
+      }
 
       if (nextStatus === 'active') {
         await this.assertCampaignCanBeActivated(nextCampaign, tx);
@@ -279,6 +473,7 @@ export class CampaignsService {
         });
       }
 
+      await this.resubmitCampaignAfterTargetChange(campaign, tx);
       const refreshed = await tx.sponsoredCampaign.findFirst({
         where: { id: campaignId, shopId },
         include: this.getCampaignInclude(),
@@ -312,6 +507,7 @@ export class CampaignsService {
         data: { status: 'removed' },
       });
 
+      await this.resubmitCampaignAfterTargetChange(campaign, tx);
       const refreshed = await tx.sponsoredCampaign.findFirst({
         where: { id: campaignId, shopId },
         include: this.getCampaignInclude(),
@@ -357,6 +553,9 @@ export class CampaignsService {
     const campaigns = await this.prisma.sponsoredCampaign.findMany({
       where: {
         status: 'active',
+        ...(this.getModerationFlags().moderationRequiredForServing
+          ? { moderationStatus: 'approved' }
+          : {}),
         scenarioTypes: { has: scenarioType },
         ...(shopId ? { shopId } : {}),
         OR: [{ startAt: null }, { startAt: { lte: now } }],
@@ -591,6 +790,103 @@ export class CampaignsService {
     }
   }
 
+  private shouldResubmitAfterUpdate(
+    campaign: CampaignWithTargets,
+    dto: UpdateSponsoredCampaignDto,
+  ) {
+    if (campaign.moderationStatus === 'pending_review') {
+      return false;
+    }
+    return [
+      'name',
+      'description',
+      'scenarioTypes',
+      'startAt',
+      'endAt',
+      'budgetLimit',
+      'billingMode',
+      'maxBoost',
+    ].some((field) => Object.prototype.hasOwnProperty.call(dto, field));
+  }
+
+  private async resubmitCampaignAfterTargetChange(
+    campaign: CampaignWithTargets,
+    tx: Prisma.TransactionClient,
+  ) {
+    if (campaign.moderationStatus === 'pending_review') {
+      return;
+    }
+    await tx.sponsoredCampaign.update({
+      where: { id: campaign.id },
+      data: {
+        moderationStatus: 'pending_review',
+        moderationReason: null,
+        reviewedByAdminId: null,
+        reviewedAt: null,
+        submittedAt: new Date(),
+      },
+    });
+    await this.writeModerationAudit(
+      campaign.id,
+      'resubmitted',
+      campaign.moderationStatus,
+      'pending_review',
+      null,
+      null,
+      tx,
+    );
+  }
+
+  private assertValidModerationTransition(
+    current: string,
+    next: Exclude<SponsoredCampaignModerationStatus, 'pending_review'>,
+  ) {
+    const allowedTransitions: Record<
+      SponsoredCampaignModerationStatus,
+      SponsoredCampaignModerationStatus[]
+    > = {
+      pending_review: ['approved', 'rejected', 'changes_requested'],
+      approved: ['suspended'],
+      rejected: [],
+      changes_requested: [],
+      suspended: ['approved'],
+    };
+    const allowed =
+      allowedTransitions[current as SponsoredCampaignModerationStatus];
+    if (!allowed || !allowed.includes(next)) {
+      throw new BadRequestException(
+        `Invalid campaign moderation transition from ${current} to ${next}.`,
+      );
+    }
+  }
+
+  private assertModerationWorkflowEnabled() {
+    if (!this.getModerationFlags().moderationEnabled) {
+      throw new NotFoundException();
+    }
+  }
+
+  private async writeModerationAudit(
+    campaignId: string,
+    action: SponsoredCampaignModerationAction,
+    previousStatus: string | null,
+    nextStatus: SponsoredCampaignModerationStatus,
+    reason: string | null,
+    adminId: string | null,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    await client.sponsoredCampaignModerationAuditLog.create({
+      data: {
+        campaignId,
+        action,
+        previousStatus,
+        nextStatus,
+        reason,
+        adminId,
+      },
+    });
+  }
+
   private validateDateWindow(startAt?: string, endAt?: string) {
     if (!startAt || !endAt) {
       return;
@@ -612,6 +908,14 @@ export class CampaignsService {
       SPONSORED_CAMPAIGN_BILLING_MODES.find((mode) => mode === billingMode) ??
       'none'
     );
+  }
+
+  private readFlag(name: string, fallback: boolean) {
+    const value = this.configService.get<string>(name);
+    if (value === undefined) {
+      return fallback;
+    }
+    return !['0', 'false', 'off', 'no'].includes(value.toLowerCase());
   }
 
   private async mapCampaignCollection(campaigns: CampaignWithTargets[]) {
@@ -650,6 +954,16 @@ export class CampaignsService {
       name: campaign.name,
       description: campaign.description,
       status: campaign.status,
+      moderationStatus: campaign.moderationStatus,
+      moderationReason: campaign.moderationReason,
+      reviewedByAdminId: campaign.reviewedByAdminId,
+      reviewedAt: campaign.reviewedAt?.toISOString() ?? null,
+      submittedAt: campaign.submittedAt.toISOString(),
+      moderationRequiredForServing:
+        this.getModerationFlags().moderationRequiredForServing,
+      moderationServingEligible: this.isModerationApprovedForServing(
+        campaign.moderationStatus,
+      ),
       scenarioTypes: [...campaign.scenarioTypes],
       startAt: campaign.startAt?.toISOString() ?? null,
       endAt: campaign.endAt?.toISOString() ?? null,
@@ -828,6 +1142,9 @@ export class CampaignsService {
     metrics?: CampaignPerformanceMetrics,
   ) {
     if (!metrics) {
+      return false;
+    }
+    if (!this.isModerationApprovedForServing(campaign.moderationStatus)) {
       return false;
     }
 

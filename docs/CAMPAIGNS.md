@@ -1,5 +1,47 @@
 # Campaigns
 
+## Phase 6.1 campaign moderation
+
+Sponsored campaigns now have a moderation lifecycle alongside the existing operational lifecycle.
+
+Moderation lifecycle:
+
+- seller create: campaign keeps its requested operational status and enters `pending_review`
+- admin review actions: `approved`, `rejected`, `changes_requested`, or `suspended`
+- seller edits to campaign content, schedule, billing configuration, boost limits, or product targets after review reset moderation to `pending_review`
+- operational-only status changes such as pause or activate do not discard an existing approval
+- rejected, changes-requested, suspended, missing-status, and pending campaigns are excluded from sponsored serving
+
+Serving eligibility now requires all existing checks plus moderation approval:
+
+- operational status is `active`
+- scenario and schedule match
+- target and product remain public-safe
+- wallet and budget checks pass
+- sponsored ranking feature flag is enabled
+- `moderationStatus` is `approved`
+
+The same moderation requirement is checked again immediately before a sponsored CPC click can charge. A campaign suspended after a tracking token was issued receives `campaign_not_approved` and does not create a CPC ledger charge.
+
+Production-safe flags:
+
+- `ADS_CAMPAIGN_MODERATION_ENABLED=true` enables the admin review workflow
+- `ADS_MODERATION_REQUIRED_FOR_SERVING=true` requires approval for serving and CPC charging
+- setting `ADS_MODERATION_REQUIRED_FOR_SERVING=false` is an explicit demo/development bypass and must not be used silently in production
+
+Admin APIs:
+
+- `GET /api/admin/campaigns/moderation`
+- `GET /api/admin/campaigns/:id`
+- `POST /api/admin/campaigns/:id/approve`
+- `POST /api/admin/campaigns/:id/reject`
+- `POST /api/admin/campaigns/:id/request-changes`
+- `POST /api/admin/campaigns/:id/suspend`
+
+Admin UI is available at `/admin/campaigns/moderation`. Seller UI at `/seller/campaigns` shows moderation status, review reason, serving eligibility, and the resubmission effect of edits.
+
+Moderation audit rows record `campaignId`, action, previous status, next status, reason, admin id when applicable, and creation time. Submit and resubmit actions intentionally have no admin id.
+
 ## Phase 5.4 tuning interaction
 
 Controlled ranking tuning presets do not change campaign lifecycle, CPC pricing, wallet mutation, billing ledger, budget enforcement, or seller campaign controls.
@@ -53,7 +95,7 @@ Intentionally excluded from V1:
 - invoice workflow
 - fraud tooling
 - advanced analytics
-- campaign moderation workflow
+- production monitoring and fraud tooling beyond the Phase 6.1 moderation workflow
 - production finance review workflow
 
 ## Phase 4.3 V1 completion

@@ -1,5 +1,14 @@
 # Full Commerce Flow Audit
 
+## Ads Campaign Moderation Phase 6.1 Addendum
+
+- verified the campaign lifecycle and moderation lifecycle remain separate
+- verified only approved campaigns are eligible for sponsored serving by default
+- verified seller edits to reviewed campaign content or targets resubmit the campaign and remove serving eligibility
+- verified a campaign suspended after a tracking token was issued cannot create a new CPC wallet debit or ledger row
+- verified the core ranking formula and CPC amount are unchanged
+- verified checkout, order, cart, payment, shipping, seller payment confirmation, shop checkout readiness, WB sync, and AI Try-On business logic were not modified
+
 ## WB Selected nmID Real Lookup Fix Addendum
 
 - verified a direct read-only WB Cards List diagnostic finds nmIDs `955686992` and `982708059` on the first descending page
