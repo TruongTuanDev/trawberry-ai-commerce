@@ -50,9 +50,9 @@ export function PublicShopProductGrid({
         setItems(response.items);
         setMeta(response.meta);
         setError(null);
-      } catch (err) {
+      } catch {
         if (mounted) {
-          setError(err instanceof Error ? err.message : t("public.shop.loadProductsFailed"));
+          setError(t("public.shop.loadProductsFailed"));
         }
       } finally {
         if (mounted) {

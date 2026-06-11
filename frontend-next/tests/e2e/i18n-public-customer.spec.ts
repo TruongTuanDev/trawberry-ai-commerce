@@ -15,7 +15,7 @@ async function newCleanPage(browser: Browser): Promise<Page> {
   return page;
 }
 
-test("public customer flow languages: default to RU, only RU/EN, no VI, translates correctly", async ({
+test("public customer flow languages: default to RU and supports RU/EN/VI", async ({
   browser,
 }) => {
   const page = await newCleanPage(browser);
@@ -43,7 +43,7 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
 
   await expect(ruOption).toBeVisible();
   await expect(enOption).toBeVisible();
-  await expect(viOption).toHaveCount(0);
+  await expect(viOption).toBeVisible();
 
   console.log("Clicking EN option...");
   await enOption.click();
@@ -89,5 +89,15 @@ test("public customer flow languages: default to RU, only RU/EN, no VI, translat
   await page.waitForTimeout(500);
   await expect(
     page.getByText("Track a public order").first(),
+  ).toBeVisible();
+
+  await page
+    .getByTestId("language-switcher-customer")
+    .getByTestId("language-switcher-trigger")
+    .click();
+  await page.getByTestId("language-option-customer-vi").click();
+  await page.goto("/products");
+  await expect(
+    page.locator("h2").filter({ hasText: "Tất cả sản phẩm" }).first(),
   ).toBeVisible();
 });

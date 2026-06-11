@@ -229,7 +229,7 @@ test("buyer seller messaging MVP works across customer, seller, admin, and notif
   await expect(customerPage.getByRole("heading", { name: "Новое сообщение", exact: true })).toBeVisible();
 
   await customerPage.getByTestId("language-switcher-customer").first().click();
-  await expect(customerPage.getByTestId("language-option-customer-vi")).toHaveCount(0);
+  await expect(customerPage.getByTestId("language-option-customer-vi")).toBeVisible();
   await customerPage.keyboard.press("Escape");
 
   await customerPage.getByTestId("customer-new-message-input").fill("Здравствуйте, есть ли быстрая доставка?");

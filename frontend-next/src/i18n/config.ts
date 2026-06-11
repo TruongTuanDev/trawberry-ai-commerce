@@ -32,7 +32,7 @@ export const roleLocalePolicy: Record<
     defaultLocale: "ru",
   },
   customer: {
-    supported: ["ru", "en"],
+    supported: ["ru", "en", "vi"],
     defaultLocale: "ru",
   },
 };
@@ -57,7 +57,7 @@ export const localeMetadata: Record<Locale, LocaleMetadata> = {
     shortLabel: "VI",
     nativeLabel: "Tiếng Việt",
     flagKey: "vn",
-    allowedRoles: ["seller"],
+    allowedRoles: ["seller", "customer"],
   },
 };
 

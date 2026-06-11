@@ -81,6 +81,10 @@ test("role-based locale defaults and switching persist by surface", async ({
   await expect(publicNav).toContainText("Shop");
   await publicPage.reload();
   await expect(publicNav).toContainText("Shop");
+  await persistRoleLocale(publicPage, "customer", "vi");
+  await publicPage.reload();
+  await expectPersistedRoleLocale(publicPage, "customer", "vi");
+  await expect(publicNav).toContainText("Mua sắm");
   await publicPage.context().close();
 
   const sellerPage = await newCleanPage(browser);

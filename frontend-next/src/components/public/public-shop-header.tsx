@@ -16,7 +16,9 @@ function formatJoinedAt(value: string | null, locale: string) {
     return null;
   }
 
-  return new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US", {
+  const dateLocale = locale === "ru" ? "ru-RU" : locale === "vi" ? "vi-VN" : "en-US";
+
+  return new Intl.DateTimeFormat(dateLocale, {
     year: "numeric",
     month: "long",
     day: "numeric",

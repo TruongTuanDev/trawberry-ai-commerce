@@ -2419,3 +2419,18 @@ Notes:
 
 - Manual payments remain the primary flow; no real payment-provider capture, webhook, or reconciliation path was added.
 - Campaign billing and recommendation attribution remain independent from seller payment confirmation.
+
+# Buyer Public UX FIX.1 Status
+
+Current status:
+
+- Buyer/Public RU strings no longer render as `????`; public shop, catalog availability, payment status, and AI Try-On dictionary copy is repaired.
+- Public/customer locale policy now supports `ru`, `en`, and `vi`, with Vietnamese navigation, shop, catalog, cart, checkout, tracking, messaging, account, and support copy normalized.
+- Public shop pages use locale-aware dates and localized safe errors instead of raw backend messages.
+- Focused RU/EN/VI responsive shop regression, public smoke, customer locale persistence, lint, i18n parity, build, Docker rebuild, and runtime health checks pass.
+
+Notes:
+
+- Backend commerce rules and production data were not changed.
+- Seller-only legacy translation gaps remain a separate cleanup phase.
+- Two broad E2E gaps remain environment/data-fixture related: accumulated fixed-name products in full commerce flow and an empty homepage product fixture.

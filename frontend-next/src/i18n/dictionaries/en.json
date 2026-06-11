@@ -468,14 +468,14 @@
       "notVerified": "Not verified",
       "productCount": "{{count}} product(s)",
       "products": "Products",
-      "productsFromShop": "{{shop}} products",
-      "rating": "{{rating}} rating ? {{count}} review(s)",
+      "productsFromShop": "Products from {{shop}}",
+      "rating": "{{rating}} rating · {{count}} review(s)",
       "searchPlaceholder": "Search within this shop",
       "sortNewest": "Newest first",
       "sortPriceAsc": "Price: low to high",
       "sortPriceDesc": "Price: high to low",
       "title": "Shop profile",
-      "verified": "Verified"
+      "verified": "Verified shop"
     }
   },
   "home": {
@@ -486,10 +486,14 @@
     "noProductsTitle": "No published products on the homepage yet",
     "noProductsDesc": "The homepage now uses the same public catalog feed as the storefront. Products will appear here once sellers publish items that are ready for sale.",
     "browseCatalog": "Browse catalog",
-    "bannerAltFallback": "Banner alt fallback",
-    "heroCtaFallback": "Hero CTA fallback",
-    "heroFallbackSubtitle": "Hero fallback subtitle",
-    "heroFallbackTitle": "Hero fallback title"
+    "bannerAltFallback": "Marketplace promotion",
+    "heroCtaFallback": "Browse products",
+    "heroFallbackSubtitle": "Discover products from verified sellers in one marketplace.",
+    "heroFallbackTitle": "Find your next favorite",
+    "goToSlide": "Go to slide {{index}}",
+    "nextSlide": "Next slide",
+    "previousSlide": "Previous slide",
+    "welcome": "Welcome"
   },
   "catalog": {
     "loading": "Loading products...",

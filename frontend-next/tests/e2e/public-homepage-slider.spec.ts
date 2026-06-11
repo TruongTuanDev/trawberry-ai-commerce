@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const backendBaseUrl = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
-async function chooseCustomerLocale(page: Page, locale: "ru" | "en") {
+async function chooseCustomerLocale(page: Page, locale: "ru" | "en" | "vi") {
   await page.getByTestId("language-switcher-customer").first().click();
   await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   await page.getByTestId(`language-option-customer-${locale}`).first().click();
@@ -63,7 +63,7 @@ test.describe("Public Homepage Banner Slider", () => {
 
     await page.getByTestId("language-switcher-customer").first().click();
     const viOption = page.getByTestId("language-option-customer-vi");
-    await expect(viOption).toHaveCount(0);
+    await expect(viOption).toBeVisible();
     await page.keyboard.press("Escape");
 
     await nextBtn.click();

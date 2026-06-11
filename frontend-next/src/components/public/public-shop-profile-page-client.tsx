@@ -32,9 +32,9 @@ export function PublicShopProfilePageClient({ shopSlug }: { shopSlug: string }) 
         if (!mounted) {
           return;
         }
-        const message = err instanceof Error ? err.message : t("public.shop.loadFailed");
+        const message = err instanceof Error ? err.message : "";
         setShop(null);
-        setError(message);
+        setError(t("public.shop.loadFailed"));
         setNotFound(message.toLowerCase().includes("not found"));
       } finally {
         if (mounted) {

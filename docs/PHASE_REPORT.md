@@ -5506,3 +5506,37 @@ Production safety:
 
 - No schema migration, production data operation, real payment provider, billing/campaign charge behavior, recommendation tracking, product detail, AI Try-On, WB sync, secret, or environment file was changed.
 - Seller and admin transitions remain role/shop guarded; backend transition validation remains authoritative over frontend controls.
+
+# Phase Report: Buyer Public UX FIX.1 - Public i18n Production Cleanup
+
+Implemented:
+
+- Repaired corrupted Russian Buyer/Public strings that rendered as `????`, including public shop profiles, payment statuses, catalog availability, and public AI Try-On copy.
+- Enabled Vietnamese on public/customer surfaces and polished visible Vietnamese Buyer copy across navigation, catalog, product, cart, checkout, tracking, messaging, reviews, account, and support surfaces.
+- Localized public shop dates for RU/EN/VI and stopped public shop pages from displaying raw backend error messages.
+- Updated homepage slide controls and safe Vietnamese fallback content without changing homepage-slide backend contracts or AI Try-On logic.
+- Added a route-mocked public shop regression covering FORMELA-style shop content at desktop, tablet, and mobile viewports in RU/EN/VI.
+
+Production safety:
+
+- No backend business logic, checkout/order/payment/shipping semantics, WB sync, AI Try-On logic, schema, secret, or production data was changed.
+- User-generated shop/product names and descriptions remain unchanged; only application-owned UI copy was normalized.
+- Public product visibility and checkout readiness remain backend-authoritative.
+
+Verification:
+
+- `frontend-next npm run check:i18n`: pass, 0 missing English keys and 0 locale gaps
+- Buyer/Public corrupted-text scan across EN/RU/VI namespaces: pass, 0 `????` or replacement-character findings
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- rebuilt Docker frontend and runtime health checks: pass, frontend/backend/AI returned HTTP 200
+- focused Buyer/Public locale, shop-profile, and public-smoke E2E: pass, 5 tests
+- customer account locale persistence E2E: pass, 1 test
+- recommendations/cart/cart-validation E2E: pass, 4 tests
+- shared role-locale, seller-operations, responsive, and homepage-slider primary E2E checks: pass, 6 tests
+
+Remaining gaps:
+
+- Existing Seller-only Russian `????` groups in dashboard/onboarding/pending and legacy Seller messaging translations are outside this Buyer/Public phase.
+- `full-commerce-flow.spec.ts` remains unstable against accumulated local E2E data: one run missed a new payment queue row and a retry found duplicate fixed-name products.
+- The homepage mobile navigation test had no public product fixture in the current local DB; the primary homepage-slider responsive test passed.

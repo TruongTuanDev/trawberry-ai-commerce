@@ -169,7 +169,7 @@ async function createProduct(
   return product;
 }
 
-async function switchPublicLocale(page: Page, locale: "ru" | "en") {
+async function switchPublicLocale(page: Page, locale: "ru" | "en" | "vi") {
   await page.context().addCookies([
     {
       name: "trawberry-locale",
@@ -183,7 +183,7 @@ async function switchPublicLocale(page: Page, locale: "ru" | "en") {
   await page.reload();
 }
 
-test("public shop profile exposes shop link, public-only products, and RU/EN labels", async ({
+test("public shop profile exposes shop link, public-only products, and RU/EN/VI labels", async ({
   page,
   request,
 }) => {
@@ -233,7 +233,13 @@ test("public shop profile exposes shop link, public-only products, and RU/EN lab
   await page.goBack();
 
   await expect(page.getByTestId("language-switcher-customer").first()).toBeVisible();
-  await expect(page.locator("body")).not.toContainText(/\bVI\b/);
+  await page
+    .getByTestId("language-switcher-customer")
+    .first()
+    .getByTestId("language-switcher-trigger")
+    .click();
+  await expect(page.getByTestId("language-option-customer-vi")).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await switchPublicLocale(page, "en");
   await expect(page.getByTestId("public-shop-verified-badge")).toContainText("Verified shop");
@@ -242,6 +248,10 @@ test("public shop profile exposes shop link, public-only products, and RU/EN lab
 
   await page.reload();
   await expect(page.getByTestId("public-shop-message-button")).toContainText("Message shop");
+
+  await switchPublicLocale(page, "vi");
+  await expect(page.getByTestId("public-shop-verified-badge")).toContainText("Cửa hàng đã xác minh");
+  await expect(page.getByTestId("public-shop-message-button")).toContainText("Nhắn tin cho cửa hàng");
 });
 
 test("unknown public shop shows safe not-found UI", async ({ page }) => {

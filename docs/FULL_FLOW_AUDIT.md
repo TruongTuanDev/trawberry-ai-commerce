@@ -1059,3 +1059,12 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Final paid/rejected decisions cannot be reversed directly, cancelled orders cannot be marked paid directly, and delivery payment cannot be finalized before delivery.
 - Public tracking still requires the exact order phone. It exposes customer-relevant status, tracking, payment instructions, proof, and customer-visible delivery messages, but suppresses seller/admin review notes and identities plus internal delivery/provider/pickup/package fields.
 - Campaign charging, recommendation attribution/tracking, seller wallet behavior, product detail, AI Try-On, and WB sync are unchanged by this audit.
+
+# Buyer Public UX FIX.1 Audit Addendum
+
+- Public/customer locale support is now `ru/en/vi`; switching remains cookie/local-storage/profile backed and does not alter cart, auth, checkout, order, payment, or shipping identifiers.
+- The public shop route `/shops/[slug]` now renders application-owned labels and joined dates in the selected locale and maps load failures to localized safe copy instead of exposing backend messages.
+- Buyer/Public dictionary scans report no corrupted `????` or replacement-character strings across EN/RU/VI.
+- Public homepage Vietnamese content uses localized generic slide fallback text because the existing admin slide contract stores only RU/EN fields.
+- A mocked FORMELA-style shop regression verifies RU/EN/VI copy and no horizontal overflow at 390, 768, and 1440 pixel widths.
+- Public product readiness, visibility, price, stock, checkout splitting, payment review, fulfillment, WB sync, and AI Try-On execution logic remain unchanged.

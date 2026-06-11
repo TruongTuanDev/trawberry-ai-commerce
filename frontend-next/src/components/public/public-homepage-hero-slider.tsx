@@ -18,7 +18,6 @@ export function PublicHomepageHeroSlider({
   initialSlides = [],
 }: PublicHomepageHeroSliderProps) {
   const { locale: currentLocale, t } = useI18n("customer");
-  const locale = currentLocale === "ru" ? "ru" : "en"; // Force RU/EN only, no VI exposure
 
   const [slides, setSlides] = useState<PublicHomepageSlide[]>(initialSlides);
   const [slidesLoading, setSlidesLoading] = useState(initialSlides.length === 0);
@@ -156,7 +155,7 @@ export function PublicHomepageHeroSlider({
         <div className="relative z-10 w-full max-w-4xl px-8 sm:px-12 py-10 space-y-6">
           <div className="space-y-4">
             <span className="inline-block rounded-full bg-white/10 border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-white/90">
-              Welcome
+              {t("home.welcome")}
             </span>
             <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-white drop-shadow-md leading-tight">
               {fallbackTitle}
@@ -191,11 +190,30 @@ export function PublicHomepageHeroSlider({
         {slides.map((slide, index) => {
           const isActive = index === activeIndex;
 
-          // Localized fields with English fallbacks
-          const title = locale === "ru" ? (slide.titleRu || slide.titleEn) : (slide.titleEn || slide.titleRu);
-          const subtitle = locale === "ru" ? (slide.subtitleRu || slide.subtitleEn) : (slide.subtitleEn || slide.subtitleRu);
-          const ctaLabel = locale === "ru" ? (slide.ctaLabelRu || slide.ctaLabelEn) : (slide.ctaLabelEn || slide.ctaLabelRu);
-          const altText = (locale === "ru" ? (slide.altTextRu ?? slide.altTextEn) : (slide.altTextEn ?? slide.altTextRu)) ?? undefined;
+          const title =
+            currentLocale === "vi"
+              ? t("home.heroFallbackTitle")
+              : currentLocale === "ru"
+                ? slide.titleRu || slide.titleEn
+                : slide.titleEn || slide.titleRu;
+          const subtitle =
+            currentLocale === "vi"
+              ? t("home.heroFallbackSubtitle")
+              : currentLocale === "ru"
+                ? slide.subtitleRu || slide.subtitleEn
+                : slide.subtitleEn || slide.subtitleRu;
+          const ctaLabel =
+            currentLocale === "vi"
+              ? t("home.heroCtaFallback")
+              : currentLocale === "ru"
+                ? slide.ctaLabelRu || slide.ctaLabelEn
+                : slide.ctaLabelEn || slide.ctaLabelRu;
+          const altText =
+            (currentLocale === "vi"
+              ? t("home.bannerAltFallback")
+              : currentLocale === "ru"
+                ? slide.altTextRu ?? slide.altTextEn
+                : slide.altTextEn ?? slide.altTextRu) ?? undefined;
 
           return (
             <div
@@ -269,7 +287,7 @@ export function PublicHomepageHeroSlider({
             type="button"
             onClick={handlePrev}
             className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white backdrop-blur transition hover:bg-black/50"
-            aria-label="Previous slide"
+            aria-label={t("home.previousSlide")}
             data-testid="slider-prev-btn"
           >
             <span aria-hidden="true" className="text-lg sm:text-xl">&larr;</span>
@@ -278,7 +296,7 @@ export function PublicHomepageHeroSlider({
             type="button"
             onClick={handleNext}
             className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-white/20 bg-black/30 text-white backdrop-blur transition hover:bg-black/50"
-            aria-label="Next slide"
+            aria-label={t("home.nextSlide")}
             data-testid="slider-next-btn"
           >
             <span aria-hidden="true" className="text-lg sm:text-xl">&rarr;</span>
@@ -290,7 +308,7 @@ export function PublicHomepageHeroSlider({
               <button
                 key={index}
                 type="button"
-                aria-label={`Go to slide ${index + 1}`}
+                aria-label={t("home.goToSlide", { index: index + 1 })}
                 onClick={() => setActiveIndex(index)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
                   index === activeIndex ? "w-8 bg-[var(--brand-primary)]" : "w-2.5 bg-white/50 hover:bg-white/80"

@@ -1,7 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function chooseCustomerLocale(page: Page, locale: "ru" | "en") {
-  await page.getByTestId("language-switcher-customer").click();
+async function chooseCustomerLocale(page: Page, locale: "ru" | "en" | "vi") {
+  await page
+    .getByTestId("language-switcher-customer")
+    .first()
+    .getByTestId("language-switcher-trigger")
+    .click();
   await expect(page.getByTestId(`locale-flag-${locale}`)).toBeVisible();
   await page.getByTestId(`language-option-customer-${locale}`).click();
 }
@@ -19,11 +23,15 @@ test("customer account i18n: auth pages, notifications, returns, and locale pers
   await expect(
     page.getByRole("heading", { name: /Вход покупателя|Customer login/ }),
   ).toBeVisible();
-  await page.getByTestId("language-switcher-customer").click();
-  await expect(page.getByTestId("language-option-customer-vi")).toHaveCount(0);
+  await page
+    .getByTestId("language-switcher-customer")
+    .first()
+    .getByTestId("language-switcher-trigger")
+    .click();
+  await expect(page.getByTestId("language-option-customer-vi")).toBeVisible();
   await expect(page.getByTestId("locale-flag-ru")).toBeVisible();
   await expect(page.getByTestId("locale-flag-en")).toBeVisible();
-  await expect(page.getByTestId("locale-flag-vi")).toHaveCount(0);
+  await expect(page.getByTestId("locale-flag-vi")).toBeVisible();
   await page.getByTestId("language-option-customer-en").click();
   await expect(
     page.getByRole("heading", { name: "Customer login", exact: true }),
@@ -110,8 +118,12 @@ test("customer account i18n: auth pages, notifications, returns, and locale pers
     page.getByRole("heading", { name: "Profile", exact: true }),
   ).toBeVisible({ timeout: 15000 });
 
-  await page.getByTestId("language-switcher-customer").click();
-  await expect(page.getByTestId("language-option-customer-vi")).toHaveCount(0);
+  await page
+    .getByTestId("language-switcher-customer")
+    .first()
+    .getByTestId("language-switcher-trigger")
+    .click();
+  await expect(page.getByTestId("language-option-customer-vi")).toBeVisible();
   await page.getByTestId("language-option-customer-ru").click();
   await page.goto("/customer/orders");
   await page.reload();
