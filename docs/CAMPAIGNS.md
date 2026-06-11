@@ -1,5 +1,13 @@
 # Campaigns
 
+## Phase 5.4 tuning interaction
+
+Controlled ranking tuning presets do not change campaign lifecycle, CPC pricing, wallet mutation, billing ledger, budget enforcement, or seller campaign controls.
+
+The Phase 5.4 sponsored multiplier is restricted to `0..1`. It can reduce an existing eligible sponsored contribution during an explicitly enabled tuning rollout, but it cannot increase sponsored boost beyond the current campaign, preset, organic-relevance, wallet, or budget guardrails.
+
+Tuning preview never writes sponsored recommendation events, charges CPC, consumes campaign budget, or creates billing ledger rows.
+
 ## Phase 4.5 final V1 demo freeze
 
 Phase 4.5 freezes the campaign feature set for final reporting and demo use.

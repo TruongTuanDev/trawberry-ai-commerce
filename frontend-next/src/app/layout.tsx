@@ -55,6 +55,15 @@ export default async function RootLayout({
         data-recommendation-analytics-tuning-enabled={String(
           recommendationFlags.recommendationAnalyticsTuningEnabled,
         )}
+        data-recommendation-tuning-workflow-enabled={String(
+          recommendationFlags.recommendationTuningWorkflowEnabled,
+        )}
+        data-recommendation-tuning-presets-enabled={String(
+          recommendationFlags.recommendationTuningPresetsEnabled,
+        )}
+        data-recommendation-tuning-active-preset-enabled={String(
+          recommendationFlags.recommendationTuningActivePresetEnabled,
+        )}
         data-public-visual-search-enabled={String(
           visualSearchFlags.publicVisualSearchEnabled,
         )}

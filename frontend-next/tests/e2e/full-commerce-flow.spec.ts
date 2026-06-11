@@ -77,7 +77,10 @@ test("full seller-to-customer commerce flow covers payment, delivery, and fulfil
   await customerPage.goto("/products");
   await customerPage.getByLabel("Search catalog").fill("Studio Canvas Jacket");
   await customerPage.getByRole("button", { name: "Search" }).click();
-  const productCard = customerPage.getByTestId("product-card").filter({ hasText: "Studio Canvas Jacket" });
+  const productCard = customerPage
+    .getByTestId("products-grid")
+    .getByTestId("product-card")
+    .filter({ hasText: "Studio Canvas Jacket" });
   await expect(productCard).toHaveCount(1);
   await productCard.getByRole("link", { name: "View" }).click();
 
@@ -131,6 +134,10 @@ test("full seller-to-customer commerce flow covers payment, delivery, and fulfil
   await sellerPage.getByTestId("login-password").fill(demoSeller.password);
   await sellerPage.getByTestId("login-submit").click();
   await sellerPage.waitForURL("**/seller/dashboard");
+  await sellerPage
+    .getByTestId("seller-shop-switcher")
+    .getByRole("combobox")
+    .selectOption(shop.id);
 
   await sellerPage.goto("/seller/payments-to-confirm");
   await expect(sellerPage.getByText(orderCode)).toBeVisible();

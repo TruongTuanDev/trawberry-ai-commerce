@@ -1,5 +1,55 @@
 # API Recommendations
 
+## Phase 5.4 controlled tuning preset workflow
+
+Phase 5.4 adds an admin-only, feature-flagged workflow for previewing and explicitly activating bounded ranking multipliers on top of `rule_based_v2`.
+
+Feature flags, all default off:
+
+- `RECOMMENDATION_TUNING_WORKFLOW_ENABLED`
+- `RECOMMENDATION_TUNING_PRESETS_ENABLED`
+- `RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED`
+
+Admin APIs:
+
+- `GET /api/admin/recommendations/tuning-presets`
+- `POST /api/admin/recommendations/tuning-presets`
+- `GET /api/admin/recommendations/tuning-presets/:id`
+- `PATCH /api/admin/recommendations/tuning-presets/:id`
+- `POST /api/admin/recommendations/tuning-presets/:id/preview`
+- `POST /api/admin/recommendations/tuning-presets/:id/activate`
+- `POST /api/admin/recommendations/tuning-presets/:id/rollback`
+- `POST /api/admin/recommendations/tuning-presets/:id/archive`
+
+Lifecycle behavior:
+
+- create always produces a draft version
+- patch creates a new draft version instead of mutating active history
+- activation is explicit and archives the previously active version
+- rollback is allowed only from the active version and restores an earlier version from the same preset family
+- archive removes a version from activation eligibility
+- all preset mutations write their safe admin audit log in the same transaction
+- detail responses include recent audit actions across the complete preset version family
+
+Preview body:
+
+```json
+{
+  "placement": "home",
+  "limit": 8
+}
+```
+
+For search preview, provide `q`. For similar-product preview, use `placement=product_detail` and provide `productId`.
+
+Preview response includes current-vs-tuned ranks, scores, sponsored marker changes, safe explanations, and guardrail violations. Preview never writes recommendation events, campaign spend, CPC charges, or billing ledger entries.
+
+Runtime safety:
+
+- an active preset affects public recommendations only when all three tuning flags are enabled
+- normal public payloads do not expose preset ids, versions, weights, guardrails, or audit data
+- existing public-readiness filtering and sponsored campaign wallet/budget checks remain unchanged
+
 ## Phase 5.3 analytics-based ranking tuning
 
 Phase 5.3 adds a bounded internal tuning layer for `rule_based_v2` while keeping public recommendation APIs backward compatible.

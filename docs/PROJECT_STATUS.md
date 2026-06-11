@@ -95,6 +95,33 @@
 - Next recommended phase:
   - Post-refactor accessibility testing and animation details
 
+## Controlled Ranking Tuning Presets Phase 5.4 - 2026-06-11
+
+- Status: implemented and verified
+- Admin-only workflow:
+  - versioned recommendation tuning presets
+  - side-effect-free current-vs-tuned preview
+  - explicit activation, rollback, archive, and audit trail
+  - transactional mutation/audit writes and family-wide recent audit visibility
+  - admin page at `/admin/recommendations/tuning`
+- Default production posture:
+  - workflow, preset management, and active runtime preset flags are all off by default
+  - public ranking remains unchanged unless all runtime flags are explicitly enabled
+- Ranking safety:
+  - preset weights only scale existing `rule_based_v2` dimensions
+  - sponsored tuning cannot increase the existing sponsored boost
+  - public readiness, stock, wallet, budget, CPC, and sponsored relevance limits remain intact
+- Excluded:
+  - ML ranking, embeddings, collaborative filtering, A/B experiments, auction bidding, fraud controls, real seller ads funding, and invoice/reconciliation workflows
+- Verification:
+  - backend full suite: `39` suites / `395` tests passed
+  - focused recommendation/tuning/campaign/billing: `4` suites / `73` tests passed
+  - backend and frontend lint/build plus frontend i18n check: passed
+  - required public, recommendation, locale, commerce, seller, and responsive Playwright groups: passed
+  - tuning UI Playwright: `2` tests passed with workflow flags enabled and active-runtime flag disabled
+  - local runtime restored to all tuning flags disabled; public output remained `rule_based_v2` and organic
+  - Windows host Prisma schema engine blocked host `db push`; the same safe schema sync passed through Prisma inside the backend container
+
 ## Ranking Weight Tuning from Analytics Phase 5.3 - 2026-06-07
 
 - Status: implemented in `backend-nest` and `frontend-next`

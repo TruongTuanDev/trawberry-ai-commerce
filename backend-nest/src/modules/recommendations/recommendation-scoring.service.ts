@@ -5,6 +5,7 @@ import type {
   RecommendationSponsoredCampaignMetadata,
   RecommendationSponsoredPresetMetadata,
 } from './recommendation-sponsored-config';
+import type { RecommendationTuningConfig } from './recommendation-tuning-config';
 
 export type RecommendationProductRecord = {
   id: string;
@@ -310,6 +311,7 @@ export class RecommendationScoringService {
       | RecommendationSponsoredRankingConfig,
     sponsoredRanking?: RecommendationSponsoredRankingConfig,
     analyticsTuning?: RecommendationAnalyticsTuningConfig,
+    tuningConfig?: RecommendationTuningConfig | null,
   ): ScoredRecommendation {
     const preferenceProfile = this.isSponsoredRankingConfig(
       preferenceProfileOrSponsored,
@@ -328,6 +330,7 @@ export class RecommendationScoringService {
       preferenceProfile,
       sponsoredRanking: resolvedSponsoredRanking,
       analyticsTuning,
+      tuningConfig,
     });
   }
 
@@ -336,12 +339,14 @@ export class RecommendationScoringService {
     preferenceProfile: RecommendationPreferenceProfile,
     sponsoredRanking?: RecommendationSponsoredRankingConfig,
     analyticsTuning?: RecommendationAnalyticsTuningConfig,
+    tuningConfig?: RecommendationTuningConfig | null,
   ): ScoredRecommendation {
     return this.scoreCandidate(candidate, {
       placement: 'home',
       preferenceProfile,
       sponsoredRanking,
       analyticsTuning,
+      tuningConfig,
     });
   }
 
@@ -353,6 +358,7 @@ export class RecommendationScoringService {
       | RecommendationSponsoredRankingConfig,
     sponsoredRanking?: RecommendationSponsoredRankingConfig,
     analyticsTuning?: RecommendationAnalyticsTuningConfig,
+    tuningConfig?: RecommendationTuningConfig | null,
   ): ScoredRecommendation {
     const preferenceProfile = this.isSponsoredRankingConfig(
       preferenceProfileOrSponsored,
@@ -371,6 +377,7 @@ export class RecommendationScoringService {
       preferenceProfile,
       sponsoredRanking: resolvedSponsoredRanking,
       analyticsTuning,
+      tuningConfig,
     });
   }
 
@@ -383,25 +390,68 @@ export class RecommendationScoringService {
       query?: string;
       sponsoredRanking?: RecommendationSponsoredRankingConfig;
       analyticsTuning?: RecommendationAnalyticsTuningConfig;
+      tuningConfig?: RecommendationTuningConfig | null;
     },
   ): ScoredRecommendation {
     const reasonCodes = new Set<RecommendationReasonCode>();
-    const categoryScore = this.resolveCategoryScore(
+    const rawCategoryScore = this.resolveCategoryScore(
       candidate,
       input,
       reasonCodes,
     );
-    const textScore = this.resolveTextScore(candidate, input, reasonCodes);
-    const popularityScore = this.resolvePopularityScore(candidate, reasonCodes);
-    const freshnessScore = this.resolveFreshnessScore(candidate, reasonCodes);
-    const ratingScore = this.resolveRatingScore(candidate, reasonCodes);
-    const stockScore = this.resolveStockScore(candidate, reasonCodes);
-    const shopScore = this.resolveShopScore(candidate, input, reasonCodes);
+    const rawTextScore = this.resolveTextScore(candidate, input, reasonCodes);
+    const rawPopularityScore = this.resolvePopularityScore(
+      candidate,
+      reasonCodes,
+    );
+    const rawFreshnessScore = this.resolveFreshnessScore(
+      candidate,
+      reasonCodes,
+    );
+    const rawRatingScore = this.resolveRatingScore(candidate, reasonCodes);
+    const rawStockScore = this.resolveStockScore(candidate, reasonCodes);
+    const rawShopScore = this.resolveShopScore(candidate, input, reasonCodes);
     const penaltyScore = this.resolvePenaltyScore(candidate);
-    const personalization = this.resolvePersonalizationScore(
+    const rawPersonalization = this.resolvePersonalizationScore(
       candidate,
       input.preferenceProfile,
       reasonCodes,
+    );
+    const categoryScore = this.applyTuningWeight(
+      rawCategoryScore,
+      input.tuningConfig?.weights.categoryScore,
+    );
+    const textScore = this.applyTuningWeight(
+      rawTextScore,
+      input.tuningConfig?.weights.textScore,
+    );
+    const popularityScore = this.applyTuningWeight(
+      rawPopularityScore,
+      input.tuningConfig?.weights.popularityScore,
+    );
+    const freshnessScore = this.applyTuningWeight(
+      rawFreshnessScore,
+      input.tuningConfig?.weights.freshnessScore,
+    );
+    const ratingScore = this.applyTuningWeight(
+      rawRatingScore,
+      input.tuningConfig?.weights.ratingScore,
+    );
+    const stockScore = this.applyTuningWeight(
+      rawStockScore,
+      input.tuningConfig?.weights.stockScore,
+    );
+    const shopScore = this.applyTuningWeight(
+      rawShopScore,
+      input.tuningConfig?.weights.shopScore,
+    );
+    const personalizationScore = Math.min(
+      input.tuningConfig?.guardrails.maxPersonalizationScore ??
+        Number.MAX_SAFE_INTEGER,
+      this.applyTuningWeight(
+        rawPersonalization.personalizationScore,
+        input.tuningConfig?.weights.personalizationScore,
+      ),
     );
     const organicScore =
       categoryScore +
@@ -411,23 +461,37 @@ export class RecommendationScoringService {
       ratingScore +
       stockScore +
       shopScore +
-      personalization.personalizationScore -
+      personalizationScore -
       penaltyScore;
-    const analyticsTuning = this.resolveAnalyticsTuningScore(
+    const rawAnalyticsTuning = this.resolveAnalyticsTuningScore(
       candidate,
       organicScore,
       input.analyticsTuning,
     );
-    const sponsoredBoost = this.resolveSponsoredBoost(
+    const analyticsPerformanceScore = this.clampTunedAnalyticsScore(
+      rawAnalyticsTuning.analyticsPerformanceScore,
+      input.tuningConfig,
+    );
+    const rawSponsoredBoost = this.resolveSponsoredBoost(
       candidate,
-      organicScore + analyticsTuning.analyticsPerformanceScore,
+      organicScore + analyticsPerformanceScore,
       input.sponsoredRanking,
+    );
+    const sponsoredBoostScore = this.clampTunedSponsoredScore(
+      rawSponsoredBoost.sponsoredBoostScore,
+      input.tuningConfig?.weights.sponsoredBoost,
+      input.tuningConfig?.guardrails.maxSponsoredBoostScore,
+    );
+    const businessBoostScore = this.clampTunedSponsoredScore(
+      rawSponsoredBoost.businessBoostScore,
+      input.tuningConfig?.weights.sponsoredBoost,
+      input.tuningConfig?.guardrails.maxBusinessBoostScore,
     );
     const score =
       organicScore +
-      analyticsTuning.analyticsPerformanceScore +
-      sponsoredBoost.sponsoredBoostScore +
-      sponsoredBoost.businessBoostScore;
+      analyticsPerformanceScore +
+      sponsoredBoostScore +
+      businessBoostScore;
 
     return {
       score: Number(score.toFixed(2)),
@@ -441,32 +505,90 @@ export class RecommendationScoringService {
         stockScore,
         shopScore,
         penaltyScore,
-        personalizationScore: personalization.personalizationScore,
-        recentViewScore: personalization.recentViewScore,
-        categoryAffinityScore: personalization.categoryAffinityScore,
-        searchIntentScore: personalization.searchIntentScore,
-        clickAffinityScore: personalization.clickAffinityScore,
-        analyticsPerformanceScore: analyticsTuning.analyticsPerformanceScore,
-        ctrScore: analyticsTuning.ctrScore,
-        productEngagementScore: analyticsTuning.productEngagementScore,
-        engagementScore: analyticsTuning.productEngagementScore,
-        algorithmPerformanceHint: analyticsTuning.algorithmPerformanceHint,
-        scenarioPerformanceHint: analyticsTuning.scenarioPerformanceHint,
-        sponsoredBoostScore: sponsoredBoost.sponsoredBoostScore,
-        businessBoostScore: sponsoredBoost.businessBoostScore,
-        maxSponsoredBoost: sponsoredBoost.maxSponsoredBoost,
+        personalizationScore,
+        recentViewScore: rawPersonalization.recentViewScore,
+        categoryAffinityScore: rawPersonalization.categoryAffinityScore,
+        searchIntentScore: rawPersonalization.searchIntentScore,
+        clickAffinityScore: rawPersonalization.clickAffinityScore,
+        analyticsPerformanceScore,
+        ctrScore: rawAnalyticsTuning.ctrScore,
+        productEngagementScore: rawAnalyticsTuning.productEngagementScore,
+        engagementScore: rawAnalyticsTuning.productEngagementScore,
+        algorithmPerformanceHint: rawAnalyticsTuning.algorithmPerformanceHint,
+        scenarioPerformanceHint: rawAnalyticsTuning.scenarioPerformanceHint,
+        sponsoredBoostScore,
+        businessBoostScore,
+        maxSponsoredBoost: Math.min(
+          rawSponsoredBoost.maxSponsoredBoost,
+          input.tuningConfig?.guardrails.maxSponsoredBoostScore ??
+            rawSponsoredBoost.maxSponsoredBoost,
+        ),
       },
-      analyticsSignalsUsed: analyticsTuning.analyticsSignalsUsed,
-      analyticsTuningEnabled: analyticsTuning.analyticsTuningEnabled,
-      sponsoredReason: sponsoredBoost.sponsoredReason,
+      analyticsSignalsUsed: rawAnalyticsTuning.analyticsSignalsUsed,
+      analyticsTuningEnabled: rawAnalyticsTuning.analyticsTuningEnabled,
+      sponsoredReason: rawSponsoredBoost.sponsoredReason,
       sponsoredPreset: input.sponsoredRanking?.enabled
         ? input.sponsoredRanking.preset
         : null,
-      campaignReadiness: sponsoredBoost.campaignReadiness,
-      sponsoredCampaign: sponsoredBoost.sponsoredCampaign,
+      campaignReadiness: {
+        ...rawSponsoredBoost.campaignReadiness,
+        sponsoredBoostApplied: sponsoredBoostScore + businessBoostScore > 0,
+        sponsoredBoostScore: Number(
+          (sponsoredBoostScore + businessBoostScore).toFixed(2),
+        ),
+        campaignReadinessStatus:
+          sponsoredBoostScore + businessBoostScore > 0
+            ? 'boosted'
+            : rawSponsoredBoost.campaignReadiness.campaignReadinessStatus ===
+                'boosted'
+              ? 'eligible'
+              : rawSponsoredBoost.campaignReadiness.campaignReadinessStatus,
+      },
+      sponsoredCampaign: rawSponsoredBoost.sponsoredCampaign,
       sponsored:
-        sponsoredBoost.totalBoostScore > 0 && sponsoredBoost.hasCampaign,
+        sponsoredBoostScore + businessBoostScore > 0 &&
+        rawSponsoredBoost.hasCampaign,
     };
+  }
+
+  private applyTuningWeight(score: number, weight = 1) {
+    return Number((score * weight).toFixed(2));
+  }
+
+  private clampTunedAnalyticsScore(
+    score: number,
+    tuningConfig: RecommendationTuningConfig | null | undefined,
+  ) {
+    if (!tuningConfig) {
+      return score;
+    }
+    const weighted = this.applyTuningWeight(
+      score,
+      tuningConfig.weights.analyticsPerformanceScore,
+    );
+    return Number(
+      Math.max(
+        -tuningConfig.guardrails.maxAnalyticsPerformanceScore,
+        Math.min(
+          tuningConfig.guardrails.maxAnalyticsPerformanceScore,
+          weighted,
+        ),
+      ).toFixed(2),
+    );
+  }
+
+  private clampTunedSponsoredScore(
+    score: number,
+    weight = 1,
+    configuredCap = Number.MAX_SAFE_INTEGER,
+  ) {
+    return Number(
+      Math.min(
+        score,
+        configuredCap,
+        this.applyTuningWeight(score, weight),
+      ).toFixed(2),
+    );
   }
 
   private resolveSponsoredBoost(

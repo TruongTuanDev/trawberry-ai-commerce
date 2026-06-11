@@ -131,6 +131,64 @@
 - Next recommended phase:
   - Post-refactor visual QA audits and accessibility refinements
 
+## 2026-06-11 Controlled Ranking Tuning Presets Phase 5.4
+
+- Status: Implemented and verified on current branch
+- Scope:
+  - added admin-only controlled ranking tuning presets with versioned immutable rows
+  - added explicit draft, active, and archived lifecycle states
+  - added safe new-version editing, explicit activation, previous-version rollback, and archive actions
+  - added audit records for create, update, preview, activate, rollback, and archive actions
+  - made preset mutations and their audit records transactional
+  - returns recent audit history across the complete version family
+  - added side-effect-free ranking preview for home, similar-product, and search scenarios
+  - reused existing `rule_based_v2` loaders, explainability, and ranking comparison concepts instead of replacing the ranking engine
+  - added `/admin/recommendations/tuning` with preset editing, preview, activation confirmation, rollback, and audit visibility
+- Feature flags, all default off:
+  - `RECOMMENDATION_TUNING_WORKFLOW_ENABLED`
+  - `RECOMMENDATION_TUNING_PRESETS_ENABLED`
+  - `RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED`
+- Runtime behavior:
+  - drafts and archived versions never affect public recommendation ranking
+  - an active preset affects public ranking only when all three tuning flags are enabled
+  - when flags are off, existing `rule_based_v2`, personalization, analytics tuning, and sponsored behavior remain unchanged
+  - local runtime was returned to all three tuning flags disabled after QA
+- Guardrails:
+  - core score multipliers are restricted to `0.5..1.5`
+  - personalization and analytics multipliers are restricted to `0..1.5`
+  - sponsored multiplier is restricted to `0..1`, so Phase 5.4 cannot increase the existing sponsored boost
+  - core weight sum must stay within `4..9.5`
+  - sponsored, business, analytics, and personalization score caps cannot exceed platform safety limits
+  - existing public-readiness, stock, campaign wallet, campaign budget, and sponsored relevance caps remain enforced
+- Preview safety:
+  - does not write recommendation tracking events
+  - does not charge CPC
+  - does not write campaign spend or billing ledger entries
+  - records only a safe admin audit entry
+  - does not expose customer ids, guest session ids, secrets, or internal sponsored target lists
+- Safety guarantee:
+  - no checkout, order, cart, payment, shipping, seller payment confirmation, shop readiness, WB sync, AI Try-On, or legacy strawberry app business logic was modified
+  - seller campaigns, CPC pricing, wallet mutations, budget enforcement, and billing ledger behavior remain unchanged
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - host `backend-nest npm run prisma:db:push`: blocked by a Windows Prisma schema-engine error
+  - container `npx prisma db push` against the local PostgreSQL runtime: pass without `--accept-data-loss`
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass, `39` suites and `395` tests
+  - focused recommendation, tuning, campaign, and billing tests: pass, `4` suites and `73` tests
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run check:i18n`: pass
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - required recommendation, locale, public, commerce, seller, and responsive Playwright groups: pass
+  - tuning workflow Playwright with local workflow flags enabled and active-runtime flag disabled: pass, `2` tests
+  - real local API QA: create/version, unsafe `400`, preview, activate, rollback, archive, and unchanged public scores with runtime activation disabled
+  - default-off runtime smoke: healthy `rule_based_v2` results with `sponsored=false`
+- Remaining gaps:
+  - tuning remains rule-based and heuristic, not ML-driven
+  - no A/B experimentation framework, automated tuning recommendation, auction bidding, fraud detection, or real ads funding was added
+  - production activation still requires explicit operator-managed flags and rollout monitoring
+
 ## 2026-06-07 Ranking Weight Tuning from Analytics Phase 5.3
 
 - Status: Implemented on current branch

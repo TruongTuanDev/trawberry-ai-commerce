@@ -27,16 +27,34 @@ const navLinks = [
     key: "adminShell.nav.recommendationsAnalytics",
     match: "/admin/recommendations-analytics",
   },
+  {
+    href: "/admin/recommendations/tuning",
+    key: "adminShell.nav.recommendationTuning",
+    match: "/admin/recommendations/tuning",
+    requiresTuningWorkflow: true,
+  },
   { href: "/admin/homepage-slides", key: "adminShell.nav.homepageSlides", match: "/admin/homepage-slides" },
   { href: "/admin/ai-settings", key: "adminShell.nav.aiSettings", match: "/admin/ai-settings" },
 ];
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  recommendationTuningWorkflowEnabled = false,
+}: {
+  children: React.ReactNode;
+  recommendationTuningWorkflowEnabled?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useI18n("admin");
   const user = useAuthStore((state) => state.adminUser);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const visibleNavLinks = navLinks.filter(
+    (link) =>
+      !("requiresTuningWorkflow" in link) ||
+      !link.requiresTuningWorkflow ||
+      recommendationTuningWorkflowEnabled,
+  );
 
   useEffect(() => {
     if (!user) {
@@ -62,7 +80,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{t("adminShell.badge")}</p>
             <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">{t("adminShell.title")}</h1>
             <nav className="mt-8 space-y-2">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -143,7 +161,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
             <h1 className="mt-3 font-[family-name:var(--font-mono-app)] text-2xl font-bold text-white">{t("adminShell.title")}</h1>
             <nav className="mt-8 flex-1 space-y-2 overflow-y-auto scrollbar-thin">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}

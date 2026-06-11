@@ -6,6 +6,11 @@ import {
   type RecommendationPreferenceProfile,
   type RecommendationProductRecord,
 } from '../src/modules/recommendations/recommendation-scoring.service';
+import {
+  DEFAULT_RECOMMENDATION_TUNING_GUARDRAILS,
+  DEFAULT_RECOMMENDATION_TUNING_WEIGHTS,
+  type RecommendationTuningConfig,
+} from '../src/modules/recommendations/recommendation-tuning-config';
 
 describe('RecommendationScoringService', () => {
   const service = new RecommendationScoringService();
@@ -50,6 +55,111 @@ describe('RecommendationScoringService', () => {
     );
     expect(sameNameScore.reasonCodes).toContain('matching_category_name');
     expect(sameCategoryScore.score).toBeGreaterThan(sameNameScore.score);
+  });
+
+  it('keeps the baseline score unchanged with no controlled tuning preset', () => {
+    const candidate = buildProduct({ id: 'baseline-no-preset' });
+    const baseline = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+    );
+    const explicitNoPreset = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      undefined,
+      undefined,
+      null,
+    );
+
+    expect(explicitNoPreset).toEqual(baseline);
+  });
+
+  it('applies bounded controlled tuning weights to existing score dimensions', () => {
+    const candidate = buildProduct({
+      id: 'controlled-tuning',
+      feedbackCount: 8,
+      stockQuantity: 20,
+    });
+    const baseline = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+    );
+    const tuned = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      undefined,
+      undefined,
+      tuningConfig({
+        popularityScore: 0.5,
+        freshnessScore: 1.5,
+      }),
+    );
+
+    expect(tuned.scoreBreakdown.popularityScore).toBe(
+      Number((baseline.scoreBreakdown.popularityScore * 0.5).toFixed(2)),
+    );
+    expect(tuned.scoreBreakdown.freshnessScore).toBe(
+      Number((baseline.scoreBreakdown.freshnessScore * 1.5).toFixed(2)),
+    );
+  });
+
+  it('never lets controlled tuning increase the existing sponsored boost', () => {
+    const candidate = buildProduct({
+      id: 'controlled-sponsored',
+      shopId: 'sponsored-shop',
+    });
+    const sponsored = sponsoredConfig({
+      sponsoredProductIds: [candidate.id],
+      businessBoostShopIds: [candidate.shopId],
+      sponsoredBoost: 5,
+      businessBoost: 2,
+      maxSponsoredBoost: 5,
+      maxBusinessBoost: 2,
+    });
+    const baseline = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsored,
+    );
+    const tuned = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsored,
+      undefined,
+      tuningConfig({ sponsoredBoost: 0.5 }),
+    );
+
+    expect(tuned.scoreBreakdown.sponsoredBoostScore).toBeLessThanOrEqual(
+      baseline.scoreBreakdown.sponsoredBoostScore,
+    );
+    expect(tuned.scoreBreakdown.businessBoostScore).toBeLessThanOrEqual(
+      baseline.scoreBreakdown.businessBoostScore,
+    );
+    expect(tuned.scoreBreakdown.sponsoredBoostScore).toBeLessThanOrEqual(5);
+    expect(tuned.scoreBreakdown.businessBoostScore).toBeLessThanOrEqual(2);
+  });
+
+  it('reports an eligible campaign when controlled tuning suppresses its boost', () => {
+    const candidate = buildProduct({
+      id: 'controlled-sponsored-suppressed',
+      shopId: 'sponsored-shop',
+    });
+    const scored = service.scoreHomeProduct(
+      candidate,
+      emptyPreferenceProfile(),
+      sponsoredConfig({
+        sponsoredProductIds: [candidate.id],
+        sponsoredBoost: 5,
+        maxSponsoredBoost: 5,
+      }),
+      undefined,
+      tuningConfig({ sponsoredBoost: 0 }),
+    );
+
+    expect(scored.scoreBreakdown.sponsoredBoostScore).toBe(0);
+    expect(scored.campaignReadiness.sponsoredBoostApplied).toBe(false);
+    expect(scored.campaignReadiness.campaignReadinessStatus).toBe('eligible');
+    expect(scored.sponsored).toBe(false);
   });
 
   it('scores text and search intent matches with keyword reasons', () => {
@@ -659,6 +769,21 @@ function analyticsTuningConfig(
           ctr: number;
         }
       >(),
+  };
+}
+
+function tuningConfig(
+  weightOverrides?: Partial<RecommendationTuningConfig['weights']>,
+): RecommendationTuningConfig {
+  return {
+    presetId: 'preset-1',
+    presetKey: 'preset-key-1',
+    version: 1,
+    weights: {
+      ...DEFAULT_RECOMMENDATION_TUNING_WEIGHTS,
+      ...weightOverrides,
+    },
+    guardrails: { ...DEFAULT_RECOMMENDATION_TUNING_GUARDRAILS },
   };
 }
 

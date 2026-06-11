@@ -29,6 +29,7 @@ import {
   RecommendationQaPackThresholdsDto,
 } from './dto/recommendation-qa-pack.dto';
 import { RecommendationQueryDto } from './dto/recommendation-query.dto';
+import { RecommendationTuningPreviewDto } from './dto/recommendation-tuning.dto';
 import {
   RECOMMENDATION_QA_BASELINE_CATALOG,
   RECOMMENDATION_QA_THRESHOLD_PRESETS,
@@ -69,6 +70,8 @@ import {
   type RecommendationSponsoredRankingConfig,
   type RecommendationSponsoredTargetConfig,
 } from './recommendation-scoring.service';
+import type { RecommendationTuningConfig } from './recommendation-tuning-config';
+import { RecommendationTuningService } from './recommendation-tuning.service';
 
 type RecommendationApiItem = {
   product: ReturnType<RecommendationsService['mapProduct']>;
@@ -278,6 +281,7 @@ export class RecommendationsService {
     private readonly scoring: RecommendationScoringService,
     private readonly campaignsService: CampaignsService,
     private readonly billingService: BillingService,
+    private readonly tuningService: RecommendationTuningService,
   ) {}
 
   async getHomeRecommendations(
@@ -429,6 +433,80 @@ export class RecommendationsService {
     return {
       placement: query.placement,
       sponsoredRanking: sponsoredQaSummary,
+      items,
+    };
+  }
+
+  async previewTuningPreset(
+    presetId: string,
+    dto: RecommendationTuningPreviewDto,
+    request: Request,
+    admin: AuthenticatedUser,
+  ) {
+    this.tuningService.assertWorkflowEnabled();
+    const tuningConfig = await this.tuningService.getPreviewConfig(presetId);
+    const query: RecommendationQueryDto = {
+      limit: dto.limit,
+      guestSessionId: dto.guestSessionId,
+      q: dto.q,
+      debug: true,
+    };
+
+    let baselineItems: RecommendationRankedItem[] = [];
+    let tunedItems: RecommendationRankedItem[] = [];
+    switch (dto.placement) {
+      case 'home':
+        [baselineItems, tunedItems] = await Promise.all([
+          this.loadHomeRecommendationsV2(query, request, admin, null),
+          this.loadHomeRecommendationsV2(query, request, admin, tuningConfig),
+        ]);
+        break;
+      case 'product_detail':
+        [baselineItems, tunedItems] = await Promise.all([
+          this.loadSimilarRecommendationsV2(
+            dto.productId!,
+            query,
+            request,
+            admin,
+            null,
+          ),
+          this.loadSimilarRecommendationsV2(
+            dto.productId!,
+            query,
+            request,
+            admin,
+            tuningConfig,
+          ),
+        ]);
+        break;
+      case 'search':
+        [baselineItems, tunedItems] = await Promise.all([
+          this.loadSearchRecommendationsV2(query, request, admin, null),
+          this.loadSearchRecommendationsV2(query, request, admin, tuningConfig),
+        ]);
+        break;
+    }
+
+    const guardrailViolations = this.findTuningPreviewGuardrailViolations(
+      tunedItems,
+      tuningConfig,
+    );
+    const items = this.buildTuningPreviewItems(baselineItems, tunedItems);
+    await this.tuningService.recordPreview(presetId, admin.userId, {
+      placement: dto.placement,
+      queryProvided: Boolean(dto.q?.trim()),
+      productIdProvided: Boolean(dto.productId),
+      itemCount: items.length,
+      guardrailViolationCount: guardrailViolations.length,
+    });
+    return {
+      placement: dto.placement,
+      preset: {
+        id: tuningConfig.presetId,
+        presetKey: tuningConfig.presetKey,
+        version: tuningConfig.version,
+      },
+      guardrailViolations,
       items,
     };
   }
@@ -1082,6 +1160,7 @@ export class RecommendationsService {
     query: RecommendationQueryDto,
     request: Request,
     user?: AuthenticatedUser | null,
+    tuningOverride?: RecommendationTuningConfig | null,
   ) {
     const [products, preferenceProfile] = await Promise.all([
       this.prisma.product.findMany({
@@ -1099,6 +1178,10 @@ export class RecommendationsService {
       products,
       'rule_based_v2',
     );
+    const tuningConfig =
+      tuningOverride === undefined
+        ? await this.tuningService.getActiveRuntimeConfig()
+        : tuningOverride;
 
     return products
       .filter((product) => this.isPublicVisible(product))
@@ -1110,6 +1193,7 @@ export class RecommendationsService {
             preferenceProfile,
             sponsoredRanking,
             analyticsTuning,
+            tuningConfig,
           ),
         },
       }))
@@ -1179,6 +1263,7 @@ export class RecommendationsService {
     query: RecommendationQueryDto,
     request: Request,
     user?: AuthenticatedUser | null,
+    tuningOverride?: RecommendationTuningConfig | null,
   ) {
     const sourceProduct = await this.prisma.product.findFirst({
       where: {
@@ -1208,6 +1293,10 @@ export class RecommendationsService {
       candidates,
       'rule_based_v2',
     );
+    const tuningConfig =
+      tuningOverride === undefined
+        ? await this.tuningService.getActiveRuntimeConfig()
+        : tuningOverride;
 
     return candidates
       .filter(
@@ -1222,6 +1311,7 @@ export class RecommendationsService {
             preferenceProfile,
             sponsoredRanking,
             analyticsTuning,
+            tuningConfig,
           ),
         },
       }))
@@ -1233,6 +1323,7 @@ export class RecommendationsService {
     query: RecommendationQueryDto,
     request: Request,
     user?: AuthenticatedUser | null,
+    tuningOverride?: RecommendationTuningConfig | null,
   ) {
     const searchQuery = query.q?.trim() ?? '';
     if (!searchQuery) {
@@ -1287,6 +1378,10 @@ export class RecommendationsService {
       candidates,
       'rule_based_v2',
     );
+    const tuningConfig =
+      tuningOverride === undefined
+        ? await this.tuningService.getActiveRuntimeConfig()
+        : tuningOverride;
 
     return candidates
       .filter((product) => this.isPublicVisible(product))
@@ -1299,6 +1394,7 @@ export class RecommendationsService {
             preferenceProfile,
             sponsoredRanking,
             analyticsTuning,
+            tuningConfig,
           ),
         },
       }))
@@ -1498,6 +1594,119 @@ export class RecommendationsService {
         ruleBasedV1: item.ruleBasedV1,
         ruleBasedV2: item.ruleBasedV2,
       }));
+  }
+
+  private buildTuningPreviewItems(
+    baselineItems: RecommendationRankedItem[],
+    tunedItems: RecommendationRankedItem[],
+  ) {
+    const baselineByProductId = new Map(
+      baselineItems.map((item, index) => [
+        item.product.id,
+        {
+          item,
+          snapshot: this.buildComparisonSnapshot(
+            'rule_based_v2',
+            index + 1,
+            item,
+            true,
+          ),
+        },
+      ]),
+    );
+    const tunedByProductId = new Map(
+      tunedItems.map((item, index) => [
+        item.product.id,
+        {
+          item,
+          snapshot: this.buildComparisonSnapshot(
+            'rule_based_v2',
+            index + 1,
+            item,
+            true,
+          ),
+        },
+      ]),
+    );
+    const productIds = [
+      ...new Set([...baselineByProductId.keys(), ...tunedByProductId.keys()]),
+    ];
+
+    return productIds
+      .map((productId) => {
+        const baseline = baselineByProductId.get(productId);
+        const tuned = tunedByProductId.get(productId);
+        const product = tuned?.item.product ?? baseline?.item.product;
+        const currentRank = baseline?.snapshot.rank ?? null;
+        const tunedRank = tuned?.snapshot.rank ?? null;
+        const currentScore = baseline?.snapshot.finalScore ?? null;
+        const tunedScore = tuned?.snapshot.finalScore ?? null;
+        return {
+          productId,
+          productName: product ? this.mapProduct(product).name : productId,
+          rankMovement:
+            currentRank !== null && tunedRank !== null
+              ? currentRank - tunedRank
+              : null,
+          scoreDelta:
+            currentScore !== null && tunedScore !== null
+              ? Number((tunedScore - currentScore).toFixed(2))
+              : null,
+          sponsoredMarkerChanged:
+            Boolean(baseline?.item.scored.sponsored) !==
+            Boolean(tuned?.item.scored.sponsored),
+          currentSponsored: Boolean(baseline?.item.scored.sponsored),
+          tunedSponsored: Boolean(tuned?.item.scored.sponsored),
+          current: baseline?.snapshot ?? null,
+          tuned: tuned?.snapshot ?? null,
+        };
+      })
+      .sort(
+        (left, right) =>
+          (left.tuned?.rank ?? left.current?.rank ?? Number.MAX_SAFE_INTEGER) -
+          (right.tuned?.rank ?? right.current?.rank ?? Number.MAX_SAFE_INTEGER),
+      );
+  }
+
+  private findTuningPreviewGuardrailViolations(
+    items: RecommendationRankedItem[],
+    tuningConfig: RecommendationTuningConfig,
+  ) {
+    const violations = new Set<string>();
+    for (const item of items) {
+      const mapped = this.mapProduct(item.product);
+      if (!this.isPublicVisible(item.product)) {
+        violations.add('A non-public-safe product entered the tuned result.');
+      }
+      if (!mapped.inStock) {
+        violations.add('An out-of-stock product entered the tuned result.');
+      }
+      if (
+        (item.scored.scoreBreakdown?.sponsoredBoostScore ?? 0) >
+        tuningConfig.guardrails.maxSponsoredBoostScore
+      ) {
+        violations.add('Sponsored boost exceeded the preset guardrail.');
+      }
+      if (
+        (item.scored.scoreBreakdown?.businessBoostScore ?? 0) >
+        tuningConfig.guardrails.maxBusinessBoostScore
+      ) {
+        violations.add('Business boost exceeded the preset guardrail.');
+      }
+      if (
+        Math.abs(item.scored.scoreBreakdown?.analyticsPerformanceScore ?? 0) >
+        tuningConfig.guardrails.maxAnalyticsPerformanceScore
+      ) {
+        violations.add('Analytics tuning exceeded the preset guardrail.');
+      }
+      if (
+        (item.scored.scoreBreakdown?.personalizationScore ?? 0) >
+        tuningConfig.guardrails.maxPersonalizationScore
+      ) {
+        violations.add('Personalization exceeded the preset guardrail.');
+      }
+    }
+    return [...violations];
   }
 
   private async buildComparisonSnapshotExport(

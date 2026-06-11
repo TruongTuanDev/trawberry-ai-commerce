@@ -21,6 +21,8 @@ model User {
   reviewedSellerDocuments SellerDocument[]       @relation("SellerDocumentReviewer")
   adminAuditActions       AdminAuditLog[]        @relation("AdminAuditActor")
   adminAuditTargets       AdminAuditLog[]        @relation("AdminAuditTarget")
+  createdRecommendationTuningPresets RecommendationTuningPreset[] @relation("RecommendationTuningPresetCreator")
+  recommendationTuningAuditActions RecommendationTuningAuditLog[] @relation("RecommendationTuningAuditActor")
   assignedAdminQueueTasks  AdminQueueTask[]       @relation("AdminQueueTaskAssignee")
   adminQueueTaskEvents     AdminQueueTaskEvent[]  @relation("AdminQueueTaskEventActor")
   aiGenerationTasks       AiGenerationTask[]
@@ -543,6 +545,47 @@ model RecommendationEvent {
   @@index([chargeStatus, createdAt])
   @@index([placement, type, createdAt])
   @@map("recommendation_events")
+}
+
+model RecommendationTuningPreset {
+  id               String                         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  presetKey        String                         @map("preset_key") @db.Uuid
+  name             String                         @db.VarChar(255)
+  description      String?                        @db.VarChar(1000)
+  status           String                         @default("draft") @db.VarChar(50)
+  version          Int                            @default(1)
+  weights          Json
+  guardrails       Json
+  createdByAdminId String                         @map("created_by_admin_id") @db.Uuid
+  activatedAt      DateTime?                      @map("activated_at") @db.Timestamptz(6)
+  archivedAt       DateTime?                      @map("archived_at") @db.Timestamptz(6)
+  createdAt        DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdByAdmin   User                           @relation("RecommendationTuningPresetCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  auditLogs        RecommendationTuningAuditLog[]
+
+  @@unique([presetKey, version])
+  @@index([status, updatedAt])
+  @@index([presetKey, version])
+  @@index([createdByAdminId, createdAt])
+  @@map("recommendation_tuning_presets")
+}
+
+model RecommendationTuningAuditLog {
+  id             String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  presetId       String                     @map("preset_id") @db.Uuid
+  action         String                     @db.VarChar(50)
+  actorAdminId   String                     @map("actor_admin_id") @db.Uuid
+  previousValue  Json?                      @map("previous_value")
+  nextValue      Json?                      @map("next_value")
+  createdAt      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  preset         RecommendationTuningPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  actorAdmin     User                       @relation("RecommendationTuningAuditActor", fields: [actorAdminId], references: [id], onDelete: Restrict)
+
+  @@index([presetId, createdAt])
+  @@index([actorAdminId, createdAt])
+  @@index([action, createdAt])
+  @@map("recommendation_tuning_audit_logs")
 }
 
 model VisualSearchLog {

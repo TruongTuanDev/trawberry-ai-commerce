@@ -11,6 +11,10 @@ import {
 } from '../src/common/guards/jwt-auth.guard';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { BillingService } from '../src/modules/billing/billing.service';
+import {
+  DEFAULT_RECOMMENDATION_TUNING_GUARDRAILS,
+  DEFAULT_RECOMMENDATION_TUNING_WEIGHTS,
+} from '../src/modules/recommendations/recommendation-tuning-config';
 import { RecommendationsService } from '../src/modules/recommendations/recommendations.service';
 import { readBody } from './test-helpers';
 
@@ -128,6 +132,13 @@ describe('RecommendationsController (e2e)', () => {
       update: jest.fn(),
       findMany: jest.fn(),
     },
+    recommendationTuningPreset: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    recommendationTuningAuditLog: {
+      create: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -208,6 +219,9 @@ describe('RecommendationsController (e2e)', () => {
     process.env.PUBLIC_RECOMMENDATIONS_ENABLED = 'true';
     process.env.RECOMMENDATION_TRACKING_ENABLED = 'true';
     process.env.RECOMMENDATION_SMART_RANKING_ENABLED = 'true';
+    process.env.RECOMMENDATION_TUNING_WORKFLOW_ENABLED = 'false';
+    process.env.RECOMMENDATION_TUNING_PRESETS_ENABLED = 'false';
+    process.env.RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED = 'false';
 
     products = [
       buildProduct({
@@ -442,6 +456,33 @@ describe('RecommendationsController (e2e)', () => {
         }),
       );
     });
+    const tuningPreset = {
+      id: '40000000-0000-0000-0000-000000000001',
+      presetKey: '40000000-0000-0000-0000-000000000002',
+      name: 'Focused freshness preset',
+      description: 'Recommendation E2E tuning preset',
+      status: 'active',
+      version: 1,
+      weights: {
+        ...DEFAULT_RECOMMENDATION_TUNING_WEIGHTS,
+        freshnessScore: 0.5,
+      },
+      guardrails: { ...DEFAULT_RECOMMENDATION_TUNING_GUARDRAILS },
+      createdByAdminId: 'admin-user-1',
+      activatedAt: new Date('2026-06-11T00:00:00Z'),
+      archivedAt: null,
+      createdAt: new Date('2026-06-11T00:00:00Z'),
+      updatedAt: new Date('2026-06-11T00:00:00Z'),
+    };
+    prismaMock.recommendationTuningPreset.findFirst.mockResolvedValue(
+      tuningPreset,
+    );
+    prismaMock.recommendationTuningPreset.findUnique.mockResolvedValue(
+      tuningPreset,
+    );
+    prismaMock.recommendationTuningAuditLog.create.mockResolvedValue({
+      id: 'tuning-audit-1',
+    });
     prismaMock.$transaction.mockImplementation((callback) =>
       callback(prismaMock),
     );
@@ -476,6 +517,58 @@ describe('RecommendationsController (e2e)', () => {
       items: [],
       products: [],
     });
+  });
+
+  it('keeps active tuning presets inert until the runtime flag is enabled', async () => {
+    process.env.RECOMMENDATION_TUNING_WORKFLOW_ENABLED = 'true';
+    process.env.RECOMMENDATION_TUNING_PRESETS_ENABLED = 'true';
+
+    const baseline = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2')
+      .expect(200);
+    const baselineScore = readBody<{ items: Array<{ score: number }> }>(
+      baseline,
+    ).items[0]?.score;
+
+    process.env.RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED = 'true';
+    const tuned = await request(app.getHttpServer())
+      .get('/api/public/recommendations/home?limit=2')
+      .expect(200);
+    const tunedScore = readBody<{ items: Array<{ score: number }> }>(tuned)
+      .items[0]?.score;
+
+    expect(tunedScore).not.toBe(baselineScore);
+  });
+
+  it('previews a tuning preset without recommendation events or billing charges', async () => {
+    process.env.RECOMMENDATION_TUNING_WORKFLOW_ENABLED = 'true';
+    process.env.RECOMMENDATION_TUNING_PRESETS_ENABLED = 'true';
+
+    const response = await request(app.getHttpServer())
+      .post(
+        '/api/admin/recommendations/tuning-presets/40000000-0000-0000-0000-000000000001/preview',
+      )
+      .send({ placement: 'home', limit: 3 })
+      .expect(201);
+
+    const body = readBody<{
+      items: Array<{
+        current: { finalScore: number };
+        tuned: { finalScore: number };
+      }>;
+      guardrailViolations: string[];
+    }>(response);
+    expect(body.items[0]?.tuned.finalScore).not.toBe(
+      body.items[0]?.current.finalScore,
+    );
+    expect(body.guardrailViolations).toEqual([]);
+    expect(prismaMock.recommendationEvent.create).not.toHaveBeenCalled();
+    expect(prismaMock.billingLedgerEntry.create).not.toHaveBeenCalled();
+    expect(prismaMock.recommendationTuningAuditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: 'previewed' }),
+      }),
+    );
   });
 
   it('returns similar products without including the source product', async () => {

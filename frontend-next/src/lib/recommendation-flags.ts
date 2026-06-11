@@ -36,6 +36,21 @@ export function getRecommendationFlags() {
       process.env.NEXT_PUBLIC_RECOMMENDATION_ANALYTICS_TUNING_ENABLED,
     false,
   );
+  const recommendationTuningWorkflowEnabled = readBoolean(
+    process.env.RECOMMENDATION_TUNING_WORKFLOW_ENABLED ??
+      process.env.NEXT_PUBLIC_RECOMMENDATION_TUNING_WORKFLOW_ENABLED,
+    false,
+  );
+  const recommendationTuningPresetsEnabled = readBoolean(
+    process.env.RECOMMENDATION_TUNING_PRESETS_ENABLED ??
+      process.env.NEXT_PUBLIC_RECOMMENDATION_TUNING_PRESETS_ENABLED,
+    false,
+  );
+  const recommendationTuningActivePresetEnabled = readBoolean(
+    process.env.RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED ??
+      process.env.NEXT_PUBLIC_RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED,
+    false,
+  );
 
   return {
     recommendationsEnabled,
@@ -48,6 +63,14 @@ export function getRecommendationFlags() {
     recommendationQaToolsEnabled,
     recommendationAnalyticsTuningEnabled:
       recommendationsEnabled && recommendationAnalyticsTuningEnabled,
+    recommendationTuningWorkflowEnabled,
+    recommendationTuningPresetsEnabled:
+      recommendationTuningWorkflowEnabled && recommendationTuningPresetsEnabled,
+    recommendationTuningActivePresetEnabled:
+      recommendationsEnabled &&
+      recommendationTuningWorkflowEnabled &&
+      recommendationTuningPresetsEnabled &&
+      recommendationTuningActivePresetEnabled,
   };
 }
 
@@ -59,6 +82,9 @@ export function readRecommendationFlagsFromDocument() {
       recommendationExplainabilityEnabled: false,
       recommendationQaToolsEnabled: false,
       recommendationAnalyticsTuningEnabled: false,
+      recommendationTuningWorkflowEnabled: false,
+      recommendationTuningPresetsEnabled: false,
+      recommendationTuningActivePresetEnabled: false,
     };
   }
 
@@ -73,5 +99,11 @@ export function readRecommendationFlagsFromDocument() {
       document.body.dataset.recommendationQaToolsEnabled === "true",
     recommendationAnalyticsTuningEnabled:
       document.body.dataset.recommendationAnalyticsTuningEnabled === "true",
+    recommendationTuningWorkflowEnabled:
+      document.body.dataset.recommendationTuningWorkflowEnabled === "true",
+    recommendationTuningPresetsEnabled:
+      document.body.dataset.recommendationTuningPresetsEnabled === "true",
+    recommendationTuningActivePresetEnabled:
+      document.body.dataset.recommendationTuningActivePresetEnabled === "true",
   };
 }

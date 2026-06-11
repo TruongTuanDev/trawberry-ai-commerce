@@ -431,6 +431,94 @@ export type RecommendationAnalyticsProductsResponse = {
   topClickedProducts: RecommendationAnalyticsProductRow[];
 };
 
+export type RecommendationTuningWeights = {
+  categoryScore: number;
+  textScore: number;
+  popularityScore: number;
+  freshnessScore: number;
+  ratingScore: number;
+  stockScore: number;
+  shopScore: number;
+  personalizationScore: number;
+  analyticsPerformanceScore: number;
+  sponsoredBoost: number;
+};
+
+export type RecommendationTuningGuardrails = {
+  maxSponsoredBoostScore: number;
+  maxBusinessBoostScore: number;
+  maxAnalyticsPerformanceScore: number;
+  maxPersonalizationScore: number;
+};
+
+export type RecommendationTuningPreset = {
+  id: string;
+  presetKey: string;
+  name: string;
+  description: string | null;
+  status: "draft" | "active" | "archived";
+  version: number;
+  weights: RecommendationTuningWeights;
+  guardrails: RecommendationTuningGuardrails;
+  createdByAdminId: string;
+  activatedAt: string | null;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecommendationTuningFlags = {
+  workflowEnabled: boolean;
+  presetsEnabled: boolean;
+  activePresetEnabled: boolean;
+};
+
+export type RecommendationTuningAuditLog = {
+  id: string;
+  presetId: string;
+  action: string;
+  actorAdminId: string;
+  previousValue: unknown;
+  nextValue: unknown;
+  createdAt: string;
+};
+
+export type RecommendationTuningPresetDetail = {
+  flags: RecommendationTuningFlags;
+  preset: RecommendationTuningPreset;
+  versions: RecommendationTuningPreset[];
+  auditLogs: RecommendationTuningAuditLog[];
+};
+
+export type RecommendationTuningPreviewItem = {
+  productId: string;
+  productName: string;
+  rankMovement: number | null;
+  scoreDelta: number | null;
+  sponsoredMarkerChanged: boolean;
+  currentSponsored: boolean;
+  tunedSponsored: boolean;
+  current: {
+    rank: number | null;
+    finalScore: number | null;
+    reasons: string[];
+    scoreBreakdown: Record<string, number> | null;
+  } | null;
+  tuned: {
+    rank: number | null;
+    finalScore: number | null;
+    reasons: string[];
+    scoreBreakdown: Record<string, number> | null;
+  } | null;
+};
+
+export type RecommendationTuningPreview = {
+  placement: "home" | "product_detail" | "search";
+  preset: { id: string; presetKey: string; version: number };
+  guardrailViolations: string[];
+  items: RecommendationTuningPreviewItem[];
+};
+
 export type AdminQueueSlaStatus = "OK" | "WARNING" | "BREACHED";
 
 export type AdminQueueResponse<T> = {
@@ -934,6 +1022,86 @@ export async function getAdminRecommendationAnalyticsProducts(query?: {
     {
       method: "GET",
     },
+  );
+}
+
+export async function listAdminRecommendationTuningPresets() {
+  return apiRequest<{
+    flags: RecommendationTuningFlags;
+    presets: RecommendationTuningPreset[];
+  }>("/api/admin/recommendations/tuning-presets", { method: "GET" });
+}
+
+export async function getAdminRecommendationTuningPreset(id: string) {
+  return apiRequest<RecommendationTuningPresetDetail>(
+    `/api/admin/recommendations/tuning-presets/${id}`,
+    { method: "GET" },
+  );
+}
+
+export async function createAdminRecommendationTuningPreset(input: {
+  name: string;
+  description?: string;
+  weights: RecommendationTuningWeights;
+  guardrails: RecommendationTuningGuardrails;
+}) {
+  return apiRequest<RecommendationTuningPreset>(
+    "/api/admin/recommendations/tuning-presets",
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export async function updateAdminRecommendationTuningPreset(
+  id: string,
+  input: {
+    name?: string;
+    description?: string;
+    weights?: RecommendationTuningWeights;
+    guardrails?: RecommendationTuningGuardrails;
+  },
+) {
+  return apiRequest<RecommendationTuningPreset>(
+    `/api/admin/recommendations/tuning-presets/${id}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+}
+
+export async function previewAdminRecommendationTuningPreset(
+  id: string,
+  input: {
+    placement: "home" | "product_detail" | "search";
+    q?: string;
+    productId?: string;
+    limit?: number;
+  },
+) {
+  return apiRequest<RecommendationTuningPreview>(
+    `/api/admin/recommendations/tuning-presets/${id}/preview`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export async function activateAdminRecommendationTuningPreset(id: string) {
+  return apiRequest<RecommendationTuningPreset>(
+    `/api/admin/recommendations/tuning-presets/${id}/activate`,
+    { method: "POST", body: JSON.stringify({}) },
+  );
+}
+
+export async function rollbackAdminRecommendationTuningPreset(
+  id: string,
+  targetVersion?: number,
+) {
+  return apiRequest<RecommendationTuningPreset>(
+    `/api/admin/recommendations/tuning-presets/${id}/rollback`,
+    { method: "POST", body: JSON.stringify({ targetVersion }) },
+  );
+}
+
+export async function archiveAdminRecommendationTuningPreset(id: string) {
+  return apiRequest<RecommendationTuningPreset>(
+    `/api/admin/recommendations/tuning-presets/${id}/archive`,
+    { method: "POST", body: JSON.stringify({}) },
   );
 }
 
