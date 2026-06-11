@@ -129,10 +129,14 @@ export class WbApiClientService {
     let lastTotal: number | undefined;
 
     while (pagesFetched < maxPages && cards.length < totalLimit) {
+      const requestLimit = options.nmIds?.length
+        ? pageLimit
+        : Math.min(pageLimit, totalLimit - cards.length);
       const page = await this.fetchCardsPage({
         apiKey: options.apiKey,
-        limit: Math.min(pageLimit, totalLimit - cards.length),
+        limit: requestLimit,
         cursor,
+        sortAscending: options.nmIds?.length ? false : true,
       });
 
       pagesFetched += 1;
@@ -160,8 +164,8 @@ export class WbApiClientService {
       if (
         !page.cards.length ||
         !page.cursor?.updatedAt ||
-        !page.cursor?.nmID ||
-        (typeof lastTotal === 'number' && lastTotal < pageLimit)
+        page.cursor?.nmID == null ||
+        (typeof lastTotal === 'number' && lastTotal < requestLimit)
       ) {
         break;
       }
@@ -203,10 +207,15 @@ export class WbApiClientService {
     apiKey: string;
     limit: number;
     cursor?: WbCardsResponse['cursor'];
+    sortAscending: boolean;
   }): Promise<WbCardsPageResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs());
-    const attempts = this.requestBodies(options.limit, options.cursor);
+    const attempts = this.requestBodies(
+      options.limit,
+      options.cursor,
+      options.sortAscending,
+    );
 
     try {
       let finalFailure: BadGatewayException | null = null;
@@ -307,13 +316,14 @@ export class WbApiClientService {
     return {
       limit,
       ...(cursor?.updatedAt ? { updatedAt: cursor.updatedAt } : {}),
-      ...(cursor?.nmID ? { nmID: cursor.nmID } : {}),
+      ...(cursor?.nmID != null ? { nmID: cursor.nmID } : {}),
     };
   }
 
   private requestBodies(
     limit: number,
     cursor?: WbCardsResponse['cursor'],
+    preferredSortAscending = true,
   ): FetchCardsPageAttempt[] {
     const baseCursor = this.cursor(limit, cursor);
     return [
@@ -321,7 +331,7 @@ export class WbApiClientService {
         settings: {
           cursor: baseCursor,
           filter: { withPhoto: -1 },
-          sort: { ascending: true },
+          sort: { ascending: preferredSortAscending },
         },
       },
       {
@@ -334,7 +344,7 @@ export class WbApiClientService {
         settings: {
           cursor: baseCursor,
           filter: { withPhoto: -1 },
-          sort: { ascending: false },
+          sort: { ascending: !preferredSortAscending },
         },
       },
     ];

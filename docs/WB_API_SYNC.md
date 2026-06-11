@@ -248,7 +248,7 @@ Parsing and matching:
 - only numeric `Артикул WB / nmID` values are valid
 - numeric duplicates are canonicalized without converting them to JavaScript `Number`, while the first original token is preserved for reporting
 - maximum input length is `5000` characters and maximum unique code count is `100`
-- real mode retrieves WB Cards List pages and filters exact requested `card.nmID` values locally
+- real selected-nmID mode retrieves descending WB Cards List pages with a stable page size and filters exact requested `card.nmID` values locally
 - mock mode applies the same exact nmID matching contract for deterministic tests
 - `vendorCode` is not used for selected-product matching
 - all-invalid selected input fails before card retrieval; selected sync never calls or falls back to sync-all

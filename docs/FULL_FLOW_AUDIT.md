@@ -1,5 +1,13 @@
 # Full Commerce Flow Audit
 
+## WB Selected nmID Real Lookup Fix Addendum
+
+- verified a direct read-only WB Cards List diagnostic finds nmIDs `955686992` and `982708059` on the first descending page
+- confirmed the app bug was selected-sync ordering/pagination rather than token access or missing WB cards
+- verified the built app `WbApiClientService` now finds both nmIDs with exact `String(card.nmID)` matching after scanning 1 page / 100 cards
+- verified selected lookup keeps a stable page size after an early match so a remaining nmID is not skipped by a false last-page condition
+- verified no sync-all action, database write, product persistence, or unrelated commerce business logic was used during real API QA
+
 ## Seller Production UX and WB nmID Selected Sync Addendum
 
 - verified Seller desktop and mobile navigation no longer render the sidebar search while preserving grouped navigation and active-route behavior

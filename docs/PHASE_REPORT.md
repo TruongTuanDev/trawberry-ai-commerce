@@ -1,5 +1,29 @@
 # Phase Report
 
+## 2026-06-11 WB Selected nmID Real Lookup Fix
+
+- Status: Implemented and real-read verified
+- Root cause:
+  - the safe real API diagnostic found nmIDs `955686992` and `982708059` on the first descending Cards List page
+  - selected-sync requested ascending cards first, so recent cards could remain outside the configured scan window
+  - after an early selected match, the client also reduced the next page size, which could trigger a false last-page stop before remaining nmIDs were found
+- Fix:
+  - selected nmID lookup now requests descending Cards List pages and keeps a stable page size across cursor pagination
+  - sync-all and non-selected article behavior remain unchanged
+  - added regression coverage for descending selected lookup and stable pagination after an early match
+- Real API QA:
+  - direct diagnostic: 1 page, 100 cards scanned, both requested nmIDs found
+  - built app `WbApiClientService`: 1 page, 100 cards scanned, both requested nmIDs found
+  - no backend sync endpoint, sync-all action, database write, or product persistence was used
+  - the user-provided token was used only in temporary process environment and must be rotated because it appeared in chat
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass (38 suites, 387 tests)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npx playwright test tests/e2e/wb-api-sync.spec.ts --workers=1`: pass (2 tests)
+  - rebuilt backend container health check: pass
+
 ## 2026-06-11 Safe WB Real API nmID Diagnostic QA.1
 
 - Status: Reusable diagnostic implemented; real API execution pending a rotated `WB_API_KEY`

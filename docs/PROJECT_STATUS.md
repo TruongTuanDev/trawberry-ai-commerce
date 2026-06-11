@@ -1,5 +1,16 @@
 # Project Status
 
+## WB Selected nmID Real Lookup Fix - 2026-06-11
+
+- Real WB QA confirmed nmIDs `955686992` and `982708059` are visible to the supplied token/shop.
+- The app lookup bug was confirmed: selected-sync scanned ascending pages first and could stop before recent requested cards; its page size could also shrink after an early match.
+- Selected nmID lookup now scans descending Cards List pages with a stable page size and exact `String(card.nmID)` matching.
+- Both the standalone diagnostic and the built app client found both requested nmIDs after scanning 1 page / 100 cards.
+- Sync-all, product persistence, checkout, order, cart, payment, shipping, campaign billing, recommendations, and AI Try-On logic remain unchanged.
+- The token used for QA appeared in chat and must be rotated.
+- Backend Prisma generation, lint, full tests (38 suites, 387 tests), and build pass.
+- WB selected-sync browser regression (2 tests) and rebuilt backend runtime health check pass.
+
 ## Safe WB Real API nmID Diagnostic QA.1 - 2026-06-11
 
 - A reusable read-only diagnostic now exists at `backend-nest/scripts/check-wb-nmids.mjs`.

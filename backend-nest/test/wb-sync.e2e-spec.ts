@@ -19,6 +19,22 @@ function getRequestBody(init: RequestInit | undefined): string {
   return init.body;
 }
 
+type CardsListRequestBody = {
+  settings: {
+    cursor: {
+      limit: number;
+      updatedAt?: string;
+      nmID?: number;
+    };
+    filter: { withPhoto: number };
+    sort?: { ascending: boolean };
+  };
+};
+
+function parseRequestBody(init: RequestInit | undefined): CardsListRequestBody {
+  return JSON.parse(getRequestBody(init)) as CardsListRequestBody;
+}
+
 describe('WB API sync foundation', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -209,9 +225,77 @@ describe('WB API sync foundation', () => {
     expect(response.scannedCount).toBe(2);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [, init] = fetchMock.mock.calls[0];
-    expect(JSON.stringify(JSON.parse(getRequestBody(init)))).not.toContain(
+    const requestBody = parseRequestBody(init);
+    expect(JSON.stringify(requestBody)).not.toContain('1013414108');
+    expect(requestBody.settings.sort).toEqual({ ascending: false });
+  });
+
+  it('selected nmID pagination keeps a stable page size after an early match', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce(
+        responseWithJson({
+          cards: [
+            { vendorCode: 'first-match', nmID: 1013414108 },
+            { vendorCode: 'unrelated', nmID: 777777777 },
+          ],
+          cursor: {
+            total: 2,
+            nmID: 777777777,
+            updatedAt: '2026-06-11T00:00:00Z',
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        responseWithJson({
+          cards: [{ vendorCode: 'second-match', nmID: 123456789 }],
+          cursor: { total: 1 },
+        }),
+      );
+    const client = new WbApiClientService({
+      get: (key: string) => {
+        if (key === 'WB_SYNC_MODE') return 'real';
+        if (key === 'WB_SYNC_PAGE_LIMIT') return '2';
+        if (key === 'WB_SYNC_MAX_PAGES') return '20';
+        return undefined;
+      },
+    } as ConfigService);
+
+    const response = await client.fetchCards({
+      apiKey: 'secret-token',
+      limit: 100,
+      nmIds: ['1013414108', '123456789'],
+    });
+
+    expect(response.cards.map((card) => String(card.nmID))).toEqual([
       '1013414108',
+      '123456789',
+    ]);
+    expect(response.pagesFetched).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const requestBodies = fetchMock.mock.calls.map(([, init]) =>
+      parseRequestBody(init),
     );
+    expect(requestBodies).toEqual([
+      {
+        settings: {
+          cursor: { limit: 2 },
+          filter: { withPhoto: -1 },
+          sort: { ascending: false },
+        },
+      },
+      {
+        settings: {
+          cursor: {
+            limit: 2,
+            updatedAt: '2026-06-11T00:00:00Z',
+            nmID: 777777777,
+          },
+          filter: { withPhoto: -1 },
+          sort: { ascending: false },
+        },
+      },
+    ]);
   });
 
   it('verify connection maps 401 to a safe failure', async () => {
