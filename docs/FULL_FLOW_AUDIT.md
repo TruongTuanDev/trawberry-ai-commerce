@@ -1068,3 +1068,9 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Public homepage Vietnamese content uses localized generic slide fallback text because the existing admin slide contract stores only RU/EN fields.
 - A mocked FORMELA-style shop regression verifies RU/EN/VI copy and no horizontal overflow at 390, 768, and 1440 pixel widths.
 - Public product readiness, visibility, price, stock, checkout splitting, payment review, fulfillment, WB sync, and AI Try-On execution logic remain unchanged.
+
+# Product Detail Size UX FIX.1 Audit Addendum
+
+- Product detail variant labels now deduplicate equivalent `sizeName`, `russianSize`, `techSize`, and `wbSize` values before rendering.
+- Desktop product detail keeps one selected-variant summary in the purchase panel; size buttons remain the interactive selector.
+- Stock, quantity, cart, checkout, mobile CTA, and AI Try-On behavior remain unchanged.

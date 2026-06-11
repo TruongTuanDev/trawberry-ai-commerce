@@ -5540,3 +5540,18 @@ Remaining gaps:
 - Existing Seller-only Russian `????` groups in dashboard/onboarding/pending and legacy Seller messaging translations are outside this Buyer/Public phase.
 - `full-commerce-flow.spec.ts` remains unstable against accumulated local E2E data: one run missed a new payment queue row and a retry found duplicate fixed-name products.
 - The homepage mobile navigation test had no public product fixture in the current local DB; the primary homepage-slider responsive test passed.
+
+# Phase Report: Product Detail Size UX FIX.1
+
+Implemented:
+
+- Removed the duplicate selected-variant summary from the product information column; the purchase panel remains the single desktop source for the selected size.
+- Normalized public variant labels so repeated WB size fields such as `52 / 52 / 52 / 52` render once as `52`.
+- Kept size selection, stock status, quantity, cart, buy-now, mobile CTA, and AI Try-On selected-size inputs unchanged.
+
+Verification:
+
+- `frontend-next npm run lint`: pass
+- `frontend-next npm run build`: pass
+- rebuilt production frontend container: pass
+- product buying UX, public marketplace contract, mobile CTA, and public smoke E2E: pass, 4 tests

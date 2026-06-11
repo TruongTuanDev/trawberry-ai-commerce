@@ -633,9 +633,7 @@ export function PublicProductDetailPageClient({
                         data-testid="product-size-selector"
                       >
                         {product.variants.map((variant) => {
-                          const label =
-                            [variant.sizeName, variant.russianSize].filter(Boolean).join(" / ") ||
-                            getVariantLabel(variant);
+                          const label = getVariantLabel(variant);
                           const active = selectedVariantId === variant.id;
 
                           return (
@@ -672,17 +670,6 @@ export function PublicProductDetailPageClient({
                     </div>
 
                     <div className="space-y-3 rounded-[1.75rem] border border-[var(--border)] bg-[var(--panel)] px-5 py-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[var(--foreground)]">
-                            {t("productDetail.selectedVariant")}
-                          </p>
-                          <p className="mt-2 break-words text-sm text-[var(--muted)]">
-                            {selectedVariantLabel}
-                          </p>
-                        </div>
-                        <StockBadge label={stockLabel} tone={stockTone} />
-                      </div>
                       {!hasSelectableInStockVariant ? (
                         <p
                           className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700"
@@ -739,7 +726,10 @@ export function PublicProductDetailPageClient({
                       </div>
 
                       <div className="mt-5 space-y-4">
-                        <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4">
+                        <div
+                          className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-4"
+                          data-testid="product-selected-variant-summary"
+                        >
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                             {t("productDetail.selectedVariant")}
                           </p>

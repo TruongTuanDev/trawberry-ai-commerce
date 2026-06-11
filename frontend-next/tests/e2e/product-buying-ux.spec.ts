@@ -208,6 +208,7 @@ test("public marketplace product buying UX supports size selection, in-cart stat
   await expect(page.getByTestId(`product-size-${created.product.variants[1].id}`)).toBeDisabled();
 
   await expect(page.getByTestId("product-selected-size")).toBeVisible();
+  await expect(page.getByTestId("product-selected-variant-summary")).toHaveCount(1);
   await page.getByTestId("product-quantity-stepper-value").fill("7");
   await page.getByTestId("product-detail-title").click();
   await expect(page.getByTestId("product-quantity-stepper-value")).toHaveValue("3");

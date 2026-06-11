@@ -2434,3 +2434,11 @@ Notes:
 - Backend commerce rules and production data were not changed.
 - Seller-only legacy translation gaps remain a separate cleanup phase.
 - Two broad E2E gaps remain environment/data-fixture related: accumulated fixed-name products in full commerce flow and an empty homepage product fixture.
+
+# Product Detail Size UX FIX.1 Status
+
+Current status:
+
+- Public product detail now shows one selected-variant summary on desktop instead of repeating it in both the content and purchase columns.
+- Duplicate WB size aliases are collapsed before display, preventing labels such as `52 / 52 / 52 / 52`.
+- Product buying, cart, buy-now, mobile CTA, lint, build, and production-container checks pass.
