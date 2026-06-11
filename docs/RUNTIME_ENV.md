@@ -99,6 +99,14 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 ## Delivery Provider Notes
 - Verified default is `DELIVERY_PROVIDER_MODE=mock`
 
+## Sponsored Ads Serving Flags
+
+- `RECOMMENDATION_SPONSORED_RANKING_ENABLED=false` keeps sponsored recommendation serving disabled by default.
+- `RECOMMENDATION_SPONSORED_PRESET_ID=balanced` selects the existing bounded default sponsored preset when serving is explicitly enabled.
+- `RECOMMENDATION_SPONSORED_ROLLOUT_MODE=internal` records the safe default rollout marker.
+- Docker Compose passes these flags into `backend-nest`; setting them only in `infra/.env` is sufficient after recreating the backend container.
+- Keep sponsored ranking disabled until campaign moderation, wallet funding, budget, CPC, and invalid-click checks have been audited for the target environment.
+
 ## Ads Campaign Moderation Flags
 
 - `ADS_CAMPAIGN_MODERATION_ENABLED=true` enables admin campaign review APIs and workflow by default.

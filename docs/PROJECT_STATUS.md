@@ -1,5 +1,16 @@
 # Project Status
 
+## Ads Production QA.1 - 2026-06-11
+
+- Status: audited, one production runtime configuration issue fixed, and verified.
+- The complete manual Ads runtime path now has live QA evidence from seller top-up through admin confirmation, wallet/ledger credit, campaign moderation, sponsored serving, valid CPC debit, duplicate-token no-debit protection, and seller metrics.
+- Confirmed and fixed Docker runtime drift: documented sponsored ranking, preset, and rollout env settings were not passed into `backend-nest`.
+- Sponsored ranking remains disabled by default; `balanced` remains the bounded default preset; rollout remains `internal`; campaign moderation and approval-for-serving remain enabled by default.
+- Existing Ads business logic was not changed. Focused backend regression passed (`4` suites / `72` tests), full backend regression passed (`40` suites / `400` tests), frontend i18n/lint/build and required Ads/buyer-safety E2E passed (`11` tests), Compose override inspection passed, and manual runtime QA passed.
+- The temporary QA campaign was archived and the local backend runtime was restored to `RECOMMENDATION_SPONSORED_RANKING_ENABLED=false`.
+- Recommendation core ranking, CPC formula, buyer commerce, seller payment confirmation, checkout readiness, WB, AI Try-On, and legacy apps remain unchanged.
+- Remaining production gaps: distributed fraud/reputation signals, finance reconciliation, refunds/chargebacks, fraud appeals, and production monitoring/alerting.
+
 ## Ads Platform Phase 6.2 Invalid Click and Fraud Protection - 2026-06-11
 
 - Status: implemented and verified.

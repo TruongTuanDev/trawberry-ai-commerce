@@ -1,5 +1,20 @@
 # Full Commerce Flow Audit
 
+## Ads Production QA.1 Addendum
+
+- verified a seller manual top-up remains non-spendable while pending
+- verified admin confirmation credits the wallet and links one ledger entry exactly once
+- verified repeated confirmation preserves the same ledger entry and does not change wallet balance
+- verified an active `pending_review` campaign target cannot serve sponsored recommendations
+- verified admin approval makes the active public-ready in-stock target eligible for sponsored serving
+- verified a valid CPC click debits exactly the existing `1 RUB` CPC amount and appears in seller metrics
+- verified reusing the signed tracking token records `duplicate_token`, increases invalid-click metrics, and creates no additional wallet debit
+- verified the public sponsored recommendation payload includes an opaque tracking token but does not expose `campaignId` or `billingMode`
+- confirmed and fixed missing Docker Compose wiring for sponsored ranking, preset, and rollout env settings
+- verified Compose and env examples keep sponsored ranking disabled and campaign moderation required by default
+- archived the temporary QA campaign and restored the local backend runtime to sponsored ranking disabled
+- verified the core ranking formula, CPC formula, checkout, order, cart, buyer payment, shipping, seller payment confirmation, shop checkout readiness, WB sync, AI Try-On, and legacy applications were not modified
+
 ## Ads Campaign Moderation Phase 6.1 Addendum
 
 - verified the campaign lifecycle and moderation lifecycle remain separate

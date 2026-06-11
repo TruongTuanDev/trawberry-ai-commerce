@@ -1,5 +1,49 @@
 # Phase Report
 
+## 2026-06-11 Ads Production QA.1 - Wallet, Campaign, Serving, and CPC Runtime Audit
+
+- Status: audited, one production runtime configuration issue fixed, and verified.
+- Audited the live Ads path end to end:
+  - seller manual top-up request
+  - admin exact-once confirmation
+  - wallet and linked ledger credit
+  - seller CPC campaign and product target
+  - admin approval
+  - sponsored recommendation serving
+  - valid CPC debit
+  - duplicate-token invalid click with no additional debit
+  - seller performance and event metrics
+- Confirmed issue:
+  - `infra/docker-compose.yml` did not pass the documented sponsored ranking, preset, or rollout settings into `backend-nest`.
+  - setting `RECOMMENDATION_SPONSORED_RANKING_ENABLED=true` only in `infra/.env` therefore could not enable the managed campaign serving path.
+  - moderation remained safe because Compose already defaulted both moderation flags to `true`, but the env examples did not declare these production-safe defaults explicitly.
+- Fix:
+  - wired `RECOMMENDATION_SPONSORED_RANKING_ENABLED`, `RECOMMENDATION_SPONSORED_PRESET_ID`, and `RECOMMENDATION_SPONSORED_ROLLOUT_MODE` into the backend container.
+  - added sponsored and moderation defaults to backend, local infra, and production infra env examples.
+  - kept sponsored ranking disabled by default, the bounded `balanced` preset selected, rollout marked `internal`, and moderation required.
+- Focused verification:
+  - backend Ads wallet, billing, campaign, recommendation, moderation, CPC, fraud, budget, wallet, and access regression: pass (`4` suites / `72` tests).
+  - frontend wallet top-up, campaign moderation, and recommendation E2E: pass (`7` tests).
+  - Compose override inspection: sponsored flags now reach the backend container.
+- Final verification:
+  - backend Prisma generate, Linux-container DB push, lint, build, and full regression: pass (`40` suites / `400` tests).
+  - the first full backend run had four unrelated auth test timeouts; the auth spec passed independently (`37` tests) and the full suite then passed cleanly.
+  - frontend i18n parity, lint, production build, Ads E2E, and buyer-safety public/cart/checkout/full-commerce regression: pass (`11` Playwright tests).
+  - runtime health, default sponsored-off container state, Compose sponsored-on override wiring, git safety, and secret checks: pass.
+- Manual runtime QA:
+  - pending top-up did not credit the wallet.
+  - admin confirmation credited once and linked one ledger entry; repeated confirmation kept the same ledger and did not change balance.
+  - active pending-review target was not sponsored; admin approval made it sponsored with an opaque tracking token.
+  - valid CPC clicks debited exactly `1 RUB` each.
+  - reusing a tracking token recorded `duplicate_token`, increased invalid-click metrics, and created no additional debit.
+  - seller performance showed charged clicks, invalid clicks, and spend; public payload did not expose `campaignId` or `billingMode`.
+  - temporary QA campaign was archived and backend runtime was restored to sponsored ranking disabled.
+- Safety:
+  - recommendation core ranking formula, bounded boost implementation, CPC amount/formula, checkout, order, cart, payment, shipping, seller payment confirmation, shop readiness, WB sync, AI Try-On, and legacy apps were not changed.
+  - no real payment gateway, automatic transfer verification, invoice, or reconciliation path was added.
+- Remaining production gaps:
+  - distributed fraud/reputation signals, finance reconciliation, refunds/chargebacks, fraud appeals, and monitoring/alerting remain future work.
+
 ## 2026-06-11 Ads Platform Phase 6.2 Invalid Click and Fraud Protection
 
 - Status: implemented and verified
