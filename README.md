@@ -1,5 +1,18 @@
 # Trawberry AI Commerce
 
+## Safe WB nmID Diagnostic
+
+To check whether a rotated WB Content API token can see specific `Артикул WB / nmID` values without syncing or modifying products:
+
+```powershell
+cd backend-nest
+$env:WB_API_KEY="PASTE_ROTATED_TOKEN_HERE"
+npm run diagnose:wb-nmids -- 955686992 982708059
+Remove-Item Env:WB_API_KEY
+```
+
+The script never prints or persists the token. Treat any WB token previously pasted into chat as compromised and rotate it before use.
+
 ## GitHub Actions CD
 
 GitHub Actions CD is prepared in `.github/workflows/deploy.yml`.

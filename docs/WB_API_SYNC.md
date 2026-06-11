@@ -399,6 +399,19 @@ Safe failures:
 
 ## Smoke and Tests
 
+Safe read-only real API nmID diagnostic:
+
+```powershell
+$env:WB_API_KEY="PASTE_ROTATED_TOKEN_HERE"
+npm run diagnose:wb-nmids -- 955686992 982708059
+Remove-Item Env:WB_API_KEY
+```
+
+- run from `backend-nest`
+- rotate any token previously pasted into chat before using it
+- the script calls only the WB Cards List endpoint, exact-matches `nmID`, never calls backend sync/sync-all, never writes products, and never prints the token or raw WB response
+- if `WB_API_KEY` is missing, the script fails before making a network request
+
 Default mock verification:
 
 ```bash

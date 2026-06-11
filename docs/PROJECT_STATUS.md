@@ -1,5 +1,14 @@
 # Project Status
 
+## Safe WB Real API nmID Diagnostic QA.1 - 2026-06-11
+
+- A reusable read-only diagnostic now exists at `backend-nest/scripts/check-wb-nmids.mjs`.
+- It scans the real WB Cards List endpoint with full cursor pagination and exact `String(card.nmID)` matching without calling backend sync endpoints or modifying products.
+- The script reads the real token only from `WB_API_KEY`, never prints it, and outputs only requested nmIDs, scan counts, bounded card metadata, not-found values, and a safe classification.
+- The previously pasted token must be considered compromised and rotated before use.
+- Backend Prisma generation, lint, full tests (38 suites, 386 tests), and build pass.
+- Real API execution remains pending because `WB_API_KEY` was not set during this phase.
+
 ## Seller Production UX and WB nmID Selected Sync - 2026-06-11
 
 - Status: implemented in `backend-nest`, `frontend-next`, and `docs`

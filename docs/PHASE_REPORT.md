@@ -1,5 +1,22 @@
 # Phase Report
 
+## 2026-06-11 Safe WB Real API nmID Diagnostic QA.1
+
+- Status: Reusable diagnostic implemented; real API execution pending a rotated `WB_API_KEY`
+- Scope:
+  - added `backend-nest/scripts/check-wb-nmids.mjs`, a read-only diagnostic for exact WB `nmID` lookup through the Content API Cards List endpoint
+  - diagnostic reads only `WB_API_KEY`, never prints or persists it, paginates up to 200 pages, stops early when all targets are found, and emits only a bounded safe summary
+  - default targets are `955686992` and `982708059`; CLI arguments can override them
+- Safety:
+  - no backend sync endpoint, sync-all action, product persistence, database write, or production business logic is used
+  - the previously shared WB token is treated as compromised and must be rotated before real diagnostic use
+- Verification:
+  - missing-token failure path: pass
+  - invalid-input failure path: pass
+  - Node syntax check and repository safety checks: pass
+  - backend Prisma generation, lint, full tests (38 suites, 386 tests), and build: pass
+  - real WB API call: not run because `WB_API_KEY` was not present in the process environment
+
 ## 2026-06-11 Seller Production UX and WB nmID Selected Sync
 
 - Status: Implemented on current branch

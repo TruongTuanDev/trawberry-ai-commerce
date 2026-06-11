@@ -41,6 +41,7 @@
     "smoke:wb-import": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-import.ps1",
     "smoke:wb-api-sync": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-api-sync.ps1",
     "smoke:wb-api-sync-real": "powershell -ExecutionPolicy Bypass -File scripts/smoke-wb-api-sync-real.ps1",
+    "diagnose:wb-nmids": "node scripts/check-wb-nmids.mjs",
     "debug:wb-credential": "powershell -ExecutionPolicy Bypass -File scripts/debug-wb-credential.ps1",
     "smoke:wb-import-checkout": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-curation.ps1",
     "smoke:product-curation": "powershell -ExecutionPolicy Bypass -File scripts/smoke-product-curation.ps1",
