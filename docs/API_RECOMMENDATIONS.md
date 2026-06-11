@@ -1,5 +1,41 @@
 # API Recommendations
 
+## Phase 6.2 sponsored click validity
+
+`POST /api/public/recommendations/events` keeps its safe `204` response and now validates sponsored CPC clicks before charging.
+
+Signed sponsored tracking tokens now contain an internal random click id and issued timestamp. The token remains opaque to clients, is never persisted raw, and is verified against product, placement, algorithm, campaign, shop, and active campaign target mapping.
+
+Backend charge order:
+
+1. Verify token and resolve campaign/product/shop mapping.
+2. Require active, in-schedule, CPC, moderation-approved campaign.
+3. Require a public-ready, in-stock product owned by the campaign shop.
+4. Recheck campaign budget and seller wallet availability.
+5. Reject duplicate-token, rapid session, rapid IP/user-agent, seller self-click, and admin click attempts.
+6. Persist event validity.
+7. Debit wallet and write one ledger row only for a valid click.
+8. Mark charged only after the ledger mutation succeeds.
+
+`RecommendationEvent` fraud metadata is private:
+
+- `tokenHash`, `sessionHash`, `ipHash`, and `userAgentHash` are HMAC-SHA256 values
+- `validityStatus` is `valid`, `invalid`, `ineligible`, `not_applicable`, or transiently `pending_validation`
+- `invalidReason` and `chargeStatus` identify safe operational classifications
+- raw IP, raw user-agent, and raw tracking token are not stored or returned
+
+Campaign responses and performance responses add aggregate `totalClicks` and `invalidClicks` alongside existing `chargedClicks`, spend, and remaining budget. They do not return buyer identity or fraud hashes.
+
+Flags and defaults:
+
+- `ADS_INVALID_CLICK_PROTECTION_ENABLED=true`
+- `ADS_SELF_CLICK_BLOCK_ENABLED=true`
+- `ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS=30`
+- `ADS_IP_REPEAT_CLICK_WINDOW_SECONDS=10`
+- `ADS_CLICK_HASH_SALT` must be a dedicated production secret; local development has a safe documented fallback chain
+
+The recommendation core ranking formula and CPC amount/formula are unchanged.
+
 ## Phase 6.1 campaign moderation eligibility
 
 Live sponsored campaign targets are eligible for recommendation serving only when `moderationStatus=approved` while `ADS_MODERATION_REQUIRED_FOR_SERVING=true`.

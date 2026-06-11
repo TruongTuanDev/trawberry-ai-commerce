@@ -557,6 +557,12 @@ model RecommendationEvent {
   cost            Decimal? @db.Decimal(14, 2)
   ledgerEntryId   String?  @map("ledger_entry_id") @db.Uuid
   idempotencyKey  String?  @unique @map("idempotency_key") @db.VarChar(255)
+  tokenHash       String?  @map("token_hash") @db.VarChar(64)
+  sessionHash     String?  @map("session_hash") @db.VarChar(64)
+  ipHash          String?  @map("ip_hash") @db.VarChar(64)
+  userAgentHash   String?  @map("user_agent_hash") @db.VarChar(64)
+  validityStatus  String   @default("not_evaluated") @map("validity_status") @db.VarChar(50)
+  invalidReason   String?  @map("invalid_reason") @db.VarChar(100)
   metadata        Json?
   rank            Int?
   score           Decimal? @db.Decimal(10, 4)
@@ -572,6 +578,10 @@ model RecommendationEvent {
   @@index([shopId, createdAt])
   @@index([campaignId, createdAt])
   @@index([chargeStatus, createdAt])
+  @@index([tokenHash, createdAt])
+  @@index([sessionHash, campaignId, productId, createdAt])
+  @@index([ipHash, userAgentHash, campaignId, productId, createdAt])
+  @@index([validityStatus, createdAt])
   @@index([placement, type, createdAt])
   @@map("recommendation_events")
 }

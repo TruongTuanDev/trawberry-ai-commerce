@@ -179,6 +179,10 @@ export function AdminCampaignModerationPageClient() {
                 <div><dt className="text-[var(--muted)]">Lifecycle</dt><dd className="font-semibold">{selected.status}</dd></div>
                 <div><dt className="text-[var(--muted)]">Billing</dt><dd className="font-semibold">{selected.billingMode}</dd></div>
                 <div><dt className="text-[var(--muted)]">Targets</dt><dd className="font-semibold">{selected.summary.totalTargets}</dd></div>
+                <div><dt className="text-[var(--muted)]">Total clicks</dt><dd className="font-semibold">{selected.billing.totalClicks}</dd></div>
+                <div><dt className="text-[var(--muted)]">Charged clicks</dt><dd className="font-semibold">{selected.billing.chargedClicks}</dd></div>
+                <div><dt className="text-[var(--muted)]">Invalid clicks</dt><dd className="font-semibold">{selected.billing.invalidClicks}</dd></div>
+                <div><dt className="text-[var(--muted)]">Spend / remaining</dt><dd className="font-semibold">{selected.billing.spentAmount} / {selected.billing.remainingBudget ?? "unlimited"}</dd></div>
               </dl>
               {selected.moderationReason ? (
                 <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">

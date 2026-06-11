@@ -17,7 +17,13 @@ export class SponsoredCampaignPerformanceSummaryDto {
   billableClicks!: number;
 
   @ApiProperty()
+  totalClicks!: number;
+
+  @ApiProperty()
   chargedClicks!: number;
+
+  @ApiProperty()
+  invalidClicks!: number;
 
   @ApiProperty()
   totalChargedEvents!: number;

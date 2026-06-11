@@ -79,7 +79,9 @@ type CampaignPerformanceMetrics = {
   remainingBudget: Prisma.Decimal | null;
   billableImpressions: number;
   billableClicks: number;
+  totalClicks: number;
   chargedClicks: number;
+  invalidClicks: number;
   totalChargedEvents: number;
   totalEvents: number;
   servedAsSponsored: boolean;
@@ -981,7 +983,9 @@ export class CampaignsService {
         remainingBudget: metrics.remainingBudget?.toString() ?? null,
         billableImpressions: metrics.billableImpressions,
         billableClicks: metrics.billableClicks,
+        totalClicks: metrics.totalClicks,
         chargedClicks: metrics.chargedClicks,
+        invalidClicks: metrics.invalidClicks,
         totalChargedEvents: metrics.totalChargedEvents,
         servedAsSponsored: metrics.servedAsSponsored,
         budgetExhausted: metrics.budgetExhausted,
@@ -1040,6 +1044,7 @@ export class CampaignsService {
           charged: true,
           cost: true,
           chargeStatus: true,
+          validityStatus: true,
         },
       }),
       this.prisma.sellerWallet.findMany({
@@ -1114,8 +1119,15 @@ export class CampaignsService {
             event.type === 'click' &&
             event.billingMode === 'cpc',
         ).length,
+        totalClicks: campaignEvents.filter(
+          (event) => event.sponsored && event.type === 'click',
+        ).length,
         chargedClicks: campaignEvents.filter(
           (event) => event.type === 'click' && event.charged,
+        ).length,
+        invalidClicks: campaignEvents.filter(
+          (event) =>
+            event.type === 'click' && event.validityStatus === 'invalid',
         ).length,
         totalChargedEvents: campaignEvents.filter((event) => event.charged)
           .length,
@@ -1203,7 +1215,9 @@ export class CampaignsService {
       remainingBudget: metrics.remainingBudget?.toString() ?? null,
       billableImpressions: metrics.billableImpressions,
       billableClicks: metrics.billableClicks,
+      totalClicks: metrics.totalClicks,
       chargedClicks: metrics.chargedClicks,
+      invalidClicks: metrics.invalidClicks,
       totalChargedEvents: metrics.totalChargedEvents,
       totalEvents: metrics.totalEvents,
       servedAsSponsored: metrics.servedAsSponsored,

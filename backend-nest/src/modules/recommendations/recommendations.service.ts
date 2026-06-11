@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type ProductVariant } from '@prisma/client';
-import { createHash, createHmac, timingSafeEqual } from 'crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
+import { USER_ROLES } from '../../common/constants/roles.constant';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { BillingService } from '../billing/billing.service';
@@ -95,6 +96,8 @@ type RecommendationApiItem = {
 };
 
 type RecommendationTrackingTokenPayload = {
+  clickId: string;
+  issuedAt: string;
   campaignId: string;
   shopId: string;
   productId: string;
@@ -948,181 +951,337 @@ export class RecommendationsService {
       dto.guestSessionId,
       request,
     );
-    const product = await this.prisma.product.findUnique({
-      where: { id: dto.productId },
-      select: { shopId: true },
-    });
+    const clickHashes = this.buildSponsoredClickHashes(
+      dto.trackingToken,
+      guestSessionId,
+      request,
+      user,
+    );
     const tracking = this.verifyRecommendationTrackingToken(dto.trackingToken, {
       productId: dto.productId,
       placement,
       algorithm,
     });
+    const sponsoredClickAttempt =
+      dto.type === 'click' &&
+      (dto.sponsored === true || Boolean(dto.trackingToken?.trim()));
+    const malformedSponsoredClick = sponsoredClickAttempt && !tracking;
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        const created = await tx.recommendationEvent.create({
-          data: {
-            type: dto.type,
-            placement,
-            productId: dto.productId,
-            sourceProductId: dto.sourceProductId ?? null,
-            customerId: user?.userId ?? null,
-            guestSessionId,
-            shopId: tracking?.shopId ?? product?.shopId ?? null,
-            campaignId: tracking?.campaignId ?? null,
-            algorithm,
-            scenarioType:
-              tracking?.scenarioType ??
-              this.mapPlacementToScenarioType(placement),
-            billingMode: tracking?.billingMode ?? null,
-            sponsored: Boolean(tracking),
-            charged: false,
-            chargeStatus: tracking
-              ? tracking.billingMode === 'cpc' && dto.type === 'click'
-                ? 'pending_charge'
-                : 'tracked_only'
-              : 'not_billable',
-            cost: null,
-            ledgerEntryId: null,
-            idempotencyKey: dto.idempotencyKey?.trim() || null,
-            metadata:
-              tracking || typeof dto.personalized === 'boolean'
-                ? {
-                    ...(tracking
-                      ? {
-                          trackingTokenVersion: 'v1',
-                          sponsored: true,
-                        }
-                      : {}),
-                    ...(typeof dto.personalized === 'boolean'
-                      ? {
-                          personalized: dto.personalized,
-                        }
-                      : {}),
-                  }
-                : undefined,
-            rank: dto.rank ?? null,
-            score:
-              typeof dto.score === 'number'
-                ? new Prisma.Decimal(dto.score)
-                : null,
-          },
-        });
-
-        if (
-          !tracking ||
-          dto.type !== 'click' ||
-          tracking.billingMode !== 'cpc'
-        ) {
-          return;
-        }
-
-        const cpcAmount = this.getSponsoredCpcAmount();
-        const campaign = await tx.sponsoredCampaign.findFirst({
-          where: {
-            id: tracking.campaignId,
-            shopId: tracking.shopId,
-          },
-          select: {
-            id: true,
-            shopId: true,
-            status: true,
-            moderationStatus: true,
-            startAt: true,
-            endAt: true,
-            budgetLimit: true,
-            billingMode: true,
-          },
-        });
-
-        if (
-          !campaign ||
-          campaign.status !== 'active' ||
-          this.normalizeBillingMode(campaign.billingMode) !== 'cpc' ||
-          !this.isCampaignWithinDateWindow(campaign.startAt, campaign.endAt)
-        ) {
-          await tx.recommendationEvent.update({
-            where: { id: created.id },
-            data: {
-              chargeStatus: 'campaign_inactive',
-              cost: cpcAmount,
-            },
-          });
-          return;
-        }
-
-        if (
-          !this.campaignsService.isModerationApprovedForServing(
-            campaign.moderationStatus,
-          )
-        ) {
-          await tx.recommendationEvent.update({
-            where: { id: created.id },
-            data: {
-              chargeStatus: 'campaign_not_approved',
-              cost: cpcAmount,
-            },
-          });
-          return;
-        }
-
-        const spentAmount = await this.sumCampaignSpend(
-          tracking.campaignId,
-          tx,
-        );
-        if (
-          campaign.budgetLimit &&
-          (spentAmount.gte(campaign.budgetLimit) ||
-            campaign.budgetLimit.minus(spentAmount).lt(cpcAmount))
-        ) {
-          await tx.recommendationEvent.update({
-            where: { id: created.id },
-            data: {
-              chargeStatus: 'budget_exhausted',
-              cost: cpcAmount,
-            },
-          });
-          return;
-        }
-
-        try {
-          const charge = await this.billingService.applyMutationInTransaction(
-            tx,
-            tracking.shopId,
-            {
-              type: 'debit',
-              amount: cpcAmount,
-              campaignId: tracking.campaignId,
-              referenceType: 'recommendation_click',
-              referenceId: created.id,
-              description: `Sponsored recommendation click for ${dto.productId}`,
-              metadata: {
-                placement,
-                productId: dto.productId,
-                algorithm,
+      await this.prisma.$transaction(
+        async (tx) => {
+          const product = await tx.product.findUnique({
+            where: { id: dto.productId },
+            select: {
+              shopId: true,
+              catalogStatus: true,
+              visibility: true,
+              archivedAt: true,
+              unpublishedAt: true,
+              wbTitle: true,
+              localTitle: true,
+              categoryId: true,
+              categoryName: true,
+              sourceCategoryName: true,
+              images: {
+                select: { id: true },
+                take: 1,
+              },
+              variants: {
+                select: {
+                  isActive: true,
+                  basePrice: true,
+                  discountPrice: true,
+                  stockQuantity: true,
+                  trackInventory: true,
+                },
+              },
+              shop: {
+                select: {
+                  status: true,
+                  sellerProfile: {
+                    select: {
+                      approvalStatus: true,
+                    },
+                  },
+                },
               },
             },
+          });
+          const created = await tx.recommendationEvent.create({
+            data: {
+              type: dto.type,
+              placement,
+              productId: dto.productId,
+              sourceProductId: dto.sourceProductId ?? null,
+              customerId:
+                user?.role === USER_ROLES.CUSTOMER ? user.userId : null,
+              guestSessionId,
+              shopId: tracking?.shopId ?? product?.shopId ?? null,
+              campaignId: tracking?.campaignId ?? null,
+              algorithm,
+              scenarioType:
+                tracking?.scenarioType ??
+                this.mapPlacementToScenarioType(placement),
+              billingMode: tracking?.billingMode ?? null,
+              sponsored: Boolean(tracking),
+              charged: false,
+              chargeStatus: malformedSponsoredClick
+                ? 'invalid_token'
+                : tracking
+                  ? tracking.billingMode === 'cpc' && dto.type === 'click'
+                    ? 'pending_charge'
+                    : 'tracked_only'
+                  : 'not_billable',
+              cost: null,
+              ledgerEntryId: null,
+              idempotencyKey: dto.idempotencyKey?.trim() || null,
+              tokenHash: sponsoredClickAttempt ? clickHashes.tokenHash : null,
+              sessionHash: sponsoredClickAttempt
+                ? clickHashes.sessionHash
+                : null,
+              ipHash: sponsoredClickAttempt ? clickHashes.ipHash : null,
+              userAgentHash: sponsoredClickAttempt
+                ? clickHashes.userAgentHash
+                : null,
+              validityStatus: malformedSponsoredClick
+                ? 'invalid'
+                : tracking?.billingMode === 'cpc' && dto.type === 'click'
+                  ? 'pending_validation'
+                  : 'not_applicable',
+              invalidReason: malformedSponsoredClick ? 'invalid_token' : null,
+              metadata:
+                tracking || typeof dto.personalized === 'boolean'
+                  ? {
+                      ...(tracking
+                        ? {
+                            trackingTokenVersion: 'v1',
+                            sponsored: true,
+                          }
+                        : {}),
+                      ...(typeof dto.personalized === 'boolean'
+                        ? {
+                            personalized: dto.personalized,
+                          }
+                        : {}),
+                    }
+                  : undefined,
+              rank: dto.rank ?? null,
+              score:
+                typeof dto.score === 'number'
+                  ? new Prisma.Decimal(dto.score)
+                  : null,
+            },
+          });
+
+          if (
+            !tracking ||
+            dto.type !== 'click' ||
+            tracking.billingMode !== 'cpc'
+          ) {
+            return;
+          }
+
+          const cpcAmount = this.getSponsoredCpcAmount();
+          const campaign = await tx.sponsoredCampaign.findFirst({
+            where: {
+              id: tracking.campaignId,
+              shopId: tracking.shopId,
+              targets: {
+                some: {
+                  productId: dto.productId,
+                  status: 'active',
+                },
+              },
+            },
+            select: {
+              id: true,
+              shopId: true,
+              status: true,
+              moderationStatus: true,
+              startAt: true,
+              endAt: true,
+              budgetLimit: true,
+              billingMode: true,
+            },
+          });
+
+          if (
+            !campaign ||
+            product?.shopId !== tracking.shopId ||
+            campaign.status !== 'active' ||
+            this.normalizeBillingMode(campaign.billingMode) !== 'cpc' ||
+            !this.isCampaignWithinDateWindow(campaign.startAt, campaign.endAt)
+          ) {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: 'campaign_inactive',
+                validityStatus: 'ineligible',
+                cost: cpcAmount,
+              },
+            });
+            return;
+          }
+
+          if (
+            !this.campaignsService.isModerationApprovedForServing(
+              campaign.moderationStatus,
+            )
+          ) {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: 'campaign_not_approved',
+                validityStatus: 'ineligible',
+                cost: cpcAmount,
+              },
+            });
+            return;
+          }
+
+          if (
+            !product ||
+            !this.productReadiness.getReadiness(product).publicVisible
+          ) {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: 'product_not_chargeable',
+                validityStatus: 'ineligible',
+                cost: cpcAmount,
+              },
+            });
+            return;
+          }
+
+          const spentAmount = await this.sumCampaignSpend(
+            tracking.campaignId,
+            tx,
           );
+          if (
+            campaign.budgetLimit &&
+            (spentAmount.gte(campaign.budgetLimit) ||
+              campaign.budgetLimit.minus(spentAmount).lt(cpcAmount))
+          ) {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: 'budget_exhausted',
+                validityStatus: 'ineligible',
+                cost: cpcAmount,
+              },
+            });
+            return;
+          }
+
+          const wallet = await tx.sellerWallet.findUnique({
+            where: { shopId: tracking.shopId },
+            select: {
+              balance: true,
+              reservedBalance: true,
+              status: true,
+            },
+          });
+          if (
+            !wallet ||
+            wallet.status !== 'active' ||
+            wallet.balance.minus(wallet.reservedBalance).lt(cpcAmount)
+          ) {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: 'insufficient_wallet',
+                validityStatus: 'ineligible',
+                cost: cpcAmount,
+              },
+            });
+            return;
+          }
+
+          const invalidReason = await this.resolveInvalidSponsoredClickReason(
+            {
+              eventId: created.id,
+              campaignId: tracking.campaignId,
+              productId: dto.productId,
+              shopId: tracking.shopId,
+              tokenHash: clickHashes.tokenHash,
+              sessionHash: clickHashes.sessionHash,
+              ipHash: clickHashes.ipHash,
+              userAgentHash: clickHashes.userAgentHash,
+            },
+            user,
+            tx,
+          );
+          if (invalidReason) {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: invalidReason,
+                validityStatus: 'invalid',
+                invalidReason,
+                cost: cpcAmount,
+              },
+            });
+            return;
+          }
 
           await tx.recommendationEvent.update({
             where: { id: created.id },
             data: {
-              charged: true,
-              chargeStatus: 'charged',
-              cost: cpcAmount,
-              ledgerEntryId: charge.entry.id,
-            },
-          });
-        } catch {
-          await tx.recommendationEvent.update({
-            where: { id: created.id },
-            data: {
-              chargeStatus: 'insufficient_wallet',
+              validityStatus: 'valid',
+              invalidReason: null,
               cost: cpcAmount,
             },
           });
-        }
-      });
+
+          try {
+            const charge = await this.billingService.applyMutationInTransaction(
+              tx,
+              tracking.shopId,
+              {
+                type: 'debit',
+                amount: cpcAmount,
+                campaignId: tracking.campaignId,
+                referenceType: 'recommendation_click',
+                referenceId: created.id,
+                description: `Sponsored recommendation click for ${dto.productId}`,
+                metadata: {
+                  placement,
+                  productId: dto.productId,
+                  algorithm,
+                },
+              },
+            );
+
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                charged: true,
+                chargeStatus: 'charged',
+                validityStatus: 'valid',
+                cost: cpcAmount,
+                ledgerEntryId: charge.entry.id,
+              },
+            });
+          } catch {
+            await tx.recommendationEvent.update({
+              where: { id: created.id },
+              data: {
+                chargeStatus: 'insufficient_wallet',
+                validityStatus: 'ineligible',
+                cost: cpcAmount,
+              },
+            });
+          }
+        },
+        {
+          isolationLevel:
+            tracking?.billingMode === 'cpc' && dto.type === 'click'
+              ? Prisma.TransactionIsolationLevel.Serializable
+              : Prisma.TransactionIsolationLevel.ReadCommitted,
+        },
+      );
     } catch (error) {
       if (this.isUniqueIdempotencyConflict(error)) {
         return;
@@ -1501,6 +1660,8 @@ export class RecommendationsService {
         sponsored,
         trackingToken: sponsored
           ? this.createRecommendationTrackingToken({
+              clickId: randomUUID(),
+              issuedAt: new Date().toISOString(),
               campaignId: item.scored.sponsoredCampaign!.campaignId!,
               shopId: item.product.shopId,
               productId: item.product.id,
@@ -3465,6 +3626,8 @@ export class RecommendationsService {
         payloadString,
       ) as RecommendationTrackingTokenPayload;
       if (
+        !payload.clickId ||
+        !payload.issuedAt ||
         payload.productId !== expected.productId ||
         payload.placement !== expected.placement ||
         payload.algorithm !== expected.algorithm
@@ -3494,6 +3657,160 @@ export class RecommendationsService {
       ? new Prisma.Decimal(configured)
       : new Prisma.Decimal('1.00');
     return new Prisma.Decimal(decimal.toDecimalPlaces(2).toString());
+  }
+
+  private buildSponsoredClickHashes(
+    trackingToken: string | undefined,
+    guestSessionId: string | null,
+    request: Request,
+    user?: AuthenticatedUser | null,
+  ) {
+    const userAgent = request.get('user-agent')?.trim() || null;
+    const rawIp = this.resolveRequestIp(request);
+    const sessionIdentity = user?.userId
+      ? `user:${user.userId}`
+      : guestSessionId
+        ? `guest:${guestSessionId}`
+        : null;
+
+    return {
+      tokenHash: this.hashAdsClickValue(trackingToken?.trim() || null),
+      sessionHash: this.hashAdsClickValue(sessionIdentity),
+      ipHash: this.hashAdsClickValue(rawIp),
+      userAgentHash: this.hashAdsClickValue(userAgent),
+    };
+  }
+
+  private hashAdsClickValue(value: string | null) {
+    if (!value) {
+      return null;
+    }
+
+    return createHmac('sha256', this.getAdsClickHashSalt())
+      .update(value)
+      .digest('hex');
+  }
+
+  private getAdsClickHashSalt() {
+    return (
+      this.configService.get<string>('ADS_CLICK_HASH_SALT')?.trim() ||
+      this.configService
+        .get<string>('RECOMMENDATION_TRACKING_TOKEN_SECRET')
+        ?.trim() ||
+      this.configService.get<string>('JWT_SECRET')?.trim() ||
+      'ads-click-hash-local-dev-v1'
+    );
+  }
+
+  private async resolveInvalidSponsoredClickReason(
+    click: {
+      eventId: string;
+      campaignId: string;
+      productId: string;
+      shopId: string;
+      tokenHash: string | null;
+      sessionHash: string | null;
+      ipHash: string | null;
+      userAgentHash: string | null;
+    },
+    user: AuthenticatedUser | null | undefined,
+    tx: Prisma.TransactionClient,
+  ) {
+    if (
+      click.tokenHash &&
+      (await tx.recommendationEvent.findFirst({
+        where: {
+          id: { not: click.eventId },
+          type: 'click',
+          tokenHash: click.tokenHash,
+        },
+        select: { id: true },
+      }))
+    ) {
+      return 'duplicate_token';
+    }
+
+    if (user?.role === USER_ROLES.ADMIN) {
+      return 'admin_click';
+    }
+
+    if (
+      user?.role === USER_ROLES.SELLER &&
+      this.readFlag('ADS_SELF_CLICK_BLOCK_ENABLED', true)
+    ) {
+      const shop = await tx.shop.findUnique({
+        where: { id: click.shopId },
+        select: {
+          sellerProfile: {
+            select: {
+              userId: true,
+            },
+          },
+        },
+      });
+      if (shop?.sellerProfile.userId === user.userId) {
+        return 'seller_self_click';
+      }
+    }
+
+    if (!this.readFlag('ADS_INVALID_CLICK_PROTECTION_ENABLED', true)) {
+      return null;
+    }
+
+    const sessionWindowStart = new Date(
+      Date.now() -
+        this.readNumberFlag(
+          'ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS',
+          30,
+          1,
+          3600,
+        ) *
+          1000,
+    );
+    if (
+      click.sessionHash &&
+      (await tx.recommendationEvent.findFirst({
+        where: {
+          id: { not: click.eventId },
+          type: 'click',
+          campaignId: click.campaignId,
+          productId: click.productId,
+          sessionHash: click.sessionHash,
+          validityStatus: 'valid',
+          createdAt: { gte: sessionWindowStart },
+        },
+        select: { id: true },
+      }))
+    ) {
+      return 'rapid_repeat_session';
+    }
+
+    const ipWindowStart = new Date(
+      Date.now() -
+        this.readNumberFlag('ADS_IP_REPEAT_CLICK_WINDOW_SECONDS', 10, 1, 3600) *
+          1000,
+    );
+    if (
+      click.ipHash &&
+      click.userAgentHash &&
+      (await tx.recommendationEvent.findFirst({
+        where: {
+          id: { not: click.eventId },
+          type: 'click',
+          campaignId: click.campaignId,
+          productId: click.productId,
+          ipHash: click.ipHash,
+          userAgentHash: click.userAgentHash,
+          validityStatus: 'valid',
+          createdAt: { gte: ipWindowStart },
+        },
+        select: { id: true },
+      }))
+    ) {
+      return 'rapid_repeat_network';
+    }
+
+    return null;
   }
 
   private async sumCampaignSpend(
@@ -3561,19 +3878,23 @@ export class RecommendationsService {
   }
 
   private hashRequestIp(request: Request) {
-    const forwarded = request.headers['x-forwarded-for'];
-    const rawIp =
-      (Array.isArray(forwarded) ? forwarded[0] : forwarded)
-        ?.split(',')[0]
-        ?.trim() ||
-      request.ip ||
-      request.socket.remoteAddress ||
-      '';
-
+    const rawIp = this.resolveRequestIp(request);
     if (!rawIp) {
       return null;
     }
 
     return createHash('sha256').update(rawIp).digest('hex');
+  }
+
+  private resolveRequestIp(request: Request) {
+    const forwarded = request.headers['x-forwarded-for'];
+    return (
+      (Array.isArray(forwarded) ? forwarded[0] : forwarded)
+        ?.split(',')[0]
+        ?.trim() ||
+      request.ip ||
+      request.socket.remoteAddress ||
+      null
+    );
   }
 }

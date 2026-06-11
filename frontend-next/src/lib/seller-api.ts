@@ -437,7 +437,9 @@ export type SellerCampaign = {
     remainingBudget: string | null;
     billableImpressions: number;
     billableClicks: number;
+    totalClicks: number;
     chargedClicks: number;
+    invalidClicks: number;
     totalChargedEvents: number;
     servedAsSponsored: boolean;
     budgetExhausted: boolean;
@@ -479,7 +481,9 @@ export type SellerCampaignPerformance = {
     remainingBudget: string | null;
     billableImpressions: number;
     billableClicks: number;
+    totalClicks: number;
     chargedClicks: number;
+    invalidClicks: number;
     totalChargedEvents: number;
     totalEvents: number;
     servedAsSponsored: boolean;

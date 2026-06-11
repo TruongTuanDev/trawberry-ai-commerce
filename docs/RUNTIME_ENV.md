@@ -104,6 +104,16 @@ Invoke-WebRequest -UseBasicParsing http://localhost:9001
 - `ADS_CAMPAIGN_MODERATION_ENABLED=true` enables admin campaign review APIs and workflow by default.
 - `ADS_MODERATION_REQUIRED_FOR_SERVING=true` requires approval for sponsored serving and CPC charging by default.
 - `ADS_MODERATION_REQUIRED_FOR_SERVING=false` is an explicit demo/development bypass and should not be used in production.
+
+## Ads Invalid Click Protection Flags
+
+- `ADS_INVALID_CLICK_PROTECTION_ENABLED=true` enables rapid session and network repeat guards.
+- `ADS_SELF_CLICK_BLOCK_ENABLED=true` blocks a seller from charging clicks on their own shop campaigns.
+- `ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS=30` controls the same customer/guest session repeat window.
+- `ADS_IP_REPEAT_CLICK_WINDOW_SECONDS=10` controls the same IP hash and user-agent hash repeat window.
+- `ADS_CLICK_HASH_SALT` must be set to a dedicated secret in production. Do not reuse a public value or commit the real salt.
+- Local development falls back to the recommendation tracking secret, then JWT secret, then a local-only constant. This fallback is for safe local startup only.
+
 - Mock mode does not call CDEK or Yandex
 - `DELIVERY_DEFAULT_PROVIDER=yandex` keeps same-city express as the default recommendation path
 - `DELIVERY_SAME_CITY_PREFERRED_PROVIDER=yandex`

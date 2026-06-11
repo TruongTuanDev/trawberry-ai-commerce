@@ -130,6 +130,7 @@ describe('RecommendationsController (e2e)', () => {
     recommendationEvent: {
       create: jest.fn(),
       update: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
     },
     recommendationTuningPreset: {
@@ -223,6 +224,11 @@ describe('RecommendationsController (e2e)', () => {
     process.env.RECOMMENDATION_TUNING_PRESETS_ENABLED = 'false';
     process.env.RECOMMENDATION_TUNING_ACTIVE_PRESET_ENABLED = 'false';
     process.env.ADS_MODERATION_REQUIRED_FOR_SERVING = 'false';
+    process.env.ADS_INVALID_CLICK_PROTECTION_ENABLED = 'true';
+    process.env.ADS_SELF_CLICK_BLOCK_ENABLED = 'true';
+    process.env.ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS = '30';
+    process.env.ADS_IP_REPEAT_CLICK_WINDOW_SECONDS = '10';
+    process.env.ADS_CLICK_HASH_SALT = 'test-ads-click-hash-salt';
 
     products = [
       buildProduct({
@@ -345,7 +351,7 @@ describe('RecommendationsController (e2e)', () => {
     prismaMock.product.findUnique.mockImplementation(
       ({ where }: { where: { id: string } }) => {
         const product = products.find((item) => item.id === where.id);
-        return product ? { shopId: product.shopId } : null;
+        return product ?? null;
       },
     );
     prismaMock.productViewLog.create.mockResolvedValue({});
@@ -405,7 +411,7 @@ describe('RecommendationsController (e2e)', () => {
       }
       const created = {
         id: `event-${recommendationEvents.length + 1}`,
-        createdAt: new Date('2026-06-07T00:00:00Z'),
+        createdAt: new Date(),
         ...data,
       };
       recommendationEvents.push(created);
@@ -420,6 +426,52 @@ describe('RecommendationsController (e2e)', () => {
         return Promise.resolve(event ?? { id: where.id, ...data });
       },
     );
+    prismaMock.recommendationEvent.findFirst.mockImplementation(({ where }) => {
+      return Promise.resolve(
+        recommendationEvents.find((event) => {
+          if (where?.id?.not && event.id === where.id.not) {
+            return false;
+          }
+          if (where?.type && event.type !== where.type) {
+            return false;
+          }
+          if (where?.campaignId && event.campaignId !== where.campaignId) {
+            return false;
+          }
+          if (where?.productId && event.productId !== where.productId) {
+            return false;
+          }
+          if (where?.tokenHash && event.tokenHash !== where.tokenHash) {
+            return false;
+          }
+          if (where?.sessionHash && event.sessionHash !== where.sessionHash) {
+            return false;
+          }
+          if (where?.ipHash && event.ipHash !== where.ipHash) {
+            return false;
+          }
+          if (
+            where?.userAgentHash &&
+            event.userAgentHash !== where.userAgentHash
+          ) {
+            return false;
+          }
+          if (
+            where?.validityStatus &&
+            event.validityStatus !== where.validityStatus
+          ) {
+            return false;
+          }
+          if (
+            where?.createdAt?.gte &&
+            new Date(String(event.createdAt)) < where.createdAt.gte
+          ) {
+            return false;
+          }
+          return true;
+        }) ?? null,
+      );
+    });
     prismaMock.recommendationEvent.findMany.mockImplementation(({ where }) => {
       return Promise.resolve(
         recommendationEvents.filter((event) => {
@@ -2987,7 +3039,7 @@ describe('RecommendationsController (e2e)', () => {
         productId: sponsoredProduct.id,
         algorithm: recommendationsBody.algorithm,
         rank: 1,
-        idempotencyKey: 'click-charge-1',
+        idempotencyKey: 'click-charge-duplicate-token',
         sponsored: true,
         trackingToken: sponsoredItem?.trackingToken,
       },
@@ -3025,20 +3077,187 @@ describe('RecommendationsController (e2e)', () => {
       prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
     ).toEqual(
       expect.objectContaining({
-        charged: true,
-        chargeStatus: 'charged',
+        chargeStatus: 'duplicate_token',
+        validityStatus: 'invalid',
+        invalidReason: 'duplicate_token',
+      }),
+    );
+    const eventCountBeforeIdempotencyRetry = recommendationEvents.length;
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        rank: 1,
+        idempotencyKey: 'click-charge-1',
+        sponsored: true,
+        trackingToken: sponsoredItem?.trackingToken,
+      },
+      {
+        get: () => undefined,
+        headers: {},
+        ip: '127.0.0.1',
+        socket: { remoteAddress: '127.0.0.1' },
+      } as never,
+      null,
+    );
+    expect(recommendationEvents).toHaveLength(eventCountBeforeIdempotencyRetry);
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(1);
+
+    const getFreshTrackingToken = async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/public/recommendations/home?limit=3')
+        .expect(200);
+      return readBody<{
+        items: Array<{
+          product: { id: string };
+          trackingToken?: string | null;
+        }>;
+      }>(response).items.find((item) => item.product.id === sponsoredProduct.id)
+        ?.trackingToken;
+    };
+    const clickRequest = (ip: string, userAgent: string) =>
+      ({
+        get: (name: string) =>
+          name.toLowerCase() === 'user-agent' ? userAgent : undefined,
+        headers: { 'x-forwarded-for': ip },
+        ip,
+        socket: { remoteAddress: ip },
+      }) as never;
+    const trackFreshClick = async (
+      idempotencyKey: string,
+      options?: {
+        guestSessionId?: string;
+        ip?: string;
+        userAgent?: string;
+        user?: {
+          sub: string;
+          userId: string;
+          email: string;
+          role: string;
+        };
+      },
+    ) => {
+      await recommendationsService.trackRecommendationEvent(
+        {
+          type: 'click',
+          placement: 'home',
+          productId: sponsoredProduct.id,
+          algorithm: recommendationsBody.algorithm,
+          idempotencyKey,
+          guestSessionId: options?.guestSessionId,
+          sponsored: true,
+          trackingToken: await getFreshTrackingToken(),
+        },
+        clickRequest(
+          options?.ip ?? `10.0.0.${recommendationEvents.length + 1}`,
+          options?.userAgent ?? `test-agent-${recommendationEvents.length + 1}`,
+        ),
+        options?.user ?? null,
+      );
+    };
+
+    await trackFreshClick('click-session-valid', {
+      guestSessionId: 'guest-repeat',
+      ip: '10.1.0.1',
+      userAgent: 'session-agent-a',
+    });
+    await trackFreshClick('click-session-repeat', {
+      guestSessionId: 'guest-repeat',
+      ip: '10.1.0.2',
+      userAgent: 'session-agent-b',
+    });
+    expect(
+      recommendationEvents.find(
+        (event) => event.idempotencyKey === 'click-session-repeat',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        chargeStatus: 'rapid_repeat_session',
+        validityStatus: 'invalid',
       }),
     );
 
-    prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
-      id: 'campaign-1',
-      shopId: sponsoredProduct.shopId,
-      status: 'active',
-      moderationStatus: 'suspended',
-      startAt: new Date('2026-06-01T00:00:00Z'),
-      endAt: new Date('2026-06-30T00:00:00Z'),
-      budgetLimit: new Prisma.Decimal('20'),
-      billingMode: 'cpc',
+    await trackFreshClick('click-network-valid', {
+      guestSessionId: 'guest-network-a',
+      ip: '10.2.0.1',
+      userAgent: 'shared-network-agent',
+    });
+    await trackFreshClick('click-network-repeat', {
+      guestSessionId: 'guest-network-b',
+      ip: '10.2.0.1',
+      userAgent: 'shared-network-agent',
+    });
+    expect(
+      recommendationEvents.find(
+        (event) => event.idempotencyKey === 'click-network-repeat',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        chargeStatus: 'rapid_repeat_network',
+        validityStatus: 'invalid',
+      }),
+    );
+
+    await trackFreshClick('click-seller-self', {
+      ip: '10.3.0.1',
+      userAgent: 'seller-agent',
+      user: {
+        sub: 'seller-user-1',
+        userId: 'seller-user-1',
+        email: 'seller@example.com',
+        role: 'SELLER',
+      },
+    });
+    await trackFreshClick('click-admin', {
+      ip: '10.3.0.2',
+      userAgent: 'admin-agent',
+      user: {
+        sub: 'admin-user-1',
+        userId: 'admin-user-1',
+        email: 'admin@example.com',
+        role: 'ADMIN',
+      },
+    });
+    expect(
+      recommendationEvents.find(
+        (event) => event.idempotencyKey === 'click-seller-self',
+      ),
+    ).toEqual(expect.objectContaining({ chargeStatus: 'seller_self_click' }));
+    expect(
+      recommendationEvents.find(
+        (event) => event.idempotencyKey === 'click-admin',
+      ),
+    ).toEqual(expect.objectContaining({ chargeStatus: 'admin_click' }));
+
+    await recommendationsService.trackRecommendationEvent(
+      {
+        type: 'click',
+        placement: 'home',
+        productId: sponsoredProduct.id,
+        algorithm: recommendationsBody.algorithm,
+        idempotencyKey: 'click-malformed-token',
+        sponsored: true,
+        trackingToken: 'malformed-token',
+      },
+      clickRequest('10.4.0.1', 'malformed-agent'),
+      null,
+    );
+    expect(
+      recommendationEvents.find(
+        (event) => event.idempotencyKey === 'click-malformed-token',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        chargeStatus: 'invalid_token',
+        validityStatus: 'invalid',
+      }),
+    );
+
+    const outOfStockToken = await getFreshTrackingToken();
+    sponsoredProduct.variants.forEach((variant) => {
+      variant.stockQuantity = 0;
     });
     await recommendationsService.trackRecommendationEvent(
       {
@@ -3046,27 +3265,75 @@ describe('RecommendationsController (e2e)', () => {
         placement: 'home',
         productId: sponsoredProduct.id,
         algorithm: recommendationsBody.algorithm,
-        rank: 1,
-        idempotencyKey: 'click-charge-after-suspend',
+        idempotencyKey: 'click-out-of-stock',
         sponsored: true,
-        trackingToken: sponsoredItem?.trackingToken,
+        trackingToken: outOfStockToken,
       },
-      {
-        get: () => undefined,
-        headers: {},
-        ip: '127.0.0.1',
-        socket: { remoteAddress: '127.0.0.1' },
-      } as never,
+      clickRequest('10.5.0.1', 'out-of-stock-agent'),
       null,
     );
-    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(1);
+    sponsoredProduct.variants.forEach((variant) => {
+      variant.stockQuantity = 10;
+    });
     expect(
-      prismaMock.recommendationEvent.update.mock.calls.at(-1)?.[0]?.data,
+      recommendationEvents.find(
+        (event) => event.idempotencyKey === 'click-out-of-stock',
+      ),
     ).toEqual(
       expect.objectContaining({
-        chargeStatus: 'campaign_not_approved',
+        chargeStatus: 'product_not_chargeable',
+        validityStatus: 'ineligible',
       }),
     );
+
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(3);
+
+    for (const moderationStatus of [
+      'pending_review',
+      'rejected',
+      'suspended',
+    ]) {
+      const moderationToken = await getFreshTrackingToken();
+      prismaMock.sponsoredCampaign.findFirst.mockResolvedValue({
+        id: 'campaign-1',
+        shopId: sponsoredProduct.shopId,
+        status: 'active',
+        moderationStatus,
+        startAt: new Date('2026-06-01T00:00:00Z'),
+        endAt: new Date('2026-06-30T00:00:00Z'),
+        budgetLimit: new Prisma.Decimal('20'),
+        billingMode: 'cpc',
+      });
+      await recommendationsService.trackRecommendationEvent(
+        {
+          type: 'click',
+          placement: 'home',
+          productId: sponsoredProduct.id,
+          algorithm: recommendationsBody.algorithm,
+          rank: 1,
+          idempotencyKey: `click-charge-${moderationStatus}`,
+          sponsored: true,
+          trackingToken: moderationToken,
+        },
+        clickRequest(
+          `10.6.0.${recommendationEvents.length + 1}`,
+          'moderation-agent',
+        ),
+        null,
+      );
+      expect(
+        recommendationEvents.find(
+          (event) =>
+            event.idempotencyKey === `click-charge-${moderationStatus}`,
+        ),
+      ).toEqual(
+        expect.objectContaining({
+          chargeStatus: 'campaign_not_approved',
+          charged: false,
+        }),
+      );
+    }
+    expect(prismaMock.billingLedgerEntry.create).toHaveBeenCalledTimes(3);
   });
 
   it('still charges sponsored CPC clicks after dev funding credits the wallet', async () => {

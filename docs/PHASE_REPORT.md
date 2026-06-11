@@ -1,5 +1,36 @@
 # Phase Report
 
+## 2026-06-11 Ads Platform Phase 6.2 Invalid Click and Fraud Protection
+
+- Status: implemented and verified
+- Extended the existing `RecommendationEvent` tracking path with privacy-safe fraud hashes, click validity, and invalid reason metadata instead of creating a parallel click system.
+- Added no-charge guards for duplicate token, rapid customer/guest session repeat, rapid IP/user-agent repeat, seller self-click, admin click, malformed token, invalid campaign/product mapping, non-approved/inactive campaign, unavailable product, exhausted budget, and unavailable wallet.
+- Added random signed click ids to sponsored tracking tokens so each recommendation serve receives a distinct opaque click opportunity.
+- Added a serializable transaction boundary around event validation and CPC mutation; only a valid click can debit wallet and write a ledger row.
+- Seller and admin campaign UIs now show aggregate total, charged, and invalid clicks with existing spend and remaining budget. No buyer identity, raw IP, raw user-agent, token, or fraud hash is exposed.
+- Production-safe defaults:
+  - `ADS_INVALID_CLICK_PROTECTION_ENABLED=true`
+  - `ADS_SELF_CLICK_BLOCK_ENABLED=true`
+  - `ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS=30`
+  - `ADS_IP_REPEAT_CLICK_WINDOW_SECONDS=10`
+  - production must set a dedicated `ADS_CLICK_HASH_SALT`
+- Safety:
+  - recommendation core ranking formula unchanged
+  - CPC amount/formula unchanged
+  - checkout, order, cart, payment, shipping, seller payment confirmation, shop readiness, WB sync, AI Try-On, and legacy apps untouched
+- Focused verification completed:
+  - recommendations sponsored click/fraud/idempotency/moderation/budget/wallet regression: pass (`55` tests)
+  - campaign/billing/recommendations focused regression: pass (`68` tests)
+- Final verification:
+  - Prisma generate, backend lint, backend build: pass
+  - Prisma db push: Windows host schema engine failed before applying; the same command passed in the backend Linux container
+  - backend full test: pass (`39` suites / `396` tests); an initial concurrent run had two unrelated payment timeouts, then the payment spec and full suite passed when rerun independently
+  - frontend i18n, lint, and build: pass
+  - required Playwright moderation, recommendations, locale, public smoke, cart checkout, cart validation, full commerce, seller operations, and responsive suites: pass (`17` tests)
+  - rebuilt runtime: all `6/6` services healthy; backend health and seller campaign route smoke passed
+  - database schema inspection: all six privacy/validity fields present
+  - manual invalid-click QA: `204`, `invalid_token`, `charged=false`, and no ledger entry
+
 ## 2026-06-11 Ads Platform Phase 6.1 Campaign Moderation
 
 - Status: implemented and verified

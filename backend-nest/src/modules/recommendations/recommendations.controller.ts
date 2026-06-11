@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OptionalAdsClickAuthGuard } from '../../common/guards/optional-ads-click-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import { RecommendationProductsResponseDto } from './dto/recommendation-products-response.dto';
@@ -114,7 +115,7 @@ export class RecommendationsController {
   }
 
   @Post('recommendations/events')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalAdsClickAuthGuard)
   @HttpCode(204)
   @ApiOperation({
     summary: 'Track recommendation impressions or clicks safely.',

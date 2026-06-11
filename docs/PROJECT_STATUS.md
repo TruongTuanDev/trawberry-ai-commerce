@@ -1,5 +1,16 @@
 # Project Status
 
+## Ads Platform Phase 6.2 Invalid Click and Fraud Protection - 2026-06-11
+
+- Status: implemented and verified.
+- Sponsored CPC clicks now require valid signed token mapping, active and approved campaign, public-ready in-stock product, available budget/wallet, and a passing invalid-click decision before charge.
+- Duplicate token, rapid session, rapid IP/user-agent, seller self-click, admin click, malformed token, inactive/non-approved campaign, and unavailable product attempts do not create wallet debit or ledger rows.
+- The existing `RecommendationEvent` model stores only HMAC-SHA256 fraud hashes plus validity classifications; raw IP, raw user-agent, and raw tokens are not stored by the fraud layer or exposed.
+- Seller and admin campaign screens show aggregate total, charged, and invalid clicks with spend and remaining budget.
+- Recommendation core ranking and CPC price formula are unchanged. Commerce, payment confirmation, shop readiness, WB sync, AI Try-On, and legacy apps remain untouched.
+- Verification passed: backend `39` suites / `396` tests, frontend i18n/lint/build, required Playwright `17` tests, rebuilt runtime `6/6` healthy, container Prisma schema sync, and manual invalid-click no-ledger QA.
+- Remaining production gaps include distributed bot/reputation signals, device fingerprinting, fraud appeals, finance reconciliation, and monitoring/alerting.
+
 ## Ads Platform Phase 6.1 Campaign Moderation - 2026-06-11
 
 - Status: implemented and verified.

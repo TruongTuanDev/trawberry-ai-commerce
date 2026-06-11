@@ -1,5 +1,45 @@
 # Campaigns
 
+## Phase 6.2 invalid click and fraud protection
+
+Sponsored CPC charging now classifies each click as `valid`, `invalid`, or `ineligible` before any wallet debit.
+
+Invalid, non-chargeable click rules:
+
+- the same signed tracking token does not charge twice
+- rapid repeats for the same customer/guest session plus campaign and product do not charge
+- rapid repeats for the same IP hash, user-agent hash, campaign, and product do not charge
+- a seller clicking their own shop campaign does not charge
+- an admin click does not charge
+- malformed or unmapped tracking tokens do not charge
+- inactive, non-approved, out-of-schedule, incorrectly mapped, out-of-stock, or non-public products/campaigns do not charge
+- exhausted budgets and unavailable wallets do not charge
+
+The charge order is: verify the signed token and mapping, recheck active/approved campaign and product readiness, recheck budget and wallet, apply invalid-click rules, persist event validity, then debit and write the billing ledger exactly once for a valid click. CPC remains backend-calculated and its amount/formula is unchanged.
+
+Production-safe flags:
+
+- `ADS_INVALID_CLICK_PROTECTION_ENABLED=true`
+- `ADS_SELF_CLICK_BLOCK_ENABLED=true`
+- `ADS_RAPID_REPEAT_CLICK_WINDOW_SECONDS=30`
+- `ADS_IP_REPEAT_CLICK_WINDOW_SECONDS=10`
+- `ADS_CLICK_HASH_SALT=<dedicated production secret>`
+
+`ADS_CLICK_HASH_SALT` should always be explicitly set in production. Local development falls back to the recommendation tracking secret, then JWT secret, then a documented local-only constant so missing local configuration fails safe without storing raw network data.
+
+Privacy and visibility:
+
+- `RecommendationEvent` stores only HMAC-SHA256 token/session/IP/user-agent hashes for fraud matching
+- raw IP, raw user-agent, and raw tracking token are not persisted or exposed by the fraud layer
+- seller `/seller/campaigns` and admin `/admin/campaigns/moderation` expose only aggregate total, charged, and invalid click counts plus existing spend and remaining budget
+- public tracking response remains `204` and exposes no fraud decision or billing internals
+
+Current limitations:
+
+- no device fingerprinting, bot challenge, ASN/reputation provider, appeal workflow, or cross-region fraud stream
+- repeat windows are database-backed and intentionally conservative
+- invalid-click aggregates are operational indicators, not a finance reconciliation or refund workflow
+
 ## Phase 6.1 campaign moderation
 
 Sponsored campaigns now have a moderation lifecycle alongside the existing operational lifecycle.

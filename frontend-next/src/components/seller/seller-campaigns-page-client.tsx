@@ -73,7 +73,9 @@ function getCampaignCopy(t: (key: string) => string) {
     budget: value("performance.budget"),
     unlimited: value("performance.unlimited"),
     remaining: value("performance.remaining"),
+    totalClicks: value("performance.totalClicks"),
     chargedClicks: value("performance.chargedClicks"),
+    invalidClicks: value("performance.invalidClicks"),
     totalBilled: value("performance.totalBilled"),
     readiness: value("performance.readiness"),
     wallet: value("performance.wallet"),
@@ -1062,7 +1064,10 @@ export function SellerCampaignsPageClient() {
                         <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">CPC</p>
                         <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.cpcAmount}</p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          {copy.chargedClicks} {campaign.billing.chargedClicks} / {copy.totalBilled} {campaign.billing.totalChargedEvents}
+                          {copy.totalClicks} {campaign.billing.totalClicks} / {copy.chargedClicks} {campaign.billing.chargedClicks}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {copy.invalidClicks} {campaign.billing.invalidClicks}
                         </p>
                       </article>
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
@@ -1085,7 +1090,7 @@ export function SellerCampaignsPageClient() {
                         <p className="text-sm font-semibold text-[var(--foreground)]">{copy.performanceTitle}</p>
                         {performanceByCampaign[campaign.id] ? (
                           <>
-                            <div className="mt-3 grid gap-3 md:grid-cols-6">
+                            <div className="mt-3 grid gap-3 md:grid-cols-4 xl:grid-cols-8">
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
                                 {copy.events} {performanceByCampaign[campaign.id].summary.totalEvents}
                               </article>
@@ -1094,6 +1099,15 @@ export function SellerCampaignsPageClient() {
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
                                 {copy.clicks} {performanceByCampaign[campaign.id].summary.billableClicks}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                {copy.totalClicks} {performanceByCampaign[campaign.id].summary.totalClicks}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                {copy.chargedClicks} {performanceByCampaign[campaign.id].summary.chargedClicks}
+                              </article>
+                              <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
+                                {copy.invalidClicks} {performanceByCampaign[campaign.id].summary.invalidClicks}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
                                 {copy.sponsored} {performanceByCampaign[campaign.id].summary.servedAsSponsored ? copy.yes : copy.no}
