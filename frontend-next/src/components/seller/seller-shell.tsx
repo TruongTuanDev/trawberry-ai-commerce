@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { ChevronDown, Menu, Search, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import {
@@ -28,7 +28,6 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
     if (typeof window === "undefined") {
       return {};
@@ -60,20 +59,6 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
       )?.key ?? null,
     [navigation, pathname],
   );
-
-  const filteredNavigation = useMemo(() => {
-    const keyword = searchQuery.trim().toLowerCase();
-    if (!keyword) {
-      return navigation;
-    }
-
-    return navigation
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) => item.label.toLowerCase().includes(keyword)),
-      }))
-      .filter((group) => group.label.toLowerCase().includes(keyword) || group.items.length > 0);
-  }, [navigation, searchQuery]);
 
   useEffect(() => {
     if (!user || user.role !== "SELLER" || sellerBlocked) {
@@ -109,15 +94,12 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
   const renderNavigation = (mode: "desktop" | "mobile") => (
     <SellerNavigation
       mode={mode}
-      groups={filteredNavigation}
+      groups={navigation}
       pathname={pathname}
       collapsedGroups={collapsedGroups}
       activeGroupKey={activeGroupKey}
       onToggleGroup={toggleGroup}
       onNavigate={() => setMobileMenuOpen(false)}
-      searchQuery={searchQuery}
-      onSearchQueryChange={setSearchQuery}
-      t={t}
     />
   );
 
@@ -193,6 +175,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     onClick={() => setMobileMenuOpen(true)}
+                    data-testid="seller-mobile-menu-toggle"
                     className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--panel)] text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] lg:hidden"
                     aria-label={t("sellerShell.openMenu")}
                   >
@@ -271,7 +254,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
 
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.24)] lg:hidden">
-          <div className="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col border-r border-[var(--border)] bg-white p-5 shadow-2xl">
+          <div className="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col border-r border-[var(--border)] bg-white p-5 shadow-2xl" data-testid="seller-mobile-menu">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">
@@ -284,6 +267,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
+                data-testid="seller-mobile-menu-close"
                 className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--panel)] text-[var(--foreground)]"
                 aria-label={t("sellerShell.closeMenu")}
               >
@@ -317,9 +301,6 @@ function SellerNavigation({
   activeGroupKey,
   onToggleGroup,
   onNavigate,
-  searchQuery,
-  onSearchQueryChange,
-  t,
 }: {
   mode: "desktop" | "mobile";
   groups: SellerNavGroup[];
@@ -328,22 +309,9 @@ function SellerNavigation({
   activeGroupKey: string | null;
   onToggleGroup: (groupKey: string) => void;
   onNavigate: () => void;
-  searchQuery: string;
-  onSearchQueryChange: (value: string) => void;
-  t: (key: string, values?: Record<string, string | number>) => string;
 }) {
   return (
-    <div className="space-y-4">
-      <label className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
-        <Search className="h-4 w-4 text-[var(--muted)]" />
-        <input
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          placeholder={t("sellerShell.searchPlaceholder")}
-          className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
-        />
-      </label>
-
+    <div className="space-y-4" data-testid={`seller-navigation-${mode}`}>
       <nav className="space-y-3">
         {groups.map((group) => {
           const isActiveGroup = group.key === activeGroupKey;
@@ -406,12 +374,6 @@ function SellerNavigation({
             </section>
           );
         })}
-
-        {groups.length < 1 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--border)] px-4 py-5 text-sm text-[var(--muted)]">
-            {t("sellerShell.noMatches")}
-          </div>
-        ) : null}
       </nav>
     </div>
   );

@@ -366,10 +366,10 @@ export function SellerReturnsPageClient({
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                       <input value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder={t("seller.returns.amount")} data-testid="seller-refund-amount" />
                       <select value={refundMethod} onChange={(event) => setRefundMethod(event.target.value as "SBP" | "BANK_TRANSFER" | "CASH" | "OTHER")} className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm">
-                        <option value="SBP">SBP</option>
-                        <option value="BANK_TRANSFER">Bank transfer</option>
-                        <option value="CASH">Cash</option>
-                        <option value="OTHER">Other</option>
+                        <option value="SBP">{t("seller.returns.refundMethods.sbp")}</option>
+                        <option value="BANK_TRANSFER">{t("seller.returns.refundMethods.bankTransfer")}</option>
+                        <option value="CASH">{t("seller.returns.refundMethods.cash")}</option>
+                        <option value="OTHER">{t("seller.returns.refundMethods.other")}</option>
                       </select>
                     </div>
                     <input value={bankReference} onChange={(event) => setBankReference(event.target.value)} className="mt-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm" placeholder={t("seller.returns.bankReference")} />

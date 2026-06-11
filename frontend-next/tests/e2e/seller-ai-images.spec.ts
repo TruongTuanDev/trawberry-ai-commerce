@@ -11,7 +11,7 @@ async function loginSeller(request: APIRequestContext, email: string, password: 
   return sellerLogin.accessToken;
 }
 
-test("seller creates and attaches AI images from the dedicated seller AI page", async ({ page, request }) => {
+test("seller AI page hides and blocks the internal simulation mode", async ({ page, request }) => {
   test.setTimeout(120000);
 
   const stamp = Date.now();
@@ -76,10 +76,34 @@ test("seller creates and attaches AI images from the dedicated seller AI page", 
   await page.waitForURL("**/seller/dashboard");
   await page.locator("select").first().selectOption(shop.id);
 
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/ai-images/runtime`, async (route) => {
+    await route.fulfill({
+      json: {
+        shopId: shop.id,
+        workerMode: "ai-service",
+        effectiveMode: "AI_SERVICE_MOCK",
+        sellerFlowEffectiveMode: "AI_SERVICE_MOCK",
+        supportsTaskGeneration: true,
+        supportsTaskAttach: true,
+        supportsCredits: true,
+        supportsTaskRetry: true,
+        supportsVirtualTryOn: false,
+        tryOnReady: false,
+        aiServiceConfigured: true,
+        aiServiceReachable: true,
+        aiServiceProvider: "mock",
+        aiServiceStorageDriver: "mock",
+        openAiConfigured: false,
+        openAiSmokeEnabled: false,
+        openAiRealEnabled: false,
+      },
+    });
+  });
   await page.goto("/seller/ai-images");
   await expect(page.getByTestId("seller-ai-images-page")).toBeVisible();
   await expect(page.getByTestId("ai-runtime-badge")).toBeVisible();
-  await expect(page.getByTestId("ai-runtime-badge")).toContainText("AI service mock mode");
+  await expect(page.getByTestId("ai-runtime-badge")).toContainText(/AI image service unavailable|Dịch vụ tạo ảnh AI chưa sẵn sàng/);
+  await expect(page.locator("body")).not.toContainText(/mock mode|chế độ mô phỏng/i);
 
   await page.getByTestId("seller-ai-product-search").fill(productName);
   const selectedCard = page.getByTestId("seller-ai-product-selected").filter({ hasText: productName });
@@ -88,21 +112,8 @@ test("seller creates and attaches AI images from the dedicated seller AI page", 
   }
   await expect(page.getByTestId("seller-ai-product-selected")).toContainText(productName);
 
-  await page.getByTestId("seller-ai-prompt").fill(
-    "Create a clean seller-facing mock-safe studio image for this marketplace product without changing the item.",
-  );
-  await page.getByTestId("seller-ai-generate-submit").click();
-
-  await expect(page.getByText(/AI task .* created/)).toBeVisible();
-  await expect(page.getByTestId("seller-ai-task-selected")).toContainText("COMPLETED", { timeout: 30000 });
-  await expect(page.getByRole("button", { name: "Attach to product" }).first()).toBeVisible();
-  await expect(page.getByTestId("seller-ai-tryon-card")).toHaveText(/Backend not ready for end-to-end try-on/);
+  await page.getByTestId("seller-ai-prompt").fill("Create a clean studio image for this marketplace product.");
+  await expect(page.getByTestId("seller-ai-generate-submit")).toBeDisabled();
+  await expect(page.getByTestId("seller-ai-tryon-card")).toBeVisible();
   await expect(page.locator("[data-testid='seller-ai-tryon-card'] button")).toHaveCount(0);
-
-  await page.getByRole("button", { name: "Attach to product" }).first().click();
-  await expect(page.getByText("AI image attached to the product gallery.")).toBeVisible();
-
-  await page.goto(`/seller/products/${product.id}/images`);
-  await expect(page.getByTestId("seller-product-images-page")).toBeVisible();
-  await expect(page.locator("article[data-testid='product-image-card'] span").filter({ hasText: "AI_GENERATED" }).first()).toBeVisible();
 });

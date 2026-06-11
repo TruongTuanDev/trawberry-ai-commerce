@@ -22,10 +22,7 @@ import { CategoryMappingService } from '../categories/category-mapping.service';
 import { SyncAllProductsDto } from './dto/sync-all-products.dto';
 import { SyncProductByArticleDto } from './dto/sync-product-by-article.dto';
 import { SyncProductsByCodesDto } from './dto/sync-products-by-codes.dto';
-import {
-  normalizeManualProductCode,
-  parseManualProductCodes,
-} from './manual-product-code-parser';
+import { parseManualProductCodes } from './manual-product-code-parser';
 import { WbApiClientService } from './wb-api-client.service';
 import { WbProductMapperService } from './wb-product-mapper.service';
 import {
@@ -310,33 +307,40 @@ export class WbProductSyncService {
     user: AuthenticatedUser,
     dto: SyncProductsByCodesDto,
   ) {
-    const requestedCodes = parseManualProductCodes(dto.codes);
+    const parsedCodes = parseManualProductCodes(dto.codes);
+    const normalizedNmIds = parsedCodes.valid.map(
+      (entry) => entry.normalizedNmId,
+    );
     const run = await this.sync(shopId, user, 'BY_CODES', {
       mode: dto.mode ?? 'PREVIEW',
       limit: this.defaultLimit(),
-      articles: requestedCodes,
+      nmIds: normalizedNmIds,
+      requestedCodes: parsedCodes.requestedCodes,
+      invalidCodes: parsedCodes.invalid,
       publishMode: dto.publishMode ?? 'DRAFT',
       imageMode: dto.imageMode ?? 'REMOTE_URL',
     });
-    const matchedCodes = new Set(
+    const matchedNmIds = new Set(
       (run.rawSummary?.products ?? [])
-        .map((product) => product.sellerSku)
-        .filter((code): code is string => Boolean(code))
-        .map(normalizeManualProductCode),
+        .map((product) => product.externalProductId)
+        .filter((nmId): nmId is string => Boolean(nmId)),
     );
-    const syncedCodes = requestedCodes.filter((code) =>
-      matchedCodes.has(normalizeManualProductCode(code)),
-    );
+    const syncedCodes = parsedCodes.valid
+      .filter((entry) => matchedNmIds.has(entry.normalizedNmId))
+      .map((entry) => entry.original);
+    const notFound = parsedCodes.valid
+      .filter((entry) => !matchedNmIds.has(entry.normalizedNmId))
+      .map((entry) => entry.original);
 
     return {
-      requestedCodes,
-      requestedCount: requestedCodes.length,
+      requestedCodes: parsedCodes.requestedCodes,
+      requestedCount: parsedCodes.requestedCodes.length,
+      normalizedNmIds,
+      matchedNmIds: normalizedNmIds.filter((nmId) => matchedNmIds.has(nmId)),
       syncedCount: run.totalProducts,
       syncedCodes,
-      notFound: requestedCodes.filter(
-        (code) => !matchedCodes.has(normalizeManualProductCode(code)),
-      ),
-      invalid: [],
+      notFound,
+      invalid: parsedCodes.invalid,
       skipped: [],
       errors: Array.isArray(run.errors) ? run.errors : [],
       run,
@@ -354,6 +358,23 @@ export class WbProductSyncService {
     return this.mapRun(run);
   }
 
+  private selectionSummary(options: {
+    requestedCodes?: string[];
+    nmIds?: string[];
+    invalidCodes?: string[];
+  }) {
+    if (!options.nmIds) {
+      return {};
+    }
+
+    return {
+      requestedCodes: options.requestedCodes ?? [],
+      normalizedNmIds: options.nmIds,
+      invalidCodes: options.invalidCodes ?? [],
+      selectionStrategy: 'WB_CARDS_LIST_LOCAL_EXACT_NMID_FILTER',
+    };
+  }
+
   private async sync(
     shopId: string,
     user: AuthenticatedUser,
@@ -362,7 +383,9 @@ export class WbProductSyncService {
       mode: 'PREVIEW' | 'IMPORT';
       limit: number;
       article?: string;
-      articles?: string[];
+      nmIds?: string[];
+      requestedCodes?: string[];
+      invalidCodes?: string[];
       publishMode: 'DRAFT' | 'ACTIVE_IF_VALID';
       imageMode: 'REMOTE_URL';
     },
@@ -387,7 +410,7 @@ export class WbProductSyncService {
           credentialKeyLast4: credential?.keyLast4 ?? null,
           imageMode: options.imageMode,
           publishMode: options.publishMode,
-          ...(options.articles ? { requestedCodes: options.articles } : {}),
+          ...this.selectionSummary(options),
         },
         startedAt,
       },
@@ -398,11 +421,20 @@ export class WbProductSyncService {
         apiKey: credential?.apiKey ?? null,
         limit: options.limit,
         article: options.article,
-        ...(options.articles ? { articles: options.articles } : {}),
+        ...(options.nmIds ? { nmIds: options.nmIds } : {}),
       });
 
+      // The WB cards list endpoint has no direct list-of-nmID filter, so keep a
+      // service-level exact filter as a persistence safety boundary.
+      const requestedNmIds = new Set(options.nmIds ?? []);
+      const selectedCards = options.nmIds
+        ? cardsResponse.cards.filter(
+            (card) =>
+              card.nmID != null && requestedNmIds.has(String(card.nmID)),
+          )
+        : cardsResponse.cards;
       const mapped = await Promise.all(
-        cardsResponse.cards.map(async (card) => {
+        selectedCards.map(async (card) => {
           const product = this.mapper.mapCard(card);
           const mapping = await this.categoryMappingService.mapSourceCategory(
             SOURCE,
@@ -471,11 +503,12 @@ export class WbProductSyncService {
             sourceMode: cardsResponse.mode,
             credentialKeyLast4: credential?.keyLast4 ?? null,
             fetchedCount: cardsResponse.fetchedCount,
+            scannedCount: cardsResponse.scannedCount,
             pagesFetched: cardsResponse.pagesFetched,
             cursor: cardsResponse.cursor ?? null,
             imageMode: options.imageMode,
             publishMode: options.publishMode,
-            ...(options.articles ? { requestedCodes: options.articles } : {}),
+            ...this.selectionSummary(options),
             products: mapped.map((product) => ({
               sellerSku: product.sellerSku,
               externalProductId: product.externalProductId,
@@ -513,7 +546,7 @@ export class WbProductSyncService {
             credentialKeyLast4: credential?.keyLast4 ?? null,
             imageMode: options.imageMode,
             publishMode: options.publishMode,
-            ...(options.articles ? { requestedCodes: options.articles } : {}),
+            ...this.selectionSummary(options),
           },
           completedAt: new Date(),
         },
@@ -917,12 +950,16 @@ export class WbProductSyncService {
     const rawSummary = (run.rawSummaryJson ?? null) as {
       sourceMode?: WbApiSourceMode;
       fetchedCount?: number;
+      scannedCount?: number;
       pagesFetched?: number;
       cursor?: unknown;
       imageMode?: string;
       publishMode?: string;
       credentialKeyLast4?: string | null;
       requestedCodes?: string[];
+      normalizedNmIds?: string[];
+      invalidCodes?: string[];
+      selectionStrategy?: string;
       products?: Array<{
         sellerSku: string | null;
         externalProductId: string | null;

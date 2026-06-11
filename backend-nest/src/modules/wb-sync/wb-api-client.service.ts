@@ -103,13 +103,14 @@ export class WbApiClientService {
       const cards = this.filterCards(
         MOCK_RESPONSE.cards,
         options.article,
-        options.articles,
+        options.nmIds,
       ).slice(0, options.limit);
       return {
         cards,
         mode,
         pagesFetched: 1,
         fetchedCount: cards.length,
+        scannedCount: MOCK_RESPONSE.cards.length,
         cursor: cards.length > 0 ? MOCK_RESPONSE.cursor : { total: 0 },
       };
     }
@@ -124,6 +125,7 @@ export class WbApiClientService {
     const cards: WbCardsResponse['cards'] = [];
     let cursor: WbCardsResponse['cursor'] | undefined;
     let pagesFetched = 0;
+    let scannedCount = 0;
     let lastTotal: number | undefined;
 
     while (pagesFetched < maxPages && cards.length < totalLimit) {
@@ -134,17 +136,24 @@ export class WbApiClientService {
       });
 
       pagesFetched += 1;
+      scannedCount += page.cards.length;
       lastTotal = page.cursor?.total;
       cursor = page.cursor;
 
       const filtered = this.filterCards(
         page.cards,
         options.article,
-        options.articles,
+        options.nmIds,
       );
       cards.push(...filtered);
 
       if (options.article && filtered.length > 0) {
+        break;
+      }
+      if (
+        options.nmIds?.length &&
+        cards.length >= new Set(options.nmIds).size
+      ) {
         break;
       }
 
@@ -163,6 +172,7 @@ export class WbApiClientService {
       mode,
       pagesFetched,
       fetchedCount: cards.length,
+      scannedCount,
       cursor,
     };
   }
@@ -274,19 +284,18 @@ export class WbApiClientService {
   private filterCards(
     cards: WbCardsResponse['cards'],
     article?: string,
-    articles?: string[],
+    nmIds?: string[],
   ) {
-    if (!article && !articles?.length) {
+    if (!article && !nmIds?.length) {
       return cards;
     }
-    const normalizedArticles = new Set(
-      (articles?.length ? articles : [article]).map((value) =>
-        this.normalizeArticle(value),
-      ),
-    );
+    const normalizedArticle = this.normalizeArticle(article);
+    const requestedNmIds = new Set(nmIds);
     return cards.filter((card) => {
-      const vendorCode = this.normalizeArticle(card.vendorCode);
-      return normalizedArticles.has(vendorCode);
+      if (requestedNmIds.size > 0) {
+        return card.nmID != null && requestedNmIds.has(String(card.nmID));
+      }
+      return this.normalizeArticle(card.vendorCode) === normalizedArticle;
     });
   }
 

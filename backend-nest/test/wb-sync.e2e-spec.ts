@@ -34,7 +34,7 @@ describe('WB API sync foundation', () => {
     expect(response.mode).toBe('mock');
   });
 
-  it('mock client filters multiple exact vendor codes without using base codes', async () => {
+  it('mock client filters multiple exact nmIDs without matching vendor codes', async () => {
     const client = new WbApiClientService({
       get: (key: string) => (key === 'WB_SYNC_MODE' ? 'mock' : undefined),
     } as ConfigService);
@@ -42,12 +42,13 @@ describe('WB API sync foundation', () => {
     const response = await client.fetchCards({
       apiKey: null,
       limit: 100,
-      articles: ['apt-mock-shirt', 'APT-MOCK'],
+      nmIds: ['111000002', '999999999'],
     });
 
     expect(response.cards.map((card) => card.vendorCode)).toEqual([
       'APT-MOCK-SHIRT',
     ]);
+    expect(response.cards.map((card) => card.nmID)).toEqual([111000002]);
   });
 
   it('real mode does not fall back to mock when token is missing', async () => {
@@ -175,6 +176,42 @@ describe('WB API sync foundation', () => {
         sort: { ascending: true },
       },
     });
+  });
+
+  it('selected nmID sync uses cards list retrieval and local exact nmID filtering', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(
+      responseWithJson({
+        cards: [
+          { vendorCode: '1013414108', nmID: 777777777 },
+          { vendorCode: 'seller-article', nmID: 1013414108 },
+        ],
+        cursor: { total: 2 },
+      }),
+    );
+    const client = new WbApiClientService({
+      get: (key: string) => {
+        if (key === 'WB_SYNC_MODE') return 'real';
+        if (key === 'WB_API_BASE_URL')
+          return 'https://content-api.wildberries.ru';
+        return undefined;
+      },
+    } as ConfigService);
+
+    const response = await client.fetchCards({
+      apiKey: 'secret-token',
+      limit: 100,
+      nmIds: ['1013414108'],
+    });
+
+    expect(response.cards).toEqual([
+      { vendorCode: 'seller-article', nmID: 1013414108 },
+    ]);
+    expect(response.scannedCount).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.stringify(JSON.parse(getRequestBody(init)))).not.toContain(
+      '1013414108',
+    );
   });
 
   it('verify connection maps 401 to a safe failure', async () => {

@@ -83,11 +83,8 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null, t: (key: string, va
   switch (runtimeStatus?.sellerFlowEffectiveMode ?? runtimeStatus?.effectiveMode) {
     case "AI_SERVICE_OPENAI_READY":
       return {
-        label: t("seller.aiImages.runtime.openAiReady"),
+        label: t("seller.aiImages.runtime.integrationReady"),
         tone: "bg-emerald-100 text-emerald-800",
-        helper: runtimeStatus?.openAiSmokeEnabled
-          ? t("seller.aiImages.runtime.openAiReadySmoke")
-          : t("seller.aiImages.runtime.openAiReadyConfigured"),
       };
     case "AI_SERVICE_OPENAI_BLOCKED":
       return {
@@ -97,9 +94,9 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null, t: (key: string, va
       };
     case "AI_SERVICE_MOCK":
       return {
-        label: t("seller.aiImages.runtime.aiServiceMock"),
-        tone: "bg-sky-100 text-sky-800",
-        helper: t("seller.aiImages.runtime.aiServiceMockHelper"),
+        label: t("seller.aiImages.runtime.integrationUnavailable"),
+        tone: "bg-amber-100 text-amber-800",
+        helper: t("seller.aiImages.runtime.integrationUnavailableHelper"),
       };
     case "OFFLINE":
       return {
@@ -109,8 +106,9 @@ function getModeBadge(runtimeStatus: AiRuntimeStatus | null, t: (key: string, va
     case "INTERNAL_MOCK":
     default:
       return {
-        label: t("seller.aiImages.runtime.internalMock"),
+        label: t("seller.aiImages.runtime.integrationUnavailable"),
         tone: "bg-amber-100 text-amber-800",
+        helper: t("seller.aiImages.runtime.integrationUnavailableHelper"),
       };
   }
 }
@@ -213,6 +211,8 @@ export function SellerAiImagesWorkspace() {
   );
   const pollingActive = Boolean(tasks.some((task) => POLLING_STATUSES.has(task.status)));
   const modeBadge = getModeBadge(runtimeStatus, t);
+  const generationReady =
+    runtimeStatus?.sellerFlowEffectiveMode === "AI_SERVICE_OPENAI_READY";
 
   useEffect(() => {
     let mounted = true;
@@ -370,7 +370,12 @@ export function SellerAiImagesWorkspace() {
   }
 
   async function handleCreateTask() {
-    if (!currentShopId || !selectedProductId || !inputFrontImageId) {
+    if (
+      !currentShopId ||
+      !selectedProductId ||
+      !inputFrontImageId ||
+      !generationReady
+    ) {
       return;
     }
 
@@ -465,13 +470,7 @@ export function SellerAiImagesWorkspace() {
               <span className={clsx("inline-flex rounded-full px-3 py-1 text-xs font-semibold", modeBadge.tone)} data-testid="ai-runtime-badge">
                 {modeBadge.label}
               </span>
-              {runtimeStatus?.aiServiceStorageDriver ? (
-                <span className="inline-flex rounded-full bg-[var(--panel-strong)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                  {t("seller.aiImages.storage")}: {runtimeStatus.aiServiceStorageDriver}
-                </span>
-              ) : null}
             </div>
-            <p className="text-sm text-[var(--muted)]">{runtimeStatus?.statusMessage}</p>
             {modeBadge.helper ? <p className="text-sm text-sky-700">{modeBadge.helper}</p> : null}
           </div>
           <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-4 py-4">
@@ -507,7 +506,7 @@ export function SellerAiImagesWorkspace() {
 
         {runtimeStatus && ["INTERNAL_MOCK", "AI_SERVICE_MOCK"].includes(runtimeStatus.sellerFlowEffectiveMode ?? runtimeStatus.effectiveMode) ? (
           <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {t("seller.aiImages.runtimeMock")}
+            {t("seller.aiImages.runtime.integrationUnavailableHelper")}
           </div>
         ) : null}
 
@@ -676,7 +675,7 @@ export function SellerAiImagesWorkspace() {
             <button
               type="button"
               onClick={() => void handleCreateTask()}
-              disabled={!selectedProductId || !inputFrontImageId || creatingTask}
+              disabled={!generationReady || !selectedProductId || !inputFrontImageId || creatingTask}
               className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="seller-ai-generate-submit"
             >
@@ -711,7 +710,7 @@ export function SellerAiImagesWorkspace() {
                   task.generatedImages[0]?.provider ??
                   (runtimeStatus?.sellerFlowEffectiveMode === "AI_SERVICE_OPENAI_READY"
                     ? "OPENAI"
-                    : runtimeStatus?.aiServiceProvider ?? "pending");
+                    : "pending");
                 const active = task.id === selectedTask?.id;
 
                 return (

@@ -82,7 +82,7 @@ export type WbFetchCardsOptions = {
   apiKey: string | null;
   limit: number;
   article?: string;
-  articles?: string[];
+  nmIds?: string[];
 };
 
 export type WbFetchCardsResult = {
@@ -90,6 +90,7 @@ export type WbFetchCardsResult = {
   mode: WbApiSourceMode;
   pagesFetched: number;
   fetchedCount: number;
+  scannedCount: number;
   cursor?: { updatedAt?: string; nmID?: number; total?: number };
 };
 

@@ -228,6 +228,7 @@ describe('WbProductSyncService credentials', () => {
         mode: options?.mode ?? 'real',
         pagesFetched: 1,
         fetchedCount: 0,
+        scannedCount: 0,
         cursor: { total: 0 },
       }),
       verifyConnection: jest.fn().mockImplementation(
@@ -265,54 +266,56 @@ describe('WbProductSyncService credentials', () => {
       {
         mapCard: jest
           .fn()
-          .mockImplementation((card: { vendorCode?: string }) => ({
-            source: 'WILDBERRIES_API',
-            externalProductId: '123',
-            sellerSku: card.vendorCode ?? 'WB-ARTICLE-1',
-            wbNmId: BigInt(123),
-            wbImtId: BigInt(456),
-            wbNmUuid: 'nm-uuid-1',
-            name: 'Imported product',
-            description: 'Imported from Wildberries',
-            brand: 'WB Brand',
-            categoryName: 'T-Shirts',
-            categoryId: null,
-            mappedCategoryName: null,
-            sourceCategoryName: null,
-            subjectId: BigInt(789),
-            videoUrl: null,
-            needKiz: null,
-            dimensions: {
-              width: 10,
-              height: 20,
-              length: 30,
-              weightBrutto: 400,
-              isValid: true,
-            },
-            characteristics: {
-              gender: null,
-              composition: null,
-              color: null,
-            },
-            variants: [
-              {
-                chrtId: BigInt(987),
-                sellerSku: card.vendorCode ?? 'WB-ARTICLE-1',
-                wbBarcode: 'barcode-1',
-                sizeName: 'M',
-                russianSize: '46',
+          .mockImplementation(
+            (card: { nmID?: number; vendorCode?: string }) => ({
+              source: 'WILDBERRIES_API',
+              externalProductId: String(card.nmID ?? 123),
+              sellerSku: card.vendorCode ?? 'WB-ARTICLE-1',
+              wbNmId: BigInt(card.nmID ?? 123),
+              wbImtId: BigInt(456),
+              wbNmUuid: 'nm-uuid-1',
+              name: 'Imported product',
+              description: 'Imported from Wildberries',
+              brand: 'WB Brand',
+              categoryName: 'T-Shirts',
+              categoryId: null,
+              mappedCategoryName: null,
+              sourceCategoryName: null,
+              subjectId: BigInt(789),
+              videoUrl: null,
+              needKiz: null,
+              dimensions: {
+                width: 10,
+                height: 20,
+                length: 30,
+                weightBrutto: 400,
+                isValid: true,
               },
-            ],
-            images: [
-              {
-                url: 'https://images.example.com/1.jpg',
-                isMain: true,
-                sortOrder: 0,
+              characteristics: {
+                gender: null,
+                composition: null,
+                color: null,
               },
-            ],
-            warnings: [],
-            errors: [],
-          })),
+              variants: [
+                {
+                  chrtId: BigInt(987),
+                  sellerSku: card.vendorCode ?? 'WB-ARTICLE-1',
+                  wbBarcode: 'barcode-1',
+                  sizeName: 'M',
+                  russianSize: '46',
+                },
+              ],
+              images: [
+                {
+                  url: 'https://images.example.com/1.jpg',
+                  isMain: true,
+                  sortOrder: 0,
+                },
+              ],
+              warnings: [],
+              errors: [],
+            }),
+          ),
       } as never,
       {
         resolveCategoryAssignment: jest.fn().mockResolvedValue({
@@ -491,40 +494,73 @@ describe('WbProductSyncService credentials', () => {
     expect(JSON.stringify(result)).not.toContain('secret-api-key-1234');
   });
 
-  it('syncs only selected exact product codes and reports not found codes', async () => {
+  it('syncs only selected exact nmIDs and reports invalid and not-found codes', async () => {
     const { service, apiClient } = createService({ mode: 'mock' });
+    const syncAllSpy = jest.spyOn(service, 'syncAll');
     apiClient.fetchCards.mockResolvedValue({
       cards: [
         {
-          nmID: 123,
-          vendorCode: '234-Xanh',
+          nmID: 1013414108,
+          vendorCode: 'seller-article-does-not-match-nmid',
           title: 'Selected product',
+        },
+        {
+          nmID: 999999999,
+          vendorCode: '1013414108',
+          title: 'Must not be selected by vendorCode',
         },
       ],
       mode: 'mock',
       pagesFetched: 1,
-      fetchedCount: 1,
+      fetchedCount: 2,
+      scannedCount: 2,
       cursor: { total: 1 },
     });
 
     const result = await service.syncByCodes('shop-1', user, {
-      codes: '234-xanh,356-đỏ,234-XANH',
+      codes: '1013414108,123456789,234-xanh,01013414108',
       mode: 'PREVIEW',
     });
 
     expect(apiClient.fetchCards).toHaveBeenCalledTimes(1);
+    expect(syncAllSpy).not.toHaveBeenCalled();
     expect(apiClient.fetchCards).toHaveBeenCalledWith({
       apiKey: null,
       limit: 100,
       article: undefined,
-      articles: ['234-xanh', '356-đỏ'],
+      nmIds: ['1013414108', '123456789'],
     });
-    expect(result.requestedCodes).toEqual(['234-xanh', '356-đỏ']);
+    expect(result.requestedCodes).toEqual([
+      '1013414108',
+      '123456789',
+      '234-xanh',
+    ]);
+    expect(result.normalizedNmIds).toEqual(['1013414108', '123456789']);
+    expect(result.matchedNmIds).toEqual(['1013414108']);
     expect(result.syncedCount).toBe(1);
-    expect(result.syncedCodes).toEqual(['234-xanh']);
-    expect(result.notFound).toEqual(['356-đỏ']);
-    expect(result.invalid).toEqual([]);
+    expect(result.run.rawSummary?.products).toHaveLength(1);
+    expect(result.syncedCodes).toEqual(['1013414108']);
+    expect(result.notFound).toEqual(['123456789']);
+    expect(result.invalid).toEqual(['234-xanh']);
     expect(result.skipped).toEqual([]);
+    expect(result.run.rawSummary?.selectionStrategy).toBe(
+      'WB_CARDS_LIST_LOCAL_EXACT_NMID_FILTER',
+    );
+  });
+
+  it('rejects invalid selected codes before fetching cards or running sync-all', async () => {
+    const { service, apiClient } = createService({ mode: 'mock' });
+    const syncAllSpy = jest.spyOn(service, 'syncAll');
+
+    await expect(
+      service.syncByCodes('shop-1', user, {
+        codes: '234-xanh,abc',
+        mode: 'IMPORT',
+      }),
+    ).rejects.toThrow('WB article codes must be numeric nmID values.');
+
+    expect(apiClient.fetchCards).not.toHaveBeenCalled();
+    expect(syncAllSpy).not.toHaveBeenCalled();
   });
 
   it('enforces shop ownership before selected-code sync', async () => {
@@ -535,7 +571,7 @@ describe('WbProductSyncService credentials', () => {
 
     await expect(
       service.syncByCodes('shop-1', user, {
-        codes: '234-xanh',
+        codes: '1013414108',
         mode: 'IMPORT',
       }),
     ).rejects.toThrow('You do not have access to this shop.');

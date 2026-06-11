@@ -1,5 +1,15 @@
 # Full Commerce Flow Audit
 
+## Seller Production UX and WB nmID Selected Sync Addendum
+
+- verified Seller desktop and mobile navigation no longer render the sidebar search while preserving grouped navigation and active-route behavior
+- verified Seller WB sync and AI image screens do not expose internal mock/simulation controls or wording; mock responses are blocked as unavailable on Seller production surfaces
+- verified selected WB sync accepts numeric `Артикул WB / nmID`, exact-matches only `card.nmID`, and does not match an unrelated card whose `vendorCode` happens to equal the requested nmID
+- verified invalid-only selected input fails before card retrieval and selected sync never falls back to sync-all
+- verified real selected sync uses WB Cards List retrieval plus local exact nmID filtering; sync-all remains unchanged
+- verified product import remains private by default and public marketplace readiness, checkout, order, cart, payment, shipping, campaign billing, recommendations, and AI Try-On business rules are unchanged
+- automated verification used safe mocks and did not call the real WB API or OpenAI API
+
 ## AI Try-On Real Demo Models Addendum
 
 - verified the public AI Try-On modal no longer depends on silhouette placeholder model cards
@@ -922,7 +932,7 @@ Future audit item: design an optional marketplace parent order for combined rece
 # Wildberries Selected-Code Sync Audit Addendum
 
 - Seller UI at `/seller/import/wildberries-api` keeps sync-all separate and adds manual selected-code preview/import.
-- `POST /api/shops/:shopId/wb-sync/products/by-codes` parses selected codes server-side, exact-matches WB `vendorCode`, and returns a structured requested/synced/not-found summary.
+- `POST /api/shops/:shopId/wb-sync/products/by-codes` parses numeric WB nmIDs server-side, exact-matches `card.nmID`, and returns a structured normalized/matched/invalid/not-found summary without sync-all fallback.
 - Input is capped at 5000 characters and 100 unique codes; empty or over-limit input cannot fall back to sync-all.
 - Existing seller authentication, approved-seller check, `ShopAccessGuard`, per-shop encrypted WB credential, and product upsert behavior are reused.
 - Automated tests stay in WB mock mode and do not call the real Wildberries API.

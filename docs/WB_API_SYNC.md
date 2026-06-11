@@ -1,9 +1,11 @@
 # Wildberries API Product Sync
 
-WB API sync now has two explicit runtime modes:
+The backend WB API sync integration has two runtime modes:
 
 - `mock`: deterministic fixture for local CI/default smoke
 - `real`: calls Wildberries Content API with the selected shop's stored API key
+
+The Seller production UI does not expose or activate mock mode. When the backend reports mock mode, Seller actions are blocked and the integration is shown as unavailable. Mock remains an internal automated-test facility.
 
 Excel import remains separate and unchanged.
 
@@ -61,7 +63,7 @@ Notes:
 ## Credential Flow
 
 1. Seller opens `/seller/import/wildberries-api`
-2. Page shows current source mode: `MOCK` or `REAL`
+2. Page shows whether the real Wildberries integration is ready without exposing internal runtime-mode controls
 3. Seller enters API key and clicks Save
 4. Frontend calls `POST /api/shops/:shopId/wb-sync/credentials`
 5. Backend trims the key, encrypts it with AES-GCM, stores `keyLast4`, and never returns the raw key
@@ -82,7 +84,7 @@ Notes:
 - `POST /api/shops/:shopId/wb-sync/products/by-article`
 - `POST /api/shops/:shopId/wb-sync/products/by-codes`
 
-Both endpoints now:
+These endpoints now:
 
 - use the selected shop's encrypted DB credential in real mode
 - keep mock mode only for CI/default tests
@@ -224,7 +226,7 @@ Behavior:
 - no import-all fallback when article is missing
 - missing article produces warning `ARTICLE_NOT_FOUND`
 
-## Sync Selected Products By Codes
+## Sync Selected Products By WB Article / nmID
 
 `POST /api/shops/:shopId/wb-sync/products/by-codes`
 
@@ -232,7 +234,7 @@ Example body:
 
 ```json
 {
-  "codes": "234-xanh,356-đỏ\n789-чёрный",
+  "codes": "1013414108,123456789",
   "mode": "IMPORT",
   "publishMode": "DRAFT",
   "imageMode": "REMOTE_URL"
@@ -242,15 +244,16 @@ Example body:
 Parsing and matching:
 
 - separators: comma, semicolon, carriage return, or new line
-- surrounding whitespace is trimmed; internal whitespace is preserved
-- duplicates are removed case-insensitively while the first original token is preserved for reporting
+- surrounding whitespace is trimmed
+- only numeric `Артикул WB / nmID` values are valid
+- numeric duplicates are canonicalized without converting them to JavaScript `Number`, while the first original token is preserved for reporting
 - maximum input length is `5000` characters and maximum unique code count is `100`
-- each parsed token matches the complete WB `vendorCode` case-insensitively
-- dashes, underscores, Cyrillic, Vietnamese characters, and numbers remain meaningful
-- codes are never reduced to a base code before `-`
-- empty or invalid selected-code input returns validation failure and never calls sync-all
+- real mode retrieves WB Cards List pages and filters exact requested `card.nmID` values locally
+- mock mode applies the same exact nmID matching contract for deterministic tests
+- `vendorCode` is not used for selected-product matching
+- all-invalid selected input fails before card retrieval; selected sync never calls or falls back to sync-all
 
-Selected-code responses include `requestedCodes`, `requestedCount`, `syncedCount`, `syncedCodes`, `notFound`, `invalid`, `skipped`, `errors`, and the persisted WB sync `run`.
+Selected-code responses include `requestedCodes`, `requestedCount`, `normalizedNmIds`, `matchedNmIds`, `syncedCount`, `syncedCodes`, `notFound`, `invalid`, `skipped`, `errors`, and the persisted WB sync `run`.
 
 ## Mapping Rules
 
@@ -280,11 +283,10 @@ Additional mapping:
 
 ## UI Expectations
 
-The WB API sync page must make mode and connection state explicit:
+The WB API sync page must make the real integration and connection state clear without exposing internal simulation controls:
 
-- `MOCK` or `REAL` badge
-- `Mock mode active - real Wildberries verification is disabled and no live API request will run.`
-- `Real mode active - this shop needs its own WB API key.`
+- integration ready or unavailable state
+- mock/internal runtime state is presented as unavailable and all Seller sync/verify actions remain disabled
 - `Connected with key ending ****1234.`
 - connected status with `keyLast4`
 - last verification result and sanitized last error
@@ -457,10 +459,10 @@ Missing credential in real mode
 - save or update the selected shop's WB API key first
 - expected safe error: `WB_CREDENTIAL_MISSING`
 
-Page shows `MOCK`
+Seller page shows the integration as unavailable
 
-- backend runtime still has `WB_SYNC_MODE=mock`
-- restart backend after env change
+- confirm backend runtime has `WB_SYNC_MODE=real`
+- restart backend after changing the runtime environment
 
 ## Security
 

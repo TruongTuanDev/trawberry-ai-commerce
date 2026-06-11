@@ -73,13 +73,13 @@ async function login(page: Page, email: string, password: string) {
   await page.waitForURL("**/seller/dashboard");
 }
 
-test("seller previews and imports Wildberries API products in mock mode", async ({ page, request }) => {
+test("seller syncs selected products by numeric WB nmID without sync-all fallback", async ({ page, request }) => {
   test.setTimeout(120000);
   const stamp = Date.now();
   const email = `wb-api-sync-${stamp}@example.com`;
   const password = "password123";
   const sellerToken = await createApprovedSeller(request, email, password);
-  await backendJson(request, "/api/shops", {
+  const shop = await backendJson<{ id: string }>(request, "/api/shops", {
     method: "POST",
     token: sellerToken,
     data: {
@@ -89,46 +89,98 @@ test("seller previews and imports Wildberries API products in mock mode", async 
     },
   });
 
+  const statusPayload = {
+    shopId: shop.id,
+    connected: true,
+    hasCredentials: true,
+    keyLast4: "1234",
+    updatedAt: new Date().toISOString(),
+    mode: "real",
+    lastVerifiedAt: new Date().toISOString(),
+    lastVerificationStatus: "SUCCESS",
+    lastVerificationError: null,
+    canAttemptRealVerify: true,
+    missingConfig: [],
+  };
+  let selectedRequests = 0;
+  let syncAllRequests = 0;
+  let selectedPayload: { codes?: string } | null = null;
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/wb-sync/credentials/status`, async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(statusPayload) });
+  });
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/wb-sync/products/by-codes`, async (route) => {
+    selectedRequests += 1;
+    selectedPayload = route.request().postDataJSON() as { codes?: string };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        requestedCodes: ["1013414108", "123456789"],
+        requestedCount: 2,
+        normalizedNmIds: ["1013414108", "123456789"],
+        matchedNmIds: ["1013414108"],
+        syncedCount: 1,
+        syncedCodes: ["1013414108"],
+        notFound: ["123456789"],
+        invalid: [],
+        skipped: [],
+        errors: [],
+        run: {
+          syncRunId: "selected-nmid-run",
+          status: "COMPLETED",
+          mode: "PREVIEW",
+          syncType: "BY_CODES",
+          article: null,
+          sourceMode: "real",
+          totalFetched: 1,
+          totalProducts: 1,
+          totalVariants: 0,
+          totalImages: 0,
+          createdProducts: 0,
+          updatedProducts: 0,
+          warnings: [],
+          errors: [],
+          rawSummary: {
+            selectionStrategy: "WB_CARDS_LIST_LOCAL_EXACT_NMID_FILTER",
+            normalizedNmIds: ["1013414108", "123456789"],
+          },
+          createdAt: new Date().toISOString(),
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+        },
+      }),
+    });
+  });
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/wb-sync/products`, async (route) => {
+    syncAllRequests += 1;
+    await route.abort();
+  });
+
   await login(page, email, password);
   await page.goto("/seller/import/wildberries-api");
   await expect(page.getByTestId("wb-api-sync-page")).toBeVisible();
-  await expect(page.getByTestId("wb-api-mode-badge")).toContainText("MOCK");
-  await expect(page.getByTestId("wb-api-mode-message")).toBeVisible();
+  await expect(page.getByTestId("wb-api-codes-identity")).toContainText(/Артикул WB.*nmID/);
+  await expect(page.getByTestId("wb-api-import-all")).toBeVisible();
 
-  await page.getByTestId("wb-api-key").fill("mock-api-key-1234");
-  await page.getByTestId("wb-api-save-credentials").click();
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("1234");
-  await expect(page.getByTestId("wb-api-save-credentials")).toBeDisabled();
-  await expect(page.getByTestId("wb-api-verify-credentials")).toBeDisabled();
-
-  await page.getByTestId("wb-api-key").fill("mock-api-key-5678");
-  await expect(page.getByTestId("wb-api-save-credentials")).toBeEnabled();
-  await page.getByTestId("wb-api-save-credentials").click();
-  await expect(page.getByTestId("wb-api-credentials-status")).toContainText("5678");
-
-  await page.getByTestId("wb-api-delete-credentials").click();
-  await expect(page.getByTestId("wb-api-credentials-status")).not.toContainText("5678");
-  await expect(page.getByTestId("wb-api-save-credentials")).toBeDisabled();
-
-  await page.getByTestId("wb-api-preview-all").click();
-  await expect(page.getByTestId("wb-api-result")).toBeVisible();
-  await expect(page.getByTestId("wb-api-product-row").first()).toContainText("APT-MOCK");
-
-  await page.getByTestId("wb-api-import-all").click();
-  await expect(page.getByTestId("wb-api-result")).toBeVisible();
-
-  await page.getByTestId("wb-api-codes").fill("APT-MOCK-HOODIE,APT-MISSING");
-  await page.getByTestId("wb-api-import-selected").click();
-  await expect(page.getByTestId("wb-api-result")).toBeVisible();
+  await page.getByTestId("wb-api-codes").fill("1013414108,123456789");
+  await page.getByTestId("wb-api-preview-selected").click();
   await expect(page.getByTestId("wb-api-selected-summary")).toBeVisible();
-  await expect(page.getByTestId("wb-api-selected-not-found")).toContainText("APT-MISSING");
+  await expect(page.getByTestId("wb-api-selected-not-found")).toContainText("123456789");
+  expect(selectedPayload).toEqual({ codes: "1013414108,123456789", mode: "PREVIEW", publishMode: "DRAFT", imageMode: "REMOTE_URL" });
+  expect(selectedRequests).toBe(1);
+  expect(syncAllRequests).toBe(0);
 
   await page.getByTestId("wb-api-codes").fill("");
-  await page.getByTestId("wb-api-import-selected").click();
+  await page.getByTestId("wb-api-preview-selected").click();
   await expect(page.getByTestId("wb-api-error")).toBeVisible();
+  expect(selectedRequests).toBe(1);
+  expect(syncAllRequests).toBe(0);
 
-  await page.goto("/seller/products");
-  await expect(page.locator("article").filter({ hasText: "Mock WB Hoodie" })).toBeVisible();
+  await page.getByTestId("wb-api-codes").fill("234-xanh");
+  await page.getByTestId("wb-api-preview-selected").click();
+  await expect(page.getByTestId("wb-api-error")).toContainText("nmID");
+  expect(selectedRequests).toBe(1);
+  expect(syncAllRequests).toBe(0);
 });
 
 test("seller sees safe verify failure returned by backend", async ({ page, request }) => {

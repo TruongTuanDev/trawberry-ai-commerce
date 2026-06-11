@@ -58,6 +58,12 @@ test("seller toolbar and dense operational cards stay inside tablet and mobile v
   await page.setViewportSize({ width: 768, height: 1024 });
   await login(page, "seller");
   await expectInsideViewport(page, '[data-testid="seller-header-controls"]');
+  await expect(page.getByTestId("seller-navigation-desktop")).not.toBeVisible();
+  await page.getByTestId("seller-mobile-menu-toggle").click();
+  await expect(page.getByTestId("seller-navigation-mobile")).toBeVisible();
+  await expect(page.getByTestId("seller-navigation-mobile").locator("nav section").first()).toBeVisible();
+  await expect(page.getByTestId("seller-mobile-menu").locator("input")).toHaveCount(0);
+  await page.getByTestId("seller-mobile-menu-close").click();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/seller/recommendations-analytics");
@@ -78,4 +84,10 @@ test("seller toolbar and dense operational cards stay inside tablet and mobile v
   ]) {
     await expectInsideViewport(page, `[data-testid="${testId}"]`);
   }
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/seller/dashboard");
+  await expect(page.getByTestId("seller-navigation-desktop")).toBeVisible();
+  await expect(page.getByTestId("seller-navigation-desktop").locator("nav section").first()).toBeVisible();
+  await expect(page.getByTestId("seller-navigation-desktop").locator("input")).toHaveCount(0);
 });

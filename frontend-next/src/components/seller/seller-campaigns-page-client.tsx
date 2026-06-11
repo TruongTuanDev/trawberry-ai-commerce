@@ -26,90 +26,110 @@ const SCENARIO_OPTIONS: SellerCampaignScenarioType[] = ["home", "similar", "sear
 const BILLING_OPTIONS: SellerCampaignBillingMode[] = ["none", "cpc", "cpm", "fixed"];
 const STATUS_OPTIONS: SellerCampaignStatus[] = ["draft", "active", "paused", "ended", "archived"];
 const TARGET_STATUS_OPTIONS: SellerCampaignTargetStatus[] = ["active", "paused", "removed"];
-const CAMPAIGN_COPY = {
-  eyebrow: "Campaigns",
-  title: "Sponsored campaign manager",
-  description:
-    "Create, target, activate, and review sponsored campaigns with bounded recommendation boosts, CPC spend tracking, and a clear V1 demo path through seller billing.",
-  currentShop: "Current shop",
-  pickShop: "Pick a seller shop to manage campaigns.",
-  totalCampaigns: "Campaign count",
-  placeholderBilling: "Campaign billing",
-  placeholderBillingDescription:
-    "CPC recommendation click charging, spend tracking, and budget enforcement are now available for the V1 demo flow. Use /seller/billing demo funding only when the internal dev flag is enabled.",
-  loading: "Loading campaigns...",
-  loadFailed: "Unable to load seller campaigns.",
-  submitting: "Saving...",
-  createEyebrow: "Create",
-  createTitle: "Create a campaign draft",
-  createDescription:
-    "Start with a draft, attach product targets, set the budget and billing mode, then move the campaign to active for the demo flow.",
-  createAction: "Create campaign",
-  listEyebrow: "Manage",
-  listTitle: "Campaign list",
-  listDescription:
-    "Review campaign status, budget, spend, remaining budget, targets, and safe billing behavior without exposing anything on public pages.",
-  empty: "No campaigns yet for this shop.",
-  saveCampaign: "Save campaign",
-  archiveCampaign: "Archive campaign",
-  targetTitle: "Product targets",
-  targetDescription:
-    "Attach published products from the current shop. Active campaigns will reject invalid or non-public products.",
-  eligibleProducts: "Suggested published products",
-  saveTarget: "Save target",
-  removeTarget: "Remove target",
-  noTargets: "No product targets yet.",
-  billingPanelTitle: "Billing and performance",
-  billingPanelDescription:
-    "This panel shows the current campaign spend state plus recent sponsored events recorded for the campaign.",
-  performanceTitle: "Performance snapshot",
-  performanceAction: "Load performance",
-  performanceLoading: "Loading performance...",
-  noEvents: "No sponsored events yet.",
-  fields: {
-    name: "Campaign name",
-    namePlaceholder: "Summer visibility push",
-    description: "Description",
-    descriptionPlaceholder:
-      "Explain what this campaign should promote and what QA should watch.",
-    scenarioTypes: "Scenario types",
-    billingMode: "Billing mode",
-    budgetLimit: "Budget limit",
-    maxBoost: "Max boost",
-    status: "Status",
-    startAt: "Start at",
-    endAt: "End at",
-    productId: "Product id",
-    targetBoost: "Target boost",
-    targetStatus: "Target status",
-  },
-  summary: {
-    totalTargets: "Targets",
-    activeTargets: "Active",
-    removedTargets: "Removed",
-    spentAmount: "Spent",
-    remainingBudget: "Remaining",
-    billableClicks: "Billable clicks",
-  },
-  table: {
-    product: "Product",
-    status: "Status",
-    boost: "Boost",
-    actions: "Actions",
-  },
-  messages: {
-    createSuccess: "Campaign created.",
-    createFailed: "Unable to create campaign.",
-    updateSuccess: "Campaign updated.",
-    updateFailed: "Unable to update campaign.",
-    archiveSuccess: "Campaign archived.",
-    archiveFailed: "Unable to archive campaign.",
-    targetSaved: "Target saved.",
-    targetSaveFailed: "Unable to save target.",
-    targetRemoved: "Target removed.",
-    targetRemoveFailed: "Unable to remove target.",
-  },
-} as const;
+function getCampaignCopy(t: (key: string) => string) {
+  const value = (key: string) => t(`seller.campaigns.${key}`);
+  return {
+    eyebrow: value("eyebrow"),
+    title: value("title"),
+    description: value("description"),
+    currentShop: value("currentShop"),
+    pickShop: value("pickShop"),
+    totalCampaigns: value("totalCampaigns"),
+    placeholderBilling: value("placeholderBilling"),
+    placeholderBillingDescription: value("placeholderBillingDescription"),
+    loading: value("loading"),
+    loadFailed: value("loadFailed"),
+    submitting: value("submitting"),
+    createEyebrow: value("createEyebrow"),
+    createTitle: value("createTitle"),
+    createDescription: value("createDescription"),
+    createAction: value("createAction"),
+    listEyebrow: value("listEyebrow"),
+    listTitle: value("listTitle"),
+    listDescription: value("listDescription"),
+    empty: value("empty"),
+    saveCampaign: value("saveCampaign"),
+    archiveCampaign: value("archiveCampaign"),
+    targetTitle: value("targetTitle"),
+    targetDescription: value("targetDescription"),
+    eligibleProducts: value("eligibleProducts"),
+    saveTarget: value("saveTarget"),
+    removeTarget: value("removeTarget"),
+    noTargets: value("noTargets"),
+    billingPanelTitle: value("billingPanelTitle"),
+    billingPanelDescription: value("billingPanelDescription"),
+    performanceTitle: value("performanceTitle"),
+    performanceAction: value("performanceAction"),
+    performanceLoading: value("performanceLoading"),
+    noEvents: value("noEvents"),
+    performanceLoadFailed: value("performanceLoadFailed"),
+    mode: value("performance.mode"),
+    budget: value("performance.budget"),
+    unlimited: value("performance.unlimited"),
+    remaining: value("performance.remaining"),
+    chargedClicks: value("performance.chargedClicks"),
+    totalBilled: value("performance.totalBilled"),
+    readiness: value("performance.readiness"),
+    wallet: value("performance.wallet"),
+    blocked: value("performance.blocked"),
+    ready: value("performance.ready"),
+    exhausted: value("performance.exhausted"),
+    available: value("performance.available"),
+    events: value("performance.events"),
+    impressions: value("performance.impressions"),
+    clicks: value("performance.clicks"),
+    sponsored: value("performance.sponsored"),
+    walletBlocked: value("performance.walletBlocked"),
+    budgetExhausted: value("performance.budgetExhausted"),
+    time: value("performance.time"),
+    columnsType: value("performance.type"),
+    cost: value("performance.cost"),
+    yes: value("performance.yes"),
+    no: value("performance.no"),
+    fields: {
+      name: value("fields.name"),
+      namePlaceholder: value("fields.namePlaceholder"),
+      description: value("fields.description"),
+      descriptionPlaceholder: value("fields.descriptionPlaceholder"),
+      scenarioTypes: value("fields.scenarioTypes"),
+      billingMode: value("fields.billingMode"),
+      budgetLimit: value("fields.budgetLimit"),
+      maxBoost: value("fields.maxBoost"),
+      status: value("fields.status"),
+      startAt: value("fields.startAt"),
+      endAt: value("fields.endAt"),
+      productId: value("fields.productId"),
+      targetBoost: value("fields.targetBoost"),
+      targetStatus: value("fields.targetStatus"),
+    },
+    summary: {
+      totalTargets: value("summary.totalTargets"),
+      activeTargets: value("summary.activeTargets"),
+      removedTargets: value("summary.removedTargets"),
+      spentAmount: value("summary.spentAmount"),
+      remainingBudget: value("summary.remainingBudget"),
+      billableClicks: value("summary.billableClicks"),
+    },
+    table: {
+      product: value("table.product"),
+      status: value("table.status"),
+      boost: value("table.boost"),
+      actions: value("table.actions"),
+    },
+    messages: {
+      createSuccess: value("messages.createSuccess"),
+      createFailed: value("messages.createFailed"),
+      updateSuccess: value("messages.updateSuccess"),
+      updateFailed: value("messages.updateFailed"),
+      archiveSuccess: value("messages.archiveSuccess"),
+      archiveFailed: value("messages.archiveFailed"),
+      targetSaved: value("messages.targetSaved"),
+      targetSaveFailed: value("messages.targetSaveFailed"),
+      targetRemoved: value("messages.targetRemoved"),
+      targetRemoveFailed: value("messages.targetRemoveFailed"),
+    },
+  };
+}
 
 type CampaignFormState = {
   name: string;
@@ -155,7 +175,7 @@ function buildCampaignForm(campaign?: SellerCampaign | null): CampaignFormState 
 }
 
 export function SellerCampaignsPageClient() {
-  const { locale } = useI18n("seller");
+  const { t } = useI18n("seller");
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -175,100 +195,7 @@ export function SellerCampaignsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const copy = useMemo(() => {
-    if (locale !== "vi") {
-      return CAMPAIGN_COPY;
-    }
-
-    return {
-      ...CAMPAIGN_COPY,
-      eyebrow: "Chiến dịch",
-      title: "Trình quản lý chiến dịch tài trợ",
-      description:
-        "Tạo, nhắm mục tiêu, kích hoạt và theo dõi chiến dịch tài trợ với mức tăng gợi ý có kiểm soát, theo dõi chi tiêu CPC và lộ trình demo V1 rõ ràng qua phần tài chính seller.",
-      currentShop: "Shop hiện tại",
-      pickShop: "Chọn shop seller để quản lý chiến dịch.",
-      totalCampaigns: "Số lượng chiến dịch",
-      placeholderBilling: "Tài chính chiến dịch",
-      placeholderBillingDescription:
-        "Thu phí click gợi ý CPC, theo dõi chi tiêu và kiểm soát ngân sách hiện đã sẵn sàng cho luồng demo V1. Chỉ dùng nguồn quỹ demo ở /seller/billing khi cờ dev nội bộ được bật.",
-      loading: "Đang tải chiến dịch...",
-      loadFailed: "Không thể tải chiến dịch seller.",
-      submitting: "Đang lưu...",
-      createEyebrow: "Tạo mới",
-      createTitle: "Tạo bản nháp chiến dịch",
-      createDescription:
-        "Bắt đầu với bản nháp, gắn mục tiêu sản phẩm, đặt ngân sách và chế độ tính phí, sau đó chuyển sang hoạt động cho luồng demo.",
-      createAction: "Tạo chiến dịch",
-      listEyebrow: "Quản lý",
-      listTitle: "Danh sách chiến dịch",
-      listDescription:
-        "Xem trạng thái chiến dịch, ngân sách, chi tiêu, phần ngân sách còn lại, mục tiêu và hành vi tính phí an toàn mà không hiển thị ra trang công khai.",
-      empty: "Chưa có chiến dịch nào cho shop này.",
-      saveCampaign: "Lưu chiến dịch",
-      archiveCampaign: "Lưu trữ chiến dịch",
-      targetTitle: "Mục tiêu sản phẩm",
-      targetDescription:
-        "Gắn các sản phẩm đã publish của shop hiện tại. Chiến dịch đang hoạt động sẽ từ chối sản phẩm không hợp lệ hoặc chưa công khai.",
-      eligibleProducts: "Sản phẩm công khai được gợi ý",
-      saveTarget: "Lưu mục tiêu",
-      removeTarget: "Gỡ mục tiêu",
-      noTargets: "Chưa có mục tiêu sản phẩm nào.",
-      billingPanelTitle: "Tài chính và hiệu suất",
-      billingPanelDescription:
-        "Bảng này hiển thị trạng thái chi tiêu hiện tại của chiến dịch cùng các sự kiện tài trợ gần đây được ghi nhận cho chiến dịch.",
-      performanceTitle: "Tổng quan hiệu suất",
-      performanceAction: "Tải hiệu suất",
-      performanceLoading: "Đang tải hiệu suất...",
-      noEvents: "Chưa có sự kiện tài trợ nào.",
-      fields: {
-        ...CAMPAIGN_COPY.fields,
-        name: "Tên chiến dịch",
-        namePlaceholder: "Đẩy mạnh độ hiển thị mùa hè",
-        description: "Mô tả",
-        descriptionPlaceholder: "Mô tả mục tiêu chiến dịch và điều QA cần theo dõi.",
-        scenarioTypes: "Loại ngữ cảnh",
-        billingMode: "Chế độ tính phí",
-        budgetLimit: "Giới hạn ngân sách",
-        maxBoost: "Mức tăng tối đa",
-        status: "Trạng thái",
-        startAt: "Bắt đầu lúc",
-        endAt: "Kết thúc lúc",
-        productId: "Mã sản phẩm",
-        targetBoost: "Mức tăng mục tiêu",
-        targetStatus: "Trạng thái mục tiêu",
-      },
-      summary: {
-        ...CAMPAIGN_COPY.summary,
-        totalTargets: "Tổng mục tiêu",
-        activeTargets: "Đang hoạt động",
-        removedTargets: "Đã gỡ",
-        spentAmount: "Đã chi",
-        remainingBudget: "Ngân sách còn lại",
-        billableClicks: "Click tính phí",
-      },
-      table: {
-        ...CAMPAIGN_COPY.table,
-        product: "Sản phẩm",
-        status: "Trạng thái",
-        boost: "Mức tăng",
-        actions: "Hành động",
-      },
-      messages: {
-        ...CAMPAIGN_COPY.messages,
-        createSuccess: "Đã tạo chiến dịch.",
-        createFailed: "Không thể tạo chiến dịch.",
-        updateSuccess: "Đã cập nhật chiến dịch.",
-        updateFailed: "Không thể cập nhật chiến dịch.",
-        archiveSuccess: "Đã lưu trữ chiến dịch.",
-        archiveFailed: "Không thể lưu trữ chiến dịch.",
-        targetSaved: "Đã lưu mục tiêu.",
-        targetSaveFailed: "Không thể lưu mục tiêu.",
-        targetRemoved: "Đã gỡ mục tiêu.",
-        targetRemoveFailed: "Không thể gỡ mục tiêu.",
-      },
-    };
-  }, [locale]);
+  const copy = useMemo(() => getCampaignCopy(t), [t]);
 
   useEffect(() => {
     hydrate();
@@ -529,7 +456,7 @@ export function SellerCampaignsPageClient() {
       }));
       setError(null);
     } catch (issue) {
-      setError(issue instanceof Error ? issue.message : "Unable to load campaign performance.");
+      setError(issue instanceof Error ? issue.message : copy.performanceLoadFailed);
     } finally {
       setLoadingPerformanceId(null);
     }
@@ -615,7 +542,7 @@ export function SellerCampaignsPageClient() {
             >
               {BILLING_OPTIONS.map((mode) => (
                 <option key={mode} value={mode}>
-                  {mode}
+                  {t(`seller.campaigns.options.billingMode.${mode}`)}
                 </option>
               ))}
             </select>
@@ -668,7 +595,7 @@ export function SellerCampaignsPageClient() {
                         }))
                       }
                     />
-                    <span>{scenario}</span>
+                    <span>{t(`seller.campaigns.options.scenario.${scenario}`)}</span>
                   </label>
                 );
               })}
@@ -719,10 +646,10 @@ export function SellerCampaignsPageClient() {
                           campaign.status === "draft" ? "premium-badge-info" :
                           "bg-slate-100 text-slate-600 border-slate-200"
                         }`}>
-                          {campaign.status}
+                          {t(`seller.campaigns.options.status.${campaign.status}`)}
                         </span>
                         <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                          {campaign.scenarioTypes.join(", ")}
+                          {campaign.scenarioTypes.map((scenario) => t(`seller.campaigns.options.scenario.${scenario}`)).join(", ")}
                         </span>
                       </div>
                     </div>
@@ -779,7 +706,7 @@ export function SellerCampaignsPageClient() {
                       >
                         {STATUS_OPTIONS.map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {t(`seller.campaigns.options.status.${status}`)}
                           </option>
                         ))}
                       </select>
@@ -830,7 +757,7 @@ export function SellerCampaignsPageClient() {
                       >
                         {BILLING_OPTIONS.map((mode) => (
                           <option key={mode} value={mode}>
-                            {mode}
+                            {t(`seller.campaigns.options.billingMode.${mode}`)}
                           </option>
                         ))}
                       </select>
@@ -901,7 +828,7 @@ export function SellerCampaignsPageClient() {
                                   }))
                                 }
                               />
-                              <span>{scenario}</span>
+                              <span>{t(`seller.campaigns.options.scenario.${scenario}`)}</span>
                             </label>
                           );
                         })}
@@ -991,7 +918,7 @@ export function SellerCampaignsPageClient() {
                         >
                           {TARGET_STATUS_OPTIONS.map((status) => (
                             <option key={status} value={status}>
-                              {status}
+                              {t(`seller.campaigns.options.targetStatus.${status}`)}
                             </option>
                           ))}
                         </select>
@@ -1048,7 +975,7 @@ export function SellerCampaignsPageClient() {
                                 <div className="font-medium text-[var(--foreground)]">{target.product.name}</div>
                                 <div className="text-xs text-[var(--muted)]">{target.productId}</div>
                               </td>
-                              <td className="px-3 py-3 text-[var(--muted)]">{target.status}</td>
+                              <td className="px-3 py-3 text-[var(--muted)]">{t(`seller.campaigns.options.targetStatus.${target.status}`)}</td>
                               <td className="px-3 py-3 text-[var(--foreground)]">{target.boost}</td>
                               <td className="px-3 py-3">
                                 <button
@@ -1081,32 +1008,32 @@ export function SellerCampaignsPageClient() {
                     </p>
                     <div className="mt-4 grid gap-3 md:grid-cols-4">
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Mode</p>
-                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.mode}</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{copy.mode}</p>
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{t(`seller.campaigns.options.billingMode.${campaign.billing.mode}`)}</p>
                       </article>
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Budget</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{copy.budget}</p>
                         <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
-                          {campaign.billing.budgetLimit ?? "Unlimited"}
+                          {campaign.billing.budgetLimit ?? copy.unlimited}
                         </p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          Remaining {campaign.billing.remainingBudget ?? "Unlimited"}
+                          {copy.remaining} {campaign.billing.remainingBudget ?? copy.unlimited}
                         </p>
                       </article>
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">CPC</p>
                         <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{campaign.billing.cpcAmount}</p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          Charged clicks {campaign.billing.chargedClicks} / total billed {campaign.billing.totalChargedEvents}
+                          {copy.chargedClicks} {campaign.billing.chargedClicks} / {copy.totalBilled} {campaign.billing.totalChargedEvents}
                         </p>
                       </article>
                       <article className="rounded-[1.25rem] border border-[var(--border)] bg-[var(--panel-strong)] p-4">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Readiness</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{copy.readiness}</p>
                         <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
-                          Wallet {campaign.billing.walletBlocked ? "blocked" : "ready"}
+                          {copy.wallet} {campaign.billing.walletBlocked ? copy.blocked : copy.ready}
                         </p>
                         <p className="mt-1 text-xs text-[var(--muted)]">
-                          Budget {campaign.billing.budgetExhausted ? "exhausted" : "available"}
+                          {copy.budget} {campaign.billing.budgetExhausted ? copy.exhausted : copy.available}
                         </p>
                       </article>
                     </div>
@@ -1122,33 +1049,33 @@ export function SellerCampaignsPageClient() {
                           <>
                             <div className="mt-3 grid gap-3 md:grid-cols-6">
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
-                                Events {performanceByCampaign[campaign.id].summary.totalEvents}
+                                {copy.events} {performanceByCampaign[campaign.id].summary.totalEvents}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
-                                Impressions {performanceByCampaign[campaign.id].summary.billableImpressions}
+                                {copy.impressions} {performanceByCampaign[campaign.id].summary.billableImpressions}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
-                                Clicks {performanceByCampaign[campaign.id].summary.billableClicks}
+                                {copy.clicks} {performanceByCampaign[campaign.id].summary.billableClicks}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
-                                Sponsored {performanceByCampaign[campaign.id].summary.servedAsSponsored ? "Yes" : "No"}
+                                {copy.sponsored} {performanceByCampaign[campaign.id].summary.servedAsSponsored ? copy.yes : copy.no}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
-                                Wallet blocked {performanceByCampaign[campaign.id].summary.walletBlocked ? "Yes" : "No"}
+                                {copy.walletBlocked} {performanceByCampaign[campaign.id].summary.walletBlocked ? copy.yes : copy.no}
                               </article>
                               <article className="rounded-[1rem] border border-[var(--border)] bg-[var(--background)] p-3 text-sm text-[var(--foreground)]">
-                                Budget exhausted {performanceByCampaign[campaign.id].summary.budgetExhausted ? "Yes" : "No"}
+                                {copy.budgetExhausted} {performanceByCampaign[campaign.id].summary.budgetExhausted ? copy.yes : copy.no}
                               </article>
                             </div>
                             <div className="mt-4 overflow-x-auto">
                               <table className="min-w-full text-sm">
                                 <thead className="text-left text-[var(--muted)]">
                                   <tr>
-                                    <th className="px-3 py-2 font-medium">Time</th>
-                                    <th className="px-3 py-2 font-medium">Product</th>
-                                    <th className="px-3 py-2 font-medium">Type</th>
-                                    <th className="px-3 py-2 font-medium">Status</th>
-                                    <th className="px-3 py-2 font-medium">Cost</th>
+                                    <th className="px-3 py-2 font-medium">{copy.time}</th>
+                                    <th className="px-3 py-2 font-medium">{copy.table.product}</th>
+                                    <th className="px-3 py-2 font-medium">{copy.columnsType}</th>
+                                    <th className="px-3 py-2 font-medium">{copy.table.status}</th>
+                                    <th className="px-3 py-2 font-medium">{copy.cost}</th>
                                   </tr>
                                 </thead>
                                 <tbody>

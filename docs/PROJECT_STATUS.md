@@ -1,5 +1,18 @@
 # Project Status
 
+## Seller Production UX and WB nmID Selected Sync - 2026-06-11
+
+- Status: implemented in `backend-nest`, `frontend-next`, and `docs`
+- Seller Center no longer renders the sidebar search; grouped desktop/mobile navigation and active route behavior remain intact.
+- Seller-facing WB sync and AI image screens no longer expose internal mock/simulation modes. Mock remains available only for safe automated tests and is blocked as unavailable in Seller production flows.
+- Seller operational wording was polished across `ru`, `en`, and `vi`, including Vietnamese copy.
+- Selected WB sync now accepts numeric `Артикул WB / nmID`, exact-matches WB cards by `nmID`, reports normalized/matched/invalid/not-found values, and never falls back to sync-all.
+- Real selected sync retrieves WB Cards List pages and applies local exact nmID filtering; sync-all and the single seller-article route remain unchanged.
+- Verification status:
+  - backend Prisma generation, lint, full tests (38 suites, 386 tests), and build: pass
+  - frontend i18n coverage, lint, build, and focused Seller/WB Playwright suites: pass
+  - no real WB API or OpenAI API call was made during automated verification
+
 ## Admin Seller Approval Error Visibility Fix - 2026-06-10
 
 - Status: implemented in `frontend-next` and `docs`
@@ -2351,10 +2364,10 @@ Current status:
 
 Current status:
 
-- Sellers can preview or import only manually selected WB `vendorCode` values from `/seller/import/wildberries-api`.
+- Sellers can preview or import only manually selected numeric WB `Артикул WB / nmID` values from `/seller/import/wildberries-api`.
 - Sync-all remains a separate unchanged action.
-- Backend validates and parses selected codes server-side, enforces shop scope, exact-matches complete codes, and reports not-found codes without exposing WB credentials.
-- Backend full verification passes with 38 suites and 374 tests; frontend i18n, lint, build, selected-sync E2E, locale regression, commerce regression, and public smoke all pass.
+- Backend validates and canonicalizes selected nmIDs server-side, enforces shop scope, exact-matches cards by `nmID`, and reports normalized, matched, invalid, and not-found codes without exposing WB credentials.
+- Backend full verification passes with 38 suites and 386 tests; frontend i18n, lint, build, selected-sync E2E, locale regression, and responsive Seller checks pass.
 - Real WB API verification remains opt-in; automated tests stay in mock mode.
 
 # Profile Information Reuse Status

@@ -259,6 +259,8 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
 
   await page.goto("/seller/products");
   await chooseSellerLocale(page, "ru");
+  await expect(page.getByPlaceholder("Поиск раздела...")).toHaveCount(0);
+  await expect(page.getByTestId("seller-navigation-desktop")).toBeVisible();
   await page.getByRole("combobox").first().selectOption(shop.id);
   await expect(page.getByTestId("seller-product-row").first()).toBeVisible();
   await expect(page.getByRole("link", { name: ruDict.sellerShell.products }).first()).toBeVisible();
@@ -281,6 +283,7 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
   await page.keyboard.press("Escape");
 
   await chooseSellerLocale(page, "vi");
+  await expect(page.getByPlaceholder("Tìm chức năng...")).toHaveCount(0);
   await expect(page.getByRole("link", { name: viDict.sellerShell.products }).first()).toBeVisible();
   await expect(page.getByText(viDict.seller.products.statusBadges.outOfStock).first()).toBeVisible();
   await page.getByTestId("action-menu-trigger").first().click();
@@ -303,6 +306,47 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
     page.getByRole("button", { name: viDict.seller.payments.reloadQueue }),
   ).toBeVisible();
 
+  await page.goto("/seller/import/wildberries-api");
+  await expect(page.getByText(viDict.seller.wbSync.title, { exact: true })).toBeVisible();
+  await expect(page.getByText(viDict.seller.wbSync.integrationUnavailable, { exact: true })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(/mock|demo|dev mode/i);
+
+  await page.route(`${backendBaseUrl}/api/shops/${shop.id}/ai-images/runtime`, async (route) => {
+    await route.fulfill({
+      json: {
+        shopId: shop.id,
+        workerMode: "ai-service",
+        effectiveMode: "AI_SERVICE_MOCK",
+        sellerFlowEffectiveMode: "AI_SERVICE_MOCK",
+        supportsTaskGeneration: true,
+        supportsTaskAttach: true,
+        supportsCredits: true,
+        supportsTaskRetry: true,
+        supportsVirtualTryOn: false,
+        tryOnReady: false,
+        aiServiceConfigured: true,
+        aiServiceReachable: true,
+        aiServiceProvider: "mock",
+        aiServiceStorageDriver: "mock",
+        openAiConfigured: false,
+        openAiSmokeEnabled: false,
+        openAiRealEnabled: false,
+      },
+    });
+  });
+  await page.goto("/seller/ai-images");
+  await expect(page.getByRole("heading", { name: viDict.seller.aiImages.title, exact: true })).toBeVisible();
+  await expect(page.getByTestId("ai-runtime-badge")).toContainText(
+    viDict.seller.aiImages.runtime.integrationUnavailable,
+  );
+  await expect(page.locator("body")).not.toContainText(/mock|runtime mode|backend/i);
+
+  await page.goto("/seller/billing");
+  await expect(page.getByText(viDict.seller.billing.title, { exact: true })).toBeVisible();
+
+  await page.goto("/seller/campaigns");
+  await expect(page.getByText(viDict.seller.campaigns.title, { exact: true })).toBeVisible();
+
   await page.goto("/seller/notifications");
   await expect(
     page.getByRole("heading", {
@@ -315,6 +359,7 @@ test("seller operations surface follows RU/VI/EN locale switching", async ({
   );
 
   await chooseSellerLocale(page, "en");
+  await expect(page.getByPlaceholder("Find a section...")).toHaveCount(0);
   await expect(page.getByRole("link", { name: enDict.sellerShell.products }).first()).toBeVisible();
   await expect(
     page.getByRole("heading", {

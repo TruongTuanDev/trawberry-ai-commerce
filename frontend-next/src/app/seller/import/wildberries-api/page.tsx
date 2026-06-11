@@ -23,17 +23,21 @@ const MAX_MANUAL_CODES_COUNT = 100;
 
 function parseManualCodes(input: string) {
   const codes: string[] = [];
+  const invalid: string[] = [];
   const seen = new Set<string>();
 
   for (const token of input.split(/[,;\r\n]+/)) {
     const code = token.trim();
-    const normalized = code.toLowerCase();
-    if (!code || seen.has(normalized)) continue;
-    seen.add(normalized);
+    if (!code) continue;
+    const normalized = /^\d+$/.test(code) ? BigInt(code).toString() : code.toLowerCase();
+    const dedupeKey = `${/^\d+$/.test(code) ? "valid" : "invalid"}:${normalized}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
     codes.push(code);
+    if (!/^\d+$/.test(code)) invalid.push(code);
   }
 
-  return codes;
+  return { codes, invalid };
 }
 
 export default function WildberriesApiSyncPage() {
@@ -42,7 +46,7 @@ export default function WildberriesApiSyncPage() {
   const shops = useSellerWorkspaceStore((state) => state.shops);
   const [credentials, setCredentials] = useState<WbCredentialsStatus | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [manualCodes, setManualCodes] = useState("APT-MOCK-HOODIE,APT-MOCK-SHIRT");
+  const [manualCodes, setManualCodes] = useState("");
   const [publishMode, setPublishMode] = useState<"DRAFT" | "ACTIVE_IF_VALID">("DRAFT");
   const [result, setResult] = useState<WbSyncRun | null>(null);
   const [selectedResult, setSelectedResult] = useState<WbSelectedCodesSyncResult | null>(null);
@@ -54,9 +58,9 @@ export default function WildberriesApiSyncPage() {
 
   const currentShop = useMemo(() => shops.find((shop) => shop.id === currentShopId) ?? null, [currentShopId, shops]);
   const visibleCredentials = currentShopId ? credentials : null;
-  const isMockMode = visibleCredentials?.mode !== "real";
+  const integrationReady = visibleCredentials?.mode === "real";
   const canAttemptRealVerify =
-    visibleCredentials?.mode === "real" &&
+    integrationReady &&
     visibleCredentials?.connected &&
     (visibleCredentials?.canAttemptRealVerify ?? true);
 
@@ -109,12 +113,16 @@ export default function WildberriesApiSyncPage() {
     }
   };
 
-  const requireRealCredential = () => {
+  const requireProductionConnection = () => {
     if (!currentShopId) {
       setError(t("seller.wbSync.noShopSelected"));
       return true;
     }
-    if (visibleCredentials?.mode === "real" && !visibleCredentials.connected) {
+    if (!integrationReady) {
+      setError(t("seller.wbSync.integrationUnavailable"));
+      return true;
+    }
+    if (!visibleCredentials.connected) {
       setError(t("seller.wbSync.realModeKeyMsg"));
       return true;
     }
@@ -154,7 +162,7 @@ export default function WildberriesApiSyncPage() {
   };
 
   const runAll = async (mode: "PREVIEW" | "IMPORT") => {
-    if (requireRealCredential()) return;
+    if (requireProductionConnection()) return;
     const shopId = currentShopId;
     if (!shopId) return;
     setLoading(true);
@@ -175,16 +183,20 @@ export default function WildberriesApiSyncPage() {
       setError(t("seller.wbSync.codesInputTooLong", { max: MAX_MANUAL_CODES_LENGTH }));
       return;
     }
-    const codes = parseManualCodes(manualCodes);
-    if (codes.length === 0) {
+    const parsedCodes = parseManualCodes(manualCodes);
+    if (parsedCodes.codes.length === 0) {
       setError(t("seller.wbSync.noCodesEntered"));
       return;
     }
-    if (codes.length > MAX_MANUAL_CODES_COUNT) {
+    if (parsedCodes.codes.length > MAX_MANUAL_CODES_COUNT) {
       setError(t("seller.wbSync.tooManyCodes", { max: MAX_MANUAL_CODES_COUNT }));
       return;
     }
-    if (requireRealCredential()) return;
+    if (parsedCodes.invalid.length === parsedCodes.codes.length) {
+      setError(t("seller.wbSync.invalidCodesInput", { codes: parsedCodes.invalid.join(", ") }));
+      return;
+    }
+    if (requireProductionConnection()) return;
     const shopId = currentShopId;
     if (!shopId) return;
     setSelectedSyncing(true);
@@ -208,11 +220,11 @@ export default function WildberriesApiSyncPage() {
   };
 
   const modeMessage =
-    visibleCredentials?.mode === "real"
+    integrationReady
       ? visibleCredentials.connected
         ? t("seller.wbSync.connectedKeyMsg", { last4: visibleCredentials.keyLast4 ?? "----" })
         : t("seller.wbSync.realModeKeyMsg")
-      : t("seller.wbSync.mockModeKeyMsg");
+      : t("seller.wbSync.integrationUnavailable");
 
   const formatConnectionValue = (value: boolean) =>
     value ? t("common.yes") : t("common.no");
@@ -230,9 +242,9 @@ export default function WildberriesApiSyncPage() {
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbSync.currentMode")}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbSync.integrationStatus")}</p>
                   <p className="mt-2 text-2xl font-bold text-[var(--foreground)]" data-testid="wb-api-mode-badge">
-                    {visibleCredentials?.mode?.toUpperCase() ?? t("seller.wbSync.mock")}
+                    {integrationReady ? t("seller.wbSync.integrationReady") : t("seller.wbSync.integrationUnavailableTitle")}
                   </p>
                 </div>
                 <div className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]">
@@ -261,8 +273,8 @@ export default function WildberriesApiSyncPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("PREVIEW")} data-testid="wb-api-preview-all" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] px-5 py-3 text-center text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewAll")}</button>
-              <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runAll("IMPORT")} data-testid="wb-api-import-all" className="max-w-full whitespace-normal rounded-full bg-[var(--accent)] px-5 py-3 text-center text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncAll")}</button>
+              <button type="button" disabled={!currentShopId || !integrationReady || loading || selectedSyncing} onClick={() => void runAll("PREVIEW")} data-testid="wb-api-preview-all" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] px-5 py-3 text-center text-sm font-semibold disabled:opacity-50">{t("seller.wbSync.previewAll")}</button>
+              <button type="button" disabled={!currentShopId || !integrationReady || loading || selectedSyncing} onClick={() => void runAll("IMPORT")} data-testid="wb-api-import-all" className="max-w-full whitespace-normal rounded-full bg-[var(--accent)] px-5 py-3 text-center text-sm font-semibold text-white disabled:opacity-50">{t("seller.wbSync.syncAll")}</button>
             </div>
 
             <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-5">
@@ -278,11 +290,14 @@ export default function WildberriesApiSyncPage() {
                 />
               </label>
               <p className="mt-2 text-sm text-[var(--muted)]">{t("seller.wbSync.codesHelper")}</p>
+              <p className="mt-1 text-sm font-medium text-[var(--foreground)]" data-testid="wb-api-codes-identity">
+                {t("seller.wbSync.codesIdentityHelper")}
+              </p>
               <div className="mt-4 flex flex-wrap gap-3">
-                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("PREVIEW")} data-testid="wb-api-preview-selected" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] bg-white px-5 py-3 text-center text-sm font-semibold disabled:opacity-50">
+                <button type="button" disabled={!currentShopId || !integrationReady || loading || selectedSyncing} onClick={() => void runSelected("PREVIEW")} data-testid="wb-api-preview-selected" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] bg-white px-5 py-3 text-center text-sm font-semibold disabled:opacity-50">
                   {selectedSyncing ? t("seller.wbSync.syncingSelected") : t("seller.wbSync.previewSelected")}
                 </button>
-                <button type="button" disabled={!currentShopId || loading || selectedSyncing} onClick={() => void runSelected("IMPORT")} data-testid="wb-api-import-selected" className="max-w-full whitespace-normal rounded-full bg-[var(--foreground)] px-5 py-3 text-center text-sm font-semibold text-white disabled:opacity-50">
+                <button type="button" disabled={!currentShopId || !integrationReady || loading || selectedSyncing} onClick={() => void runSelected("IMPORT")} data-testid="wb-api-import-selected" className="max-w-full whitespace-normal rounded-full bg-[var(--foreground)] px-5 py-3 text-center text-sm font-semibold text-white disabled:opacity-50">
                   {selectedSyncing ? t("seller.wbSync.syncingSelected") : t("seller.wbSync.syncSelected")}
                 </button>
               </div>
@@ -293,7 +308,7 @@ export default function WildberriesApiSyncPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{t("seller.wbSync.connection")}</p>
             <p className="mt-3 text-lg font-bold text-[var(--foreground)]">{currentShop?.name ?? t("seller.wbSync.noShopSelected")}</p>
             <div className="mt-4 space-y-2 text-sm" data-testid="wb-api-credentials-status">
-              <p><span className="font-semibold">{t("seller.wbSync.mode")}:</span> {visibleCredentials?.mode?.toUpperCase() ?? t("seller.wbSync.mock")}</p>
+              <p><span className="font-semibold">{t("seller.wbSync.integrationStatus")}:</span> {integrationReady ? t("seller.wbSync.integrationReady") : t("seller.wbSync.integrationUnavailableTitle")}</p>
               <p><span className="font-semibold">{t("seller.wbSync.connected")}:</span> {formatConnectionValue(Boolean(visibleCredentials?.connected))}</p>
               <p><span className="font-semibold">{t("seller.wbSync.keyLast4")}:</span> {visibleCredentials?.keyLast4 ?? "--"}</p>
               <p><span className="font-semibold">{t("seller.wbSync.lastVerify")}:</span> {visibleCredentials?.lastVerificationStatus ?? t("seller.wbSync.notVerified")}</p>
@@ -303,13 +318,13 @@ export default function WildberriesApiSyncPage() {
             </div>
             <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row">
               <input value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={t("seller.wbSync.apiKeyPlaceholder")} type="password" data-testid="wb-api-key" className="w-full min-w-0 flex-1 rounded-full border border-[var(--border)] px-4 py-2 text-sm" />
-              <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold disabled:opacity-50">
+              <button type="button" onClick={() => void saveCredentials()} disabled={!currentShopId || !integrationReady || !apiKey.trim() || loading} data-testid="wb-api-save-credentials" className="max-w-full whitespace-normal rounded-full border border-[var(--border)] px-4 py-2 text-center text-sm font-semibold disabled:opacity-50">
                 {visibleCredentials?.connected ? t("seller.wbSync.updateApiKey") : t("seller.wbSync.saveApiKey")}
               </button>
             </div>
             <div className="mt-3 flex flex-wrap gap-3">
               <button type="button" onClick={() => void verifyConnection()} disabled={!currentShopId || !canAttemptRealVerify || verifying} data-testid="wb-api-verify-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">
-                {verifying ? t("seller.wbSync.verifying") : isMockMode ? t("seller.wbSync.verifyRealMode") : t("seller.wbSync.verifyConnection")}
+                {verifying ? t("seller.wbSync.verifying") : t("seller.wbSync.verifyConnection")}
               </button>
               <button type="button" onClick={() => void clearCredentials()} disabled={!currentShopId || !visibleCredentials?.connected || loading} data-testid="wb-api-delete-credentials" className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold disabled:opacity-50">
                 {t("seller.wbSync.deleteKey")}
@@ -319,7 +334,7 @@ export default function WildberriesApiSyncPage() {
               <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--panel)] px-4 py-3 text-sm" data-testid="wb-api-verify-result">
                 <p className="font-semibold text-[var(--foreground)]">{verifyResult.message}</p>
                 <p className="mt-1 text-[var(--muted)]">
-                  {t("seller.wbSync.verifyResult", { fetched: verifyResult.fetched, mode: verifyResult.mode.toUpperCase() })}
+                  {t("seller.wbSync.verifyResult", { fetched: verifyResult.fetched })}
                 </p>
               </div>
             ) : null}
@@ -336,7 +351,6 @@ export default function WildberriesApiSyncPage() {
           description={t("seller.wbSync.runStatusDescription", { status: result.status })}
         >
           <div className="grid gap-3 sm:grid-cols-4" data-testid="wb-api-result">
-            <Metric label={t("seller.wbSync.mode")} value={result.sourceMode.toUpperCase()} />
             <Metric label={t("seller.wbSync.fetched")} value={String(result.totalFetched)} />
             <Metric label={t("seller.wbExcel.metricProducts")} value={String(result.totalProducts)} />
             <Metric label={t("seller.wbExcel.metricVariants")} value={String(result.totalVariants)} />
@@ -360,6 +374,8 @@ export default function WildberriesApiSyncPage() {
               </div>
               <SummaryCodes label={t("seller.wbSync.notFound")} codes={selectedResult.notFound} emptyLabel={t("seller.wbSync.none")} testId="wb-api-selected-not-found" />
               <SummaryCodes label={t("seller.wbSync.invalidCodes")} codes={selectedResult.invalid} emptyLabel={t("seller.wbSync.none")} />
+              <SummaryCodes label={t("seller.wbSync.normalizedNmIds")} codes={selectedResult.normalizedNmIds} emptyLabel={t("seller.wbSync.none")} />
+              <SummaryCodes label={t("seller.wbSync.matchedNmIds")} codes={selectedResult.matchedNmIds} emptyLabel={t("seller.wbSync.none")} />
               <SummaryCodes label={t("seller.wbSync.skippedCodes")} codes={selectedResult.skipped} emptyLabel={t("seller.wbSync.none")} />
             </div>
           ) : null}

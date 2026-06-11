@@ -3,70 +3,56 @@
 import { useEffect, useMemo, useState } from "react";
 import { SectionCard } from "@/components/seller/section-card";
 import {
-  devCreditSellerBillingWallet,
   getSellerBillingLedger,
   getSellerBillingWallet,
-  type SellerBillingDevCreditResult,
   type SellerBillingLedgerEntry,
   type SellerBillingWallet,
 } from "@/lib/seller-api";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
+import { useI18n } from "@/i18n/use-i18n";
 
-const BILLING_DEV_TOOLS_ENABLED =
-  process.env.NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED === "true";
-
-const BILLING_COPY = {
-  eyebrow: "Billing",
-  title: "Seller wallet and campaign billing",
-  description:
-    "Review the current seller wallet, recent ledger entries, and campaign charge activity for the V1 sponsored recommendation flow.",
-  currentShop: "Current shop",
-  selectShop: "Pick a seller shop to view the billing foundation.",
-  walletStatus: "Wallet status",
-  balance: "Wallet balance",
-  reservedBalance: "Reserved balance",
-  availableBalance: "Available balance",
-  currency: "Currency",
-  foundationTitle: "Foundation scope",
-  foundationDescription:
-    "This wallet remains internal-only. It powers sponsored recommendation charging without changing checkout, payment, or customer-facing billing flows.",
-  demoReadinessTitle: "V1 demo readiness",
-  demoReadinessDescription:
-    "Use this page to show wallet state, funded demo balance, and campaign charge history without introducing any real checkout or payment-provider top-up flow.",
-  loading: "Loading billing foundation...",
-  loadFailed: "Unable to load seller billing foundation.",
-  walletEyebrow: "Wallet",
-  walletTitle: "Wallet summary",
-  walletDescription:
-    "The wallet is shop-scoped and campaign CPC charges debit it transactionally when attributed recommendation clicks are billable.",
-  ledgerEyebrow: "Ledger",
-  ledgerTitle: "Ledger history",
-  ledgerDescription:
-    "Ledger rows show balance transitions after wallet mutations, including campaign recommendation click charges.",
-  devFundingEyebrow: "Demo funding",
-  devFundingTitle: "Local dev/demo wallet credit",
-  devFundingDescription:
-    "This action is for local demo and QA only. It is not a real payment, top-up, or customer-visible billing flow.",
-  devFundingDisabled:
-    "Demo wallet funding is hidden unless NEXT_PUBLIC_BILLING_DEV_TOOLS_ENABLED=true and the backend BILLING_DEV_TOOLS_ENABLED flag are both enabled.",
-  devFundingAmount: "Credit amount",
-  devFundingAction: "Add demo funds",
-  devFundingSubmitting: "Funding wallet...",
-  devFundingHint:
-    "Recommended for demos: credit a small wallet amount, then trigger sponsored clicks from the public storefront to show spend deductions safely.",
-  devFundingSuccess: "Demo funds added to the current seller wallet.",
-  demoOnlyLabel: "Demo/dev only",
-  noLedger: "No ledger entries yet.",
-  columns: {
-    date: "Date",
-    type: "Type",
-    amount: "Amount",
-    balanceAfter: "Balance after",
-    reservedAfter: "Reserved after",
-    campaign: "Campaign",
-    description: "Description",
-  },
-} as const;
+function getBillingCopy(t: (key: string) => string) {
+  return {
+    eyebrow: t("seller.billing.eyebrow"),
+    title: t("seller.billing.title"),
+    description: t("seller.billing.description"),
+    currentShop: t("seller.billing.currentShop"),
+    selectShop: t("seller.billing.selectShop"),
+    walletStatus: t("seller.billing.walletStatus"),
+    balance: t("seller.billing.balance"),
+    reservedBalance: t("seller.billing.reservedBalance"),
+    availableBalance: t("seller.billing.availableBalance"),
+    currency: t("seller.billing.currency"),
+    foundationTitle: t("seller.billing.foundationTitle"),
+    foundationDescription: t("seller.billing.foundationDescription"),
+    operationsTitle: t("seller.billing.operationsTitle"),
+    operationsDescription: t("seller.billing.operationsDescription"),
+    loading: t("seller.billing.loading"),
+    loadFailed: t("seller.billing.loadFailed"),
+    walletEyebrow: t("seller.billing.walletEyebrow"),
+    walletTitle: t("seller.billing.walletTitle"),
+    walletDescription: t("seller.billing.walletDescription"),
+    ledgerEyebrow: t("seller.billing.ledgerEyebrow"),
+    ledgerTitle: t("seller.billing.ledgerTitle"),
+    ledgerDescription: t("seller.billing.ledgerDescription"),
+    noLedger: t("seller.billing.noLedger"),
+    workflow: t("seller.billing.workflow"),
+    workflowDescription: t("seller.billing.workflowDescription"),
+    availableNow: t("seller.billing.availableNow"),
+    availableNowDescription: t("seller.billing.availableNowDescription"),
+    protectedScope: t("seller.billing.protectedScope"),
+    protectedScopeDescription: t("seller.billing.protectedScopeDescription"),
+    columns: {
+      date: t("seller.billing.columns.date"),
+      type: t("seller.billing.columns.type"),
+      amount: t("seller.billing.columns.amount"),
+      balanceAfter: t("seller.billing.columns.balanceAfter"),
+      reservedAfter: t("seller.billing.columns.reservedAfter"),
+      campaign: t("seller.billing.columns.campaign"),
+      description: t("seller.billing.columns.description"),
+    },
+  };
+}
 
 function formatMoney(value: string, currency: string) {
   return new Intl.NumberFormat("ru-RU", {
@@ -81,6 +67,8 @@ function formatDate(value: string) {
 }
 
 export function SellerBillingPageClient() {
+  const { t } = useI18n("seller");
+  const BILLING_COPY = useMemo(() => getBillingCopy(t), [t]);
   const hydrate = useSellerWorkspaceStore((state) => state.hydrate);
   const loadShops = useSellerWorkspaceStore((state) => state.loadShops);
   const shops = useSellerWorkspaceStore((state) => state.shops);
@@ -91,9 +79,6 @@ export function SellerBillingPageClient() {
   const [ledger, setLedger] = useState<SellerBillingLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [devFundingAmount, setDevFundingAmount] = useState("250");
-  const [devFundingSubmitting, setDevFundingSubmitting] = useState(false);
 
   useEffect(() => {
     hydrate();
@@ -155,7 +140,7 @@ export function SellerBillingPageClient() {
     return () => {
       active = false;
     };
-  }, [currentShopId, hydrated, loadShops, shops.length]);
+  }, [BILLING_COPY.loadFailed, currentShopId, hydrated, loadShops, shops.length]);
 
   const currentShop = useMemo(
     () => shops.find((shop) => shop.id === currentShopId) ?? null,
@@ -163,32 +148,6 @@ export function SellerBillingPageClient() {
   );
 
   const currency = wallet?.currency ?? "RUB";
-
-  const handleDevFunding = async () => {
-    if (!currentShopId) return;
-
-    const amount = Number(devFundingAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setError("Demo funding amount must be greater than zero.");
-      return;
-    }
-
-    setDevFundingSubmitting(true);
-    try {
-      const result: SellerBillingDevCreditResult =
-        await devCreditSellerBillingWallet(currentShopId, { amount });
-      setWallet(result.wallet);
-      setLedger((current) => [result.entry, ...current]);
-      setMessage(BILLING_COPY.devFundingSuccess);
-      setError(null);
-    } catch (issue) {
-      setError(
-        issue instanceof Error ? issue.message : BILLING_COPY.loadFailed,
-      );
-    } finally {
-      setDevFundingSubmitting(false);
-    }
-  };
 
   return (
     <div className="space-y-6" data-testid="seller-billing-page">
@@ -201,26 +160,26 @@ export function SellerBillingPageClient() {
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                Finance workflow
+                {BILLING_COPY.workflow}
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-                Track wallet health, reserve usage, and campaign spend in one place.
+                {BILLING_COPY.workflowDescription}
               </p>
             </div>
             <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                Available now
+                {BILLING_COPY.availableNow}
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-                Wallet, ledger, demo credit tools
+                {BILLING_COPY.availableNowDescription}
               </p>
             </div>
             <div className="rounded-[1.25rem] border border-white/80 bg-white/80 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                Protected scope
+                {BILLING_COPY.protectedScope}
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-                No checkout or customer billing behavior changed
+                {BILLING_COPY.protectedScopeDescription}
               </p>
             </div>
           </div>
@@ -263,7 +222,6 @@ export function SellerBillingPageClient() {
             </article>
           </div>
         )}
-        {message ? <p className="mt-4 text-sm text-[var(--success)]">{message}</p> : null}
       </SectionCard>
 
       <SectionCard
@@ -293,61 +251,12 @@ export function SellerBillingPageClient() {
             </p>
           </article>
           <article className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5 xl:col-span-2">
-            <p className="text-sm text-[var(--muted)]">{BILLING_COPY.demoReadinessTitle}</p>
+            <p className="text-sm text-[var(--muted)]">{BILLING_COPY.operationsTitle}</p>
             <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
-              {BILLING_COPY.demoReadinessDescription}
+              {BILLING_COPY.operationsDescription}
             </p>
           </article>
         </div>
-      </SectionCard>
-
-      <SectionCard
-        eyebrow={BILLING_COPY.devFundingEyebrow}
-        title={BILLING_COPY.devFundingTitle}
-        description={BILLING_COPY.devFundingDescription}
-      >
-        {BILLING_DEV_TOOLS_ENABLED ? (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--warning)]">
-                {BILLING_COPY.demoOnlyLabel}
-              </p>
-              <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
-                {BILLING_COPY.devFundingHint}
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel-strong)] p-5">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-[var(--foreground)]">
-                  {BILLING_COPY.devFundingAmount}
-                </span>
-                <input
-                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm"
-                  type="number"
-                  min="0.01"
-                  max="50000"
-                  step="0.01"
-                  value={devFundingAmount}
-                  onChange={(event) => setDevFundingAmount(event.target.value)}
-                />
-              </label>
-              <button
-                className="mt-4 rounded-full bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-[var(--background)] disabled:opacity-60"
-                disabled={devFundingSubmitting || !currentShopId}
-                onClick={() => void handleDevFunding()}
-                type="button"
-              >
-                {devFundingSubmitting
-                  ? BILLING_COPY.devFundingSubmitting
-                  : BILLING_COPY.devFundingAction}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-[var(--muted)]">
-            {BILLING_COPY.devFundingDisabled}
-          </p>
-        )}
       </SectionCard>
 
       <SectionCard

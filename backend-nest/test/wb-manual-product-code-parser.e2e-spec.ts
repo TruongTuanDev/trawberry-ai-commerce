@@ -7,29 +7,47 @@ import {
 
 describe('WB manual product code parser', () => {
   it.each([
-    ['comma-separated', '234-xanh,356-đỏ,789-den'],
-    ['semicolon-separated', '234-xanh;356-đỏ;789-den'],
-    ['newline-separated', '234-xanh\n356-đỏ\n789-den'],
-    ['mixed separators', '234-xanh, 356-đỏ\n789-den'],
+    ['comma-separated', '1013414108,123456789,789012345'],
+    ['semicolon-separated', '1013414108;123456789;789012345'],
+    ['newline-separated', '1013414108\n123456789\n789012345'],
+    ['mixed separators', '1013414108, 123456789\n789012345'],
   ])('parses %s codes', (_name, input) => {
-    expect(parseManualProductCodes(input)).toEqual([
-      '234-xanh',
-      '356-đỏ',
-      '789-den',
-    ]);
+    expect(parseManualProductCodes(input)).toEqual({
+      requestedCodes: ['1013414108', '123456789', '789012345'],
+      valid: [
+        { original: '1013414108', normalizedNmId: '1013414108' },
+        { original: '123456789', normalizedNmId: '123456789' },
+        { original: '789012345', normalizedNmId: '789012345' },
+      ],
+      invalid: [],
+    });
   });
 
   it('deduplicates codes while preserving the first original token', () => {
-    expect(parseManualProductCodes(' 234-Xanh,234-xanh, 356-đỏ ')).toEqual([
-      '234-Xanh',
-      '356-đỏ',
-    ]);
+    expect(
+      parseManualProductCodes(' 001013414108,1013414108, 123456789 '),
+    ).toEqual({
+      requestedCodes: ['001013414108', '123456789'],
+      valid: [
+        { original: '001013414108', normalizedNmId: '1013414108' },
+        { original: '123456789', normalizedNmId: '123456789' },
+      ],
+      invalid: [],
+    });
   });
 
-  it('keeps dashes, underscores, Vietnamese, Cyrillic, and internal spaces', () => {
-    expect(
-      parseManualProductCodes('234-xanh;356_đỏ\n789-чёрный\ncode with space'),
-    ).toEqual(['234-xanh', '356_đỏ', '789-чёрный', 'code with space']);
+  it('reports non-numeric seller articles as invalid while keeping valid nmIDs', () => {
+    expect(parseManualProductCodes('1013414108;234-xanh\nabc')).toEqual({
+      requestedCodes: ['1013414108', '234-xanh', 'abc'],
+      valid: [{ original: '1013414108', normalizedNmId: '1013414108' }],
+      invalid: ['234-xanh', 'abc'],
+    });
+  });
+
+  it('rejects input containing no valid numeric nmID', () => {
+    expect(() => parseManualProductCodes('234-xanh,abc')).toThrow(
+      'WB article codes must be numeric nmID values.',
+    );
   });
 
   it('rejects empty input', () => {
@@ -41,7 +59,7 @@ describe('WB manual product code parser', () => {
   it('rejects more than the maximum code count', () => {
     const input = Array.from(
       { length: MANUAL_PRODUCT_CODES_MAX_COUNT + 1 },
-      (_, index) => `code-${index}`,
+      (_, index) => String(1000000000 + index),
     ).join(',');
 
     expect(() => parseManualProductCodes(input)).toThrow(

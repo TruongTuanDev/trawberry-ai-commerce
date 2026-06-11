@@ -1,5 +1,29 @@
 # Phase Report
 
+## 2026-06-11 Seller Production UX and WB nmID Selected Sync
+
+- Status: Implemented on current branch
+- Seller production UX:
+  - removed the Seller Center sidebar search while preserving grouped navigation, active states, desktop sidebar, and mobile drawer behavior
+  - removed internal mock/simulation wording and controls from Seller WB sync and AI image surfaces; internal mock responses are presented as unavailable and cannot trigger Seller production actions
+  - polished Seller billing, campaign, return-payment, WB sync, and AI image copy across `ru`, `en`, and `vi`
+- WB selected sync:
+  - selected-product input now accepts numeric Wildberries `Артикул WB / nmID` values instead of seller `vendorCode`
+  - backend validates and canonicalizes numeric nmIDs without JavaScript number conversion, exact-matches cards by `nmID`, reports invalid/not-found/matched values, and never falls back to sync-all
+  - real selected sync uses the WB Cards List endpoint and filters exact requested nmIDs locally; sync-all and the legacy single-article route remain unchanged
+- Safety:
+  - no checkout, order, cart, payment, shipping, campaign billing, recommendation, or AI Try-On business logic changed
+  - automated verification did not call the real WB API or OpenAI API
+- Verification:
+  - `backend-nest npm run prisma:generate`: pass
+  - `backend-nest npm run lint`: pass
+  - `backend-nest npm test -- --runInBand`: pass (38 suites, 386 tests)
+  - `backend-nest npm run build`: pass
+  - `frontend-next npm run check:i18n`: pass (0 missing English keys, 0 locale fallback gaps)
+  - `frontend-next npm run lint`: pass
+  - `frontend-next npm run build`: pass
+  - focused Seller locale, responsive, AI mock-blocking, and WB selected-sync Playwright suites: pass
+
 ## 2026-06-10 Admin Seller Approval Error Visibility Fix
 
 - Status: Implemented on current branch

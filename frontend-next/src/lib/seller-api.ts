@@ -1197,6 +1197,8 @@ export type WbSyncRun = {
 export type WbSelectedCodesSyncResult = {
   requestedCodes: string[];
   requestedCount: number;
+  normalizedNmIds: string[];
+  matchedNmIds: string[];
   syncedCount: number;
   syncedCodes: string[];
   notFound: string[];
