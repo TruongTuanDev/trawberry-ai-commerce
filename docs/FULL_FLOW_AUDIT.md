@@ -1031,3 +1031,13 @@ Future audit item: design an optional marketplace parent order for combined rece
 - Existing `ShopPaymentSetting` and `ShopDeliverySetting` records remain authoritative. Seller onboarding data is used only for first-use form prefill.
 - Seller delivery/payment APIs remain shop-owner guarded, customer profile/address APIs remain customer scoped, and public tracking remains phone-gated.
 - No new full-address, payment, or contact data is stored in local storage, and no public API response was expanded with private profile data.
+
+# Order Ops QA.1 Audit Addendum
+
+- Multi-shop checkout continues to create one parent checkout receipt and one shop-scoped child order per seller in a single transaction; sellers only process their own child orders and items.
+- Seller order fulfillment remains guarded as `PENDING/NEW -> ASSEMBLING -> SHIPPING -> DELIVERED`; seller payment confirmation is a separate guarded workflow.
+- Prepaid/manual payments can move from pending/unpaid to paid or rejected. Seller QR pay-on-delivery moves from selected to seller accepted, then after delivery to buyer marked paid/seller confirmed or delivery payment rejected.
+- Seller/admin payment confirmation and rejection now atomically claim the observed payment status before audit-log, seller-ledger, and customer-notification side effects.
+- Final paid/rejected decisions cannot be reversed directly, cancelled orders cannot be marked paid directly, and delivery payment cannot be finalized before delivery.
+- Public tracking still requires the exact order phone. It exposes customer-relevant status, tracking, payment instructions, proof, and customer-visible delivery messages, but suppresses seller/admin review notes and identities plus internal delivery/provider/pickup/package fields.
+- Campaign charging, recommendation attribution/tracking, seller wallet behavior, product detail, AI Try-On, and WB sync are unchanged by this audit.

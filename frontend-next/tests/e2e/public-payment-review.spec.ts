@@ -257,6 +257,8 @@ test("customer uploads proof, seller marks paid, customer sees paid status", asy
 
   await expect(sellerPage.getByTestId("seller-payment-status")).toHaveAttribute("data-status", "PAID");
   await expect(sellerPage.locator("span").filter({ hasText: "SELLER_CONFIRMED" }).first()).toBeVisible();
+  await expect(sellerPage.getByTestId("seller-mark-paid-button")).toHaveCount(0);
+  await expect(sellerPage.getByTestId("seller-reject-payment-button")).toHaveCount(0);
   await sellerPage.goto("/seller/orders");
   await sellerPage.getByTestId("seller-order-tab-NEW").click();
   await expect(

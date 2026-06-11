@@ -2371,3 +2371,18 @@ Notes:
 
 - Reuse is intentionally prefill-only. Saving one operational form does not silently overwrite another profile or snapshot.
 - `smoke:delivery` now creates a category-ready product and publishes it through the seller API before checkout.
+
+# Order Ops QA.1 Status
+
+Current status:
+
+- Seller/admin payment decisions use an atomic current-status claim, so concurrent duplicate confirmation cannot repeat ledger, audit, or notification side effects.
+- Confirmed/rejected/cancelled transitions and pay-on-delivery timing are guarded explicitly.
+- Seller payment controls reflect valid backend actions and stop rendering after final decisions.
+- Public tracking remains phone-gated and now excludes seller/admin payment review notes, reviewer identities, seller pickup details, internal provider identifiers, package operations data, and internal delivery notes.
+- Multi-shop checkout remains split into one seller-scoped child order per shop under a parent customer receipt.
+
+Notes:
+
+- Manual payments remain the primary flow; no real payment-provider capture, webhook, or reconciliation path was added.
+- Campaign billing and recommendation attribution remain independent from seller payment confirmation.

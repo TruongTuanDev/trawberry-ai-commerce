@@ -5418,3 +5418,26 @@ Remaining gaps:
 
 - No new automatic profile synchronization was added between account identity and already-saved address/shop records; those records intentionally remain explicit snapshots/settings.
 - Manual visual review at every requested viewport was not performed separately; focused and regression Playwright flows passed against the rebuilt production runtime.
+
+# Phase Report: Order Ops QA.1 - Seller Order Processing and Payment Confirmation Audit
+
+Implemented:
+
+- Payment confirmation and rejection now atomically claim the current payment status, preventing concurrent duplicate audit, ledger, and notification side effects.
+- Final paid/rejected decisions, cancelled orders, and pay-on-delivery payments before delivery are protected by explicit transition guards for seller and admin actions.
+- Public order tracking keeps customer-relevant payment state changes while hiding seller/admin review notes, reviewer identities, seller pickup details, internal provider identifiers, package operations data, and internal delivery notes.
+- Seller payment detail hides confirm/reject actions when the current order or payment state makes them invalid.
+- Added regression coverage for concurrent confirmation, cross-shop and buyer authorization, cancelled/rejected/final transitions, pay-on-delivery timing, tracking privacy, and final-state frontend actions.
+
+Lifecycle summary:
+
+- Checkout validates all items, creates one parent marketplace checkout receipt, and creates one shop-scoped child order per seller in one transaction.
+- Seller fulfillment transitions are `PENDING/NEW -> ASSEMBLING -> SHIPPING -> DELIVERED`, with guarded cancellation before shipping.
+- Prepaid/manual payment transitions are pending/unpaid -> paid or rejected.
+- Seller QR pay-on-delivery transitions are selected -> seller accepted -> delivered awaiting/buyer marked paid -> seller confirmed or delivery payment rejected.
+- Buyer tracking remains phone-gated and projects each shop-scoped child order independently.
+
+Production safety:
+
+- No schema migration, production data operation, real payment provider, billing/campaign charge behavior, recommendation tracking, product detail, AI Try-On, WB sync, secret, or environment file was changed.
+- Seller and admin transitions remain role/shop guarded; backend transition validation remains authoritative over frontend controls.

@@ -33,7 +33,13 @@ const PAID_PAYMENT_STATUSES = [
   'SELLER_CONFIRMED_DELIVERY_PAYMENT',
   'YANDEX_PAYMENT_ON_DELIVERY_PAID',
 ] as const;
-const REJECTED_PAYMENT_STATUSES = ['REJECTED', 'FAILED', 'CANCELLED'] as const;
+const REJECTED_PAYMENT_STATUSES = [
+  'REJECTED',
+  'FAILED',
+  'CANCELLED',
+  'DELIVERY_PAYMENT_REJECTED',
+  'YANDEX_PAYMENT_ON_DELIVERY_FAILED',
+] as const;
 
 type PaymentOrderRecord = {
   id: string;
@@ -243,11 +249,20 @@ export class PaymentsService {
       );
     }
 
+    if (order.status === 'CANCELLED') {
+      throw new BadRequestException(
+        'Cancelled orders cannot be marked as paid directly.',
+      );
+    }
+
     const isPayOnDelivery = isPayOnDeliverySellerQrMethod(
       order.paymentMethod ?? order.shippingMethodName,
     );
     const isSellerAcceptingCod =
       isPayOnDelivery && order.paymentStatus === 'PAY_ON_DELIVERY_SELECTED';
+    if (isPayOnDelivery && !isSellerAcceptingCod) {
+      this.assertDeliveryPaymentCanBeConfirmed(order);
+    }
     const nextPaymentStatus = isSellerAcceptingCod
       ? 'SELLER_ACCEPTED_PAY_ON_DELIVERY'
       : isPayOnDelivery
@@ -255,6 +270,14 @@ export class PaymentsService {
         : 'PAID';
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      await this.claimPaymentTransition(
+        tx,
+        orderId,
+        order.paymentStatus,
+        nextPaymentStatus,
+        shopId,
+      );
+
       await tx.order.update({
         where: { id: orderId },
         data: {
@@ -343,7 +366,7 @@ export class PaymentsService {
       throw new BadRequestException('Paid payments cannot be rejected.');
     }
 
-    if (order.paymentStatus === 'REJECTED') {
+    if (REJECTED_PAYMENT_STATUSES.includes(order.paymentStatus as 'REJECTED')) {
       throw new BadRequestException('Payment is already rejected.');
     }
 
@@ -370,6 +393,14 @@ export class PaymentsService {
       : 'REJECTED';
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      await this.claimPaymentTransition(
+        tx,
+        orderId,
+        order.paymentStatus,
+        nextPaymentStatus,
+        shopId,
+      );
+
       await tx.order.update({
         where: { id: orderId },
         data: {
@@ -466,6 +497,13 @@ export class PaymentsService {
     dto: MarkPaymentPaidDto,
   ) {
     const order = await this.findPaymentOrderForAdminOrThrow(orderId);
+    if (
+      isPayOnDeliverySellerQrMethod(
+        order.paymentMethod ?? order.shippingMethodName,
+      )
+    ) {
+      this.assertDeliveryPaymentCanBeConfirmed(order);
+    }
     return this.transitionAdminPayment(
       order,
       user,
@@ -572,13 +610,33 @@ export class PaymentsService {
       paymentStatus === 'PAID' ||
       paymentStatus === 'SELLER_CONFIRMED_DELIVERY_PAYMENT'
     ) {
+      if (order.status === 'CANCELLED') {
+        throw new BadRequestException(
+          'Cancelled orders cannot be marked as paid directly.',
+        );
+      }
       if (PAID_PAYMENT_STATUSES.includes(order.paymentStatus as 'PAID')) {
         throw new BadRequestException('Payment is already marked as paid.');
+      }
+      if (
+        REJECTED_PAYMENT_STATUSES.includes(order.paymentStatus as 'REJECTED')
+      ) {
+        throw new BadRequestException(
+          'Rejected payments cannot be marked as paid directly.',
+        );
       }
     } else if (
       paymentStatus === 'REJECTED' ||
       paymentStatus === 'DELIVERY_PAYMENT_REJECTED'
     ) {
+      if (PAID_PAYMENT_STATUSES.includes(order.paymentStatus as 'PAID')) {
+        throw new BadRequestException('Paid payments cannot be rejected.');
+      }
+      if (
+        REJECTED_PAYMENT_STATUSES.includes(order.paymentStatus as 'REJECTED')
+      ) {
+        throw new BadRequestException('Payment is already rejected.');
+      }
       if (order.status === 'SHIPPING' || order.status === 'DELIVERED') {
         throw new BadRequestException(
           'Cannot reject payment for shipped or delivered orders.',
@@ -597,6 +655,13 @@ export class PaymentsService {
           : order.status;
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      await this.claimPaymentTransition(
+        tx,
+        order.id,
+        order.paymentStatus,
+        paymentStatus,
+      );
+
       await tx.order.update({
         where: { id: order.id },
         data: {
@@ -667,6 +732,44 @@ export class PaymentsService {
     }
 
     return this.toPaymentResponse(updated);
+  }
+
+  private async claimPaymentTransition(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    fromPaymentStatus: string,
+    toPaymentStatus: string,
+    shopId?: string,
+  ) {
+    const claimed = await tx.order.updateMany({
+      where: {
+        id: orderId,
+        ...(shopId ? { shopId } : {}),
+        paymentStatus: fromPaymentStatus,
+      },
+      data: {
+        paymentStatus: toPaymentStatus,
+      },
+    });
+
+    if (claimed.count !== 1) {
+      throw new BadRequestException(
+        'Payment status changed while this action was being processed. Refresh and try again.',
+      );
+    }
+  }
+
+  private assertDeliveryPaymentCanBeConfirmed(order: PaymentOrderRecord) {
+    const canConfirm =
+      order.status === 'DELIVERED' ||
+      order.paymentStatus === 'DELIVERED_AWAITING_PAYMENT' ||
+      order.paymentStatus === 'BUYER_MARKED_DELIVERY_PAID';
+
+    if (!canConfirm) {
+      throw new BadRequestException(
+        'Delivery payment can only be confirmed after the order is delivered.',
+      );
+    }
   }
 
   private toPaymentResponse(order: PaymentOrderRecord) {

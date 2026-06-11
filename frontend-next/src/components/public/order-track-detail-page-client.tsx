@@ -524,10 +524,6 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             </p>
                           </div>
                         ) : null}
-                        <p className="mt-2 text-sm text-[var(--muted)]">
-                          {order.delivery.providerShipmentId ??
-                            t("orderTrack.awaitingProviderId")}
-                        </p>
                         <p className="mt-3 text-sm text-[var(--muted)]">
                           {t("orderTrack.trackingNumber", {
                             value: order.delivery.trackingNumber ?? t("orderTrack.trackingNumberNotAssigned")
@@ -569,14 +565,6 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             {t("orderTrack.deliveryEta", {
                               value: new Date(order.delivery.estimatedDeliveryAt).toLocaleString()
                             })}
-                          </p>
-                        ) : null}
-                        {order.delivery.deliveryNote ? (
-                          <p
-                            className="mt-3 text-sm text-[var(--muted)]"
-                            data-testid="tracked-delivery-note"
-                          >
-                            {order.delivery.deliveryNote}
                           </p>
                         ) : null}
                         <div className="mt-4 rounded-[1rem] border border-[var(--border)] bg-[var(--panel)] px-4 py-3">
@@ -662,9 +650,11 @@ export function OrderTrackDetailPageClient({ orderId }: { orderId: string }) {
                             {log.fromStatus ?? "N/A"}{" "}
                             {log.toStatus ? `-> ${log.toStatus}` : ""}
                           </p>
-                          <p className="mt-2 text-sm text-[var(--foreground)]">
-                            {log.note ?? t("seller.paymentDetail.noNote")}
-                          </p>
+                          {log.note ? (
+                            <p className="mt-2 text-sm text-[var(--foreground)]">
+                              {log.note}
+                            </p>
+                          ) : null}
                         </article>
                       ))
                     ) : (

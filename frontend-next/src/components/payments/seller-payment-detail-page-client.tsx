@@ -19,6 +19,21 @@ import {
 import { useAuthStore } from "@/stores/auth-store";
 import { useSellerWorkspaceStore } from "@/stores/seller-workspace-store";
 
+const FINAL_PAYMENT_STATUSES = new Set([
+  "PAID",
+  "APPROVED",
+  "SELLER_CONFIRMED_DELIVERY_PAYMENT",
+  "YANDEX_PAYMENT_ON_DELIVERY_PAID",
+]);
+
+const REJECTED_PAYMENT_STATUSES = new Set([
+  "REJECTED",
+  "FAILED",
+  "CANCELLED",
+  "DELIVERY_PAYMENT_REJECTED",
+  "YANDEX_PAYMENT_ON_DELIVERY_FAILED",
+]);
+
 export function SellerPaymentDetailPageClient({
   orderId,
 }: {
@@ -185,6 +200,24 @@ export function SellerPaymentDetailPageClient({
     );
   }
 
+  const isDecisionFinal =
+    FINAL_PAYMENT_STATUSES.has(payment.paymentStatus) ||
+    REJECTED_PAYMENT_STATUSES.has(payment.paymentStatus);
+  const isPayOnDelivery =
+    payment.paymentMethod === "PAY_ON_DELIVERY_SELLER_QR";
+  const canConfirmPayment =
+    !isDecisionFinal &&
+    payment.status !== "CANCELLED" &&
+    (!isPayOnDelivery ||
+      payment.paymentStatus === "PAY_ON_DELIVERY_SELECTED" ||
+      payment.status === "DELIVERED" ||
+      payment.paymentStatus === "DELIVERED_AWAITING_PAYMENT" ||
+      payment.paymentStatus === "BUYER_MARKED_DELIVERY_PAID");
+  const canRejectPayment =
+    !isDecisionFinal &&
+    (isPayOnDelivery ||
+      (payment.status !== "SHIPPING" && payment.status !== "DELIVERED"));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -327,23 +360,28 @@ export function SellerPaymentDetailPageClient({
               >
                 {t("seller.paymentDetail.addNote")}
               </Button>
-              <Button
-                variant="success"
-                onClick={() => void performAction("markPaid")}
-                disabled={saving}
-                loading={saving}
-                data-testid="seller-mark-paid-button"
-              >
-                {t("seller.paymentDetail.confirmPaymentReceived")}
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => void performAction("reject")}
-                disabled={saving}
-                loading={saving}
-              >
-                {t("seller.paymentDetail.rejectProof")}
-              </Button>
+              {canConfirmPayment ? (
+                <Button
+                  variant="success"
+                  onClick={() => void performAction("markPaid")}
+                  disabled={saving}
+                  loading={saving}
+                  data-testid="seller-mark-paid-button"
+                >
+                  {t("seller.paymentDetail.confirmPaymentReceived")}
+                </Button>
+              ) : null}
+              {canRejectPayment ? (
+                <Button
+                  variant="danger"
+                  onClick={() => void performAction("reject")}
+                  disabled={saving}
+                  loading={saving}
+                  data-testid="seller-reject-payment-button"
+                >
+                  {t("seller.paymentDetail.rejectProof")}
+                </Button>
+              ) : null}
             </div>
             {error ? (
               <div className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--accent-strong)]">

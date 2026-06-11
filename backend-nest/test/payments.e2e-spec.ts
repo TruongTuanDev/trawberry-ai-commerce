@@ -162,6 +162,7 @@ describe('PaymentsController (e2e)', () => {
       count: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -210,6 +211,17 @@ describe('PaymentsController (e2e)', () => {
           approvalStatus: 'APPROVED',
           currentShopId: 'shop-2',
         },
+      },
+      {
+        id: 'customer-user-1',
+        email: 'customer1@example.com',
+        passwordHash: bcrypt.hashSync('password123', 10),
+        fullName: 'Customer One',
+        phone: '123456',
+        role: 'CUSTOMER',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        sellerProfile: null,
       },
     ];
 
@@ -501,6 +513,27 @@ describe('PaymentsController (e2e)', () => {
         return Promise.resolve(target);
       },
     );
+    prismaMock.order.updateMany.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { id: string; shopId?: string; paymentStatus: string };
+        data: { paymentStatus: string };
+      }) => {
+        const target = orders.find(
+          (order) =>
+            order.id === where.id &&
+            (!where.shopId || order.shopId === where.shopId) &&
+            order.paymentStatus === where.paymentStatus,
+        );
+        if (!target) {
+          return Promise.resolve({ count: 0 });
+        }
+        target.paymentStatus = data.paymentStatus;
+        return Promise.resolve({ count: 1 });
+      },
+    );
 
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
@@ -573,6 +606,33 @@ describe('PaymentsController (e2e)', () => {
     expect(body.paymentProofStatus).toBe('SELLER_CONFIRMED');
     expect(body.reviewLogs[0].action).toBe('SELLER_CONFIRMED');
     expect(body.reviewLogs[0].note).toBe('Manual transfer confirmed.');
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'order-1',
+        shopId: 'shop-1',
+        paymentStatus: 'PENDING',
+      },
+      data: { paymentStatus: 'PAID' },
+    });
+  });
+
+  it('allows only one concurrent payment confirmation', async () => {
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post('/api/shops/shop-1/payments/order-1/mark-paid')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ note: 'First confirmation.' }),
+      request(app.getHttpServer())
+        .post('/api/shops/shop-1/payments/order-1/mark-paid')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ note: 'Duplicate confirmation.' }),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 400,
+    ]);
+    expect(orders[0].paymentReviewLogs).toHaveLength(1);
   });
 
   it('rejects payment and cancels order when still pending', async () => {
@@ -612,6 +672,30 @@ describe('PaymentsController (e2e)', () => {
       .expect(403);
   });
 
+  it('prevents another seller from mutating an order outside their shop', async () => {
+    const token = await loginAndGetToken(app, 'seller2@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-2/payments/order-1/mark-paid')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Cross-shop attempt.' })
+      .expect(404);
+
+    expect(orders[0].paymentStatus).toBe('PENDING');
+    expect(orders[0].paymentReviewLogs).toHaveLength(0);
+  });
+
+  it('prevents buyers from calling seller payment actions', async () => {
+    const token = await loginAndGetToken(app, 'customer1@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/payments/order-1/mark-paid')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Buyer attempt.' })
+      .expect(403);
+
+    expect(orders[0].paymentStatus).toBe('PENDING');
+    expect(orders[0].paymentReviewLogs).toHaveLength(0);
+  });
+
   it('rejects invalid transition when payment is already paid', async () => {
     const token = await loginAndGetToken(app, 'seller1@example.com');
     await request(app.getHttpServer())
@@ -619,6 +703,58 @@ describe('PaymentsController (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ note: 'Too late.' })
       .expect(400);
+  });
+
+  it('blocks delivery payment confirmation before delivery', async () => {
+    orders[1].paymentStatus = 'SELLER_ACCEPTED_PAY_ON_DELIVERY';
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/payments/order-2/mark-paid')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Too early.' })
+      .expect(400);
+
+    expect(response.text).toContain(
+      'Delivery payment can only be confirmed after the order is delivered.',
+    );
+    expect(orders[1].paymentReviewLogs).toHaveLength(0);
+  });
+
+  it('blocks payment confirmation for a cancelled order', async () => {
+    orders[0].status = 'CANCELLED';
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    const response = await request(app.getHttpServer())
+      .post('/api/shops/shop-1/payments/order-1/mark-paid')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Cannot confirm cancelled order.' })
+      .expect(400);
+
+    expect(response.text).toContain(
+      'Cancelled orders cannot be marked as paid directly.',
+    );
+    expect(orders[0].paymentStatus).toBe('PENDING');
+    expect(orders[0].paymentReviewLogs).toHaveLength(0);
+  });
+
+  it('blocks confirming or repeatedly rejecting a rejected delivery payment', async () => {
+    orders[1].paymentStatus = 'DELIVERY_PAYMENT_REJECTED';
+    orders[1].status = 'DELIVERED';
+
+    const token = await loginAndGetToken(app, 'seller1@example.com');
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/payments/order-2/mark-paid')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Cannot reverse rejection.' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/api/shops/shop-1/payments/order-2/reject')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Duplicate rejection.' })
+      .expect(400);
+
+    expect(orders[1].paymentReviewLogs).toHaveLength(0);
   });
 
   it('lists buyer-marked payments in seller confirmation queue', async () => {
@@ -693,6 +829,35 @@ describe('PaymentsController (e2e)', () => {
     expect(body.paymentStatus).toBe('REJECTED');
     expect(body.paymentProofStatus).toBe('SELLER_REJECTED');
     expect(body.reviewLogs[0].action).toBe('ADMIN_REJECTED');
+  });
+
+  it('blocks admin from reversing final payment decisions', async () => {
+    const token = await loginAndGetToken(
+      app,
+      'demo-admin@trawberry.local',
+      'DemoAdmin123!',
+    );
+
+    orders[0].paymentStatus = 'REJECTED';
+    await request(app.getHttpServer())
+      .post('/api/admin/payments/order-1/confirm')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Cannot reverse rejection.' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/api/admin/payments/order-1/reject')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Duplicate rejection.' })
+      .expect(400);
+
+    orders[0].paymentStatus = 'PAID';
+    await request(app.getHttpServer())
+      .post('/api/admin/payments/order-1/reject')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ note: 'Cannot reject paid payment.' })
+      .expect(400);
+
+    expect(orders[0].paymentReviewLogs).toHaveLength(0);
   });
 
   it('forbids sellers from accessing admin payment supervision routes', async () => {

@@ -143,6 +143,7 @@ describe('OrderTrackingController (e2e)', () => {
     order: {
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -387,6 +388,27 @@ describe('OrderTrackingController (e2e)', () => {
         return Promise.resolve(target);
       },
     );
+    prismaMock.order.updateMany.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { id: string; shopId?: string; paymentStatus: string };
+        data: { paymentStatus: string };
+      }) => {
+        const target = orders.find(
+          (order) =>
+            order.id === where.id &&
+            (!where.shopId || order.shopId === where.shopId) &&
+            order.paymentStatus === where.paymentStatus,
+        );
+        if (!target) {
+          return Promise.resolve({ count: 0 });
+        }
+        target.paymentStatus = data.paymentStatus;
+        return Promise.resolve({ count: 1 });
+      },
+    );
 
     prismaMock.$transaction.mockImplementation(
       (callback: (tx: typeof prismaMock) => unknown) =>
@@ -446,6 +468,56 @@ describe('OrderTrackingController (e2e)', () => {
     await request(app.getHttpServer())
       .get('/api/public/orders/track?orderCode=ORD-TRACK-1001&phone=999999')
       .expect(404);
+  });
+
+  it('hides seller payment review notes and reviewer identity from tracking', async () => {
+    orders[0].paymentReviewLogs = [
+      {
+        id: 'log-note',
+        shopId: 'shop-1',
+        orderId: 'order-1',
+        reviewerUserId: 'seller-user-1',
+        action: 'ADD_NOTE',
+        fromStatus: 'PENDING',
+        toStatus: 'PENDING',
+        note: 'Internal seller escalation note.',
+        createdAt: new Date('2025-01-10T11:00:00Z'),
+        reviewer: {
+          id: 'seller-user-1',
+          fullName: 'Seller One',
+        },
+      },
+      {
+        id: 'log-confirm',
+        shopId: 'shop-1',
+        orderId: 'order-1',
+        reviewerUserId: 'seller-user-1',
+        action: 'SELLER_CONFIRMED',
+        fromStatus: 'PENDING',
+        toStatus: 'PAID',
+        note: 'Matched against internal bank statement.',
+        createdAt: new Date('2025-01-10T12:00:00Z'),
+        reviewer: {
+          id: 'seller-user-1',
+          fullName: 'Seller One',
+        },
+      },
+    ];
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/orders/order-1/track?phone=123456')
+      .expect(200);
+
+    const body = readBody<PublicOrderTrackingResponseDto>(response);
+    expect(body.paymentLogs).toEqual([
+      expect.objectContaining({
+        action: 'SELLER_CONFIRMED',
+        note: null,
+        reviewerName: null,
+      }),
+    ]);
+    expect(JSON.stringify(body)).not.toContain('Internal seller escalation');
+    expect(JSON.stringify(body)).not.toContain('internal bank statement');
   });
 
   it('uploads payment proof successfully and creates audit log', async () => {
@@ -563,6 +635,8 @@ describe('OrderTrackingController (e2e)', () => {
       PublicOrderTrackingResponseDto & {
         delivery: {
           status: string;
+          providerShipmentId: string | null;
+          deliveryNote: string | null;
           failureReasonCode: string | null;
           customerVisibleMessage: string | null;
           deliveryComments: Array<{ message: string }>;
@@ -574,6 +648,8 @@ describe('OrderTrackingController (e2e)', () => {
     expect(body.delivery.customerVisibleMessage).toBe(
       'Courier could not reach you.',
     );
+    expect(body.delivery.providerShipmentId).toBeNull();
+    expect(body.delivery.deliveryNote).toBeNull();
     expect(body.delivery.deliveryComments).toEqual([
       expect.objectContaining({
         message: 'Please contact support to schedule another attempt.',
@@ -582,6 +658,10 @@ describe('OrderTrackingController (e2e)', () => {
     expect(JSON.stringify(body.delivery)).not.toContain(
       'Seller internal escalation.',
     );
+    expect(JSON.stringify(body.delivery)).not.toContain(
+      'Internal note must not be used here.',
+    );
+    expect(JSON.stringify(body.delivery)).not.toContain('ydx-100');
   });
 
   it('seller payment detail shows proof and seller can mark paid after upload', async () => {
