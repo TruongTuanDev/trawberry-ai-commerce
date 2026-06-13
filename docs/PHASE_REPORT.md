@@ -1,5 +1,15 @@
 # Phase Report
 
+## 2026-06-13 Seller Ads V1 Final Release QA
+
+- Status: verified end to end after local runtime recovery.
+- Final QA covered the Ads admin surfaces, seller wallet top-ups, campaign moderation, and the related public/recommendation surfaces that depend on the Ads runtime.
+- The only code change in this pass was a small presentation cleanup in the admin Ads wallet top-up and campaign moderation pages to replace broken separator glyphs with plain ASCII separators.
+- Local runtime blockers were resolved during QA by restoring the expected Postgres database, syncing Prisma schema into it, seeding the demo dataset, and aligning browser-accessible loopback origins so the frontend could reach the backend from `127.0.0.1`.
+- No Ads business logic, campaign model, CPC formula, wallet behavior, checkout, orders, cart, payment, shipping, WB sync, or AI Try-On logic was changed.
+- Verification passed: backend Prisma generate, backend lint, backend build, auth smoke, focused Ads/public/recommendations Playwright, seller operations i18n, responsive regression, frontend lint, frontend build, and direct browser login smoke.
+- Remaining gaps: none in the final QA scope; broader future work remains the same as the existing Ads platform roadmap.
+
 ## 2026-06-11 Ads Production QA.1 - Wallet, Campaign, Serving, and CPC Runtime Audit
 
 - Status: audited, one production runtime configuration issue fixed, and verified.

@@ -159,7 +159,7 @@ export function AdminCampaignModerationPageClient() {
                 </span>
               </div>
               <p className="mt-3 text-sm text-[var(--muted)]">
-                Lifecycle: {campaign.status} · Targets: {campaign.summary.totalTargets}
+                Lifecycle: {campaign.status} / Targets: {campaign.summary.totalTargets}
               </p>
             </button>
           ))}
@@ -216,7 +216,7 @@ export function AdminCampaignModerationPageClient() {
                   {(selected.moderationAuditLogs ?? []).map((log) => (
                     <div key={log.id} className="rounded-xl border border-[var(--border)] p-3 text-xs text-[var(--muted)]">
                       <strong className="text-[var(--foreground)]">{statusLabel(log.action)}</strong>
-                      {" · "}{new Date(log.createdAt).toLocaleString()}
+                      {" / "}{new Date(log.createdAt).toLocaleString()}
                       {log.reason ? <p className="mt-1">{log.reason}</p> : null}
                     </div>
                   ))}

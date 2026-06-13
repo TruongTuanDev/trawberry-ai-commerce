@@ -1,5 +1,14 @@
 # Project Status
 
+## Seller Ads V1 Final Release QA - 2026-06-13
+
+- Status: verified end to end.
+- Admin Ads monitoring, campaign moderation, and wallet top-up UI flows now pass again in browser QA against the local seeded runtime.
+- The local runtime had to be restored during QA by creating the expected Postgres database, pushing the Prisma schema, seeding demo data, and allowing `127.0.0.1` browser origins to reach the backend.
+- Ads behavior stays unchanged: manual seller top-ups still require admin review, approved campaigns can serve sponsored placements, valid CPC clicks charge once, and invalid-click protection still blocks duplicate or malformed charge paths.
+- Verification passed: backend Prisma generate, backend lint, backend build, auth smoke, Ads/admin/public/recommendations Playwright, seller operations i18n, responsive regression, frontend lint, frontend build, and direct browser login smoke.
+- Remaining work is unchanged from the prior Ads roadmap: external alerting, persistent alert acknowledgment, automated reconciliation, refunds/chargebacks, and richer fraud analytics.
+
 ## Ads Platform Phase 6.3 Production Monitoring - 2026-06-12
 
 - Status: implemented and verified.

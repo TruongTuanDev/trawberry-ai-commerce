@@ -136,7 +136,7 @@ export function AdminAdsWalletTopUpsPageClient() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-bold text-[var(--foreground)]">{formatMoney(item.amount, item.currency)}</p>
-                  <p className="mt-1 text-sm text-[var(--muted)]">{item.shop.name} · {item.seller.email}</p>
+                  <p className="mt-1 text-sm text-[var(--muted)]">{item.shop.name} / {item.seller.email}</p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase text-slate-700">{item.status}</span>
               </div>
@@ -150,7 +150,7 @@ export function AdminAdsWalletTopUpsPageClient() {
             <div className="space-y-5">
               <div>
                 <h3 className="text-2xl font-black text-[var(--foreground)]">{formatMoney(selected.amount, selected.currency)}</h3>
-                <p className="mt-1 text-sm text-[var(--muted)]">{selected.shop.name} · {selected.seller.email}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{selected.shop.name} / {selected.seller.email}</p>
               </div>
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
                 <div><dt className="text-[var(--muted)]">Status</dt><dd className="font-semibold">{selected.status}</dd></div>
@@ -158,7 +158,7 @@ export function AdminAdsWalletTopUpsPageClient() {
                 <div className="sm:col-span-2"><dt className="text-[var(--muted)]">Transfer reference</dt><dd className="font-semibold">{selected.transferReference || "-"}</dd></div>
                 <div className="sm:col-span-2"><dt className="text-[var(--muted)]">Seller note</dt><dd className="font-semibold">{selected.sellerNote || "-"}</dd></div>
                 {selected.proofUrl ? <div className="sm:col-span-2"><dt className="text-[var(--muted)]">Proof URL</dt><dd><a href={selected.proofUrl} target="_blank" rel="noreferrer" className="font-semibold text-indigo-700 underline">Open proof</a></dd></div> : null}
-                {selected.confirmedLedger ? <div className="sm:col-span-2 rounded-xl bg-emerald-50 p-3"><dt className="text-emerald-700">Confirmed ledger</dt><dd className="font-semibold text-emerald-950">{selected.confirmedLedger.id} · balance {formatMoney(selected.confirmedLedger.balanceAfter, selected.confirmedLedger.currency)}</dd></div> : null}
+                {selected.confirmedLedger ? <div className="sm:col-span-2 rounded-xl bg-emerald-50 p-3"><dt className="text-emerald-700">Confirmed ledger</dt><dd className="font-semibold text-emerald-950">{selected.confirmedLedger.id} / balance {formatMoney(selected.confirmedLedger.balanceAfter, selected.confirmedLedger.currency)}</dd></div> : null}
                 {selected.rejectionReason ? <div className="sm:col-span-2 rounded-xl bg-rose-50 p-3"><dt className="text-rose-700">Rejection reason</dt><dd className="font-semibold text-rose-950">{selected.rejectionReason}</dd></div> : null}
               </dl>
               {selected.status === "pending" ? (
