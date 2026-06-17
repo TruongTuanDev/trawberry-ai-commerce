@@ -11,7 +11,6 @@ import {
   getComparableOldPrice,
   getProductPrimaryVariant,
   getStockState,
-  getVariantLabel,
   hasSelectableVariants,
 } from "@/components/public/public-product-utils";
 import { FallbackImage } from "@/components/ui/fallback-image";
@@ -38,6 +37,13 @@ export function ProductCard({
   const formattedOldPrice = formatMoney(oldPrice);
   const requiresSelection = hasSelectableVariants(product);
 
+  const priceNumber = Number(product.price);
+  const oldPriceNumber = Number(oldPrice);
+  const discountPercent =
+    oldPrice && oldPriceNumber > priceNumber && priceNumber > 0
+      ? Math.round((1 - priceNumber / oldPriceNumber) * 100)
+      : null;
+
   const handleQuickAdd = () => {
     if (!primaryVariant?.inStock) {
       return;
@@ -53,7 +59,7 @@ export function ProductCard({
 
   return (
     <article
-      className="card-panel hover-card-effect group flex h-full min-w-0 flex-col overflow-hidden rounded-[1.6rem] border-white/70 bg-white sm:rounded-[1.85rem]"
+      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-white transition hover:shadow-[0_8px_24px_rgba(31,31,41,0.10)]"
       data-testid="product-card"
     >
       <Link
@@ -61,32 +67,30 @@ export function ProductCard({
         className="relative block overflow-hidden"
         onClick={onProductNavigate}
       >
-        <div className="absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-2 sm:inset-x-4 sm:top-4 sm:gap-3">
-          <div className="flex flex-wrap gap-2">
-            <StockBadge label={stockState.label} tone={stockState.tone} />
-            {product.averageRating && product.feedbackCount > 0 ? (
-              <span
-                className="inline-flex items-center rounded-full bg-white/92 px-2 py-1 text-[11px] font-semibold text-[var(--foreground)] shadow-[0_8px_20px_rgba(31,31,41,0.08)] sm:px-2.5 sm:text-xs"
-                data-testid={`product-rating-summary-${product.id}`}
-              >
-                {"★"} {Number(product.averageRating).toFixed(1)} ({product.feedbackCount})
+        <div className="absolute inset-x-2 top-2 z-10 flex items-start justify-between gap-1">
+          <div className="flex flex-col items-start gap-1">
+            {discountPercent ? (
+              <span className="inline-flex items-center rounded-md bg-[var(--brand-primary)] px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-sm">
+                -{discountPercent}%
               </span>
             ) : null}
+            <StockBadge label={stockState.label} tone={stockState.tone} />
           </div>
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/88 text-base text-[var(--brand-primary)] shadow-[0_10px_22px_rgba(31,31,41,0.08)]">
+          <span
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-sm text-[var(--brand-primary)] shadow-[0_4px_12px_rgba(31,31,41,0.10)]"
+            aria-hidden
+          >
             {"♡"}
           </span>
         </div>
 
-        <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-2 sm:bottom-4 sm:left-4">
-          {inCartQuantity > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-gradient-primary px-3 py-1 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(203,17,171,0.24)]">
-              {t("productDetail.inCartCount", { count: inCartQuantity })}
-            </span>
-          ) : null}
-        </div>
+        {inCartQuantity > 0 ? (
+          <span className="absolute bottom-2 left-2 z-10 inline-flex items-center rounded-md bg-gradient-primary px-2 py-0.5 text-[11px] font-semibold text-white shadow">
+            {t("productDetail.inCartCount", { count: inCartQuantity })}
+          </span>
+        ) : null}
 
-        <div className="aspect-[4/5] overflow-hidden rounded-b-[1.6rem] bg-[linear-gradient(180deg,#fdf2fc_0%,#fbf5fa_100%)]">
+        <div className="aspect-[3/4] overflow-hidden bg-[linear-gradient(180deg,#fdf2fc_0%,#fbf5fa_100%)]">
           <FallbackImage
             src={product.images[0]?.url}
             alt={product.name}
@@ -96,78 +100,58 @@ export function ProductCard({
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-3 px-3.5 pb-3.5 pt-3.5 sm:gap-4 sm:px-5 sm:pb-5 sm:pt-4">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                {product.shop.name ?? t("productDetail.marketplaceShop")}
-              </p>
-              <Link
-                href={`/products/${product.id}`}
-                className="mt-2 line-clamp-2 block text-sm font-semibold text-[var(--foreground)] sm:text-base"
-                data-testid={`product-view-${product.id}`}
-                onClick={onProductNavigate}
-              >
-                {product.name}
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
-            {product.brand ? (
-              <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-1">
-                {product.brand}
-              </span>
-            ) : null}
-            {product.categoryName ? (
-              <span className="rounded-full bg-[var(--panel-strong)] px-2.5 py-1">
-                {product.categoryName}
-              </span>
-            ) : null}
-          </div>
+      <div className="flex flex-1 flex-col gap-1 px-2 pb-2 pt-1.5 sm:px-2.5">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-base font-black tracking-tight text-[var(--brand-primary)] sm:text-lg">
+            {formattedPrice ?? t("productDetail.contactShop")}
+          </span>
+          {formattedOldPrice ? (
+            <span className="text-xs text-[var(--muted)] line-through">
+              {formattedOldPrice}
+            </span>
+          ) : null}
         </div>
 
-        <div className="mt-auto space-y-4">
-          <div className="flex items-end justify-between gap-2 rounded-[1.2rem] bg-[linear-gradient(180deg,#fff8fd_0%,#ffffff_100%)] p-3 ring-1 ring-[var(--brand-primary)]/6 sm:gap-3 sm:rounded-[1.35rem]">
-            <div>
-              <p className="text-2xl font-black tracking-tight text-[var(--brand-primary)] sm:text-3xl">
-                {formattedPrice ?? t("productDetail.contactShop")}
-              </p>
-              {formattedOldPrice ? (
-                <p className="mt-1 text-sm text-[var(--muted)] line-through">
-                  {formattedOldPrice}
-                </p>
-              ) : null}
-            </div>
-            {primaryVariant ? (
-              <p className="max-w-20 text-right text-[11px] text-[var(--muted)] sm:max-w-none sm:text-xs">
-                {getVariantLabel(primaryVariant)}
-              </p>
-            ) : null}
-          </div>
+        <Link
+          href={`/products/${product.id}`}
+          className="line-clamp-2 text-xs leading-snug text-[var(--foreground)] transition hover:text-[var(--brand-primary)] sm:text-[13px]"
+          data-testid={`product-view-${product.id}`}
+          onClick={onProductNavigate}
+        >
+          {product.name}
+        </Link>
 
+        <div className="flex items-center justify-between gap-1 text-[11px] text-[var(--muted)]">
+          <span className="truncate">
+            {product.brand ?? product.shop.name ?? t("productDetail.marketplaceShop")}
+          </span>
+          {product.averageRating && product.feedbackCount > 0 ? (
+            <span
+              className="shrink-0 font-semibold text-[var(--foreground)]"
+              data-testid={`product-rating-summary-${product.id}`}
+            >
+              {"★"} {Number(product.averageRating).toFixed(1)} ({product.feedbackCount})
+            </span>
+          ) : null}
+        </div>
+
+        <div className="mt-auto pt-1.5">
           {inCartQuantity > 0 && primaryVariant ? (
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-[var(--brand-primary-dark)]">
-                {t("productDetail.inCart")}
-              </span>
-              <QuantityStepper
-                size="sm"
-                value={inCartQuantity}
-                max={primaryVariant.trackInventory ? primaryVariant.availableQuantity : undefined}
-                onChange={(nextValue) =>
-                  updateQuantity(product.id, primaryVariant.id, nextValue)
-                }
-                testId={`product-card-stepper-${product.id}`}
-              />
-            </div>
+            <QuantityStepper
+              size="sm"
+              value={inCartQuantity}
+              max={primaryVariant.trackInventory ? primaryVariant.availableQuantity : undefined}
+              onChange={(nextValue) =>
+                updateQuantity(product.id, primaryVariant.id, nextValue)
+              }
+              testId={`product-card-stepper-${product.id}`}
+            />
           ) : (
             <button
               type="button"
               onClick={handleQuickAdd}
               disabled={!primaryVariant?.inStock}
-              className="public-button-primary w-full px-4 py-3.5 text-sm shadow-[0_16px_28px_rgba(203,17,171,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg bg-gradient-primary px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
               data-testid={`product-primary-action-${product.id}`}
             >
               {requiresSelection
@@ -177,15 +161,6 @@ export function ProductCard({
                   : t("productDetail.outOfStock")}
             </button>
           )}
-
-          <Link
-            href={`/products/${product.id}`}
-            className="public-button-secondary inline-flex w-full justify-center px-4 py-3 text-sm"
-            onClick={onProductNavigate}
-            aria-label="View"
-          >
-            {t("productDetail.view")}
-          </Link>
         </div>
       </div>
     </article>

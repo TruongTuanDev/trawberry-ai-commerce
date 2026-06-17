@@ -1720,7 +1720,7 @@ function ProductsPageContent({
                 </p>
                 <p className="mt-1 text-sm text-[var(--muted)]">{t("catalog.loadingDescription")}</p>
               </div>
-              <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+              <section className={`relative z-0 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 ${layoutCols === "3" ? "lg:grid-cols-4 xl:grid-cols-5" : "lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"}`} data-testid={isMounted ? "products-grid" : undefined}>
                 {Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="card-panel animate-pulse overflow-hidden rounded-[1.75rem]">
                     <div className="aspect-[4/3] bg-[var(--panel-strong)]" />
@@ -1735,7 +1735,7 @@ function ProductsPageContent({
               </section>
             </div>
           ) : items.length ? (
-            <section className={`relative z-0 grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 ${layoutCols === "3" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`} data-testid={isMounted ? "products-grid" : undefined}>
+            <section className={`relative z-0 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 ${layoutCols === "3" ? "lg:grid-cols-4 xl:grid-cols-5" : "lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"}`} data-testid={isMounted ? "products-grid" : undefined}>
               {items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
