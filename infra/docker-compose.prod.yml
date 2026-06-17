@@ -162,6 +162,8 @@ services:
   backend-nest:
     image: ${BACKEND_IMAGE:-strawberry/backend-nest:prod}
     container_name: strawberry-backend-nest
+    env_file:
+      - .env.production
     restart: unless-stopped
     build:
       context: ../backend-nest
@@ -257,6 +259,8 @@ services:
   frontend-next:
     image: ${FRONTEND_IMAGE:-strawberry/frontend-next:prod}
     container_name: strawberry-frontend-next
+    env_file:
+      - .env.production
     restart: unless-stopped
     build:
       context: ../frontend-next
