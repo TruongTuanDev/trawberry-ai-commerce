@@ -3326,7 +3326,6 @@ export class RecommendationsService {
   private buildPublicVisibilityWhere(): Prisma.ProductWhereInput {
     return {
       visibility: 'ACTIVE',
-      catalogStatus: 'PUBLISHED',
       archivedAt: null,
       unpublishedAt: null,
       images: {
