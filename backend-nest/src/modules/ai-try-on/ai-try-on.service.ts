@@ -287,6 +287,9 @@ export class AiTryOnService {
       categoryName: product.category?.name ?? product.categoryName,
       selectedSize: dto.selectedSize,
       selectedRussianSize: dto.selectedRussianSize,
+      heightCm: dto.heightCm,
+      weightKg: dto.weightKg,
+      gender: dto.gender,
       bodyType: dto.bodyType,
       bodyTraits: dto.bodyTraits,
     });

@@ -59,7 +59,7 @@ export function PublicProductDetailPageClient({
       initialProduct?.variants[0]?.id ??
       "",
   );
-  const [hasChosenSize, setHasChosenSize] = useState(false);
+  const [, setHasChosenSize] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
   const items = useCartStore((state) => state.items);
@@ -449,11 +449,6 @@ export function PublicProductDetailPageClient({
   const handleOpenAiTryOn = () => {
     if (!aiTryOnConfig?.enabled) {
       toast.warning(t("aiTryOn.underDevelopment"));
-      return;
-    }
-
-    if (!selectedVariant || !hasChosenSize) {
-      toast.warning(t("aiTryOn.selectSizeFirst"));
       return;
     }
 
