@@ -8,6 +8,8 @@ For first-time server preparation, start with [docs/VPS_SETUP.md](/c:/Users/admi
 
 The production stack uses the `pgvector/pgvector:pg16` image and a persistent `ai_model_cache` volume. When OpenCLIP is enabled, allow up to five minutes for AI-service cold-start before it becomes healthy; backend startup runs `prisma migrate deploy` automatically.
 
+GitHub Actions uses SSH keepalives and retries the idempotent pull/deploy sequence up to three times. A transient `Broken pipe` during the large AI image pull therefore resumes from Docker's cached layers on the next attempt.
+
 - Recommended: `8 vCPU`, `16 GB RAM`, `200 GB NVMe`
 - Minimum: `4 vCPU`, `8 GB RAM`, `100 GB`
 

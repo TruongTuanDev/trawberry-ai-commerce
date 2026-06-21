@@ -188,7 +188,9 @@ jobs:
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
           set -euo pipefail
-          tar -czf - infra | ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+          tar -czf - infra | ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes \
+            "$VPS_USER@$VPS_HOST" \
             "mkdir -p '$VPS_APP_DIR' && tar -xzf - -C '$VPS_APP_DIR' && chmod +x '$VPS_APP_DIR/infra/scripts/'*.sh"
 
       - name: Deploy over SSH
@@ -207,8 +209,9 @@ jobs:
           NGINX_IMAGE: ghcr.io/${{ steps.vars.outputs.image_namespace }}/nginx:${{ github.sha }}
         run: |
           set -euo pipefail
-          ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-            "VPS_APP_DIR='$VPS_APP_DIR' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' FRONTEND_IMAGE='$FRONTEND_IMAGE' BACKEND_IMAGE='$BACKEND_IMAGE' AI_SERVICE_IMAGE='$AI_SERVICE_IMAGE' NGINX_IMAGE='$NGINX_IMAGE' DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'EOF'
+          remote_script="$(mktemp)"
+          trap 'rm -f "$remote_script"' EXIT
+          cat > "$remote_script" <<'EOF'
           set -euo pipefail
 
           cd "$VPS_APP_DIR"
@@ -216,11 +219,6 @@ jobs:
           test -f infra/.env.production
 
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
-
-          docker pull "$FRONTEND_IMAGE"
-          docker pull "$BACKEND_IMAGE"
-          docker pull "$AI_SERVICE_IMAGE"
-          docker pull "$NGINX_IMAGE"
 
           cat > infra/.env.deploy <<DEPLOY_ENV
           FRONTEND_IMAGE=$FRONTEND_IMAGE
@@ -236,3 +234,19 @@ jobs:
 
           ./infra/scripts/smoke-production.sh infra/.env.production
           EOF
+
+          for attempt in 1 2 3; do
+            echo "VPS deploy attempt $attempt/3"
+            if ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes \
+              "$VPS_USER@$VPS_HOST" \
+              "VPS_APP_DIR='$VPS_APP_DIR' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' FRONTEND_IMAGE='$FRONTEND_IMAGE' BACKEND_IMAGE='$BACKEND_IMAGE' AI_SERVICE_IMAGE='$AI_SERVICE_IMAGE' NGINX_IMAGE='$NGINX_IMAGE' DEPLOY_SHA='$DEPLOY_SHA' bash -se" \
+              < "$remote_script"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "SSH deploy attempt failed; retrying cached pull/deploy in 20 seconds."
+              sleep 20
+            fi
+          done
+          exit 1
