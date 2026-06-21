@@ -5,6 +5,8 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { VisualEmbeddingClient } from '../src/modules/visual-search/visual-embedding.client';
+import { VisualSearchService } from '../src/modules/visual-search/visual-search.service';
 import { readBody } from './test-helpers';
 
 type StoredProduct = {
@@ -90,6 +92,9 @@ describe('VisualSearchController (e2e)', () => {
     product: {
       findMany: jest.fn(),
     },
+    productImage: {
+      findMany: jest.fn(),
+    },
     visualSearchLog: {
       create: jest.fn(),
     },
@@ -102,6 +107,12 @@ describe('VisualSearchController (e2e)', () => {
     marketplaceCheckout: {
       create: jest.fn(),
     },
+    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
+  };
+  const visualEmbeddingClientMock = {
+    embedBytes: jest.fn(),
+    embedUrl: jest.fn(),
   };
 
   const buildApp = async () => {
@@ -110,6 +121,8 @@ describe('VisualSearchController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(VisualEmbeddingClient)
+      .useValue(visualEmbeddingClientMock)
       .compile();
 
     const nextApp: INestApplication<App> =
@@ -159,14 +172,35 @@ describe('VisualSearchController (e2e)', () => {
     ];
 
     prismaMock.product.findMany.mockReset();
+    prismaMock.productImage.findMany.mockReset();
     prismaMock.visualSearchLog.create.mockReset();
     prismaMock.visualSearchEvent.create.mockReset();
     prismaMock.order.create.mockReset();
     prismaMock.marketplaceCheckout.create.mockReset();
+    prismaMock.$queryRaw.mockReset();
+    prismaMock.$executeRaw.mockReset();
+    visualEmbeddingClientMock.embedBytes.mockReset();
+    visualEmbeddingClientMock.embedUrl.mockReset();
 
     prismaMock.product.findMany.mockResolvedValue(products);
     prismaMock.visualSearchLog.create.mockResolvedValue({ id: 'log-1' });
     prismaMock.visualSearchEvent.create.mockResolvedValue({});
+    prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.$executeRaw.mockResolvedValue(1);
+    visualEmbeddingClientMock.embedBytes.mockResolvedValue({
+      embedding: Array.from({ length: 512 }, () => 0.01),
+      dimensions: 512,
+      model: 'deterministic_mock_v1',
+      provider: 'mock',
+      fingerprint: 'query-fingerprint',
+    });
+    visualEmbeddingClientMock.embedUrl.mockResolvedValue({
+      embedding: Array.from({ length: 512 }, () => 0.01),
+      dimensions: 512,
+      model: 'deterministic_mock_v1',
+      provider: 'mock',
+      fingerprint: 'product-fingerprint',
+    });
 
     global.fetch = jest.fn();
     app = await buildApp();
@@ -195,13 +229,22 @@ describe('VisualSearchController (e2e)', () => {
 
     expect(readBody(response)).toEqual({
       analysis: {
+        productDetected: false,
         category: 'Шорты',
         color: null,
         gender: null,
+        material: null,
+        pattern: null,
+        style: null,
         keywords: [],
+        confidence: 0,
       },
       products: [],
-      algorithm: 'visual_search_rule_based_v1',
+      matches: [],
+      algorithm: 'visual_search_semantic_attributes_v2',
+      provider: 'rule_based_ai_v1',
+      fallbackUsed: true,
+      vectorUsed: false,
       visualSearchLogId: null,
       disabled: true,
     });
@@ -252,10 +295,15 @@ describe('VisualSearchController (e2e)', () => {
     }>(response);
 
     expect(body.analysis).toEqual({
+      productDetected: true,
       category: 'Шорты',
       color: null,
       gender: null,
+      material: null,
+      pattern: null,
+      style: null,
       keywords: [],
+      confidence: 0.15,
     });
     expect(body.products[0]?.id).toBe('product-shorts-blue');
     const visualSearchLogCreateCalls = prismaMock.visualSearchLog.create.mock
@@ -273,6 +321,66 @@ describe('VisualSearchController (e2e)', () => {
     );
   });
 
+  it('returns no candidates when vision detects no shoppable product', async () => {
+    process.env.VISUAL_SEARCH_AI_PROVIDER = 'openai';
+    process.env.OPENAI_API_KEY = 'test-key';
+    process.env.VISUAL_SEARCH_OPENAI_MODEL = 'vision-test-model';
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          output_text: JSON.stringify({
+            productDetected: false,
+            category: null,
+            color: null,
+            gender: null,
+            material: null,
+            pattern: null,
+            style: null,
+            confidence: 0.08,
+            keywordsRu: [],
+            keywordsEn: [],
+          }),
+        }),
+    });
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/visual-search')
+      .attach('image', pngBuffer, {
+        filename: 'background.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+
+    const body = readBody<{
+      analysis: { productDetected: boolean; confidence: number };
+      products: Array<{ id: string }>;
+      matches: Array<{ product: { id: string } }>;
+    }>(response);
+    expect(body.analysis).toEqual({
+      productDetected: false,
+      category: null,
+      color: null,
+      gender: null,
+      material: null,
+      pattern: null,
+      style: null,
+      keywords: [],
+      confidence: 0.08,
+    });
+    expect(body.products).toEqual([]);
+    expect(body.matches).toEqual([]);
+    expect(prismaMock.product.findMany).not.toHaveBeenCalled();
+
+    const fetchCalls = (global.fetch as jest.Mock).mock.calls as Array<
+      [string, { body?: string }]
+    >;
+    const fetchBody = JSON.parse(fetchCalls[0]?.[1].body ?? '{}') as {
+      model: string;
+    };
+    expect(fetchBody.model).toBe('vision-test-model');
+  });
+
   it('matches products by category, color, and keyword without touching checkout flows', async () => {
     process.env.VISUAL_SEARCH_AI_PROVIDER = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
@@ -281,9 +389,14 @@ describe('VisualSearchController (e2e)', () => {
       json: () =>
         Promise.resolve({
           output_text: JSON.stringify({
+            productDetected: true,
             category: 'Шорты',
             color: 'Blue',
             gender: 'female',
+            material: 'polyester',
+            pattern: 'solid',
+            style: 'sport',
+            confidence: 0.94,
             keywordsRu: ['спорт'],
             keywordsEn: ['running'],
           }),
@@ -308,17 +421,88 @@ describe('VisualSearchController (e2e)', () => {
         keywords: string[];
       };
       products: Array<{ id: string }>;
+      matches: Array<{
+        product: { id: string };
+        score: number;
+        reasons: string[];
+      }>;
+      provider: string;
+      fallbackUsed: boolean;
     }>(response);
 
     expect(body.analysis.category).toBe('Шорты');
     expect(body.analysis.color).toBe('Blue');
+    expect(body.analysis.material).toBe('polyester');
+    expect(body.analysis.confidence).toBe(0.94);
     expect(body.analysis.keywords).toEqual(['спорт', 'running']);
     expect(body.products.map((product) => product.id)).toEqual(
       expect.arrayContaining(['product-shorts-blue']),
     );
     expect(body.products[0]?.id).toBe('product-shorts-blue');
+    expect(body.matches[0]?.product.id).toBe('product-shorts-blue');
+    expect(body.matches[0]?.score).toBeGreaterThan(0);
+    expect(body.matches[0]?.reasons).toContain('category');
+    expect(body.provider).toBe('openai');
+    expect(body.fallbackUsed).toBe(false);
     expect(prismaMock.order.create).not.toHaveBeenCalled();
     expect(prismaMock.marketplaceCheckout.create).not.toHaveBeenCalled();
+  });
+
+  it('uses pgvector candidates and hybrid ranking when vector search is enabled', async () => {
+    process.env.VISUAL_SEARCH_VECTOR_ENABLED = 'true';
+    prismaMock.$queryRaw.mockResolvedValue([
+      { id: 'product-accessory', score: 0.96 },
+      { id: 'product-shorts-blue', score: 0.72 },
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .post('/api/public/visual-search')
+      .attach('image', pngBuffer, {
+        filename: 'similar.png',
+        contentType: 'image/png',
+      })
+      .field('categoryHint', 'Аксессуары')
+      .expect(201);
+
+    const body = readBody<{
+      algorithm: string;
+      vectorUsed: boolean;
+      matches: Array<{ product: { id: string }; reasons: string[] }>;
+    }>(response);
+    expect(body.algorithm).toBe('visual_search_clip_pgvector_hybrid_v3');
+    expect(body.vectorUsed).toBe(true);
+    expect(body.matches[0]?.product.id).toBe('product-accessory');
+    expect(body.matches[0]?.reasons).toContain('image_similarity');
+    expect(visualEmbeddingClientMock.embedBytes).toHaveBeenCalledTimes(1);
+  });
+
+  it('indexes public product image URLs and stores their vectors', async () => {
+    prismaMock.productImage.findMany.mockResolvedValue([
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        productId: '22222222-2222-4222-8222-222222222222',
+        localUrl: null,
+        wbUrl: 'https://images.example.com/product.jpg',
+        updatedAt: new Date('2026-06-20T00:00:00Z'),
+      },
+    ]);
+
+    const service = app.get(VisualSearchService);
+    const first = await service.reindexPublishedImages(10);
+    expect(first).toEqual(
+      expect.objectContaining({
+        requested: 1,
+        indexed: 1,
+        skipped: 0,
+        failed: 0,
+      }),
+    );
+    expect(visualEmbeddingClientMock.embedUrl).toHaveBeenCalledWith(
+      'https://images.example.com/product.jpg',
+    );
+    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(1);
+
+    expect(prismaMock.$queryRaw).toHaveBeenCalledTimes(1);
   });
 });
 

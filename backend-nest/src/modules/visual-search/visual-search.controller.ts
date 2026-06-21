@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBody,
+  ApiBearerAuth,
   ApiConsumes,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -20,12 +21,15 @@ import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import { AdminOnlyGuard } from '../../common/guards/admin-only.guard';
+import { AdminJwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.type';
 import {
   CreateVisualSearchDto,
   VisualSearchResponseDto,
 } from './dto/create-visual-search.dto';
 import { TrackVisualSearchEventDto } from './dto/track-visual-search-event.dto';
+import { ReindexVisualSearchDto } from './dto/reindex-visual-search.dto';
 import { VisualSearchService } from './visual-search.service';
 
 @ApiTags('public-visual-search')
@@ -78,5 +82,24 @@ export class VisualSearchController {
     @CurrentUser() user?: AuthenticatedUser | null,
   ) {
     await this.visualSearchService.trackEvent(dto, request, user);
+  }
+}
+
+@ApiTags('admin-visual-search')
+@ApiBearerAuth()
+@UseGuards(AdminJwtAuthGuard, AdminOnlyGuard)
+@Controller('api/admin/visual-search')
+export class AdminVisualSearchController {
+  constructor(private readonly visualSearchService: VisualSearchService) {}
+
+  @Post('reindex')
+  @ApiOperation({
+    summary: 'Create or refresh CLIP embeddings for public product images.',
+  })
+  reindex(@Body() dto: ReindexVisualSearchDto) {
+    return this.visualSearchService.reindexPublishedImages(
+      dto.limit,
+      dto.offset,
+    );
   }
 }

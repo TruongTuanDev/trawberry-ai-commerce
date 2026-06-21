@@ -248,6 +248,7 @@ describe('PublicProductsController contract (e2e)', () => {
     marketplaceCheckout: {
       create: jest.fn(),
     },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -347,6 +348,24 @@ describe('PublicProductsController contract (e2e)', () => {
             sellerSku: 'DRAFT-L',
             basePrice: decimal(1999),
             stockQuantity: 4,
+          }),
+        ],
+      }),
+      buildProduct({
+        id: 'product-active-draft',
+        title: 'Active But Unpublished Jacket',
+        catalogStatus: 'DRAFT',
+        visibility: 'ACTIVE',
+        variants: [
+          buildVariant({
+            id: 'variant-active-draft',
+            productId: 'product-active-draft',
+            sizeName: 'M',
+            russianSize: '46',
+            techSize: 'M',
+            sellerSku: 'ACTIVE-DRAFT-M',
+            basePrice: decimal(1899),
+            stockQuantity: 6,
           }),
         ],
       }),
@@ -452,7 +471,11 @@ describe('PublicProductsController contract (e2e)', () => {
     prismaMock.productVariant.updateMany.mockReset();
     prismaMock.order.create.mockReset();
     prismaMock.marketplaceCheckout.create.mockReset();
+    prismaMock.$queryRaw.mockReset();
     prismaMock.$transaction.mockReset();
+    prismaMock.$queryRaw.mockRejectedValue(
+      new Error('Full-text search unavailable in the in-memory test double.'),
+    );
 
     prismaMock.user.findUnique.mockImplementation(
       ({ where }: UserFindUniqueArgs) => {
@@ -631,6 +654,39 @@ describe('PublicProductsController contract (e2e)', () => {
     expect(body.meta.total).toBe(5);
   });
 
+  it('uses ranked full-text matches for typo-tolerant relevance search', async () => {
+    prismaMock.$queryRaw.mockResolvedValue([
+      { id: 'product-price-changed', score: 2.5 },
+      { id: 'product-ready', score: 12.75 },
+    ]);
+
+    const response = await request(app.getHttpServer())
+      .get('/api/public/products')
+      .query({ q: 'Pblic Contrct Jaket', sort: 'relevance' })
+      .expect(200);
+
+    const body = readBody<PaginatedPublicProductsResponseDto>(response);
+    expect(body.items.map((item) => item.id)).toEqual([
+      'product-ready',
+      'product-price-changed',
+    ]);
+  });
+
+  it('rejects an ACTIVE readiness-passing product unless it is PUBLISHED', async () => {
+    await request(app.getHttpServer())
+      .get('/api/public/products')
+      .query({ q: 'Active But Unpublished Jacket' })
+      .expect(200)
+      .expect((response) => {
+        const body = readBody<PaginatedPublicProductsResponseDto>(response);
+        expect(body.items).toHaveLength(0);
+      });
+
+    await request(app.getHttpServer())
+      .get('/api/public/products/product-active-draft')
+      .expect(404);
+  });
+
   it('returns public detail fields and variant availability contract', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/public/products/product-ready')
@@ -769,6 +825,12 @@ describe('PublicProductsController contract (e2e)', () => {
             clientUnitPrice: 1999,
           },
           {
+            productId: 'product-active-draft',
+            variantId: 'variant-active-draft',
+            quantity: 1,
+            clientUnitPrice: 1899,
+          },
+          {
             productId: 'product-archived',
             variantId: 'variant-archived',
             quantity: 1,
@@ -818,7 +880,7 @@ describe('PublicProductsController contract (e2e)', () => {
     }>(response);
 
     expect(body.valid).toBe(false);
-    expect(body.summary.invalidCount).toBe(7);
+    expect(body.summary.invalidCount).toBe(8);
     expect(body.summary.changedCount).toBe(1);
     expect(body.summary.subtotal).toBe(5676);
 
@@ -870,6 +932,12 @@ describe('PublicProductsController contract (e2e)', () => {
         expect.objectContaining({
           productId: 'product-unpublished',
           variantId: 'variant-unpublished',
+          status: 'PRODUCT_NOT_PUBLIC',
+          available: false,
+        }),
+        expect.objectContaining({
+          productId: 'product-active-draft',
+          variantId: 'variant-active-draft',
           status: 'PRODUCT_NOT_PUBLIC',
           available: false,
         }),

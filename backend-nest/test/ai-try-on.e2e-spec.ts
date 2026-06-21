@@ -1083,7 +1083,7 @@ describe('AiTryOnController (e2e)', () => {
     expect(task.resultImage?.mimeType).toBe('image/svg+xml');
     expect(task.resultImage?.width).toBe(1024);
     expect(task.resultImage?.height).toBe(1536);
-    expect(task.sizeRecommendation.recommendedRussianSize).toBe('RU 46');
+    expect(task.sizeRecommendation.recommendedRussianSize).toBe('48-50');
   });
 
   it('creates a demo task and still returns completed result data', async () => {

@@ -7,3 +7,4 @@ boto3==1.38.17
 openai==1.79.0
 pytest==8.3.5
 Pillow==11.2.1
+open-clip-torch==2.31.0

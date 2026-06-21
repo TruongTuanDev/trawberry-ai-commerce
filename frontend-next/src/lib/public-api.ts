@@ -428,13 +428,26 @@ export type RecommendationQaPackValidationResponse = {
 
 export type VisualSearchResponse = {
   analysis: {
+    productDetected: boolean;
     category: string | null;
     color: string | null;
     gender: string | null;
+    material: string | null;
+    pattern: string | null;
+    style: string | null;
     keywords: string[];
+    confidence: number;
   };
   products: PublicProduct[];
+  matches: Array<{
+    product: PublicProduct;
+    score: number;
+    reasons: string[];
+  }>;
   algorithm: string;
+  provider: string;
+  fallbackUsed: boolean;
+  vectorUsed: boolean;
   visualSearchLogId?: string | null;
   disabled?: boolean;
 };

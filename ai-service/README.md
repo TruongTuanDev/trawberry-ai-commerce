@@ -204,6 +204,14 @@ docker build -t strawberry-ai-service .
 docker run --rm -p 8000:8000 --env-file .env strawberry-ai-service
 ```
 
+## Visual Product Embeddings
+
+- `POST /internal/visual-search/embeddings` accepts exactly one image URL or base64 image and requires `X-Internal-Token`.
+- Tests and development default to deterministic `mock` vectors.
+- Production uses `VISUAL_EMBEDDING_PROVIDER=open_clip` with `ViT-B-32` and 512 normalized dimensions.
+- Public URL downloads require HTTPS and reject private/reserved addresses. Explicit Compose-only hosts such as `backend-nest` and `minio` are allowlisted.
+- Model weights are downloaded on first real use and cached in the Compose `ai-model-cache` volume.
+
 ## Notes
 - `frontend-next` still talks only to `backend-nest`.
 - `backend-nest` controls credits, task status, and retries.

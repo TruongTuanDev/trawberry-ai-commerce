@@ -493,6 +493,7 @@ export class CartValidationService {
   private hasPublicVisibilityAccess(product: CartValidationProductRecord) {
     return (
       product.visibility === 'ACTIVE' &&
+      product.catalogStatus === 'PUBLISHED' &&
       product.shop.status === 'ACTIVE' &&
       product.shop.sellerProfile.approvalStatus === 'APPROVED' &&
       product.images.length > 0 &&

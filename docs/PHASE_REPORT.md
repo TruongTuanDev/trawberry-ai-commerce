@@ -1,5 +1,51 @@
 # Phase Report
 
+## 2026-06-20 Visual Product Search Phase 3 - CLIP and pgvector
+
+- Added WB-like direct image similarity: query images and product image URLs are encoded into normalized 512-dimension CLIP vectors.
+- Added an internal authenticated AI-service embedding API with deterministic mock mode for tests and optional local OpenCLIP `ViT-B-32` mode for production.
+- Added SSRF-safe URL downloading, MIME/size validation, internal-host allowlisting, URL/update fingerprinting, and persistent model cache wiring.
+- Added `product_image_embeddings`, pgvector cosine storage, and a partial HNSW index.
+- Added admin-only `POST /api/admin/visual-search/reindex` for idempotent indexing of public product image URLs.
+- Public visual search now uses pgvector nearest-neighbor candidates and hybrid image/semantic reranking, with Phase 2 semantic retrieval retained as a safe fallback.
+- Vector search and all public visual-search flags remain disabled by default.
+- Focused backend vector/hybrid regression passes (`8/8`) and AI service tests pass (`36/36`) without real model or OpenAI calls.
+- Reconciled the pre-existing Prisma migration history against the live schema, applied the text-search and pgvector migrations, and verified Prisma reports the schema as up to date.
+- Built and started the PostgreSQL, backend, frontend, and AI containers; verified OpenCLIP returns 512 dimensions, reindex writes a `READY` vector, and public hybrid search returns `vectorUsed=true` with the v3 algorithm.
+- Added OpenCLIP startup preload and a five-minute healthcheck start period so the first shopper request does not pay the model cold-start cost.
+- Updated the stale AI Try-On size assertion to match the active height/weight recommendation (`48-50`); its focused suite passes (`28/28`).
+- A transient 5-second timeout in the concurrent payment-confirmation test passed in focused rerun (`19/19`), and the final full backend regression passes (`41/41` suites, `412/412` tests).
+
+## 2026-06-20 Visual Product Search Phase 2 - Semantic Attribute Retrieval
+
+- Upgraded visual search from `visual_search_rule_based_v1` to `visual_search_semantic_attributes_v2`.
+- Expanded image analysis with product detection, confidence, material, pattern, style, category, color, gender, and bilingual search keywords.
+- Replaced the arbitrary latest-250 scan with signal-based database candidate retrieval across the public catalog, capped at 500 candidates and 24 ranked results.
+- Added weighted ranking scores and match reasons, exposed them through the API, and connected scores to impression/click tracking.
+- Added configurable OpenAI model and timeout with provider failures still degrading safely to category-hint matching; tests never call the real OpenAI API.
+- Fixed missing Docker Compose wiring for backend OpenAI credentials, visual-search flags, provider, model, timeout, and frontend runtime flags. All flags remain off by default.
+- Focused backend visual-search regression passes (`6/6`).
+- This phase does not claim native image embeddings or vector similarity; the provider converts image content into structured catalog attributes before retrieval.
+
+## 2026-06-20 Public Text Search Full-Text and Typo-Tolerance Phase
+
+- Implemented PostgreSQL-native public product search using weighted `simple` full-text vectors and `pg_trgm` similarity, with title and seller/WB codes weighted above category, attributes, and descriptions.
+- Added relevance ranking as the default for keyword searches while preserving newest, price, name, and stock sorting.
+- Added a safe case-insensitive substring fallback when the full-text query cannot run during a staged database rollout.
+- Added a migration for `pg_trgm`, one weighted GIN full-text index, and targeted trigram indexes.
+- Added backend regression coverage for ranked typo-tolerant matches and frontend coverage for default relevance search state.
+- Verification completed before the runtime migration blocker: focused public-products tests pass (`9/9`), backend host build passes, and backend Docker image build passes.
+- Runtime migration is blocked by pre-existing Prisma `P3009`: migration `20260510_add_ai_image_tables` has been recorded as failed since 2026-06-03. The search migration was not applied and left no partial search extension/index state.
+- Frontend lint/build/E2E and runtime search smoke remain pending until the database migration history is repaired explicitly.
+
+## 2026-06-20 Public Search and Checkout Publication Guard Hardening
+
+- Added an explicit `catalogStatus=PUBLISHED` database guard to public product listing/search and public product detail lookup.
+- Added the same explicit publication requirement to server-side cart/checkout validation while preserving the existing `PRODUCT_NOT_PUBLIC` response for non-published products.
+- Added regression coverage for a deliberately inconsistent product that is `visibility=ACTIVE`, fully readiness-passing, but still `catalogStatus=DRAFT`.
+- Verified that this inconsistent product is excluded from search, returns `404` from public detail, and is rejected by cart validation.
+- Visual search already required `PUBLISHED` and was left unchanged. Fuzzy, full-text, embedding, and vector search remain separate future phases.
+
 ## 2026-06-13 Seller Ads V1 Final Release QA
 
 - Status: verified end to end after local runtime recovery.

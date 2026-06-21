@@ -75,12 +75,32 @@ export class ListPublicProductsQueryDto {
   maxPrice?: number;
 
   @ApiPropertyOptional({
-    enum: ['newest', 'price_asc', 'price_desc', 'name_asc', 'stock_desc'],
+    enum: [
+      'relevance',
+      'newest',
+      'price_asc',
+      'price_desc',
+      'name_asc',
+      'stock_desc',
+    ],
   })
   @IsOptional()
   @IsString()
-  @IsIn(['newest', 'price_asc', 'price_desc', 'name_asc', 'stock_desc'])
-  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'stock_desc';
+  @IsIn([
+    'relevance',
+    'newest',
+    'price_asc',
+    'price_desc',
+    'name_asc',
+    'stock_desc',
+  ])
+  sort?:
+    | 'relevance'
+    | 'newest'
+    | 'price_asc'
+    | 'price_desc'
+    | 'name_asc'
+    | 'stock_desc';
 
   @ApiPropertyOptional({ default: 1 })
   @Type(() => Number)

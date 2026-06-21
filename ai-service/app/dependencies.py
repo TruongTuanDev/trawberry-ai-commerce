@@ -15,6 +15,7 @@ from app.services.mock_try_on_provider import MockTryOnProvider
 from app.services.openai_try_on_provider import OpenAITryOnProvider
 from app.services.try_on_provider import TryOnProvider
 from app.services.try_on_service import TryOnService
+from app.services.visual_embedding_service import VisualEmbeddingService
 
 
 @lru_cache
@@ -51,6 +52,11 @@ def get_try_on_service() -> TryOnService:
     return TryOnService(
         providers=get_try_on_providers(),
     )
+
+
+@lru_cache
+def get_visual_embedding_service() -> VisualEmbeddingService:
+    return VisualEmbeddingService(get_settings())
 
 
 async def verify_internal_token(

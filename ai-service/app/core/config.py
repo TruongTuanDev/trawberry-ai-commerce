@@ -102,6 +102,14 @@ class Settings(BaseSettings):
     ai_service_internal_token: str = "dev-internal-token"
     nest_callback_auth_token: str | None = None
 
+    visual_embedding_provider: Literal["mock", "open_clip"] = "mock"
+    visual_embedding_model: str = "ViT-B-32"
+    visual_embedding_pretrained: str = "laion2b_s34b_b79k"
+    visual_embedding_dimensions: int = 512
+    visual_embedding_max_bytes: int = 8 * 1024 * 1024
+    visual_embedding_download_timeout_seconds: int = 15
+    visual_embedding_allowed_hosts: str = "backend-nest,minio"
+
     @property
     def input_image_max_bytes(self) -> int:
         default_bytes = self.max_input_image_size_mb * 1024 * 1024

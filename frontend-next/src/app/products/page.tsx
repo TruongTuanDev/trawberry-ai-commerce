@@ -36,9 +36,14 @@ const RECENT_SEARCHES_KEY = "public-catalog-recent-searches";
 const RECENT_SEARCH_LIMIT = 5;
 const PRODUCTS_FETCH_TIMEOUT_MS = 12000;
 
+function defaultSortFor(query: string) {
+  return query.trim() ? "relevance" : "newest";
+}
+
 function readFilters(searchParams: { get(name: string): string | null }) {
+  const q = searchParams.get("q") ?? searchParams.get("search") ?? "";
   return {
-    q: searchParams.get("q") ?? searchParams.get("search") ?? "",
+    q,
     categoryId: searchParams.get("categoryId") ?? "",
     categorySlug: searchParams.get("categorySlug") ?? searchParams.get("category") ?? "",
     brand: searchParams.get("brand") ?? "",
@@ -47,7 +52,7 @@ function readFilters(searchParams: { get(name: string): string | null }) {
     inStock: searchParams.get("inStock") ?? "",
     minPrice: searchParams.get("minPrice") ?? "",
     maxPrice: searchParams.get("maxPrice") ?? "",
-    sort: searchParams.get("sort") ?? "newest",
+    sort: searchParams.get("sort") ?? defaultSortFor(q),
   };
 }
 
@@ -169,7 +174,7 @@ function ProductsPageContent({
           filters.inStock ||
           filters.minPrice ||
           filters.maxPrice ||
-          filters.sort !== "newest",
+          filters.sort !== defaultSortFor(filters.q),
       ),
     [filters],
   );
@@ -188,7 +193,7 @@ function ProductsPageContent({
             : null,
         filters.minPrice ? `${t("catalog.filterSummary.minPrice")}: ${filters.minPrice}` : null,
         filters.maxPrice ? `${t("catalog.filterSummary.maxPrice")}: ${filters.maxPrice}` : null,
-        filters.sort !== "newest" ? `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}` : null,
+        filters.sort !== defaultSortFor(filters.q) ? `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}` : null,
       ].filter(Boolean) as string[],
     [filters, t],
   );
@@ -469,6 +474,13 @@ function ProductsPageContent({
   };
 
   const applyFilters = (targetFilters = filters) => {
+    const hadSearchQuery = Boolean(
+      searchParams.get("q")?.trim() || searchParams.get("search")?.trim(),
+    );
+    const effectiveSort =
+      targetFilters.q.trim() && !hadSearchQuery && targetFilters.sort === "newest"
+        ? "relevance"
+        : targetFilters.sort;
     const params = new URLSearchParams();
     if (targetFilters.q.trim()) params.set("q", targetFilters.q.trim());
     if (targetFilters.categoryId) params.set("categoryId", targetFilters.categoryId);
@@ -479,7 +491,9 @@ function ProductsPageContent({
     if (targetFilters.inStock) params.set("inStock", targetFilters.inStock);
     if (targetFilters.minPrice) params.set("minPrice", targetFilters.minPrice);
     if (targetFilters.maxPrice) params.set("maxPrice", targetFilters.maxPrice);
-    if (targetFilters.sort && targetFilters.sort !== "newest") params.set("sort", targetFilters.sort);
+    if (effectiveSort && effectiveSort !== defaultSortFor(targetFilters.q)) {
+      params.set("sort", effectiveSort);
+    }
     params.set("page", "1");
     try {
       storeRecentSearch(targetFilters.q);
@@ -611,11 +625,11 @@ function ProductsPageContent({
           onRemove: () => applyFilterPatch({ maxPrice: "" }),
         }
       : null,
-    filters.sort !== "newest"
+    filters.sort !== defaultSortFor(filters.q)
       ? {
           key: "sort",
           label: `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}`,
-          onRemove: () => applyFilterPatch({ sort: "newest" }),
+          onRemove: () => applyFilterPatch({ sort: defaultSortFor(filters.q) }),
         }
       : null,
   ].filter(Boolean) as Array<{ key: string; label: string; onRemove: () => void }>;
@@ -665,6 +679,7 @@ function ProductsPageContent({
               className="w-2 h-2 shrink-0 cursor-pointer text-[1px]"
               data-testid="marketplace-sort"
             >
+              <option value="relevance">{t("catalog.sortOptions.relevance")}</option>
               <option value="newest">{t("catalog.sortOptions.newest")}</option>
               <option value="price_asc">{t("catalog.sortOptions.price_asc")}</option>
               <option value="price_desc">{t("catalog.sortOptions.price_desc")}</option>
@@ -828,6 +843,7 @@ function ProductsPageContent({
                           }}
                           className="min-w-0 flex-1 bg-transparent text-sm outline-none"
                         >
+                          <option value="relevance">{t("catalog.sortOptions.relevance")}</option>
                           <option value="newest">{t("catalog.sortOptions.newest")}</option>
                           <option value="price_asc">{t("catalog.sortOptions.price_asc")}</option>
                           <option value="price_desc">{t("catalog.sortOptions.price_desc")}</option>
@@ -878,7 +894,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "sort" ? null : "sort")}
                         data-testid="catalog-filter-sort-trigger"
                         className={`h-10 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none max-sm:flex-1 max-sm:justify-center ${
-                          activeDropdown === "sort" || filters.sort !== "newest"
+                          activeDropdown === "sort" || filters.sort !== defaultSortFor(filters.q)
                             ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
@@ -898,6 +914,7 @@ function ProductsPageContent({
                       {activeDropdown === "sort" && (
                         <div className={`${dropdownPanelClass} flex min-w-[200px] flex-col gap-1 p-2.5`} data-testid="catalog-filter-sort-panel">
                           {[
+                            { label: t("catalog.sortOptions.relevance"), value: "relevance" },
                             { label: t("catalog.sortOptions.newest"), value: "newest" },
                             { label: t("catalog.sortOptions.price_asc"), value: "price_asc" },
                             { label: t("catalog.sortOptions.price_desc"), value: "price_desc" },

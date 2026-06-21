@@ -61,6 +61,11 @@ type PublicCategoryFacet = {
   count: number;
 };
 
+type SearchMatch = {
+  id: string;
+  score: number;
+};
+
 @Injectable()
 export class PublicProductsService {
   constructor(
@@ -70,9 +75,16 @@ export class PublicProductsService {
 
   async list(query: ListPublicProductsQueryDto) {
     const search = (query.q ?? query.search)?.trim();
+    const searchMatches = search
+      ? await this.findFullTextSearchMatches(search)
+      : null;
+    const searchRankById = new Map(
+      (searchMatches ?? []).map((match) => [match.id, Number(match.score)]),
+    );
     const priceRange = this.resolvePriceRange(query);
     const where: Prisma.ProductWhereInput = {
       visibility: 'ACTIVE',
+      catalogStatus: 'PUBLISHED',
       images: {
         some: {},
       },
@@ -135,84 +147,9 @@ export class PublicProductsService {
         ? { gender: { contains: query.gender.trim(), mode: 'insensitive' } }
         : {}),
       ...(search
-        ? {
-            OR: [
-              {
-                localTitle: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                wbTitle: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                brand: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                categoryName: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                category: {
-                  name: {
-                    contains: search,
-                    mode: 'insensitive',
-                  },
-                },
-              },
-              {
-                sourceCategoryName: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                wbVendorCode: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                sellerSku: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                wbDescription: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                localDescription: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                color: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                gender: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          }
+        ? searchMatches
+          ? { id: { in: searchMatches.map((match) => match.id) } }
+          : { OR: this.buildFallbackSearchPredicates(search) }
         : {}),
     };
 
@@ -282,7 +219,8 @@ export class PublicProductsService {
             this.matchesCategoryFilter(product, query.categorySlug!),
           )
         : readinessVisibleProducts,
-      query.sort ?? 'newest',
+      query.sort ?? (search ? 'relevance' : 'newest'),
+      searchRankById,
     );
     const visibleFacetProducts = facetProducts.filter(
       (product) => this.productReadiness.getReadiness(product).ready,
@@ -312,6 +250,7 @@ export class PublicProductsService {
       where: {
         id: productId,
         visibility: 'ACTIVE',
+        catalogStatus: 'PUBLISHED',
         images: {
           some: {},
         },
@@ -492,8 +431,17 @@ export class PublicProductsService {
     };
   }
 
-  private sortProducts(products: PublicProductRecord[], sort: string) {
+  private sortProducts(
+    products: PublicProductRecord[],
+    sort: string,
+    searchRankById: Map<string, number> = new Map(),
+  ) {
     return [...products].sort((a, b) => {
+      if (sort === 'relevance' && searchRankById.size > 0) {
+        const scoreDifference =
+          (searchRankById.get(b.id) ?? 0) - (searchRankById.get(a.id) ?? 0);
+        if (scoreDifference !== 0) return scoreDifference;
+      }
       if (sort === 'name_asc') {
         return (a.localTitle ?? a.wbTitle).localeCompare(
           b.localTitle ?? b.wbTitle,
@@ -524,6 +472,102 @@ export class PublicProductsService {
       ).getTime();
       return leftFreshness - rightFreshness;
     });
+  }
+
+  private async findFullTextSearchMatches(
+    search: string,
+  ): Promise<SearchMatch[] | null> {
+    try {
+      return await this.prisma.$queryRaw<SearchMatch[]>(Prisma.sql`
+        WITH search_input AS (
+          SELECT
+            websearch_to_tsquery('simple', ${search}) AS query,
+            lower(${search}) AS term
+        )
+        SELECT
+          p.id,
+          (
+            ts_rank_cd(
+              setweight(to_tsvector('simple', coalesce(p.local_title, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.wb_title, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.brand, '')), 'B') ||
+              setweight(to_tsvector('simple', coalesce(p.category_name, '')), 'B') ||
+              setweight(to_tsvector('simple', coalesce(p.source_category_name, '')), 'B') ||
+              setweight(to_tsvector('simple', coalesce(p.wb_vendor_code, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.seller_sku, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.color, '')), 'C') ||
+              setweight(to_tsvector('simple', coalesce(p.gender, '')), 'C') ||
+              setweight(to_tsvector('simple', coalesce(p.local_description, '')), 'D') ||
+              setweight(to_tsvector('simple', coalesce(p.wb_description, '')), 'D'),
+              search_input.query
+            ) * 10 +
+            greatest(
+              similarity(lower(coalesce(p.local_title, '')), search_input.term) * 6,
+              similarity(lower(coalesce(p.wb_title, '')), search_input.term) * 6,
+              similarity(lower(coalesce(p.brand, '')), search_input.term) * 3,
+              similarity(lower(coalesce(p.category_name, '')), search_input.term) * 3,
+              similarity(lower(coalesce(p.source_category_name, '')), search_input.term) * 3,
+              similarity(lower(coalesce(p.wb_vendor_code, '')), search_input.term) * 7,
+              similarity(lower(coalesce(p.seller_sku, '')), search_input.term) * 7
+            ) +
+            CASE
+              WHEN lower(coalesce(p.local_title, p.wb_title)) = search_input.term THEN 20
+              WHEN lower(coalesce(p.local_title, p.wb_title)) LIKE search_input.term || '%' THEN 8
+              ELSE 0
+            END
+          )::double precision AS score
+        FROM products p
+        CROSS JOIN search_input
+        WHERE p.visibility = 'ACTIVE'
+          AND p.catalog_status = 'PUBLISHED'
+          AND (
+            (
+              setweight(to_tsvector('simple', coalesce(p.local_title, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.wb_title, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.brand, '')), 'B') ||
+              setweight(to_tsvector('simple', coalesce(p.category_name, '')), 'B') ||
+              setweight(to_tsvector('simple', coalesce(p.source_category_name, '')), 'B') ||
+              setweight(to_tsvector('simple', coalesce(p.wb_vendor_code, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.seller_sku, '')), 'A') ||
+              setweight(to_tsvector('simple', coalesce(p.color, '')), 'C') ||
+              setweight(to_tsvector('simple', coalesce(p.gender, '')), 'C') ||
+              setweight(to_tsvector('simple', coalesce(p.local_description, '')), 'D') ||
+              setweight(to_tsvector('simple', coalesce(p.wb_description, '')), 'D')
+            ) @@ search_input.query
+            OR lower(coalesce(p.local_title, '')) % search_input.term
+            OR lower(coalesce(p.wb_title, '')) % search_input.term
+            OR lower(coalesce(p.brand, '')) % search_input.term
+            OR lower(coalesce(p.category_name, '')) % search_input.term
+            OR lower(coalesce(p.source_category_name, '')) % search_input.term
+            OR lower(coalesce(p.wb_vendor_code, '')) % search_input.term
+            OR lower(coalesce(p.seller_sku, '')) % search_input.term
+          )
+        ORDER BY score DESC, p.published_at DESC NULLS LAST, p.created_at DESC
+        LIMIT 2000
+      `);
+    } catch {
+      return null;
+    }
+  }
+
+  private buildFallbackSearchPredicates(
+    search: string,
+  ): Prisma.ProductWhereInput[] {
+    const contains = { contains: search, mode: Prisma.QueryMode.insensitive };
+    return [
+      { localTitle: contains },
+      { wbTitle: contains },
+      { brand: contains },
+      { categoryName: contains },
+      { category: { name: contains } },
+      { sourceCategoryName: contains },
+      { wbVendorCode: contains },
+      { sellerSku: contains },
+      { wbDescription: contains },
+      { localDescription: contains },
+      { color: contains },
+      { gender: contains },
+    ];
   }
 
   private buildFacets(products: FacetProductRecord[]) {

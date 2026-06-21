@@ -9,10 +9,12 @@ Supported query params:
 - `brand`, `color`, `gender`
 - `minPrice`, `maxPrice`
 - `inStock=true|false`
-- `sort=newest|price_asc|price_desc|name_asc|stock_desc`
+- `sort=relevance|newest|price_asc|price_desc|name_asc|stock_desc`
 - `page`, `size`
 
 Search matches title, article/vendor code, brand, category, source category, description, color, and gender.
+
+Keyword searches default to relevance ordering. The primary path uses weighted PostgreSQL full-text search plus `pg_trgm` similarity for typo tolerance. If the database migration is not available during rollout, the API safely falls back to case-insensitive substring matching.
 
 Public cards use the lowest active sellable variant price as the display price. Price sorting uses that same minimum variant price. Checkout still recalculates totals server-side.
 

@@ -1,5 +1,40 @@
 # Full Commerce Flow Audit
 
+## Visual Product Search Phase 3 Addendum
+
+- verified test/default embedding mode is deterministic and never loads or calls a real CLIP/OpenAI model
+- verified embedding API requires the internal service token and validates image bytes
+- verified product image URLs are indexed separately from shopper requests and persisted as 512-dimensional vectors
+- verified nearest-neighbor candidates are filtered again through `PUBLISHED`, shop, seller, price, stock, image, and readiness guards
+- verified missing vector tables, embedding service failures, empty indexes, or disabled vector flags fall back to Phase 2 semantic retrieval
+- verified reindex is admin-only and does not modify products, prices, stock, checkout, orders, or payments
+
+## Visual Product Search Phase 2 Addendum
+
+- verified disabled flags still return an empty safe response and hide the storefront camera trigger
+- verified provider failures return category-hint fallback results without surfacing provider errors
+- verified images with no detected shoppable product do not scan or return arbitrary catalog items
+- verified candidate retrieval and ranking retain `PUBLISHED`, active shop, approved seller, image, price, stock, and readiness guards
+- verified API matches expose score and reason metadata while existing `products` remains backward compatible
+- verified impression and click tracking receive the corresponding match score and remain best-effort
+- verified no checkout, cart, order, payment, shipping, WB sync, or AI Try-On behavior was changed
+
+## Public Text Search Full-Text Addendum
+
+- implemented weighted PostgreSQL `simple` full-text matching across product title, brand, category metadata, seller/WB codes, attributes, and descriptions
+- implemented `pg_trgm` typo-tolerant matching and relevance ranking, with exact/prefix title boosts
+- preserved public `PUBLISHED`, readiness, shop, seller, stock, and price guards after ranked candidate selection
+- preserved a substring fallback for staged deployments where the new extension/index migration is not yet available
+- runtime verification is blocked before search migration application by historical failed migration `20260510_add_ai_image_tables` (`P3009`); no search migration was partially applied
+
+## Public Search and Checkout Publication Guard Addendum
+
+- verified public product listing and text search require `visibility=ACTIVE` and `catalogStatus=PUBLISHED`
+- verified public product detail returns not found for a readiness-passing `ACTIVE + DRAFT` product
+- verified server-side cart validation rejects the same inconsistent product as `PRODUCT_NOT_PUBLIC`
+- verified visual search already has an explicit `PUBLISHED` query guard and required no behavior change
+- confirmed price, stock, shop approval, seller approval, readiness, and checkout recalculation rules remain enforced
+
 ## Ads Production Monitoring Phase 6.3 Addendum
 
 - verified monitoring is an independent read-only Ads operations surface and does not mutate wallets, ledgers, top-ups, campaigns, recommendation events, or financial records

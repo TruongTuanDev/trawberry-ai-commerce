@@ -364,6 +364,7 @@ npm run test:e2e:multi-shop-checkout
 npm run test:e2e:customer-order-history
 npm run test:e2e:notifications
 npm run test:e2e:support-cases
+npm run test:e2e:visual-search
 ```
 
 ## 8. Cấu trúc repo

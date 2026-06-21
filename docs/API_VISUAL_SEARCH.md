@@ -1,78 +1,85 @@
 # Visual Search API
 
-## Phase 1 Scope
+## Phase 3 Scope
 
-- Public visual product search is additive and isolated from checkout, cart, order, payment, shipping, WB sync, and AI Try-On flows.
-- Phase 1 uses rule-based product matching with an optional OpenAI vision analysis step.
-- If AI analysis is disabled or fails, the API falls back safely to `categoryHint` plus empty keywords.
+- Public visual product search is isolated from checkout, cart, orders, payments, shipping, WB sync, and AI Try-On.
+- An optional OpenAI vision step converts the uploaded image into structured catalog attributes.
+- Local CLIP creates direct image embeddings and pgvector performs cosine nearest-neighbor retrieval.
+- Semantic attributes remain an optional reranking and fallback layer.
+- Provider failures safely fall back to the optional `categoryHint`.
 
-## Feature Flags
+## Runtime Configuration
 
-- `VISUAL_SEARCH_ENABLED`
-- `PUBLIC_VISUAL_SEARCH_ENABLED`
-- `VISUAL_SEARCH_TRACKING_ENABLED`
-- `NEXT_PUBLIC_VISUAL_SEARCH_ENABLED`
+- `VISUAL_SEARCH_ENABLED=false`
+- `PUBLIC_VISUAL_SEARCH_ENABLED=false`
+- `VISUAL_SEARCH_TRACKING_ENABLED=false`
+- `VISUAL_SEARCH_AI_PROVIDER=rule_based_ai_v1`
+- `VISUAL_SEARCH_OPENAI_MODEL=gpt-4.1-mini`
+- `VISUAL_SEARCH_OPENAI_TIMEOUT_MS=15000`
+- `VISUAL_SEARCH_VECTOR_ENABLED=false`
+- `VISUAL_SEARCH_VECTOR_CANDIDATE_LIMIT=500`
+- `VISUAL_SEARCH_VECTOR_MIN_SCORE=0.15`
+- `VISUAL_EMBEDDING_PROVIDER=mock|open_clip`
+- `VISUAL_EMBEDDING_MODEL=ViT-B-32`
+- `VISUAL_EMBEDDING_PRETRAINED=laion2b_s34b_b79k`
+- `OPENAI_API_KEY` is required only when the provider is `openai`.
 
-Recommended rollout:
-
-1. Deploy with every visual-search flag off.
-2. Enable `VISUAL_SEARCH_ENABLED=true`.
-3. Enable `PUBLIC_VISUAL_SEARCH_ENABLED=true` for storefront exposure.
-4. Enable `VISUAL_SEARCH_TRACKING_ENABLED=true` after response quality is confirmed.
-
-## Architecture
-
-- Frontend public header camera button is hidden unless visual search is enabled.
-- Frontend modal uploads one cropped image region plus an optional category hint.
-- Backend validates image mime and size, analyzes the image through a safe provider abstraction, and never blocks the shopper with a provider-originated `500`.
-- Backend searches only public-ready products already visible in the marketplace.
-- Tracking writes are best-effort and degrade safely.
+All visual-search flags remain off by default. Enable core, public exposure, and tracking separately after quality review.
 
 ## POST `/api/public/visual-search`
 
-Request:
+Request is `multipart/form-data`:
 
-- `multipart/form-data`
-- `image` required
-- `categoryHint` optional
-- `cropX` optional
-- `cropY` optional
-- `cropWidth` optional
-- `cropHeight` optional
-- `guestSessionId` optional
+- `image`: required JPEG, PNG, or WEBP; maximum 8 MB
+- `categoryHint`: optional
+- `cropX`, `cropY`, `cropWidth`, `cropHeight`: optional crop metadata
+- `guestSessionId`: optional; the request header is preferred
 
-Response:
+Example response:
 
 ```json
 {
   "analysis": {
-    "category": "Шорты",
+    "productDetected": true,
+    "category": "Shorts",
     "color": "Blue",
     "gender": "female",
-    "keywords": ["спорт", "running"]
+    "material": "polyester",
+    "pattern": "solid",
+    "style": "sport",
+    "keywords": ["sport", "running"],
+    "confidence": 0.94
   },
   "products": [],
-  "algorithm": "visual_search_rule_based_v1",
+  "matches": [
+    {
+      "product": {},
+      "score": 94.8,
+      "reasons": ["category", "color", "style", "keywords", "in_stock"]
+    }
+  ],
+  "algorithm": "visual_search_clip_pgvector_hybrid_v3",
+  "provider": "openai",
+  "fallbackUsed": false,
+  "vectorUsed": true,
   "visualSearchLogId": "optional-uuid"
 }
 ```
 
-Disabled response behavior:
+`products` remains for backward compatibility. `matches` provides the corresponding score and match reasons.
 
-- Returns a safe payload with `products: []`
-- Can include `disabled: true`
-- Never changes normal text search behavior
+When public visual search is disabled, the API returns empty `products` and `matches`, plus `disabled: true`. Raw image bytes and base64 are never logged or persisted by this flow.
 
-Validation:
+## Matching and Safety
 
-- supported mime types: `image/jpeg`, `image/png`, `image/webp`
-- max file size: `8MB`
-- uploaded bytes are processed in memory in Phase 1
-- raw image bytes/base64 are never logged
+- Only `PUBLISHED`, active, public-ready products from active shops and approved sellers are considered.
+- Vector mode compares the shopper image directly with pre-indexed product-image vectors.
+- Semantic fallback uses category, color, gender, material, pattern, style, and keywords.
+- Candidate limit is 500; result limit is 24.
+- Ranking also considers stock, rating, and feedback, but visual/category signals carry the main weight.
+- If no shoppable product is detected and no category hint exists, the API returns no candidates.
 
 ## POST `/api/public/visual-search/events`
-
-Request body:
 
 ```json
 {
@@ -80,32 +87,24 @@ Request body:
   "visualSearchLogId": "optional-uuid",
   "productId": "product-uuid",
   "rank": 1,
-  "score": 88.5
+  "score": 94.8
 }
 ```
 
-Behavior:
-
-- best-effort tracking only
-- safe no-op when tracking is disabled
-
-## Matching Rules
-
-- only `PUBLISHED`, active, public-ready products are considered
-- archived, unpublished, and non-visible products are excluded
-- score inputs include category, category hint, color, keywords, and stock availability
-- max result count: `24`
+Tracking is best-effort and becomes a safe no-op when disabled.
 
 ## Persistence
 
-Phase 1 additive Prisma models:
+- `VisualSearchLog` stores safe detected metadata and provider information.
+- `VisualSearchEvent` stores impression/click rank and score.
+- `product_image_embeddings` stores one current vector per product image with source/model fingerprints.
 
-- `VisualSearchLog`
-- `VisualSearchEvent`
+## POST `/api/admin/visual-search/reindex`
 
-## Future Phase 2
-
-- image embeddings
-- vector search
-- stronger product-region detection
-- hybrid ranking between semantic similarity and catalog/business signals
+- Admin authentication is required.
+- Optional body: `{ "limit": 100, "offset": 0 }`, maximum batch size 500.
+- Use the returned `nextOffset` while `hasMore=true` to walk the full catalog deterministically.
+- Downloads public-ready product image URLs through the internal embedding service.
+- Skips unchanged source/update/model fingerprints and reports indexed, skipped, and failed counts.
+- Invalid, missing, or unreachable source images are reported per image without aborting the batch.
+- With the OpenCLIP provider, the AI service preloads model weights before its healthcheck becomes ready. `VISUAL_EMBEDDING_REQUEST_TIMEOUT_MS` controls the backend request timeout after startup.

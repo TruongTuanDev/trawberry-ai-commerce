@@ -46,6 +46,9 @@ export class CreateVisualSearchDto {
 }
 
 class VisualSearchAnalysisDto {
+  @ApiProperty()
+  productDetected!: boolean;
+
   @ApiProperty({ nullable: true })
   category!: string | null;
 
@@ -55,8 +58,31 @@ class VisualSearchAnalysisDto {
   @ApiProperty({ nullable: true })
   gender!: string | null;
 
+  @ApiProperty({ nullable: true })
+  material!: string | null;
+
+  @ApiProperty({ nullable: true })
+  pattern!: string | null;
+
+  @ApiProperty({ nullable: true })
+  style!: string | null;
+
   @ApiProperty({ type: String, isArray: true })
   keywords!: string[];
+
+  @ApiProperty({ minimum: 0, maximum: 1 })
+  confidence!: number;
+}
+
+class VisualSearchMatchDto {
+  @ApiProperty({ type: PublicProductResponseDto })
+  product!: PublicProductResponseDto;
+
+  @ApiProperty()
+  score!: number;
+
+  @ApiProperty({ type: String, isArray: true })
+  reasons!: string[];
 }
 
 export class VisualSearchResponseDto {
@@ -66,8 +92,20 @@ export class VisualSearchResponseDto {
   @ApiProperty({ type: PublicProductResponseDto, isArray: true })
   products!: PublicProductResponseDto[];
 
+  @ApiProperty({ type: VisualSearchMatchDto, isArray: true })
+  matches!: VisualSearchMatchDto[];
+
   @ApiProperty()
   algorithm!: string;
+
+  @ApiProperty()
+  provider!: string;
+
+  @ApiProperty()
+  fallbackUsed!: boolean;
+
+  @ApiProperty()
+  vectorUsed!: boolean;
 
   @ApiPropertyOptional()
   visualSearchLogId?: string | null;

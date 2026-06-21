@@ -1,5 +1,38 @@
 # Project Status
 
+## WB-like Visual Search with CLIP and pgvector - 2026-06-20
+
+- Code status: implemented behind `VISUAL_SEARCH_VECTOR_ENABLED=false`.
+- Product image links are embedded once by the AI service and stored in PostgreSQL pgvector; shopper queries create one query vector and use HNSW cosine nearest-neighbor retrieval.
+- Hybrid ranking combines direct image similarity with semantic attributes and public marketplace readiness.
+- Admin reindex supports batches up to 500 and skips unchanged URL/update/model fingerprints.
+- PostgreSQL Compose now uses the pgvector PostgreSQL 16 image; OpenCLIP model files persist in `ai-model-cache`.
+- OpenCLIP is preloaded before AI-service readiness; backend embedding timeout is configurable with `VISUAL_EMBEDDING_REQUEST_TIMEOUT_MS`.
+- Runtime enablement is pending repair of the existing failed Prisma migration history and a full catalog reindex.
+
+## Visual Product Search Semantic Attribute Retrieval - 2026-06-20
+
+- Visual search Phase 2 code is implemented with richer image understanding, no-product detection, confidence, public-catalog candidate retrieval, weighted relevance, match reasons, and score-aware tracking.
+- Runtime configuration now reaches both backend and frontend containers; visual search and OpenAI remain disabled by default until explicitly enabled.
+- Provider model and timeout are configurable through `VISUAL_SEARCH_OPENAI_MODEL` and `VISUAL_SEARCH_OPENAI_TIMEOUT_MS`.
+- Focused backend tests pass (`6/6`) using mocked provider responses only.
+- Native image embeddings/vector search remain a future architecture phase requiring a dedicated multimodal embedding provider and product-image indexing pipeline.
+
+## Public Text Search Full-Text and Typo-Tolerance - 2026-06-20
+
+- Code status: implemented, runtime rollout blocked by existing database migration history.
+- Public product keyword search now supports weighted PostgreSQL full-text matching, trigram typo tolerance, relevance ordering, and safe fallback to the previous substring behavior.
+- Catalog UI and API support `sort=relevance`; keyword searches select relevance by default.
+- Search indexes are defined in `20260620_add_public_product_full_text_search` but are not yet applied to the local runtime because Prisma reports failed historical migration `20260510_add_ai_image_tables` (`P3009`).
+- Focused backend regression passes (`9/9`), backend build passes, and the rebuilt backend Docker image passes compilation. Runtime smoke and frontend verification remain pending.
+
+## Public Search and Checkout Publication Guard Hardening - 2026-06-20
+
+- Public catalog search/list and product detail now require both `visibility=ACTIVE` and `catalogStatus=PUBLISHED` at the database query boundary.
+- Cart and checkout validation now explicitly rejects any product whose catalog status is not `PUBLISHED`, even if stale or inconsistent data leaves its visibility active and all readiness fields valid.
+- Regression tests cover the inconsistent `ACTIVE + DRAFT` state across search, detail, and cart validation.
+- Text search remains database-backed case-insensitive substring matching. Fuzzy/full-text search and image embedding/vector search are not included in this safety phase.
+
 ## Seller Ads V1 Final Release QA - 2026-06-13
 
 - Status: verified end to end.

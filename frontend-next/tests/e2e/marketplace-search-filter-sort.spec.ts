@@ -7,6 +7,7 @@ test("public marketplace search, filters, sort, and detail expose category field
   await page.getByTestId("marketplace-search").fill("Linen Bloom");
   await page.getByTestId("marketplace-apply").click();
   await expect(page).toHaveURL(/q=Linen\+Bloom|q=Linen%20Bloom/);
+  await expect(page.getByTestId("marketplace-sort")).toHaveValue("relevance");
   await expect(page.locator("[data-testid='product-card']").first()).toContainText("Linen Bloom Dress");
   await expect(page.locator("[data-testid='product-card']").first()).toContainText("Berry Atelier");
 

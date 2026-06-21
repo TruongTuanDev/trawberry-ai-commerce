@@ -154,6 +154,10 @@ export function VisualSearchModal({
   }, [previewUrl]);
 
   const similarProducts = useMemo(() => results?.products ?? [], [results]);
+  const matchByProductId = useMemo(
+    () => new Map((results?.matches ?? []).map((match) => [match.product.id, match])),
+    [results],
+  );
 
   if (!open) {
     return null;
@@ -208,6 +212,7 @@ export function VisualSearchModal({
               visualSearchLogId: response.visualSearchLogId ?? undefined,
               productId: product.id,
               rank: index + 1,
+              score: response.matches.find((match) => match.product.id === product.id)?.score,
               guestSessionId: getGuestSessionId(),
             }),
           ),
@@ -243,6 +248,7 @@ export function VisualSearchModal({
       visualSearchLogId: results.visualSearchLogId,
       productId: product.id,
       rank: index + 1,
+      score: matchByProductId.get(product.id)?.score,
       guestSessionId: getGuestSessionId(),
     });
   };
@@ -408,6 +414,21 @@ export function VisualSearchModal({
                       <p className="text-sm text-[var(--muted)]">
                         {results.analysis.color ?? categoryHint}
                       </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2" data-testid="visual-search-analysis">
+                      {[
+                        results.analysis.category,
+                        results.analysis.color,
+                        results.analysis.material,
+                        results.analysis.pattern,
+                        results.analysis.style,
+                      ]
+                        .filter((value): value is string => Boolean(value))
+                        .map((value) => (
+                          <span key={value} className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--muted)]">
+                            {value}
+                          </span>
+                        ))}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="visual-search-product-grid">
                       {similarProducts.map((product, index) => (

@@ -686,6 +686,7 @@
     "previous": "Trước",
     "next": "Sau",
     "sortOptions": {
+      "relevance": "Phù hợp nhất",
       "newest": "Theo độ phổ biến",
       "price_asc": "Giá: thấp đến cao",
       "price_desc": "Giá: cao đến thấp",

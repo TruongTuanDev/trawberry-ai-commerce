@@ -539,6 +539,7 @@
     "previous": "Назад",
     "next": "Вперед",
     "sortOptions": {
+      "relevance": "По релевантности",
       "newest": "По популярности",
       "price_asc": "Цена: дешевле",
       "price_desc": "Цена: дороже",

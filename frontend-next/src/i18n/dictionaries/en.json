@@ -540,6 +540,7 @@
     "previous": "Previous",
     "next": "Next",
     "sortOptions": {
+      "relevance": "Best match",
       "newest": "By popularity",
       "price_asc": "Price: cheap first",
       "price_desc": "Price: expensive first",
