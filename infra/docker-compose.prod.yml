@@ -28,7 +28,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
 
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: strawberry-postgres
     restart: unless-stopped
     environment:
@@ -131,6 +131,13 @@ services:
       OPENAI_IMAGE_MAX_RETRIES: ${OPENAI_IMAGE_MAX_RETRIES:-1}
       MAX_INPUT_IMAGE_SIZE_MB: ${MAX_INPUT_IMAGE_SIZE_MB:-15}
       RUN_OPENAI_SMOKE: ${RUN_OPENAI_SMOKE:-false}
+      VISUAL_EMBEDDING_PROVIDER: ${VISUAL_EMBEDDING_PROVIDER:-open_clip}
+      VISUAL_EMBEDDING_MODEL: ${VISUAL_EMBEDDING_MODEL:-ViT-B-32}
+      VISUAL_EMBEDDING_PRETRAINED: ${VISUAL_EMBEDDING_PRETRAINED:-laion2b_s34b_b79k}
+      VISUAL_EMBEDDING_DIMENSIONS: ${VISUAL_EMBEDDING_DIMENSIONS:-512}
+      VISUAL_EMBEDDING_MAX_BYTES: ${VISUAL_EMBEDDING_MAX_BYTES:-8388608}
+      VISUAL_EMBEDDING_DOWNLOAD_TIMEOUT_SECONDS: ${VISUAL_EMBEDDING_DOWNLOAD_TIMEOUT_SECONDS:-15}
+      VISUAL_EMBEDDING_ALLOWED_HOSTS: ${VISUAL_EMBEDDING_ALLOWED_HOSTS:-backend-nest,minio}
       STORAGE_DRIVER: ${STORAGE_DRIVER:-s3}
       STORAGE_LOCAL_ROOT: generated
       STORAGE_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-https://storage.yourdomain.ru}
@@ -149,6 +156,7 @@ services:
     expose:
       - "8000"
     volumes:
+      - ai_model_cache:/root/.cache
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     healthcheck:
@@ -156,6 +164,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+      start_period: 5m
     networks:
       - strawberry-prod-net
 
@@ -168,6 +177,7 @@ services:
     build:
       context: ../backend-nest
       dockerfile: Dockerfile
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]
     environment:
       TZ: ${TZ:-UTC}
       APP_ENV: ${APP_ENV:-production}
@@ -208,6 +218,16 @@ services:
       AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-45000}
       AI_SERVICE_RETRY_ATTEMPTS: ${AI_SERVICE_RETRY_ATTEMPTS:-3}
       AI_SERVICE_RETRY_DELAY_MS: ${AI_SERVICE_RETRY_DELAY_MS:-1000}
+      VISUAL_SEARCH_ENABLED: ${VISUAL_SEARCH_ENABLED:-false}
+      PUBLIC_VISUAL_SEARCH_ENABLED: ${PUBLIC_VISUAL_SEARCH_ENABLED:-false}
+      VISUAL_SEARCH_TRACKING_ENABLED: ${VISUAL_SEARCH_TRACKING_ENABLED:-false}
+      VISUAL_SEARCH_AI_PROVIDER: ${VISUAL_SEARCH_AI_PROVIDER:-rule_based_ai_v1}
+      VISUAL_SEARCH_OPENAI_MODEL: ${VISUAL_SEARCH_OPENAI_MODEL:-gpt-4.1-mini}
+      VISUAL_SEARCH_OPENAI_TIMEOUT_MS: ${VISUAL_SEARCH_OPENAI_TIMEOUT_MS:-15000}
+      VISUAL_SEARCH_VECTOR_ENABLED: ${VISUAL_SEARCH_VECTOR_ENABLED:-false}
+      VISUAL_SEARCH_VECTOR_CANDIDATE_LIMIT: ${VISUAL_SEARCH_VECTOR_CANDIDATE_LIMIT:-500}
+      VISUAL_SEARCH_VECTOR_MIN_SCORE: ${VISUAL_SEARCH_VECTOR_MIN_SCORE:-0.15}
+      VISUAL_EMBEDDING_REQUEST_TIMEOUT_MS: ${VISUAL_EMBEDDING_REQUEST_TIMEOUT_MS:-60000}
       BACKEND_INTERNAL_BASE_URL: http://backend-nest:3001
       BACKEND_PUBLIC_BASE_URL: ${BACKEND_PUBLIC_URL:-https://api.yourdomain.ru}
       APP_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-https://api.yourdomain.ru}
@@ -272,6 +292,9 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.yourdomain.ru}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://yourdomain.ru}
+      VISUAL_SEARCH_ENABLED: ${VISUAL_SEARCH_ENABLED:-false}
+      PUBLIC_VISUAL_SEARCH_ENABLED: ${PUBLIC_VISUAL_SEARCH_ENABLED:-false}
+      VISUAL_SEARCH_TRACKING_ENABLED: ${VISUAL_SEARCH_TRACKING_ENABLED:-false}
     depends_on:
       backend-nest:
         condition: service_healthy
@@ -292,6 +315,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  ai_model_cache:
 
 networks:
   strawberry-prod-net:

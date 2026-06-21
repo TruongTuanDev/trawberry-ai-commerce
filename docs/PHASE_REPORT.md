@@ -13,6 +13,7 @@
 - Reconciled the pre-existing Prisma migration history against the live schema, applied the text-search and pgvector migrations, and verified Prisma reports the schema as up to date.
 - Built and started the PostgreSQL, backend, frontend, and AI containers; verified OpenCLIP returns 512 dimensions, reindex writes a `READY` vector, and public hybrid search returns `vectorUsed=true` with the v3 algorithm.
 - Added OpenCLIP startup preload and a five-minute healthcheck start period so the first shopper request does not pay the model cold-start cost.
+- Updated production Compose to use pgvector PostgreSQL, persist the OpenCLIP cache, forward visual-search flags to all consumers, and apply Prisma migrations before backend startup.
 - Updated the stale AI Try-On size assertion to match the active height/weight recommendation (`48-50`); its focused suite passes (`28/28`).
 - A transient 5-second timeout in the concurrent payment-confirmation test passed in focused rerun (`19/19`), and the final full backend regression passes (`41/41` suites, `412/412` tests).
 

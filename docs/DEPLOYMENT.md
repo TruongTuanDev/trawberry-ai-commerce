@@ -6,6 +6,8 @@ For first-time server preparation, start with [docs/VPS_SETUP.md](/c:/Users/admi
 
 ## VPS sizing
 
+The production stack uses the `pgvector/pgvector:pg16` image and a persistent `ai_model_cache` volume. When OpenCLIP is enabled, allow up to five minutes for AI-service cold-start before it becomes healthy; backend startup runs `prisma migrate deploy` automatically.
+
 - Recommended: `8 vCPU`, `16 GB RAM`, `200 GB NVMe`
 - Minimum: `4 vCPU`, `8 GB RAM`, `100 GB`
 
