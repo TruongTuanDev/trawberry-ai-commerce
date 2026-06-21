@@ -218,8 +218,6 @@ jobs:
 
           test -f infra/.env.production
 
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null 2>&1
-
           cat > infra/.env.deploy <<DEPLOY_ENV
           FRONTEND_IMAGE=$FRONTEND_IMAGE
           BACKEND_IMAGE=$BACKEND_IMAGE
@@ -235,18 +233,46 @@ jobs:
           ./infra/scripts/smoke-production.sh infra/.env.production
           EOF
 
+          ssh_opts=(
+            -i "$HOME/.ssh/id_ed25519"
+            -p "$VPS_PORT"
+            -o ServerAliveInterval=30
+            -o ServerAliveCountMax=20
+            -o TCPKeepAlive=yes
+          )
+          remote="$VPS_USER@$VPS_HOST"
+
           for attempt in 1 2 3; do
-            echo "VPS deploy attempt $attempt/3"
-            if ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" \
-              -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes \
-              "$VPS_USER@$VPS_HOST" \
-              "VPS_APP_DIR='$VPS_APP_DIR' GHCR_USERNAME='$GHCR_USERNAME' GHCR_TOKEN='$GHCR_TOKEN' FRONTEND_IMAGE='$FRONTEND_IMAGE' BACKEND_IMAGE='$BACKEND_IMAGE' AI_SERVICE_IMAGE='$AI_SERVICE_IMAGE' NGINX_IMAGE='$NGINX_IMAGE' DEPLOY_SHA='$DEPLOY_SHA' bash -se" \
-              < "$remote_script"; then
+            if ssh "${ssh_opts[@]}" "$remote" \
+              "cat > '$VPS_APP_DIR/infra/.deploy-remote.sh'" < "$remote_script"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Could not upload the remote deploy script after 3 attempts."
+              exit 1
+            fi
+            sleep 10
+          done
+
+          ssh "${ssh_opts[@]}" "$remote" \
+            "set -e; echo '$GHCR_TOKEN' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin >/dev/null 2>&1; rm -f '$VPS_APP_DIR/infra/.deploy.status'; nohup env VPS_APP_DIR='$VPS_APP_DIR' GHCR_USERNAME='$GHCR_USERNAME' FRONTEND_IMAGE='$FRONTEND_IMAGE' BACKEND_IMAGE='$BACKEND_IMAGE' AI_SERVICE_IMAGE='$AI_SERVICE_IMAGE' NGINX_IMAGE='$NGINX_IMAGE' DEPLOY_SHA='$DEPLOY_SHA' bash -c 'bash \"$VPS_APP_DIR/infra/.deploy-remote.sh\"; code=\$?; printf \"%s\\n\" \"\$code\" > \"$VPS_APP_DIR/infra/.deploy.status\"' > '$VPS_APP_DIR/infra/.deploy.log' 2>&1 < /dev/null & echo 'Remote deploy started.'"
+
+          for poll in $(seq 1 80); do
+            status="$(ssh "${ssh_opts[@]}" "$remote" \
+              "if test -f '$VPS_APP_DIR/infra/.deploy.status'; then cat '$VPS_APP_DIR/infra/.deploy.status'; else printf running; fi" \
+              2>/dev/null || printf disconnected)"
+            echo "Remote deploy poll $poll/80: $status"
+            if [ "$status" = "0" ]; then
+              ssh "${ssh_opts[@]}" "$remote" "tail -n 120 '$VPS_APP_DIR/infra/.deploy.log'"
               exit 0
             fi
-            if [ "$attempt" -lt 3 ]; then
-              echo "SSH deploy attempt failed; retrying cached pull/deploy in 20 seconds."
-              sleep 20
+            if [ "$status" != "running" ] && [ "$status" != "disconnected" ]; then
+              ssh "${ssh_opts[@]}" "$remote" "tail -n 200 '$VPS_APP_DIR/infra/.deploy.log'" || true
+              exit 1
             fi
+            sleep 30
           done
+
+          echo "Remote deploy did not finish within 40 minutes."
+          ssh "${ssh_opts[@]}" "$remote" "tail -n 200 '$VPS_APP_DIR/infra/.deploy.log'" || true
           exit 1

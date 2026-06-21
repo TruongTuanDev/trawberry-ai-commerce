@@ -25,7 +25,7 @@ CD scope:
 - build and push production images to GHCR
 - SSH to VPS and deploy with `infra/docker-compose.prod.yml`
 - run post-deploy smoke checks
-- keep SSH alive during large image pulls and retry the idempotent remote deploy up to three times
+- launch long image pulls/deployment in a detached VPS process and poll status over short SSH connections
 
 Required GitHub secrets:
 
