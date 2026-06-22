@@ -430,7 +430,7 @@ export class VisualSearchService {
       }))
       .filter((entry) => entry.score > 0)
       .sort((left, right) => right.score - left.score)
-      .slice(0, VISUAL_SEARCH_RESULT_LIMIT);
+      .slice(0, this.resolveResultLimit());
   }
 
   async reindexPublishedImages(limit = 100, offset = 0) {
@@ -597,7 +597,7 @@ export class VisualSearchService {
           };
         })
         .sort((left, right) => right.score - left.score)
-        .slice(0, VISUAL_SEARCH_RESULT_LIMIT);
+        .slice(0, this.resolveResultLimit());
     } catch {
       return [];
     }
@@ -927,6 +927,15 @@ export class VisualSearchService {
     return Number.isFinite(configured)
       ? Math.min(Math.max(configured, -1), 1)
       : 0.15;
+  }
+
+  private resolveResultLimit() {
+    const configured = Number(
+      this.configService.get<string>('VISUAL_SEARCH_RESULT_LIMIT'),
+    );
+    return Number.isInteger(configured) && configured > 0
+      ? Math.min(configured, VISUAL_SEARCH_RESULT_LIMIT)
+      : VISUAL_SEARCH_RESULT_LIMIT;
   }
 
   private resolveEmbeddingModelName() {
