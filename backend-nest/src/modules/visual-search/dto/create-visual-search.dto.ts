@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PublicProductResponseDto } from '../../public-products/dto/public-product-response.dto';
 
 export class CreateVisualSearchDto {
@@ -13,28 +13,28 @@ export class CreateVisualSearchDto {
   @ApiPropertyOptional()
   @Type(() => Number)
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(0)
   cropX?: number;
 
   @ApiPropertyOptional()
   @Type(() => Number)
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(0)
   cropY?: number;
 
   @ApiPropertyOptional()
   @Type(() => Number)
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(0)
   cropWidth?: number;
 
   @ApiPropertyOptional()
   @Type(() => Number)
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   @Min(0)
   cropHeight?: number;
 

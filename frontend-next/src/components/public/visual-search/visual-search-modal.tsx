@@ -190,10 +190,10 @@ export function VisualSearchModal({
         ...(useWholeImage
           ? {}
           : {
-              cropX: crop.x,
-              cropY: crop.y,
-              cropWidth: crop.width,
-              cropHeight: crop.height,
+              cropX: Math.round(crop.x),
+              cropY: Math.round(crop.y),
+              cropWidth: Math.round(crop.width),
+              cropHeight: Math.round(crop.height),
             }),
         guestSessionId: getGuestSessionId(),
       });
