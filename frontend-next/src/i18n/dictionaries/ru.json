@@ -2831,15 +2831,17 @@
     "genericError": "Что-то пошло не так. Повторите попытку."
   },
   "visualSearch": {
-    "couldNotFindProductsByPhoto": "Could not find products by photo",
-    "findProductsByPhoto": "Find products by photo",
-    "findProduct": "Find product",
-    "supportedFormats": "Supported formats",
-    "dragOrChoosePhoto": "Drag or choose photo",
-    "selectProductArea": "Select product area",
-    "categoryHint": "Category hint",
-    "finding": "Finding",
-    "similarProductsFound": "Similar products found"
+    "couldNotFindProductsByPhoto": "Не удалось найти товары по фото. Попробуйте другое изображение.",
+    "findProductsByPhoto": "Поиск товаров по фото",
+    "findProduct": "Найти товар",
+    "supportedFormats": "Поддерживаемые форматы: JPG, PNG, WEBP до 8 МБ",
+    "dragOrChoosePhoto": "Перетащите или выберите фото",
+    "selectProductArea": "Область поиска",
+    "dragToSelectHint": "Перетащите прямо по фото, чтобы выделить область поиска. Тяните за углы, чтобы изменить размер.",
+    "wholeImage": "Всё изображение",
+    "categoryHint": "Подсказка категории",
+    "finding": "Идёт поиск...",
+    "similarProductsFound": "Похожие товары"
   },
   "adminLogin": {
     "badge": "Вход администратора",

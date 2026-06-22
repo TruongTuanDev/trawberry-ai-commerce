@@ -11,27 +11,12 @@ import {
   type PublicProduct,
   type VisualSearchResponse,
 } from "@/lib/public-api";
-
-type CropState = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-const CATEGORY_HINTS = [
-  { value: "Шорты", key: "visualSearch.shorts" },
-  { value: "Топ", key: "visualSearch.top" },
-  { value: "Аксессуары", key: "visualSearch.accessories" },
-  { value: "Другой предмет", key: "visualSearch.otherItem" },
-];
-
-const DEFAULT_CROP: CropState = {
-  x: 10,
-  y: 10,
-  width: 80,
-  height: 80,
-};
+import {
+  ImageCropSelector,
+  FULL_CROP,
+  isFullCrop,
+  type Crop,
+} from "@/components/public/visual-search/image-crop-selector";
 
 function CameraIcon() {
   return (
@@ -49,7 +34,7 @@ function CameraIcon() {
   );
 }
 
-async function cropImageFile(file: File, crop: CropState) {
+async function cropImageFile(file: File, crop: Crop) {
   const imageUrl = URL.createObjectURL(file);
 
   try {
@@ -118,8 +103,7 @@ export function VisualSearchModal({
   onClose: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
-  const [categoryHint, setCategoryHint] = useState<string>(CATEGORY_HINTS[0]!.value);
-  const [crop, setCrop] = useState<CropState>(DEFAULT_CROP);
+  const [crop, setCrop] = useState<Crop>(FULL_CROP);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [results, setResults] = useState<VisualSearchResponse | null>(null);
@@ -167,7 +151,7 @@ export function VisualSearchModal({
     setFile(null);
     setResults(null);
     setErrorMessage(null);
-    setCrop(DEFAULT_CROP);
+    setCrop(FULL_CROP);
   };
 
   const handleClose = () => {
@@ -178,7 +162,7 @@ export function VisualSearchModal({
   const handleFileChange = (selectedFile: File | null) => {
     setResults(null);
     setErrorMessage(null);
-    setCrop(DEFAULT_CROP);
+    setCrop(FULL_CROP);
     setFile(selectedFile);
   };
 
@@ -192,14 +176,18 @@ export function VisualSearchModal({
     setResults(null);
 
     try {
-      const croppedFile = await cropImageFile(file, crop);
+      const useWholeImage = isFullCrop(crop);
+      const searchImage = useWholeImage ? file : await cropImageFile(file, crop);
       const response = await createVisualSearch({
-        image: croppedFile,
-        categoryHint,
-        cropX: crop.x,
-        cropY: crop.y,
-        cropWidth: crop.width,
-        cropHeight: crop.height,
+        image: searchImage,
+        ...(useWholeImage
+          ? {}
+          : {
+              cropX: crop.x,
+              cropY: crop.y,
+              cropWidth: crop.width,
+              cropHeight: crop.height,
+            }),
         guestSessionId: getGuestSessionId(),
       });
       setResults(response);
@@ -229,13 +217,6 @@ export function VisualSearchModal({
     } finally {
       setLoading(false);
     }
-  };
-
-  const cropStyle = {
-    left: `${crop.x}%`,
-    top: `${crop.y}%`,
-    width: `${crop.width}%`,
-    height: `${crop.height}%`,
   };
 
   const handleProductNavigate = async (product: PublicProduct, index: number) => {
@@ -295,59 +276,25 @@ export function VisualSearchModal({
                   />
                 </label>
 
-                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-sm">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    {t("visualSearch.selectProductArea")}
-                  </p>
-                  <div className="mt-4 space-y-3">
-                    {[
-                      ["x", "X", crop.x],
-                      ["y", "Y", crop.y],
-                      ["width", "W", crop.width],
-                      ["height", "H", crop.height],
-                    ].map(([key, label, value]) => (
-                      <label key={key} className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                        {label}
-                        <input
-                          type="range"
-                          min={key === "width" || key === "height" ? 20 : 0}
-                          max={key === "x" || key === "y" ? 80 : 100}
-                          value={value}
-                          onChange={(event) =>
-                            setCrop((current) => ({
-                              ...current,
-                              [key]: Number(event.target.value),
-                            }))
-                          }
-                          className="mt-2 w-full accent-[var(--accent)]"
-                        />
-                      </label>
-                    ))}
+                {file ? (
+                  <div className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-sm">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {t("visualSearch.selectProductArea")}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                      {t("visualSearch.dragToSelectHint")}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setCrop(FULL_CROP)}
+                      disabled={isFullCrop(crop)}
+                      className="mt-4 w-full rounded-full bg-[var(--panel)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--panel-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+                      data-testid="visual-search-whole-image"
+                    >
+                      {t("visualSearch.wholeImage")}
+                    </button>
                   </div>
-                </div>
-
-                <div className="rounded-[1.75rem] border border-[var(--border)] bg-white p-5 shadow-sm">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    {t("visualSearch.categoryHint")}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {CATEGORY_HINTS.map((hint) => (
-                      <button
-                        key={hint.value}
-                        type="button"
-                        onClick={() => setCategoryHint(hint.value)}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                          categoryHint === hint.value
-                            ? "bg-gradient-primary text-white shadow-[0_10px_20px_rgba(203,17,171,0.2)]"
-                            : "bg-[var(--panel)] text-[var(--foreground)] hover:bg-[var(--panel-strong)]"
-                        }`}
-                        data-testid={`visual-search-category-${hint.value}`}
-                      >
-                        {t(hint.key)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                ) : null}
 
                 <button
                   type="button"
@@ -379,17 +326,12 @@ export function VisualSearchModal({
                   </div>
 
                   {previewUrl ? (
-                    <div className="relative overflow-hidden rounded-[1.5rem] bg-[linear-gradient(180deg,#fbf3ff_0%,#f7f6fb_100%)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                    <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,#fbf3ff_0%,#f7f6fb_100%)] p-2">
+                      <ImageCropSelector
                         src={previewUrl}
                         alt={t("visualSearch.findProductsByPhoto")}
-                        className="max-h-[440px] w-full object-contain"
-                        data-testid="visual-search-preview-image"
-                      />
-                      <div
-                        className="pointer-events-none absolute border-2 border-white shadow-[0_0_0_9999px_rgba(15,23,42,0.35)]"
-                        style={cropStyle}
+                        crop={crop}
+                        onChange={setCrop}
                       />
                     </div>
                   ) : (
@@ -412,7 +354,7 @@ export function VisualSearchModal({
                         {t("visualSearch.similarProductsFound")}
                       </h3>
                       <p className="text-sm text-[var(--muted)]">
-                        {results.analysis.color ?? categoryHint}
+                        {results.analysis.color ?? results.analysis.category ?? ""}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2" data-testid="visual-search-analysis">
