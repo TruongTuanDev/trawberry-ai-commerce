@@ -34,7 +34,9 @@ function CameraIcon() {
   );
 }
 
-async function cropImageFile(file: File, crop: Crop) {
+const MAX_UPLOAD_DIMENSION = 1280;
+
+async function prepareSearchImage(file: File, crop: Crop) {
   const imageUrl = URL.createObjectURL(file);
 
   try {
@@ -45,33 +47,38 @@ async function cropImageFile(file: File, crop: Crop) {
       element.src = imageUrl;
     });
 
+    // Source crop region in natural pixels (the whole image when crop covers all).
     const sx = Math.round((crop.x / 100) * image.width);
     const sy = Math.round((crop.y / 100) * image.height);
     const sWidth = Math.max(1, Math.round((crop.width / 100) * image.width));
     const sHeight = Math.max(1, Math.round((crop.height / 100) * image.height));
 
+    // Downscale so the longest side is <= MAX_UPLOAD_DIMENSION. Phone photos are
+    // much larger than the model needs and can exceed the 8MB upload limit,
+    // which otherwise fails the request before any matching happens.
+    const scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(sWidth, sHeight));
+    const dWidth = Math.max(1, Math.round(sWidth * scale));
+    const dHeight = Math.max(1, Math.round(sHeight * scale));
+
     const canvas = document.createElement("canvas");
-    canvas.width = sWidth;
-    canvas.height = sHeight;
+    canvas.width = dWidth;
+    canvas.height = dHeight;
     const context = canvas.getContext("2d");
     if (!context) {
       return file;
     }
 
-    context.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+    context.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
 
-    const mimeType = ["image/jpeg", "image/png", "image/webp"].includes(file.type)
-      ? file.type
-      : "image/png";
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, mimeType, 0.92),
+      canvas.toBlob(resolve, "image/jpeg", 0.9),
     );
     if (!blob) {
       return file;
     }
 
-    return new File([blob], file.name, {
-      type: mimeType,
+    return new File([blob], "search.jpg", {
+      type: "image/jpeg",
       lastModified: file.lastModified,
     });
   } finally {
@@ -177,7 +184,7 @@ export function VisualSearchModal({
 
     try {
       const useWholeImage = isFullCrop(crop);
-      const searchImage = useWholeImage ? file : await cropImageFile(file, crop);
+      const searchImage = await prepareSearchImage(file, crop);
       const response = await createVisualSearch({
         image: searchImage,
         ...(useWholeImage
