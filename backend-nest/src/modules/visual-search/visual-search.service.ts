@@ -16,7 +16,7 @@ import {
 const ALGORITHM = 'visual_search_semantic_attributes_v2';
 const VECTOR_ALGORITHM = 'visual_search_clip_pgvector_hybrid_v3';
 const PROVIDER_FALLBACK = 'rule_based_ai_v1';
-const VISUAL_SEARCH_MAX_BYTES = 8 * 1024 * 1024;
+const VISUAL_SEARCH_MAX_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 const DEFAULT_OPENAI_TIMEOUT_MS = 15_000;
@@ -240,7 +240,7 @@ export class VisualSearchService {
     }
 
     if (image.size > VISUAL_SEARCH_MAX_BYTES) {
-      throw new BadRequestException('Image size must be 8MB or smaller.');
+      throw new BadRequestException('Image size must be 20MB or smaller.');
     }
   }
 

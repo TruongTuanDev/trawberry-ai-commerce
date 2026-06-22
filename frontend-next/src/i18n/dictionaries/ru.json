@@ -2834,7 +2834,7 @@
     "couldNotFindProductsByPhoto": "Не удалось найти товары по фото. Попробуйте другое изображение.",
     "findProductsByPhoto": "Поиск товаров по фото",
     "findProduct": "Найти товар",
-    "supportedFormats": "Поддерживаемые форматы: JPG, PNG, WEBP до 8 МБ",
+    "supportedFormats": "Поддерживаемые форматы: JPG, PNG, WEBP до 20 МБ",
     "dragOrChoosePhoto": "Перетащите или выберите фото",
     "selectProductArea": "Область поиска",
     "dragToSelectHint": "Перетащите прямо по фото, чтобы выделить область поиска. Тяните за углы, чтобы изменить размер.",

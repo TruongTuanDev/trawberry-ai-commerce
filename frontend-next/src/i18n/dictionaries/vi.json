@@ -175,7 +175,7 @@
   "visualSearch": {
     "findProductsByPhoto": "Tìm sản phẩm bằng ảnh",
     "dragOrChoosePhoto": "Kéo thả hoặc chọn ảnh",
-    "supportedFormats": "Định dạng hỗ trợ: JPG, PNG, WEBP tối đa 8MB",
+    "supportedFormats": "Định dạng hỗ trợ: JPG, PNG, WEBP tối đa 20MB",
     "selectProductArea": "Vùng tìm kiếm",
     "dragToSelectHint": "Kéo trực tiếp trên ảnh để khoanh vùng cần tìm. Kéo các góc để thay đổi kích thước.",
     "wholeImage": "Toàn bộ ảnh",
