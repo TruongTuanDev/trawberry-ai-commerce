@@ -10,6 +10,8 @@ The production stack uses the `pgvector/pgvector:pg16` image and a persistent `a
 
 GitHub Actions launches the long pull/deploy sequence as a detached VPS process and polls its status over short SSH connections. A dropped SSH session does not terminate the remote Docker pull, migration, OpenCLIP preload, or smoke checks.
 
+For an existing database created with `prisma db push`, CD creates a PostgreSQL custom-format backup and baselines only the historical migrations after `prisma migrate diff` confirms that the live schema matches the current Prisma data model. The two search migrations remain pending and are then applied by normal `prisma migrate deploy`. Any unexpected drift stops deployment without writing migration history.
+
 - Recommended: `8 vCPU`, `16 GB RAM`, `200 GB NVMe`
 - Minimum: `4 vCPU`, `8 GB RAM`, `100 GB`
 

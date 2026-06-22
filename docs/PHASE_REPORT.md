@@ -17,6 +17,7 @@
 - Hardened CD after a real VPS AI-image pull ended with SSH `Broken pipe`: keepalives are enabled and the idempotent remote deploy retries three times using cached Docker layers.
 - Replaced the still-fragile long-lived SSH deployment with a detached VPS job plus short status polls, preserving remote progress across provider SSH disconnects.
 - Added automatic container status and bounded backend/PostgreSQL/AI log capture when production Compose fails, after the next deploy isolated the remaining failure to an unhealthy backend.
+- Diagnosed production Prisma `P3005` from the captured backend log and added a backup-first, schema-diff-guarded baseline path for databases historically created with `prisma db push`.
 - Updated the stale AI Try-On size assertion to match the active height/weight recommendation (`48-50`); its focused suite passes (`28/28`).
 - A transient 5-second timeout in the concurrent payment-confirmation test passed in focused rerun (`19/19`), and the final full backend regression passes (`41/41` suites, `412/412` tests).
 

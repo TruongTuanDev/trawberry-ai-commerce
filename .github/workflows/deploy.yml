@@ -238,6 +238,16 @@ jobs:
           trap dump_deploy_diagnostics ERR
 
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy pull nginx backend-nest frontend-next ai-service
+
+          migration_table="$(docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy exec -T postgres \
+            sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atqc "SELECT to_regclass('"'"'public._prisma_migrations'"'"');"')"
+          if [ -z "$migration_table" ]; then
+            echo "Existing database has no Prisma migration history; creating a guarded baseline backup."
+            ENV_FILE="$VPS_APP_DIR/infra/.env.production" ./infra/scripts/backup-postgres.sh
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy run --rm --no-deps \
+              backend-nest sh scripts/baseline-existing-production.sh
+          fi
+
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy ps
 
