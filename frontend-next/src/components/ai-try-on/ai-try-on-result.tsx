@@ -19,7 +19,7 @@ export function AiTryOnResult({
           <FallbackImage
             src={task.resultImageUrl || task.resultImage?.url}
             alt="AI try-on result"
-            className="h-full min-h-[360px] w-full object-cover"
+            className="h-full min-h-[360px] w-full object-contain"
             testId="ai-try-on-result-image"
           />
         ) : (

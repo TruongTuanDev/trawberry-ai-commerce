@@ -581,7 +581,7 @@ export function AiTryOnModal({
                       <FallbackImage
                         src={product.imageUrl}
                         alt={product.name}
-                        className="h-64 w-full object-cover"
+                        className="h-64 w-full object-contain"
                       />
                     ) : (
                       <div className="flex h-64 items-center justify-center text-sm text-[var(--muted)]">
