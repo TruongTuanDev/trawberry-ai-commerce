@@ -226,6 +226,17 @@ jobs:
           DEPLOY_SHA=$DEPLOY_SHA
           DEPLOY_ENV
 
+          dump_deploy_diagnostics() {
+            code=$?
+            set +e
+            echo "Deployment failed with exit code $code. Container status:"
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy ps -a
+            echo "Backend/PostgreSQL/AI logs:"
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy logs --no-color --tail=250 backend-nest postgres ai-service
+            exit "$code"
+          }
+          trap dump_deploy_diagnostics ERR
+
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy pull nginx backend-nest frontend-next ai-service
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy up -d
           docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.production --env-file infra/.env.deploy ps
