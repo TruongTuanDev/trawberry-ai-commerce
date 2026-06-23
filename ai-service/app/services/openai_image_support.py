@@ -366,6 +366,9 @@ class OpenAIImageSupport:
             params["quality"] = self.settings.openai_image_quality
             params["extra_body"] = {
                 "output_format": self.settings.openai_image_output_format,
+                # Keep the person's face and the garment's texture/print faithful
+                # to the input images instead of regenerating them from scratch.
+                "input_fidelity": self.settings.openai_image_input_fidelity,
             }
 
         return client.images.edit(**params)

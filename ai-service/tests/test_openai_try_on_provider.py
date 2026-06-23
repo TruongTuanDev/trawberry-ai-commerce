@@ -124,6 +124,7 @@ def test_openai_try_on_provider_calls_image_edit(monkeypatch) -> None:
     assert images_api.edit_calls[0]["model"] == "gpt-image-1"
     assert images_api.edit_calls[0]["size"] == "1024x1536"
     assert images_api.edit_calls[0]["extra_body"]["output_format"] == "png"
+    assert images_api.edit_calls[0]["extra_body"]["input_fidelity"] == "high"
     assert "response_format" not in images_api.edit_calls[0]
     assert "exact garment from the product image" in images_api.edit_calls[0]["prompt"]
     assert "wide_shoulders" in images_api.edit_calls[0]["prompt"]
