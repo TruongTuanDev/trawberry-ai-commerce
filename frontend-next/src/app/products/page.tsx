@@ -41,14 +41,9 @@ const RECENT_SEARCHES_KEY = "public-catalog-recent-searches";
 const RECENT_SEARCH_LIMIT = 5;
 const PRODUCTS_FETCH_TIMEOUT_MS = 12000;
 
-function defaultSortFor(query: string) {
-  return query.trim() ? "relevance" : "newest";
-}
-
 function readFilters(searchParams: { get(name: string): string | null }) {
-  const q = searchParams.get("q") ?? searchParams.get("search") ?? "";
   return {
-    q,
+    q: searchParams.get("q") ?? searchParams.get("search") ?? "",
     categoryId: searchParams.get("categoryId") ?? "",
     categorySlug: searchParams.get("categorySlug") ?? searchParams.get("category") ?? "",
     brand: searchParams.get("brand") ?? "",
@@ -57,7 +52,7 @@ function readFilters(searchParams: { get(name: string): string | null }) {
     inStock: searchParams.get("inStock") ?? "",
     minPrice: searchParams.get("minPrice") ?? "",
     maxPrice: searchParams.get("maxPrice") ?? "",
-    sort: searchParams.get("sort") ?? defaultSortFor(q),
+    sort: searchParams.get("sort") ?? "newest",
   };
 }
 
@@ -187,7 +182,7 @@ function ProductsPageContent({
           filters.inStock ||
           filters.minPrice ||
           filters.maxPrice ||
-          filters.sort !== defaultSortFor(filters.q),
+          filters.sort !== "newest",
       ),
     [filters],
   );
@@ -206,7 +201,7 @@ function ProductsPageContent({
             : null,
         filters.minPrice ? `${t("catalog.filterSummary.minPrice")}: ${filters.minPrice}` : null,
         filters.maxPrice ? `${t("catalog.filterSummary.maxPrice")}: ${filters.maxPrice}` : null,
-        filters.sort !== defaultSortFor(filters.q) ? `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}` : null,
+        filters.sort !== "newest" ? `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}` : null,
       ].filter(Boolean) as string[],
     [filters, t],
   );
@@ -493,13 +488,6 @@ function ProductsPageContent({
   };
 
   const applyFilters = (targetFilters = filters) => {
-    const hadSearchQuery = Boolean(
-      searchParams.get("q")?.trim() || searchParams.get("search")?.trim(),
-    );
-    const effectiveSort =
-      targetFilters.q.trim() && !hadSearchQuery && targetFilters.sort === "newest"
-        ? "relevance"
-        : targetFilters.sort;
     const params = new URLSearchParams();
     if (targetFilters.q.trim()) params.set("q", targetFilters.q.trim());
     if (targetFilters.categoryId) params.set("categoryId", targetFilters.categoryId);
@@ -510,8 +498,8 @@ function ProductsPageContent({
     if (targetFilters.inStock) params.set("inStock", targetFilters.inStock);
     if (targetFilters.minPrice) params.set("minPrice", targetFilters.minPrice);
     if (targetFilters.maxPrice) params.set("maxPrice", targetFilters.maxPrice);
-    if (effectiveSort && effectiveSort !== defaultSortFor(targetFilters.q)) {
-      params.set("sort", effectiveSort);
+    if (targetFilters.sort && targetFilters.sort !== "newest") {
+      params.set("sort", targetFilters.sort);
     }
     params.set("page", "1");
     try {
@@ -644,11 +632,11 @@ function ProductsPageContent({
           onRemove: () => applyFilterPatch({ maxPrice: "" }),
         }
       : null,
-    filters.sort !== defaultSortFor(filters.q)
+    filters.sort !== "newest"
       ? {
           key: "sort",
           label: `${t("catalog.filterSummary.sort")}: ${t(`catalog.sortOptions.${filters.sort}`)}`,
-          onRemove: () => applyFilterPatch({ sort: defaultSortFor(filters.q) }),
+          onRemove: () => applyFilterPatch({ sort: "newest" }),
         }
       : null,
   ].filter(Boolean) as Array<{ key: string; label: string; onRemove: () => void }>;
@@ -921,7 +909,7 @@ function ProductsPageContent({
                         onClick={() => setActiveDropdown(activeDropdown === "sort" ? null : "sort")}
                         data-testid="catalog-filter-sort-trigger"
                         className={`h-10 px-4 rounded-full text-[13px] font-semibold transition flex items-center gap-1.5 cursor-pointer border select-none max-sm:flex-1 max-sm:justify-center ${
-                          activeDropdown === "sort" || filters.sort !== defaultSortFor(filters.q)
+                          activeDropdown === "sort" || filters.sort !== "newest"
                             ? "bg-[var(--brand-primary-soft)] border-[var(--brand-primary)]/30 text-[var(--brand-primary-dark)]"
                             : "bg-[#f6f6fa] border-transparent text-gray-800 hover:bg-[#ececf3]"
                         }`}
