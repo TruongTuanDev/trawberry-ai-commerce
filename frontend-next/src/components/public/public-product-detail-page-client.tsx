@@ -33,6 +33,21 @@ import {
 import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
 import { useCartStore } from "@/stores/cart-store";
 
+function AiTryOnGenerateIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4 shrink-0"
+      fill="currentColor"
+    >
+      <path d="M12 2.5l1.7 4.6 4.6 1.7-4.6 1.7L12 15.1l-1.7-4.6L5.7 8.8l4.6-1.7L12 2.5z" />
+      <path d="M18.8 14l.85 2.35 2.35.85-2.35.85L18.8 20.4l-.85-2.35-2.35-.85 2.35-.85L18.8 14z" />
+      <path d="M5.4 14.6l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6.6-1.7z" />
+    </svg>
+  );
+}
+
 export function PublicProductDetailPageClient({
   productId,
   initialProduct,
@@ -780,9 +795,10 @@ export function PublicProductDetailPageClient({
                         <button
                           type="button"
                           onClick={handleOpenAiTryOn}
-                          className="w-full rounded-full border border-[var(--border)] bg-white px-5 py-3.5 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-white px-5 py-3.5 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
                           data-testid="product-ai-try-on-button"
                         >
+                          <AiTryOnGenerateIcon />
                           {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
                         </button>
                       </div>
@@ -1049,9 +1065,10 @@ export function PublicProductDetailPageClient({
                   <button
                     type="button"
                     onClick={handleOpenAiTryOn}
-                    className="mt-2 w-full rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
+                    className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition-all duration-200 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)]"
                     data-testid="mobile-product-ai-try-on"
                   >
+                    <AiTryOnGenerateIcon />
                     {locale === "ru" ? "Примерка с ИИ" : "AI Try-On"}
                   </button>
                   <button

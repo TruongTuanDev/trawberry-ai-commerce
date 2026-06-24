@@ -199,6 +199,8 @@
     "noVariant": "Нет доступного варианта",
     "selectSize": "Выберите размер",
     "outOfStock": "Нет в наличии",
+    "inStockCount": "В наличии: {{count}}",
+    "lowStockCount": "Мало в наличии: {{count}}",
     "availableCount": "Доступно: {{count}}",
     "availableToOrder": "Доступно к заказу",
     "sku": "Артикул / SKU",
@@ -2844,7 +2846,9 @@
     "wholeImage": "Всё изображение",
     "categoryHint": "Подсказка категории",
     "finding": "Идёт поиск...",
-    "similarProductsFound": "Похожие товары"
+    "similarProductsFound": "Похожие товары",
+    "matchesCount": "Найдено совпадений: {{count}}",
+    "exitResults": "Вернуться в каталог"
   },
   "adminLogin": {
     "badge": "Вход администратора",

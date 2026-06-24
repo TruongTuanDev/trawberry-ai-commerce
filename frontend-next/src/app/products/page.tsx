@@ -20,6 +20,11 @@ import {
   type RecommendationProductItem,
 } from "@/lib/public-api";
 import { readRecommendationFlagsFromDocument } from "@/lib/recommendation-flags";
+import {
+  clearVisualSearchResult,
+  readVisualSearchResult,
+  type StoredVisualSearchResult,
+} from "@/lib/visual-search-result";
 import { useCartStore } from "@/stores/cart-store";
 import { useI18n } from "@/i18n/use-i18n";
 import { PublicRecommendationSection } from "@/components/public/public-recommendation-section";
@@ -162,6 +167,14 @@ function ProductsPageContent({
   }, [categoryOptions, categorySearch]);
 
   const page = Number(searchParams.get("page") ?? "1");
+  const visualSearchActive = searchParams.get("visualSearch") === "1";
+  // This subtree is client-only (useSearchParams opts it out of SSR up to the
+  // Suspense boundary), so reading sessionStorage during init is safe and
+  // avoids a flash of the empty state before an effect could run. The content
+  // remounts on every URL change (key={searchParams}), so this re-reads fresh.
+  const [visualResult, setVisualResult] = useState<StoredVisualSearchResult | null>(
+    () => (searchParams.get("visualSearch") === "1" ? readVisualSearchResult() : null),
+  );
   const hasActiveFilters = useMemo(
     () =>
       Boolean(
@@ -334,6 +347,12 @@ function ProductsPageContent({
     const timeout = window.setTimeout(() => controller.abort(), PRODUCTS_FETCH_TIMEOUT_MS);
 
     const run = async () => {
+      if (visualSearchActive) {
+        // Image-search results are handed in via sessionStorage, not the
+        // catalog API — skip the normal product fetch entirely.
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const response = await getPublicProducts({
@@ -382,7 +401,7 @@ function ProductsPageContent({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [filters, meta.size, page, requestKey, t]);
+  }, [filters, meta.size, page, requestKey, t, visualSearchActive]);
 
   useEffect(() => {
     const query = filters.q.trim();
@@ -634,6 +653,14 @@ function ProductsPageContent({
       : null,
   ].filter(Boolean) as Array<{ key: string; label: string; onRemove: () => void }>;
 
+  const displayItems = visualSearchActive ? visualResult?.products ?? [] : items;
+  const displayLoading = visualSearchActive ? false : loading;
+  const exitVisualSearch = () => {
+    clearVisualSearchResult();
+    setVisualResult(null);
+    router.replace("/products");
+  };
+
   return (
     <PublicShell>
       <main className="relative px-4 py-6 sm:px-6 sm:py-8">
@@ -737,9 +764,9 @@ function ProductsPageContent({
           </div>
           <div id="debug-info" className="text-[10px] text-red-500 font-mono" data-testid="e2e-debug"></div>
 
-          {!hasActiveFilters && <PublicHomepageHeroSlider initialSlides={slides} />}
+          {!hasActiveFilters && !visualSearchActive && <PublicHomepageHeroSlider initialSlides={slides} />}
 
-          <div className={showFilters ? "relative z-30 space-y-4 overflow-visible" : "hidden"}>
+          <div className={showFilters && !visualSearchActive ? "relative z-30 space-y-4 overflow-visible" : "hidden"}>
               <section className="relative z-30 overflow-visible rounded-[1.8rem] border border-[var(--border)] bg-gradient-to-br from-white via-[var(--brand-primary-soft)]/35 to-gray-50 p-3.5 shadow-sm backdrop-blur-md sm:p-4">
                 <form
                   id="filter-form"
@@ -1659,17 +1686,44 @@ function ProductsPageContent({
             </div>
           ) : null}
 
-          <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-4 border-b border-[var(--border)] pb-4">
-            <h2 className="text-3xl font-black tracking-tight text-[var(--foreground)] capitalize">
-              {filters.q ? filters.q : t("catalog.allProducts")}
-            </h2>
-            <p className="text-sm text-[var(--muted)] font-medium">
-              {t(meta.total === 1 ? "catalog.productsFound" : "catalog.productsFoundPlural", { count: meta.total })}
-            </p>
-          </div>
+          {visualSearchActive ? (
+            <div
+              className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--brand-primary)]/15 bg-[var(--brand-primary-soft)]/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+              data-testid="visual-search-results-banner"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary-dark)]">
+                  {t("visualSearch.findProductsByPhoto")}
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-[var(--foreground)] sm:text-3xl">
+                  {t("visualSearch.similarProductsFound")}
+                </h2>
+                <p className="mt-1 text-sm font-medium text-[var(--muted)]">
+                  {t("visualSearch.matchesCount", { count: displayItems.length })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={exitVisualSearch}
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-[var(--brand-primary)]/25 bg-white px-5 py-2.5 text-sm font-semibold text-[var(--brand-primary-dark)] shadow-sm transition hover:border-[var(--brand-primary)]/40"
+                data-testid="visual-search-exit"
+              >
+                {t("visualSearch.exitResults")}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row md:items-baseline gap-2 md:gap-4 border-b border-[var(--border)] pb-4">
+              <h2 className="text-3xl font-black tracking-tight text-[var(--foreground)] capitalize">
+                {filters.q ? filters.q : t("catalog.allProducts")}
+              </h2>
+              <p className="text-sm text-[var(--muted)] font-medium">
+                {t(meta.total === 1 ? "catalog.productsFound" : "catalog.productsFoundPlural", { count: meta.total })}
+              </p>
+            </div>
+          )}
 
           {/* Horizontally scrollable Category Chips */}
-          {categoryOptions.length > 0 ? (
+          {!visualSearchActive && (categoryOptions.length > 0 ? (
             <div
               className="flex items-center gap-2 overflow-x-auto pb-3 pt-1 scrollbar-thin select-none"
               data-testid="category-chips-container"
@@ -1727,9 +1781,9 @@ function ProductsPageContent({
             <div className="rounded-xl border border-dashed border-gray-200 px-4 py-3 text-center text-xs font-semibold text-gray-400 select-none">
               {t("catalog.noCategoriesFound")}
             </div>
-          )}
+          ))}
 
-          {loading ? (
+          {displayLoading ? (
             <div className="space-y-4">
               <div className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] px-5 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-primary-dark)]">
@@ -1751,9 +1805,9 @@ function ProductsPageContent({
                 ))}
               </section>
             </div>
-          ) : items.length ? (
+          ) : displayItems.length ? (
             <section className={`relative z-0 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 ${layoutCols === "3" ? "lg:grid-cols-4 xl:grid-cols-5" : "lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"}`} data-testid={isMounted ? "products-grid" : undefined}>
-              {items.map((product) => (
+              {displayItems.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </section>
@@ -1763,15 +1817,25 @@ function ProductsPageContent({
               data-testid={hasActiveFilters ? "products-no-results-state" : "products-empty-state"}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                {hasActiveFilters ? t("catalog.searchResults") : t("catalog.catalogTitle")}
+                {visualSearchActive
+                  ? t("visualSearch.findProductsByPhoto")
+                  : hasActiveFilters
+                    ? t("catalog.searchResults")
+                    : t("catalog.catalogTitle")}
               </p>
               <h2 className="mt-3 font-[family-name:var(--font-mono-app)] text-3xl font-bold text-[var(--foreground)]">
-                {hasActiveFilters ? t("catalog.noResults") : t("catalog.noProducts")}
+                {visualSearchActive
+                  ? t("visualSearch.similarProductsFound")
+                  : hasActiveFilters
+                    ? t("catalog.noResults")
+                    : t("catalog.noProducts")}
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-                {hasActiveFilters
-                  ? t("catalog.noResultsDesc")
-                  : t("catalog.noProductsDesc")}
+                {visualSearchActive
+                  ? t("visualSearch.couldNotFindProductsByPhoto")
+                  : hasActiveFilters
+                    ? t("catalog.noResultsDesc")
+                    : t("catalog.noProductsDesc")}
               </p>
               {activeFilterSummary.length ? (
                 <div className="mt-5 flex flex-wrap justify-center gap-2" data-testid="products-filter-summary">
@@ -1819,7 +1883,7 @@ function ProductsPageContent({
             </section>
           )}
 
-          {visibleSearchRecommendations.length ? (
+          {!visualSearchActive && visibleSearchRecommendations.length ? (
             <PublicRecommendationSection
               titleKey="similarBySearch"
               items={visibleSearchRecommendations}
@@ -1832,29 +1896,31 @@ function ProductsPageContent({
             />
           ) : null}
 
-          <div className="public-muted-card flex flex-col gap-4 rounded-[1.5rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[var(--muted)]">
-              {t("catalog.pageInfo", { page: meta.page, totalPages: Math.max(meta.totalPages, 1), total: meta.total })}
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => router.replace(pageUrl(page - 1))}
-                className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {t("catalog.previous")}
-              </button>
-              <button
-                type="button"
-                disabled={page >= Math.max(meta.totalPages, 1)}
-                onClick={() => router.replace(pageUrl(page + 1))}
-                className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {t("catalog.next")}
-              </button>
+          {!visualSearchActive && (
+            <div className="public-muted-card flex flex-col gap-4 rounded-[1.5rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-[var(--muted)]">
+                {t("catalog.pageInfo", { page: meta.page, totalPages: Math.max(meta.totalPages, 1), total: meta.total })}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => router.replace(pageUrl(page - 1))}
+                  className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("catalog.previous")}
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= Math.max(meta.totalPages, 1)}
+                  onClick={() => router.replace(pageUrl(page + 1))}
+                  className="public-button-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("catalog.next")}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </PublicShell>

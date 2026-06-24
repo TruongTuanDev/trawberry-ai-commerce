@@ -31,7 +31,7 @@ export function ProductCard({
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const primaryVariant = getProductPrimaryVariant(product);
   const inCartQuantity = getCartQuantity(items, product.id, primaryVariant?.id);
-  const stockState = getStockState(product);
+  const stockState = getStockState(product, t);
   const formattedPrice = formatMoney(product.price);
   const oldPrice = getComparableOldPrice(product.price, product.oldPrice);
   const formattedOldPrice = formatMoney(oldPrice);
@@ -151,7 +151,7 @@ export function ProductCard({
               type="button"
               onClick={handleQuickAdd}
               disabled={!primaryVariant?.inStock}
-              className="w-full rounded-lg bg-gradient-primary px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="public-button-primary w-full rounded-lg! px-3 py-2 text-xs transition disabled:cursor-not-allowed disabled:opacity-50"
               data-testid={`product-primary-action-${product.id}`}
             >
               {requiresSelection
