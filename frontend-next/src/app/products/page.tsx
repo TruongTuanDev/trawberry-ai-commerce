@@ -210,6 +210,19 @@ function ProductsPageContent({
     hydrateCart();
   }, [hydrateCart]);
 
+  // Belt-and-suspenders: on a client-side navigation into visual-search mode the
+  // lazy useState initializer can run before the handed-off result is readable,
+  // which left the grid empty until a manual reload. Re-read from sessionStorage
+  // after mount so the matches appear without reloading. The write happens before
+  // the navigation, so by the time this effect runs the data is always present.
+  useEffect(() => {
+    if (!visualSearchActive) {
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVisualResult((current) => current ?? readVisualSearchResult());
+  }, [visualSearchActive]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
