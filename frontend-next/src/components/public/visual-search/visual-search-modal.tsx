@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
 import { ApiError } from "@/lib/api";
 import {
@@ -108,7 +107,6 @@ export function VisualSearchModal({
   trackingEnabled: boolean;
   onClose: () => void;
 }) {
-  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [crop, setCrop] = useState<Crop>(FULL_CROP);
   const [loading, setLoading] = useState(false);
@@ -214,7 +212,11 @@ export function VisualSearchModal({
       });
       resetState();
       onClose();
-      router.push("/products?visualSearch=1");
+      // Use a full navigation (not router.push) so the catalog page loads fresh
+      // and reliably reads the handed-off result from sessionStorage. A soft
+      // client navigation could render before the result was picked up, which
+      // left the grid empty until a manual reload.
+      window.location.assign("/products?visualSearch=1");
     } catch (error) {
       const fallbackMessage = t("visualSearch.couldNotFindProductsByPhoto");
       const message =
