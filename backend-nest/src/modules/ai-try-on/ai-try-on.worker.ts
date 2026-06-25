@@ -42,10 +42,17 @@ export class AiTryOnWorkerService implements OnModuleInit, OnModuleDestroy {
     // How many try-on jobs this worker processes in parallel. Each job is
     // mostly I/O-bound (waiting on the AI service), so a single worker can
     // safely fan out. Tune via env, or run multiple replicas to scale out.
-    const concurrency = this.configService.get<number>(
+    // Env values arrive as strings, so coerce to a finite positive number —
+    // BullMQ throws if concurrency is not a number.
+    const concurrencyRaw = this.configService.get<string | number>(
       'AI_TRY_ON_WORKER_CONCURRENCY',
       10,
     );
+    const parsedConcurrency = Number(concurrencyRaw);
+    const concurrency =
+      Number.isFinite(parsedConcurrency) && parsedConcurrency > 0
+        ? Math.floor(parsedConcurrency)
+        : 10;
 
     this.worker = new Worker<{ taskId: string }>(
       AI_TRY_ON_QUEUE,
