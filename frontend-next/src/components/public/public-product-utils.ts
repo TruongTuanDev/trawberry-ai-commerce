@@ -68,10 +68,15 @@ export function hasSelectableVariants(product: PublicProduct) {
   return product.variants.length > 1;
 }
 
-export function getStockState(product: PublicProduct) {
+type TranslateFn = (
+  key: string,
+  values?: Record<string, string | number>,
+) => string;
+
+export function getStockState(product: PublicProduct, t: TranslateFn) {
   if (!product.inStock) {
     return {
-      label: "Out of stock",
+      label: t("productDetail.outOfStock"),
       tone: "text-rose-700 bg-rose-50 border-rose-200",
     };
   }
@@ -80,13 +85,17 @@ export function getStockState(product: PublicProduct) {
   const threshold = primaryVariant?.lowStockThreshold ?? 3;
   if (product.availableQuantity <= threshold) {
     return {
-      label: `Low stock: ${formatCount(product.availableQuantity)}`,
+      label: t("productDetail.lowStockCount", {
+        count: formatCount(product.availableQuantity),
+      }),
       tone: "text-amber-700 bg-amber-50 border-amber-200",
     };
   }
 
   return {
-    label: `In stock: ${formatCount(product.availableQuantity)}`,
+    label: t("productDetail.inStockCount", {
+      count: formatCount(product.availableQuantity),
+    }),
     tone: "text-emerald-700 bg-emerald-50 border-emerald-200",
   };
 }

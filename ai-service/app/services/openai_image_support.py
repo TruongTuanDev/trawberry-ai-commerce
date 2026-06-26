@@ -364,9 +364,15 @@ class OpenAIImageSupport:
             }
 
             params["quality"] = self.settings.openai_image_quality
-            params["extra_body"] = {
+            extra_body: dict[str, Any] = {
                 "output_format": self.settings.openai_image_output_format,
             }
+            # input_fidelity keeps the person's face and the garment texture/print
+            # faithful to the inputs, but only gpt-image-1 / gpt-image-1.5 accept it;
+            # gpt-image-2 rejects the parameter (it is high-fidelity natively).
+            if self.settings.ai_try_on_openai_model.startswith("gpt-image-1"):
+                extra_body["input_fidelity"] = self.settings.openai_image_input_fidelity
+            params["extra_body"] = extra_body
 
         return client.images.edit(**params)
 

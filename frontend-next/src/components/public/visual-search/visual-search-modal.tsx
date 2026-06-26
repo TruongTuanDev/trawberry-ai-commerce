@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ProductCard } from "@/components/public/product-card";
 import { toast } from "@/components/ui/use-toast";
 import { ApiError } from "@/lib/api";
 import {
   createVisualSearch,
   getGuestSessionId,
   trackVisualSearchEvent,
-  type PublicProduct,
-  type VisualSearchResponse,
 } from "@/lib/public-api";
+import { storeVisualSearchResult } from "@/lib/visual-search-result";
 import {
   ImageCropSelector,
   FULL_CROP,
@@ -113,7 +111,6 @@ export function VisualSearchModal({
   const [crop, setCrop] = useState<Crop>(FULL_CROP);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [results, setResults] = useState<VisualSearchResponse | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -144,19 +141,12 @@ export function VisualSearchModal({
     };
   }, [previewUrl]);
 
-  const similarProducts = useMemo(() => results?.products ?? [], [results]);
-  const matchByProductId = useMemo(
-    () => new Map((results?.matches ?? []).map((match) => [match.product.id, match])),
-    [results],
-  );
-
   if (!open) {
     return null;
   }
 
   const resetState = () => {
     setFile(null);
-    setResults(null);
     setErrorMessage(null);
     setCrop(FULL_CROP);
   };
@@ -167,7 +157,6 @@ export function VisualSearchModal({
   };
 
   const handleFileChange = (selectedFile: File | null) => {
-    setResults(null);
     setErrorMessage(null);
     setCrop(FULL_CROP);
     setFile(selectedFile);
@@ -180,7 +169,6 @@ export function VisualSearchModal({
 
     setLoading(true);
     setErrorMessage(null);
-    setResults(null);
 
     try {
       const useWholeImage = isFullCrop(crop);
@@ -197,10 +185,10 @@ export function VisualSearchModal({
             }),
         guestSessionId: getGuestSessionId(),
       });
-      setResults(response);
 
       if (trackingEnabled && response.visualSearchLogId && response.products.length > 0) {
-        await Promise.all(
+        // Fire impression tracking but don't block the navigation on it.
+        void Promise.all(
           response.products.map((product, index) =>
             trackVisualSearchEvent({
               type: "impression",
@@ -213,6 +201,22 @@ export function VisualSearchModal({
           ),
         );
       }
+
+      // Hand the matches off to the catalog page and render them there inside
+      // the normal product grid instead of a separate section in this modal.
+      storeVisualSearchResult({
+        products: response.products,
+        analysis: response.analysis ?? null,
+        visualSearchLogId: response.visualSearchLogId ?? null,
+        createdAt: Date.now(),
+      });
+      resetState();
+      onClose();
+      // Use a full navigation (not router.push) so the catalog page loads fresh
+      // and reliably reads the handed-off result from sessionStorage. A soft
+      // client navigation could render before the result was picked up, which
+      // left the grid empty until a manual reload.
+      window.location.assign("/products?visualSearch=1");
     } catch (error) {
       const fallbackMessage = t("visualSearch.couldNotFindProductsByPhoto");
       const message =
@@ -224,21 +228,6 @@ export function VisualSearchModal({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleProductNavigate = async (product: PublicProduct, index: number) => {
-    if (!trackingEnabled || !results?.visualSearchLogId) {
-      return;
-    }
-
-    await trackVisualSearchEvent({
-      type: "click",
-      visualSearchLogId: results.visualSearchLogId,
-      productId: product.id,
-      rank: index + 1,
-      score: matchByProductId.get(product.id)?.score,
-      guestSessionId: getGuestSessionId(),
-    });
   };
 
   return (
@@ -325,11 +314,6 @@ export function VisualSearchModal({
                         {t("visualSearch.selectProductArea")}
                       </h3>
                     </div>
-                    {results?.analysis.category ? (
-                      <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
-                        {results.analysis.category}
-                      </span>
-                    ) : null}
                   </div>
 
                   {previewUrl ? (
@@ -351,49 +335,6 @@ export function VisualSearchModal({
                 {errorMessage ? (
                   <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" data-testid="visual-search-error">
                     {errorMessage}
-                  </div>
-                ) : null}
-
-                {results && similarProducts.length > 0 ? (
-                  <div className="space-y-4" data-testid="visual-search-results">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-xl font-bold text-[var(--foreground)]">
-                        {t("visualSearch.similarProductsFound")}
-                      </h3>
-                      <p className="text-sm text-[var(--muted)]">
-                        {results.analysis.color ?? results.analysis.category ?? ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2" data-testid="visual-search-analysis">
-                      {[
-                        results.analysis.category,
-                        results.analysis.color,
-                        results.analysis.material,
-                        results.analysis.pattern,
-                        results.analysis.style,
-                      ]
-                        .filter((value): value is string => Boolean(value))
-                        .map((value) => (
-                          <span key={value} className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-                            {value}
-                          </span>
-                        ))}
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="visual-search-product-grid">
-                      {similarProducts.map((product, index) => (
-                        <ProductCard
-                          key={product.id}
-                          product={product}
-                          onProductNavigate={() => void handleProductNavigate(product, index)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {results && similarProducts.length === 0 ? (
-                  <div className="rounded-[1.5rem] border border-[var(--border)] bg-white px-5 py-4 text-sm text-[var(--muted)]" data-testid="visual-search-empty-state">
-                    {t("visualSearch.couldNotFindProductsByPhoto")}
                   </div>
                 ) : null}
               </section>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
+import { ExternalLink } from "lucide-react";
 import { AiTaskPanel } from "@/components/products/ai-task-panel";
 import { SectionCard } from "@/components/seller/section-card";
 import { FallbackImage } from "@/components/ui/fallback-image";
@@ -27,6 +28,7 @@ import { useI18n } from "@/i18n/use-i18n";
 
 const POLLING_STATUSES = new Set<AiImageTask["status"]>(["PENDING", "PROCESSING"]);
 const POLLING_INTERVAL_MS = 2000;
+const SEO_WB_AI_CARD_GENERATOR_URL = "https://seo-wb.com/";
 
 const GENERATION_MODES: Array<{
   id: "studio" | "lifestyle" | "promotional";
@@ -578,6 +580,25 @@ export function SellerAiImagesWorkspace() {
           description={t("seller.aiImages.generateDescription")}
         >
           <div className="space-y-5">
+            <div className="rounded-[1.5rem] border border-sky-100 bg-sky-50 px-4 py-4" data-testid="seller-ai-seo-wb-card">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-sky-950">{t("seller.aiImages.externalCardTitle")}</p>
+                  <p className="mt-1 text-sm text-sky-800">{t("seller.aiImages.externalCardDescription")}</p>
+                </div>
+                <a
+                  href={SEO_WB_AI_CARD_GENERATOR_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-800"
+                  data-testid="seller-ai-seo-wb-link"
+                >
+                  <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                  {t("seller.aiImages.externalCardButton")}
+                </a>
+              </div>
+            </div>
+
             <div className="grid gap-3">
               {GENERATION_MODES.map((mode) => (
                 <button

@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     openai_image_size: str = "1024x1536"
     openai_image_quality: str = "medium"
     openai_image_output_format: Literal["jpeg", "png", "webp"] = "jpeg"
+    # gpt-image-1 only: "high" preserves the input face and garment details far
+    # better than "low" (much more realistic try-on), at a higher token cost.
+    openai_image_input_fidelity: Literal["low", "high"] = Field(
+        default="high",
+        validation_alias=AliasChoices(
+            "OPENAI_IMAGE_INPUT_FIDELITY",
+            "AI_TRY_ON_INPUT_FIDELITY",
+        ),
+    )
     openai_image_timeout_seconds: int = 120
     openai_image_max_retries: int = 1
     run_openai_smoke: bool = False

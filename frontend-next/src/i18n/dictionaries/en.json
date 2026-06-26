@@ -199,6 +199,8 @@
     "noVariant": "No variant available",
     "selectSize": "Select size",
     "outOfStock": "Out of stock",
+    "inStockCount": "In stock: {{count}}",
+    "lowStockCount": "Low stock: {{count}}",
     "availableCount": "{{count}} available",
     "availableToOrder": "Available to order",
     "sku": "Article / SKU",
@@ -2130,6 +2132,9 @@
       "generateEyebrow": "Generate",
       "generateTitle": "Create AI image task",
       "generateDescription": "Create a new AI image task for the selected product.",
+      "externalCardTitle": "WB AI Card Generator",
+      "externalCardDescription": "Open seo-wb.com in a new tab when you want a dedicated sales card generator for Wildberries-style product visuals.",
+      "externalCardButton": "Open seo-wb.com",
       "frontProductImage": "Front product image",
       "count": "Count",
       "backImage": "Back image",
@@ -2883,6 +2888,8 @@
     "dragToSelectHint": "Drag directly on the photo to select the search area. Drag the corners to resize.",
     "wholeImage": "Whole image",
     "similarProductsFound": "Similar products found",
+    "matchesCount": "{{count}} matching products",
+    "exitResults": "Back to catalog",
     "supportedFormats": "Supported formats"
   },
   "adminLogin": {

@@ -7,10 +7,8 @@ import type { PublicProduct } from "@/lib/public-api";
 
 export function HomeCatalogSectionClient({
   items,
-  total,
 }: {
   items: PublicProduct[];
-  total: number;
 }) {
   const { t } = useI18n("customer");
 
@@ -25,12 +23,12 @@ export function HomeCatalogSectionClient({
             <span data-testid="home-catalog-title">{t("home.allProducts")}</span>
           </h2>
           <p className="mt-2 text-sm font-medium text-[var(--muted)]">
-            {t("home.availableProductsCount", { count: total })}
+            {t("home.availableProductsCount", { count: items.length })}
           </p>
         </div>
         <Link
           href="/products"
-          className="inline-flex items-center rounded-full border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] shadow-[0_12px_26px_rgba(31,31,41,0.05)] transition hover:-translate-y-0.5"
+          className="inline-flex items-center rounded-full border border-[var(--brand-primary)]/12 bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] shadow-[0_12px_26px_rgba(31,31,41,0.05)] transition hover:-translate-y-0.5 hover:border-[var(--brand-primary)]/25 hover:text-[var(--brand-primary-dark)]"
           data-testid="home-open-filters-link"
         >
           {t("home.openFilters")}
@@ -38,7 +36,10 @@ export function HomeCatalogSectionClient({
       </div>
 
       {items.length ? (
-        <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6" data-testid="products-grid">
+        <section
+          className="grid grid-cols-1 gap-3 min-[390px]:grid-cols-2 lg:gap-5 xl:grid-cols-4"
+          data-testid="products-grid"
+        >
           {items.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

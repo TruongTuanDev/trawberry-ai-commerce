@@ -199,6 +199,8 @@
     "noVariant": "Нет доступного варианта",
     "selectSize": "Выберите размер",
     "outOfStock": "Нет в наличии",
+    "inStockCount": "В наличии: {{count}}",
+    "lowStockCount": "Мало в наличии: {{count}}",
     "availableCount": "Доступно: {{count}}",
     "availableToOrder": "Доступно к заказу",
     "sku": "Артикул / SKU",
@@ -2096,6 +2098,9 @@
       "selectorTitle": "Выберите товар",
       "searchPlaceholder": "Искать товары по названию, бренду или статусу",
       "generateTitle": "Создать AI-задачу",
+      "externalCardTitle": "WB AI Card Generator",
+      "externalCardDescription": "Откройте seo-wb.com в новой вкладке, когда нужен отдельный генератор продающих карточек для визуалов в стиле Wildberries.",
+      "externalCardButton": "Открыть seo-wb.com",
       "frontProductImage": "Переднее фото товара",
       "count": "Количество",
       "prompt": "Промпт",
@@ -2841,7 +2846,9 @@
     "wholeImage": "Всё изображение",
     "categoryHint": "Подсказка категории",
     "finding": "Идёт поиск...",
-    "similarProductsFound": "Похожие товары"
+    "similarProductsFound": "Похожие товары",
+    "matchesCount": "Найдено совпадений: {{count}}",
+    "exitResults": "Вернуться в каталог"
   },
   "adminLogin": {
     "badge": "Вход администратора",

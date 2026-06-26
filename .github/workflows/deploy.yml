@@ -188,7 +188,11 @@ jobs:
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
           set -euo pipefail
-          tar -czf - infra | ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" \
+          # nginx.conf is volume-mounted on the VPS (compose: ./nginx/nginx.conf:/etc/nginx/nginx.conf)
+          # and the live VPS copy carries extra server blocks for a co-hosted site that are
+          # intentionally NOT tracked in git. Excluding it here keeps the runtime config intact;
+          # the nginx IMAGE is still rebuilt/pushed/pulled separately, so app routing stays current.
+          tar --exclude='infra/nginx/nginx.conf' -czf - infra | ssh -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes \
             "$VPS_USER@$VPS_HOST" \
             "mkdir -p '$VPS_APP_DIR' && tar -xzf - -C '$VPS_APP_DIR' && chmod +x '$VPS_APP_DIR/infra/scripts/'*.sh"
