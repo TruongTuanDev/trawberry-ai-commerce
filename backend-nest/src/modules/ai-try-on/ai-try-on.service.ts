@@ -163,6 +163,10 @@ export class AiTryOnService {
     request: Request,
     user?: AuthenticatedUser | null,
   ) {
+    // Reject photos that don't clearly contain a real person before storing them
+    // or spending an expensive generation on them.
+    await this.assertReferenceImageHasPerson(file);
+
     const guestSessionId = user ? null : this.resolveGuestSessionId(request);
     const stored = await this.filesService.storeAiTryOnReference(file, {
       scope: user ? 'customer' : 'guest',
@@ -823,6 +827,123 @@ export class AiTryOnService {
       updatedAt: task.updatedAt.toISOString(),
       completedAt: task.completedAt?.toISOString() ?? null,
     };
+  }
+
+  private isReferenceValidationEnabled() {
+    const raw = this.configService.get<string>('AI_TRY_ON_VALIDATE_REFERENCE');
+    if (raw === undefined) {
+      return true; // on by default
+    }
+    return !['0', 'false', 'off', 'no'].includes(raw.trim().toLowerCase());
+  }
+
+  private resolveReferenceCheckModel() {
+    return (
+      this.configService.get<string>('AI_TRY_ON_REFERENCE_CHECK_MODEL')?.trim() ||
+      this.configService.get<string>('VISUAL_SEARCH_OPENAI_MODEL')?.trim() ||
+      'gpt-4.1-mini'
+    );
+  }
+
+  private resolveReferenceCheckTimeoutMs() {
+    const configured = Number(
+      this.configService.get<string>('AI_TRY_ON_REFERENCE_CHECK_TIMEOUT_MS'),
+    );
+    return Number.isFinite(configured) && configured >= 1_000
+      ? Math.min(configured, 30_000)
+      : 12_000;
+  }
+
+  /**
+   * Uses OpenAI vision to confirm the uploaded reference photo actually shows a
+   * real person before it can be used for a try-on. Fails OPEN (allows the
+   * image) when validation is disabled, no API key is configured, or the check
+   * errors out — so try-on keeps working even if the validator is unavailable.
+   * Only blocks when the model is confident there is no usable person.
+   */
+  private async assertReferenceImageHasPerson(file: Express.Multer.File) {
+    if (!this.isReferenceValidationEnabled()) {
+      return;
+    }
+
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+    if (!apiKey?.trim()) {
+      return;
+    }
+
+    const mimetype = file.mimetype || 'image/jpeg';
+    let hasPerson = true; // default: allow (fail open)
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(
+        () => controller.abort(),
+        this.resolveReferenceCheckTimeoutMs(),
+      );
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.resolveReferenceCheckModel(),
+          text: {
+            format: {
+              type: 'json_schema',
+              name: 'try_on_person_check',
+              schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  hasPerson: { type: 'boolean' },
+                },
+                required: ['hasPerson'],
+              },
+            },
+          },
+          input: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: [
+                    'Decide if this image can be used as the PERSON for a virtual clothing try-on.',
+                    'Set hasPerson=true ONLY if a real human person (their body and/or face) is clearly visible.',
+                    'Set hasPerson=false when there is no identifiable real person: e.g. only objects, animals, food, scenery, logos, text/screenshots, or cartoons/illustrations.',
+                  ].join(' '),
+                },
+                {
+                  type: 'input_image',
+                  image_url: `data:${mimetype};base64,${file.buffer.toString('base64')}`,
+                  detail: 'low',
+                },
+              ],
+            },
+          ],
+        }),
+      }).finally(() => clearTimeout(timeout));
+
+      if (response.ok) {
+        const body = (await response.json()) as { output_text?: string };
+        const parsed = JSON.parse(body.output_text ?? '{}') as {
+          hasPerson?: boolean;
+        };
+        // Only block when the model explicitly says there is no person.
+        hasPerson = parsed.hasPerson !== false;
+      }
+    } catch {
+      hasPerson = true; // network/timeout/parse error → fail open
+    }
+
+    if (!hasPerson) {
+      throw this.buildCodeError(
+        'AI_TRY_ON_IMAGE_UNSUITABLE',
+        'The uploaded photo does not contain a person. Please choose a valid photo to try on.',
+      );
+    }
   }
 
   private buildCodeError(code: string, message: string) {
