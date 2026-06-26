@@ -927,10 +927,21 @@ export class AiTryOnService {
       }).finally(() => clearTimeout(timeout));
 
       if (response.ok) {
-        const body = (await response.json()) as { output_text?: string };
-        const parsed = JSON.parse(body.output_text ?? '{}') as {
-          hasPerson?: boolean;
+        const body = (await response.json()) as {
+          output_text?: string;
+          output?: Array<{ content?: Array<{ text?: string }> }>;
         };
+        // The Responses API returns the structured JSON in
+        // output[].content[].text; output_text is not present on the raw HTTP
+        // response, so fall back to digging it out.
+        const text =
+          body.output_text ??
+          body.output
+            ?.flatMap((item) => item.content ?? [])
+            .map((part) => part.text)
+            .find((value): value is string => typeof value === 'string') ??
+          '{}';
+        const parsed = JSON.parse(text) as { hasPerson?: boolean };
         // Only block when the model explicitly says there is no person.
         hasPerson = parsed.hasPerson !== false;
       }
